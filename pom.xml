@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>ph.com.guanzongroup</groupId>
+    <artifactId>cas-cashflow</artifactId>
+    <version>0.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
+    <dependencies>
+        <dependency>
+            <groupId>org.guanzon</groupId>
+            <artifactId>appdriver-agent</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.guanzon</groupId>
+            <artifactId>cas-parameter</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.guanzon</groupId>
+            <artifactId>cas-client</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>org.guanzon</groupId>
+            <artifactId>cas-gl</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.12</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+    <developers>
+        <developer>
+            <name>Rex S. Adversalo</name>
+            <email>rsadversalo@guanzongroup.com.ph</email>
+            <organization>Guanzon Group of Companies</organization>
+        </developer>
+           
+        <developer>
+            <name>Marlon A. Sayson</name>
+            <email>masayson@guanzongroup.com.ph</email>
+            <organization>Guanzon Group of Companies</organization>
+        </developer>
+        
+        <developer>    
+            <name>Michael T. Cuison</name>
+            <email>mtcuison@guanzongroup.com.ph</email>
+            <organization>Guanzon Group of Companies</organization>
+        </developer>
+    </developers>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <!-- Add any configuration options here -->
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+    <distributionManagement>
+        <repository>
+            <id>github</id>
+            <name>GitHub Guanzon-Central-Repository Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/mtcuison/Guanzon-Central-Repository/</url>
+        </repository>
+    </distributionManagement>
+</project>
