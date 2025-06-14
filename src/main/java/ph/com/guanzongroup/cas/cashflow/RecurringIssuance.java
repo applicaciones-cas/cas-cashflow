@@ -11,12 +11,12 @@ import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.gl.Particular;
 import org.guanzon.cas.gl.Payee;
-import org.guanzon.cas.gl.model.Model_Recurring_Issuance;
 import org.guanzon.cas.gl.services.GLControllers;
-import org.guanzon.cas.gl.services.GLModels;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class RecurringIssuance extends Parameter{
     Model_Recurring_Issuance poModel;
@@ -25,7 +25,7 @@ public class RecurringIssuance extends Parameter{
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
         
-        GLModels model = new GLModels(poGRider);
+        CashflowModels model = new CashflowModels(poGRider);
         poModel = model.Recurring_Issuance();
         
         super.initialize();

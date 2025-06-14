@@ -4,9 +4,9 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
-import org.guanzon.cas.gl.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 
 
 public class CashflowControllers {

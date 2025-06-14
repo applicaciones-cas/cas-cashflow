@@ -1,11 +1,11 @@
 package ph.com.guanzongroup.cas.cashflow.services;
 
 import org.guanzon.appdriver.base.GRiderCAS;
-import org.guanzon.cas.gl.model.Model_Recurring_Issuance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Ledger;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
 
 public class CashflowModels {
     public CashflowModels(GRiderCAS applicationDriver){
