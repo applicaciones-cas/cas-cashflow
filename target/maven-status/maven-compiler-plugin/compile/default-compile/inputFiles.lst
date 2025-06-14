@@ -1,4 +1,5 @@
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\RecurringIssuance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountConstants.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountMaster.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowModels.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Recurring_Issuance.java
@@ -7,4 +8,5 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Detail.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountTrans.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Ledger.java
