@@ -12,15 +12,13 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
-import org.guanzon.cas.gl.model.Model_Check_Payments;
-import org.guanzon.cas.gl.model.Model_Recurring_Issuance;
-import org.guanzon.cas.gl.services.GLControllers;
-import org.guanzon.cas.gl.services.GLModels;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class CheckPayments extends Parameter {
 
@@ -32,7 +30,7 @@ public class CheckPayments extends Parameter {
             psRecdStat = Logical.YES;
             super.initialize();
 
-            GLModels model = new GLModels(poGRider);
+            CashflowModels model = new CashflowModels(poGRider);
             poModel = model.CheckPayments();
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(CheckPayments.class.getName()).log(Level.SEVERE, null, ex);

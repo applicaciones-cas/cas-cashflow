@@ -5,10 +5,6 @@ import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.cas.gl.PaymentRequest;
-import org.guanzon.cas.gl.RecurringIssuance;
-import org.guanzon.cas.gl.services.GLControllers;
-import org.guanzon.cas.gl.status.PaymentRequestStatus;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -16,6 +12,8 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testPRFVAT {
@@ -29,7 +27,7 @@ public class testPRFVAT {
             System.setProperty("sys.default.path.metadata", "D:/GGC_Maven_Systems/config/metadata/new/");
             
             poApp = MiscUtil.Connect();
-            poPaymentRequest = new GLControllers(poApp, null).PaymentRequest();
+            poPaymentRequest = new CashflowControllers(poApp, null).PaymentRequest();
         } catch (SQLException ex) {
             Logger.getLogger(testPRFOpenIsuance.class.getName()).log(Level.SEVERE, null, ex);
         } catch (GuanzonException ex) {

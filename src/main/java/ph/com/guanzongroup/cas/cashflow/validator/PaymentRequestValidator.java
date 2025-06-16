@@ -3,10 +3,10 @@ package ph.com.guanzongroup.cas.cashflow.validator;
 import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.cas.gl.model.Model_Payment_Request_Detail;
-import org.guanzon.cas.gl.model.Model_Payment_Request_Master;
-import org.guanzon.cas.gl.status.PaymentRequestStatus;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 public class PaymentRequestValidator implements GValidator{
     GRiderCAS poGrider;

@@ -5,8 +5,6 @@ import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.cas.gl.Disbursement;
-import org.guanzon.cas.gl.services.GLControllers;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -14,12 +12,13 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testAddtoDisbursementDetail {
 
     static GRiderCAS poApp;
-    static GLControllers poDisbursement;
+    static CashflowControllers poDisbursement;
 
     @BeforeClass
     public static void setUpClass() {
@@ -28,7 +27,7 @@ public class testAddtoDisbursementDetail {
 
         poApp = MiscUtil.Connect();
 
-        poDisbursement = new GLControllers(poApp, null);
+        poDisbursement = new CashflowControllers(poApp, null);
 
     }
 

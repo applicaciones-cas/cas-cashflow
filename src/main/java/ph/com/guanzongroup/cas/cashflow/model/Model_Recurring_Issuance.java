@@ -7,12 +7,10 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
-import org.guanzon.cas.gl.model.Model_Particular;
-import org.guanzon.cas.gl.model.Model_Payee;
-import org.guanzon.cas.gl.services.GLModels;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Recurring_Issuance extends Model {
     Model_Particular poParticular;
@@ -44,8 +42,8 @@ public class Model_Recurring_Issuance extends Model {
             ID4 = "sAcctNoxx";
             
             poBranch = new ParamModels(poGRider).Branch();
-            poPayee = new GLModels(poGRider).Payee();
-            poParticular = new GLModels(poGRider).Particular();
+            poPayee = new CashflowModels(poGRider).Payee();
+            poParticular = new CashflowModels(poGRider).Particular();
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
