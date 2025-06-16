@@ -4,8 +4,10 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
+import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 
 
@@ -65,6 +67,40 @@ public class CashflowControllers {
         poRecurringIssuance.newRecord();
         return poRecurringIssuance;        
     }
+    
+    public Payee Payee() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.Payee: Application driver is not set.");
+            return null;
+        }
+        
+        if (poPayee != null) return poPayee;
+        
+        poPayee = new Payee();
+        poPayee.setApplicationDriver(poGRider);
+        poPayee.setWithParentClass(false);
+        poPayee.setLogWrapper(poLogWrapper);
+        poPayee.initialize();
+        poPayee.newRecord();
+        return poPayee;        
+    }
+    
+    public Particular Particular() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.Particular: Application driver is not set.");
+            return null;
+        }
+        
+        if (poParticular != null) return poParticular;
+        
+        poParticular = new Particular();
+        poParticular.setApplicationDriver(poGRider);
+        poParticular.setWithParentClass(false);
+        poParticular.setLogWrapper(poLogWrapper);
+        poParticular.initialize();
+        poParticular.newRecord();
+        return poParticular;        
+    }
        
     @Override
     protected void finalize() throws Throwable {
@@ -86,4 +122,6 @@ public class CashflowControllers {
     private BankAccountMaster poBankAccountMaster;
     private CachePayable poCachePayable;
     private RecurringIssuance poRecurringIssuance;
+    private Particular poParticular;
+    private Payee poPayee;
 }
