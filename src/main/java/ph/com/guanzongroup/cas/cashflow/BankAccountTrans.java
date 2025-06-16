@@ -1,12 +1,18 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.Date;
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 
 public class BankAccountTrans {
     private GRiderCAS poGRider;
+
+    private ResultSet poMaster;
     
     private String psBnkActID; 
     private String psBranchCd; 
@@ -356,5 +362,36 @@ public class BankAccountTrans {
         
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+    private boolean loadTransaction() throws SQLException{
+        String lsSQL = "SELECT" +
+                            "  a.dLastTran" +
+                            ", a.dLastPost" +
+                            ", a.nOBalance xOBalance" +
+                            ", a.nABalance xABalance" +
+                            ", a.nOBegBalx" +
+                            ", a.nABegBalx" +
+                            ", b.dTransact" +
+                            ", b.nAmountIn" +
+                            ", b.nAmountOt" +
+                            ", b.nLedgerNo" +
+                            ", b.dPostedxx" +
+                        " FROM Bank_Account_Master a" +
+                            " LEFT JOIN Bank_Account_Ledger b" +
+                                " ON a.sBnkActID = b.sBnkActID";
+        
+        if (pnEditMode == EditMode.ADDNEW){
+            lsSQL = MiscUtil.addCondition(lsSQL, "0 = 1");
+        } else {
+            lsSQL = MiscUtil.addCondition(lsSQL, "b.sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
+                                                        " AND b.sSourceNo = " + SQLUtil.toSQL(psSourceNo));
+        }
+        
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBnkActID = " + SQLUtil.toSQL(psBnkActID));
+        
+        poMaster = poGRider.executeQuery(lsSQL);
+        
+        return MiscUtil.RecordCount(poMaster) > 0;
     }
 }

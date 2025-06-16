@@ -31,6 +31,7 @@ public class Model_Bank_Account_Master extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
+            poEntity.updateNull("nEntryNox");
             poEntity.updateNull("dBegBalxx");
             poEntity.updateNull("dDueDatex");
             poEntity.updateNull("dLastTran");
@@ -97,6 +98,14 @@ public class Model_Bank_Account_Master extends Model {
 
     public String getCompanyId() {
         return (String) getValue("sCompnyID");
+    }
+    
+    public JSONObject setEntryNumber(int entryNumber) {
+        return setValue("nEntryNox", entryNumber);
+    }
+
+    public String getEntryNumber() {
+        return (String) getValue("nEntryNox");
     }
     
     public JSONObject setBankId(String bankId){
