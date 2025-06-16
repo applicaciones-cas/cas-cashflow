@@ -2,12 +2,16 @@ ph\com\guanzongroup\cas\cashflow\model\Model_Recurring_Issuance.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Master.class
 ph\com\guanzongroup\cas\cashflow\BankAccountTrans.class
 ph\com\guanzongroup\cas\cashflow\CachePayable.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Payee.class
 ph\com\guanzongroup\cas\cashflow\BankAccountConstants.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Detail.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Detail.class
 ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.class
+ph\com\guanzongroup\cas\cashflow\Payee.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Master.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.class
+ph\com\guanzongroup\cas\cashflow\Particular.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Particular.class
 ph\com\guanzongroup\cas\cashflow\RecurringIssuance.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Account_Chart.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Ledger.class
