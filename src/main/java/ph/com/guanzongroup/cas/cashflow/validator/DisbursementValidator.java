@@ -73,29 +73,46 @@ public class DisbursementValidator implements GValidator{
         poJSON = new JSONObject();
         
 //        
-//        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
-//            poJSON.put("message", "Invalid Branch");
-//            return poJSON;
-//        }
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
         
-//        if (poGrider.isMainOffice() || poGrider.isWarehouse()){
-//            if (poMaster.getDepartmentID()== null || poMaster.getDepartmentID().isEmpty()) {
-//                poJSON.put("message", "Department is not set");
-//                return poJSON;
-//            }
-//        }
+        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
+            poJSON.put("message", "Invalid Branch");
+            return poJSON;
+        }
+
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
         
-//        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
-//            poJSON.put("message", "Payee information is missing or not set.");
-//            return poJSON;
-//        }
+        if (poMaster.getCompanyID()== null || poMaster.getCompanyID().isEmpty()) {
+            poJSON.put("message", "Company is missing or not set.");
+            return poJSON;
+        }
         
-//        if (!poGrider.isMainOffice() || !poGrider.isWarehouse()){
-//            if (poMaster.getSeriesNo()== null || poMaster.getSeriesNo().isEmpty()) {
-//                poJSON.put("message", "Series No is not set");
-//                return poJSON;
-//            }
-//        }
+        if (poMaster.getVoucherNo()== null || poMaster.getVoucherNo().isEmpty()) {
+            poJSON.put("message", "Voucher No is missing or not set.");
+            return poJSON;
+        }        
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        
+        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+            poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
         
         poJSON.put("result", "success");
         return poJSON;
