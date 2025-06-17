@@ -621,6 +621,19 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
     }
+    
+    public JSONObject removeDetails() {
+        poJSON = new JSONObject();
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next();
+            detail.remove();
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
 
     @Override
     public int getDetailCount() {

@@ -898,25 +898,25 @@ public class APPaymentAdjustment extends Parameter {
         return poJSON;
     }
     
-    @Override
-    public JSONObject willSave() throws SQLException, GuanzonException{
-        /*Put system validations and other assignments here*/
-        poJSON = new JSONObject();
-//        try {
-
-
-            //Populate cache payables
-//            poJSON = populateCachePayable(true, APPaymentAdjustmentStatus.CONFIRMED);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
-            
-//        } catch (CloneNotSupportedException ex) {
-//            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-        
-        return poJSON;
-    }
+//    @Override
+//    public JSONObject willSave() throws SQLException, GuanzonException{
+//        /*Put system validations and other assignments here*/
+//        poJSON = new JSONObject();
+////        try {
+//
+//
+//            //Populate cache payables
+////            poJSON = populateCachePayable(true, APPaymentAdjustmentStatus.CONFIRMED);
+////            if (!"success".equals((String) poJSON.get("result"))) {
+////                return poJSON;
+////            }
+//            
+////        } catch (CloneNotSupportedException ex) {
+////            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, null, ex);
+////        }
+//        
+//        return poJSON;
+//    }
     
     @Override
     public JSONObject saveOthers() throws SQLException, GuanzonException{
@@ -937,6 +937,7 @@ public class APPaymentAdjustment extends Parameter {
             Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, null, ex);
         }
         
+        poJSON.put("result", "success");
         return poJSON;
     }
     
