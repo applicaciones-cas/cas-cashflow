@@ -1,7 +1,16 @@
-<<<<<<< Updated upstream
+testPRFUpdateTransaction.class
+testPRFPaidTransaction.class
+testPRFCancelTransaction.class
+testDisbursementVerifyTransaction.class
+testPRFConfirmTransaction.class
+testDisbursementNewTransaction.class
+testDisbursementUpdateTransaction.class
+testPRFOpenIsuance.class
+testPRFgetSeriesno.class
+exportXML.class
 testCachePayable.class
+testPRFLoadRecurringInssuance.class
 testBankAccountMaster.class
-=======
 testPRFUpdateTransaction.class
 testPRFPaidTransaction.class
 testPRFCancelTransaction.class
@@ -28,4 +37,13 @@ testSOATagging.class
 testPRFVAT.class
 testPRFVoidTransaction.class
 testGetPRFMasterList.class
->>>>>>> Stashed changes
+testPRFNewTransaction.class
+testPRFOpenTransaction.class
+testAddtoDisbursementDetail.class
+testPRFPostTransaction.class
+testGetDVMasterList.class
+testDisbursementOpenTransaction.class
+testGetUnifiedPaymentsList.class
+testPRFVAT.class
+testPRFLiquidateTransaction.class
+testPRFVoidTransaction.class

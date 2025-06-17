@@ -1,7 +1,5 @@
-<<<<<<< Updated upstream
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testBankAccountMaster.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testCachePayable.java
-=======
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFUpdateTransaction.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFgetSeriesno.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFLoadRecurringInssuance.java
@@ -28,4 +26,3 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFLiquidateTra
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFVAT.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testSOATagging.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testDisbursementUpdateTransaction.java
->>>>>>> Stashed changes

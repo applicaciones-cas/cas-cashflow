@@ -1,4 +1,3 @@
-<<<<<<< Updated upstream
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountMaster.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CachePayable.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Account_Chart.java
@@ -13,7 +12,6 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountConstants.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Particular.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowModels.java
-=======
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\APPaymentAdjustmentValidator.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CachePayable.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.java
@@ -25,15 +23,12 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Detail.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Payments.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\PaymentRequestValidator.java
->>>>>>> Stashed changes
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Recurring_Issuance.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Master.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Master.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Payee.java
-<<<<<<< Updated upstream
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Detail.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.java
-=======
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\NewClass.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPayments.java
@@ -70,4 +65,3 @@ D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payment_Request_Detail.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\PaymentRequest.java
->>>>>>> Stashed changes

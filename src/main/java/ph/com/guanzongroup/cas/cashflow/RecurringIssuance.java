@@ -9,13 +9,11 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
-import org.guanzon.cas.gl.Particular;
-import org.guanzon.cas.gl.Payee;
-import org.guanzon.cas.gl.services.GLControllers;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class RecurringIssuance extends Parameter{
@@ -153,7 +151,7 @@ public class RecurringIssuance extends Parameter{
             return poJSON;
         }
         
-        Particular loParticular = new GLControllers(poGRider, logwrapr).Particular();
+        Particular loParticular = new CashflowControllers(poGRider, logwrapr).Particular();
         poJSON = loParticular.searchRecord(description, false);
         
         if ("success".equals((String) poJSON.get("result"))){
@@ -189,7 +187,7 @@ public class RecurringIssuance extends Parameter{
             return poJSON;
         }
         
-        Payee loPayee = new GLControllers(poGRider, logwrapr).Payee();
+        Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
         poJSON = loPayee.searchRecord(payeeName, false);
         
         if ("success".equals((String) poJSON.get("result"))){

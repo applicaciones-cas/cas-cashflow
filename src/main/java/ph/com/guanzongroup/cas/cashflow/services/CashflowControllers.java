@@ -4,11 +4,16 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
+import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
 import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.CheckPayments;
+import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.Payee;
+import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
+import ph.com.guanzongroup.cas.cashflow.SOATagging;
 
 
 public class CashflowControllers {
@@ -101,6 +106,91 @@ public class CashflowControllers {
         poParticular.newRecord();
         return poParticular;        
     }
+    
+    public PaymentRequest PaymentRequest() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.PaymentRequest: Application driver is not set.");
+            return null;
+        }
+        
+        if (poPaymentRequest != null) return poPaymentRequest;
+        
+        poPaymentRequest = new PaymentRequest();
+        poPaymentRequest.setApplicationDriver(poGRider);
+        poPaymentRequest.setBranchCode(poGRider.getBranchCode());
+        poPaymentRequest.setLogWrapper(poLogWrapper);
+        poPaymentRequest.setVerifyEntryNo(true);
+        poPaymentRequest.setWithParent(false);
+        return poPaymentRequest;        
+    }
+
+    public Disbursement Disbursement() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.Disbursement: Application driver is not set.");
+            return null;
+        }
+        
+        if (poDisbursement != null) return poDisbursement;
+        
+        poDisbursement = new Disbursement();
+        poDisbursement.setApplicationDriver(poGRider);
+        poDisbursement.setBranchCode(poGRider.getBranchCode());
+        poDisbursement.setLogWrapper(poLogWrapper);
+        poDisbursement.setVerifyEntryNo(true);
+        poDisbursement.setWithParent(false);
+        return poDisbursement;        
+    }
+    
+    public CheckPayments CheckPayments() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.CheckPayments: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckPayments != null) return poCheckPayments;
+        
+       
+        poCheckPayments = new CheckPayments();
+        poCheckPayments.setApplicationDriver(poGRider);
+        poCheckPayments.setWithParentClass(true);
+        poCheckPayments.setLogWrapper(poLogWrapper);
+        poCheckPayments.initialize();
+        return poCheckPayments;         
+    }
+    
+    public SOATagging SOATagging(){
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.SOATagging: Application driver is not set.");
+            return null;
+        }
+        
+        if (poSOATagging != null) return poSOATagging;
+        
+        poSOATagging = new SOATagging();
+        poSOATagging.setApplicationDriver(poGRider);
+        poSOATagging.setBranchCode(poGRider.getBranchCode());
+        poSOATagging.setVerifyEntryNo(true);
+        poSOATagging.setWithParent(false);
+        poSOATagging.setLogWrapper(poLogWrapper);
+        return poSOATagging;        
+    }
+    
+    public APPaymentAdjustment APPayementAdjustment(){
+        if (poGRider == null){
+            poLogWrapper.severe("GLControllers.APPayementAdjustment: Application driver is not set.");
+            return null;
+        }
+        
+        if (poAPPaymentAdjustment != null) return poAPPaymentAdjustment;
+        
+        poAPPaymentAdjustment = new APPaymentAdjustment();
+        poAPPaymentAdjustment.setApplicationDriver(poGRider);
+        poAPPaymentAdjustment.setApplicationDriver(poGRider);
+        poAPPaymentAdjustment.setWithParentClass(false);
+        poAPPaymentAdjustment.setLogWrapper(poLogWrapper);
+        poAPPaymentAdjustment.initialize();
+        return poAPPaymentAdjustment;        
+    }
        
     @Override
     protected void finalize() throws Throwable {
@@ -108,6 +198,15 @@ public class CashflowControllers {
             poCachePayable = null;
             poBankAccountMaster = null;
             poRecurringIssuance = null;
+            
+            poParticular = null;
+            poPayee = null;
+            poRecurringIssuance = null;
+            poCachePayable = null;
+            poBankAccountMaster = null;
+            poDisbursement = null;
+            poCheckPayments = null;            
+            poPaymentRequest = null;
             
             poLogWrapper = null;
             poGRider = null;
@@ -124,4 +223,9 @@ public class CashflowControllers {
     private RecurringIssuance poRecurringIssuance;
     private Particular poParticular;
     private Payee poPayee;
+    private PaymentRequest poPaymentRequest;
+    private Disbursement poDisbursement;
+    private CheckPayments poCheckPayments;
+    private SOATagging poSOATagging;
+    private APPaymentAdjustment poAPPaymentAdjustment;
 }
