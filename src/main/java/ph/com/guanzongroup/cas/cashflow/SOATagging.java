@@ -28,7 +28,6 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.Client;
 import org.guanzon.cas.client.services.ClientControllers;
-import org.guanzon.cas.gl.services.SOATaggingModels;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
@@ -1076,7 +1075,7 @@ public class SOATagging extends Transaction {
     }
 
     public void resetMaster() {
-        poMaster = new SOATaggingModels(poGRider).SOATaggingMaster();
+        poMaster = new CashflowModels(poGRider).SOATaggingMaster();
     }
 
     @Override
