@@ -23,16 +23,15 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.Client;
 import org.guanzon.cas.client.services.ClientControllers;
-import org.guanzon.cas.gl.model.Model_AP_Payment_Adjustment;
-import org.guanzon.cas.gl.services.GLControllers;
-import org.guanzon.cas.gl.services.GLModels;
-import org.guanzon.cas.gl.status.APPaymentAdjustmentStatus;
-import org.guanzon.cas.gl.validator.APPaymentAdjustmentValidator;
+import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Adjustment;
+import ph.com.guanzongroup.cas.cashflow.status.APPaymentAdjustmentStatus;
+import ph.com.guanzongroup.cas.cashflow.validator.APPaymentAdjustmentValidator;
 import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 /**
  *
@@ -53,7 +52,7 @@ public class APPaymentAdjustment extends Parameter {
         psRecdStat = Logical.YES;
         pbInitRec = true;
 
-        poModel = new GLModels(poGRider).APPaymentAdjustment();
+        poModel = new CashflowModels(poGRider).APPaymentAdjustment();
 
         paModel = new ArrayList<>();
     }
@@ -575,7 +574,7 @@ public class APPaymentAdjustment extends Parameter {
     }
     
     public void resetMaster() {
-        poModel = new GLModels(poGRider).APPaymentAdjustment();
+        poModel = new CashflowModels(poGRider).APPaymentAdjustment();
     }
 
     @Override
@@ -810,7 +809,7 @@ public class APPaymentAdjustment extends Parameter {
     }
     
     private Model_AP_Payment_Adjustment APPaymentAdjustment() {
-        return new GLModels(poGRider).APPaymentAdjustment();
+        return new CashflowModels(poGRider).APPaymentAdjustment();
     }
 
     public Model_AP_Payment_Adjustment APPaymentAdjustmentList(int row) {

@@ -8,10 +8,10 @@ package ph.com.guanzongroup.cas.cashflow.validator;
 import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.cas.gl.model.Model_AP_Payment_Detail;
-import org.guanzon.cas.gl.model.Model_AP_Payment_Master;
-import org.guanzon.cas.gl.status.SOATaggingStatus;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Master;
+import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 
 /**
  *
