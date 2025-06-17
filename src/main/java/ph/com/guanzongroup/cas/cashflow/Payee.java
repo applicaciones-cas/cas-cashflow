@@ -8,9 +8,9 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
-import org.guanzon.cas.gl.model.Model_Payee;
-import org.guanzon.cas.gl.services.GLModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Payee extends Parameter{
     Model_Payee poModel;
@@ -19,7 +19,7 @@ public class Payee extends Parameter{
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
         
-        GLModels model = new GLModels(poGRider);
+        CashflowModels model = new CashflowModels(poGRider);
         poModel = model.Payee();
         
         super.initialize();
@@ -120,4 +120,33 @@ public class Payee extends Parameter{
         
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
+    
+    public JSONObject searchRecordbyClient(String value, String ParticularID, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = getSQ_Browse();
+        String lsCondition = "";
+
+        if (ParticularID != null && !ParticularID.isEmpty()) {
+            lsCondition = "a.sPrtclrID = " + SQLUtil.toSQL(ParticularID);
+        }
+
+         lsSQL = MiscUtil.addCondition(getSQ_Browse(), lsCondition);
+        
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ClientID»ID»Name»Particular»AP Client",
+                "sClientID»sPayeeIDx»sPayeeNme»xPrtclrNm»xClientNm",
+                "a.sClientID»a.sPayeeIDx»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }    
+    
 }
