@@ -5,10 +5,6 @@ import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.cas.gl.SOATagging;
-import org.guanzon.cas.gl.services.GLControllers;
-import org.guanzon.cas.gl.services.SOATaggingControllers;
-import org.guanzon.cas.gl.status.SOATaggingStatic;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.junit.Assert;
@@ -16,6 +12,9 @@ import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.SOATagging;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -38,7 +37,7 @@ public class testSOATagging {
 
         instance = MiscUtil.Connect();
 
-        poSOATaggingController = new GLControllers(instance, null).SOATagging();
+        poSOATaggingController = new CashflowControllers(instance, null).SOATagging();
     }
 
     @Test

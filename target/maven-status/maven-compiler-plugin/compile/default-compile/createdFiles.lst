@@ -27,6 +27,8 @@ ph\com\guanzongroup\cas\cashflow\SOATagging.class
 ph\com\guanzongroup\cas\cashflow\BankAccountTrans.class
 ph\com\guanzongroup\cas\cashflow\validator\DisbursementValidator.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Detail.class
+ph\com\guanzongroup\cas\cashflow\validator\DisbursementValidator.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Detail.class
 ph\com\guanzongroup\cas\cashflow\services\SOATaggingControllers.class
 ph\com\guanzongroup\cas\cashflow\Payee.class
 ph\com\guanzongroup\cas\cashflow\validator\NewClass.class
@@ -44,6 +46,16 @@ ph\com\guanzongroup\cas\cashflow\model\Model_Payee.class
 ph\com\guanzongroup\cas\cashflow\model\SourceDetail.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Detail.class
 ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.class
+ph\com\guanzongroup\cas\cashflow\Payee.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Master.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.class
+ph\com\guanzongroup\cas\cashflow\Particular.class
+ph\com\guanzongroup\cas\cashflow\model\Model_Particular.class
+ph\com\guanzongroup\cas\cashflow\validator\PaymentRequestValidator.class
+ph\com\guanzongroup\cas\cashflow\model\SelectedITems.class
+ph\com\guanzongroup\cas\cashflow\status\SOATaggingStatic.class
+ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Master.class
+ph\com\guanzongroup\cas\cashflow\status\CheckStatus$CheckState.class
 ph\com\guanzongroup\cas\cashflow\validator\PaymentRequestValidator.class
 ph\com\guanzongroup\cas\cashflow\SOATagging$CustomJasperViewer.class
 ph\com\guanzongroup\cas\cashflow\model\SelectedITems.class

@@ -5,13 +5,14 @@ import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.cas.gl.APPaymentAdjustment;
-import org.guanzon.cas.gl.services.GLControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 
@@ -38,7 +39,7 @@ public class testAPPaymentAdjustment {
 
         instance = MiscUtil.Connect();
         
-        poAPPaymentAdjustment = new GLControllers(instance, null).APPayementAdjustment();
+        poAPPaymentAdjustment = new CashflowControllers(instance, null).APPayementAdjustment();
     }
 
 //    @Test
