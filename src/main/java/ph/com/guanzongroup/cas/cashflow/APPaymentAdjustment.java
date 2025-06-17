@@ -73,7 +73,8 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         //Populate cache payables
-        if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)){
+        if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED) 
+                || getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CANCELLED) ){
             poJSON = populateCachePayable(true, getModel().getTransactionStatus());
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -180,24 +181,30 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
         poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
         poCachePayable.InitTransaction();
-        poCachePayable.setWithParent(true);
         
-        if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
-            if(isSave){
-                //Update cache payables
-                if(getCachePayable().isEmpty()){
+        if(isSave){
+            //Update cache payables
+            if(getCachePayable().isEmpty()){
+                if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
                     poJSON = poCachePayable.NewTransaction();
                     if ("error".equals((String) poJSON.get("result"))){
                         return poJSON;
                     }
-                } else {
-                    poJSON = poCachePayable.OpenTransaction(getCachePayable());
-                    if ("error".equals((String) poJSON.get("result"))){
-                        return poJSON;
-                    }
                 }
-            
             } else {
+                poJSON = poCachePayable.OpenTransaction(getCachePayable());
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+
+                poJSON = poCachePayable.UpdateTransaction();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            }
+
+        } else {
+            if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
                 poJSON = poCachePayable.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -205,31 +212,39 @@ public class APPaymentAdjustment extends Parameter {
             }
         }
         
-        //Cache Payable Master
-        poCachePayable.Master().setIndustryCode(getModel().getIndustryId());
-        poCachePayable.Master().setBranchCode(getModel().getBranchCode());
-        poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); //TODO
-        poCachePayable.Master().setCompanyId(getModel().getCompanyId());
-        poCachePayable.Master().setClientId(getModel().getClientId());
-        poCachePayable.Master().setSourceCode(SOURCE_CODE);
-        poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
-        poCachePayable.Master().setReferNo(getModel().getReferenceNo()); //TODO
-        poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); //TODO
-        poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); //TODO
-        poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); //TODO
-        poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); //TODO
         
-        //Cache Payable Detail
-        if(poCachePayable.getDetailCount() < 0){
-            poCachePayable.AddDetail();
+        if(poCachePayable.getEditMode() == EditMode.ADDNEW || poCachePayable.getEditMode() == EditMode.UPDATE){
+            //Cache Payable Master
+            poCachePayable.Master().setIndustryCode(getModel().getIndustryId());
+            poCachePayable.Master().setBranchCode(getModel().getBranchCode());
+            poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); 
+            poCachePayable.Master().setCompanyId(getModel().getCompanyId());
+            poCachePayable.Master().setClientId(getModel().getClientId());
+            poCachePayable.Master().setSourceCode("PAdj");
+            poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
+            poCachePayable.Master().setReferNo(getModel().getReferenceNo()); 
+            poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); 
+            poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); 
+            poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
+            poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
+
+            //Cache Payable Detail
+            if(poCachePayable.getDetailCount() < 0){
+                poCachePayable.AddDetail();
+            }
+
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType("PAdj");
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setReceivables(getModel().getCreditAmount().doubleValue());
+            
+            
+            if(status.equals(APPaymentAdjustmentStatus.CANCELLED)){
+                poCachePayable.Master().setTransactionStatus(APPaymentAdjustmentStatus.CANCELLED);
+            }
+            
         }
-        
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(SOURCE_CODE);
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setReceivables(getModel().getCreditAmount().doubleValue());
-        
         return poJSON;
     }
     
@@ -457,7 +472,6 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         poModel.setTransactionStatus(APPaymentAdjustmentStatus.CANCELLED);
-        
         poJSON = SaveTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -923,9 +937,11 @@ public class APPaymentAdjustment extends Parameter {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         try {
-            
-            if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)){
+            if(poCachePayable != null){
                 if(poCachePayable.getEditMode() == EditMode.ADDNEW || poCachePayable.getEditMode() == EditMode.UPDATE){
+                    poCachePayable.setWithParent(true);
+                    poCachePayable.Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                    poCachePayable.Master().setModifiedDate(poGRider.getServerDate());
                     poJSON = poCachePayable.SaveTransaction();
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -934,7 +950,7 @@ public class APPaymentAdjustment extends Parameter {
             }
             
         } catch (CloneNotSupportedException ex) {
-            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         
         poJSON.put("result", "success");

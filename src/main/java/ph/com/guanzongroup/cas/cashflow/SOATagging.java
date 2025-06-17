@@ -1022,13 +1022,25 @@ public class SOATagging extends Transaction {
                 lsSourceCd = loPaymentRequest.getSourceCode();
                 ldblTranTotal = loPaymentRequest.Master().getTranTotal();
                 ldblDebitAmt = loPaymentRequest.Master().getTranTotal();
+                lsClientId = loPaymentRequest.Master().Payee().getClientID();
+                
+                if(Master().getClientId() == null || "".equals(Master().getClientId())){
+                    Master().setClientId(lsClientId);
+                } else {
+                    if (!Master().getClientId().equals(lsClientId)) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
+                        poJSON.put("row", lnCtr);
+                        return poJSON;
+                    }
+                }
 
                 if (Master().getIssuedTo() == null || "".equals(Master().getIssuedTo())) {
                     Master().setIssuedTo(lsIssuedTo);
                 } else {
                     if (!Master().getIssuedTo().equals(lsIssuedTo)) {
                         poJSON.put("result", "error");
-                        poJSON.put("message", "Seleted Payee of payables is not equal to transaction payee.");
+                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
                         poJSON.put("row", lnCtr);
                         return poJSON;
                     }
@@ -1054,7 +1066,7 @@ public class SOATagging extends Transaction {
                 } else {
                     if (!Master().getClientId().equals(lsClientId)) {
                         poJSON.put("result", "error");
-                        poJSON.put("message", "Seleted Supplier of payables is not equal to transaction supplier.");
+                        poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
                         poJSON.put("row", lnCtr);
                         return poJSON;
                     }
@@ -1227,7 +1239,6 @@ public class SOATagging extends Transaction {
     private JSONObject validatePayableAmt(int row) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         double ldblBalance = 0.0000;
-//            ldblPayment = getPayment(Detail(lnCtr).getSourceNo()) + Detail(lnCtr).getAppliedAmount().doubleValue();
         switch (Detail(row).getSourceCode()) {
             case SOATaggingStatic.PaymentRequest:
                 ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal().doubleValue()
@@ -1241,6 +1252,15 @@ public class SOATagging extends Transaction {
                 }
                 break;
             case SOATaggingStatic.CachePayable:
+                ldblBalance = Detail(row).CachePayableMaster().getNetTotal()
+                        - (Detail(row).getAppliedAmount().doubleValue()
+                        + getPayment(Detail(row).getSourceNo()));
+                if (ldblBalance < 0) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid transaction balance " + ldblBalance + " for source no " + Detail(row).getSourceNo() + ".");
+                    poJSON.put("row", row);
+                    return poJSON;
+                }
                 break;
         }
 
