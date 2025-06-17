@@ -295,9 +295,11 @@ public class CashflowModels {
         }
 
         return poCheckPayments;
-    }    public Model_AP_Payment_Master SOATaggingMaster(){
+    }    
+       
+    public Model_AP_Payment_Master SOATaggingMaster(){
         if (poGRider == null){
-            System.err.println("SOATaggingModels.SOATaggingMaster: Application driver is not set.");
+            System.err.println("GLModels.SOATaggingMaster: Application driver is not set.");
             return null;
         }
         
@@ -314,7 +316,7 @@ public class CashflowModels {
     
     public Model_AP_Payment_Detail SOATaggingDetails(){
         if (poGRider == null){
-            System.err.println("SOATaggingModels.SOATaggingDetails: Application driver is not set.");
+            System.err.println("GLModels.SOATaggingDetails: Application driver is not set.");
             return null;
         }
         
@@ -328,7 +330,7 @@ public class CashflowModels {
 
         return poAPPaymentDetail;
     }
-    
+
     public Model_AP_Payment_Adjustment APPaymentAdjustment(){
         if (poGRider == null){
             System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
