@@ -31,7 +31,7 @@ public class Model_Bank_Account_Master extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateNull("nEntryNox");
+//            poEntity.updateNull("nEntryNox");
             poEntity.updateNull("dBegBalxx");
             poEntity.updateNull("dDueDatex");
             poEntity.updateNull("dLastTran");

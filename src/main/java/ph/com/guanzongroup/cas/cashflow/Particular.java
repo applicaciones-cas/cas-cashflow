@@ -8,9 +8,9 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
-import org.guanzon.cas.gl.model.Model_Particular;
-import org.guanzon.cas.gl.services.GLModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Particular extends Parameter{
     Model_Particular poModel;
@@ -19,7 +19,7 @@ public class Particular extends Parameter{
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
         
-        GLModels model = new GLModels(poGRider);
+        CashflowModels model = new CashflowModels(poGRider);
         poModel = model.Particular();
         
         super.initialize();
