@@ -1,2 +1,31 @@
+<<<<<<< Updated upstream
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testBankAccountMaster.java
 D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testCachePayable.java
+=======
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFUpdateTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFgetSeriesno.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFLoadRecurringInssuance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testAddtoDisbursementDetail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testDisbursementVerifyTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testGetDVMasterList.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFPostTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFCancelTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testBankAccountMaster.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\exportXML.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testDisbursementNewTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFVoidTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFConfirmTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testCachePayable.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testGetUnifiedPaymentsList.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFOpenTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testGetPRFMasterList.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFPaidTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testDisbursementOpenTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testAPPaymentAdjustment.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFOpenIsuance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFNewTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFLiquidateTransaction.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testPRFVAT.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testSOATagging.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\test\java\testDisbursementUpdateTransaction.java
+>>>>>>> Stashed changes
