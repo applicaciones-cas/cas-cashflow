@@ -62,8 +62,8 @@ public class testGetDVMasterList {
                     System.out.println("poPurchasingController no:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).getTransactionNo());
                     System.out.println("poPurchasingController entry no:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).getEntryNo());
                     System.out.println("poPurchasingController status:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).getTransactionStatus());
-                    System.out.println("poPurchasingController status:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).checkPayments().Banks().getBankName());
-                    System.out.println("poPurchasingController status:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).checkPayments().Bank_Account_Master().getAccountNo());
+                    System.out.println("poPurchasingController status:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).CheckPayments().Banks().getBankName());
+                    System.out.println("poPurchasingController status:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).CheckPayments().Bank_Account_Master().getAccountNo());
                 }
             }
             

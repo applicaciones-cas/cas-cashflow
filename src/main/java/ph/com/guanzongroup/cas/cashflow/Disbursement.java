@@ -663,6 +663,19 @@ public class Disbursement extends Transaction {
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
                         }
+                    }else{
+                        boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
+                        if (disbursementTypeChanged) {
+                            if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.OPEN);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            } else {
+                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.VOID);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            }
+                        }
                     }
                     break;
             }
@@ -727,6 +740,10 @@ public class Disbursement extends Transaction {
 
     private SOATagging SOATagging() throws SQLException, GuanzonException {
         return new SOATaggingControllers(poGRider, logwrapr).SOATagging();
+    }
+    
+    private CachePayable CachePayable() throws SQLException, GuanzonException {
+        return new CashflowControllers(poGRider, logwrapr).CachePayable();
     }
 
     public JSONObject updateDisbursementsSource(String sourceNo, String sourceCode, String particular, Boolean isAdd)
@@ -794,31 +811,31 @@ public class Disbursement extends Transaction {
                 break;
 
             case DisbursementStatic.SourceCode.CASH_PAYABLE:
-                for (lnRow = 0; lnRow <= poApPayments.size() - 1; lnRow++) {
-                    if (poApPayments.get(lnRow).Master().getTransactionNo() != null) {
-                        if (sourceNo.equals(poApPayments.get(lnRow).Master().getTransactionNo())) {
+                for (lnRow = 0; lnRow <= poCachePayable.size() - 1; lnRow++) {
+                    if (poCachePayable.get(lnRow).Master().getTransactionNo() != null) {
+                        if (sourceNo.equals(poCachePayable.get(lnRow).Master().getTransactionNo())) {
                             lbExist = true;
                             break;
                         }
                     }
                 }
                 if (!lbExist) {
-                    poApPayments.add(SOATagging());
-                    poApPayments.get(poApPayments.size() - 1).InitTransaction();
-                    poApPayments.get(poApPayments.size() - 1).OpenTransaction(sourceNo);
-                    poApPayments.get(poApPayments.size() - 1).UpdateTransaction();
-                    lnList = poApPayments.size() - 1;
+                    poCachePayable.add(CachePayable());
+                    poCachePayable.get(poCachePayable.size() - 1).InitTransaction();
+                    poCachePayable.get(poCachePayable.size() - 1).OpenTransaction(sourceNo);
+                    poCachePayable.get(poCachePayable.size() - 1).UpdateTransaction();
+                    lnList = poCachePayable.size() - 1;
                 } else {
                     lnList = lnRow;
                 }
                 if (isAdd) {
-                    poApPayments.get(lnList).Master().isProcessed(false);
-                    poApPayments.get(lnList).Master().setModifyingId(poGRider.getUserID());
-                    poApPayments.get(lnList).Master().setModifiedDate(poGRider.getServerDate());
+//                    poCachePayable.get(lnList).Master().isProcessed(false);
+                    poCachePayable.get(lnList).Master().setModifyingId(poGRider.getUserID());
+                    poCachePayable.get(lnList).Master().setModifiedDate(poGRider.getServerDate());
                 } else {
-                    poApPayments.get(lnList).Master().isProcessed(false);
-                    poApPayments.get(lnList).Master().setModifyingId(poGRider.getUserID());
-                    poApPayments.get(lnList).Master().setModifiedDate(poGRider.getServerDate());
+//                    poCachePayable.get(lnList).Master().isProcessed(false);
+                    poCachePayable.get(lnList).Master().setModifyingId(poGRider.getUserID());
+                    poCachePayable.get(lnList).Master().setModifiedDate(poGRider.getServerDate());
                 }
                 break;
 
@@ -1336,9 +1353,9 @@ public class Disbursement extends Transaction {
                 detailCount = poCAchePayable.getDetailCount();
                 for (int lnCtr = 0; lnCtr < detailCount; lnCtr++) {
                     sourceNo = poCAchePayable.Detail(lnCtr).getTransactionNo();
-                    sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
+                    sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = poCAchePayable.Detail(lnCtr).getTransactionType();
-                    amount = poCAchePayable.Detail(lnCtr).getGrossAmount();
+                    amount = Double.parseDouble(String.valueOf(poCAchePayable.Detail(lnCtr).getGrossAmount()));
                 }
                 break;
 

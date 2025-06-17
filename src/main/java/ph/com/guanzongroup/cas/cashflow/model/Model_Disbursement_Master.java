@@ -427,7 +427,7 @@ public class Model_Disbursement_Master extends Model {
         }
     }
     
-    public Model_Check_Payments checkPayments() throws SQLException, GuanzonException {
+    public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sTransNox"))) {
             if (poCheckPayments.getEditMode() == EditMode.READY
                     && poCheckPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
