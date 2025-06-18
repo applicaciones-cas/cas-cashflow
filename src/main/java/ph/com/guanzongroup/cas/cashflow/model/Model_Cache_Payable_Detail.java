@@ -67,52 +67,52 @@ public class Model_Cache_Payable_Detail extends Model {
         return (String) getValue("sTranType");
     }
     
-    public JSONObject setGrossAmount(double amount){
+    public JSONObject setGrossAmount(Number amount){
         return setValue("nGrossAmt", amount);
     }
 
-    public double getGrossAmount() {
-        return (double) getValue("nGrossAmt");
+    public Number getGrossAmount() {
+        return (Number) getValue("nGrossAmt");
     }
     
-    public JSONObject setDiscountAmount(double amount){
+    public JSONObject setDiscountAmount(Number amount){
         return setValue("nDiscAmtx", amount);
     }
 
-    public double getDiscountAmount() {
-        return (double) getValue("nDiscAmtx");
+    public Number getDiscountAmount() {
+        return (Number) getValue("nDiscAmtx");
     }
     
-    public JSONObject setDeductionAmount(double amount){
+    public JSONObject setDeductionAmount(Number amount){
         return setValue("nDeductnx", amount);
     }
 
-    public double getDeductionAmount() {
-        return (double) getValue("nDeductnx");
+    public Number getDeductionAmount() {
+        return (Number) getValue("nDeductnx");
     }
     
-    public JSONObject setPayables(double amount){
+    public JSONObject setPayables(Number amount){
         return setValue("nPayables", amount);
     }
 
-    public double getPayables() {
-        return (double) getValue("nPayables");
+    public Number getPayables() {
+        return (Number) getValue("nPayables");
     }
     
-    public JSONObject setReceivables(double amount){
+    public JSONObject setReceivables(Number amount){
         return setValue("nRecvbles", amount);
     }
 
-    public double getReceivables() {
-        return (double) getValue("nRecvbles");
+    public Number getReceivables() {
+        return (Number) getValue("nRecvbles");
     }
     
-    public JSONObject setAmountPaid(double amount){
+    public JSONObject setAmountPaid(Number amount){
         return setValue("nAmtPaidx", amount);
     }
 
-    public double getAmountPaid() {
-        return (double) getValue("nAmtPaidx");
+    public Number getAmountPaid() {
+        return (Number) getValue("nAmtPaidx");
     }
         
     @Override

@@ -22,7 +22,7 @@ import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
  *
  * @author User
  */
-public class Model_Check_Printing extends Model {
+public class Model_Check_Printing_Master extends Model {
 
   
     Model_Bank_Account_Master poBankAccountMaster;
@@ -40,7 +40,7 @@ public class Model_Check_Printing extends Model {
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateObject("nTotalAmt", DisbursementStatic.DefaultValues.default_value_double_0000);
-            poEntity.updateBoolean("cIsUpload", false);
+//            poEntity.updateBoolean("cIsUpload", false);
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -80,11 +80,11 @@ public class Model_Check_Printing extends Model {
     }
 
     public JSONObject setBankID(String bankID) {
-        return setValue("bankID", bankID);
+        return setValue("sBankIDxx", bankID);
     }
 
     public String getBankID() {
-        return (String) getValue("bankID");
+        return (String) getValue("sBankIDxx");
     }
     
     public JSONObject setRemarks(String remarks) {

@@ -139,4 +139,34 @@ public class BankAccountMaster extends Parameter{
         
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
+    
+    
+    
+    public JSONObject searchRecordbyBanks(String value, String bankID, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = getSQ_Browse();
+        String lsCondition = "";
+
+        if (bankID != null && !bankID.isEmpty()) {
+            lsCondition = "a.sBankIDxx = " + SQLUtil.toSQL(bankID);
+        }
+
+         lsSQL = MiscUtil.addCondition(getSQ_Browse(), lsCondition);
+        
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Bank»Account No.»Account Name",
+                "sBnkActID»xBankName»sActNumbr»sActNamex",
+                "a.sBnkActID»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }    
 }

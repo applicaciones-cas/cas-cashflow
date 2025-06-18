@@ -34,6 +34,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.SelectedITems;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
@@ -497,11 +498,11 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchBankAccount(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchBankAccount(String value,String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecordbyBanks(value,Banks, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
 //            Master().setBankAccountID(object.getModel().getBankAccountId());
@@ -650,11 +651,11 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.OPEN);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.VOID);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
@@ -663,11 +664,11 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.OPEN);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.OPEN);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.VOID);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
