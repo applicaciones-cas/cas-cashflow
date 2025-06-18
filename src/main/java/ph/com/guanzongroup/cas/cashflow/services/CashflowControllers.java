@@ -9,6 +9,7 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
+import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
@@ -191,6 +192,23 @@ public class CashflowControllers {
         poAPPaymentAdjustment.initialize();
         return poAPPaymentAdjustment;        
     }
+    
+    public CheckPrintingRequest CheckPrintingRequest(){
+        if (poGRider == null){
+            poLogWrapper.severe("CashflowController.CheckPrintingRequest: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckPrintingRequest != null) return poCheckPrintingRequest;
+        
+        poCheckPrintingRequest = new CheckPrintingRequest();
+        poCheckPrintingRequest.setApplicationDriver(poGRider);
+        poCheckPrintingRequest.setBranchCode(poGRider.getBranchCode());
+        poCheckPrintingRequest.setLogWrapper(poLogWrapper);
+        poCheckPrintingRequest.setVerifyEntryNo(true);
+        poCheckPrintingRequest.setWithParent(false);
+        return poCheckPrintingRequest;        
+    }
        
     @Override
     protected void finalize() throws Throwable {
@@ -207,6 +225,7 @@ public class CashflowControllers {
             poDisbursement = null;
             poCheckPayments = null;            
             poPaymentRequest = null;
+            poCheckPrintingRequest = null;
             
             poLogWrapper = null;
             poGRider = null;
@@ -228,4 +247,5 @@ public class CashflowControllers {
     private CheckPayments poCheckPayments;
     private SOATagging poSOATagging;
     private APPaymentAdjustment poAPPaymentAdjustment;
+    private CheckPrintingRequest poCheckPrintingRequest;
 }

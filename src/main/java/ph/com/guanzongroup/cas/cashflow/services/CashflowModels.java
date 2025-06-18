@@ -10,6 +10,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
@@ -347,6 +349,40 @@ public class CashflowModels {
 
         return poAPPaymentAdjustment;
     }
+
+    public Model_Check_Printing_Master CheckPrintingRequestMaster(){
+        if (poGRider == null){
+            System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckPrintingMaster == null){
+            poCheckPrintingMaster = new Model_Check_Printing_Master();
+            poCheckPrintingMaster.setApplicationDriver(poGRider);
+            poCheckPrintingMaster.setXML("Model_Check_Printing_Master");
+            poCheckPrintingMaster.setTableName("check_printing_master");
+            poCheckPrintingMaster.initialize();
+        }
+
+        return poCheckPrintingMaster;
+    }
+
+    public Model_Check_Printing_Request CheckPrintingRequestDetail(){
+        if (poGRider == null){
+            System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckPrintingDetail == null){
+            poCheckPrintingDetail = new Model_Check_Printing_Request();
+            poCheckPrintingDetail.setApplicationDriver(poGRider);
+            poCheckPrintingDetail.setXML("Model_Check_Printing_Request");
+            poCheckPrintingDetail.setTableName("check_printing_request");
+            poCheckPrintingDetail.initialize();
+        }
+
+        return poCheckPrintingDetail;
+    }
     
     @Override
     protected void finalize() throws Throwable {
@@ -360,6 +396,8 @@ public class CashflowModels {
             poGeneralLedger = null;
             poJournalMaster = null;
             poJournalDetail = null;
+            poCheckPrintingMaster = null;
+            poCheckPrintingDetail = null;
 
             poGRider = null;
         } finally {
@@ -380,8 +418,6 @@ public class CashflowModels {
     private Model_Recurring_Issuance poRecurringIssuance;
     private Model_Particular poParticular;
     private Model_Payee poPayee;
-    
-
     private Model_Payment_Request_Master poPaymentRequestMaster;    
     private Model_Payment_Request_Detail poPaymentRequestDetail;
     private Model_Disbursement_Master poDisbursementMaster;    
@@ -389,5 +425,7 @@ public class CashflowModels {
     private Model_Check_Payments poCheckPayments;
     private Model_AP_Payment_Master poAPPaymentMaster;    
     private Model_AP_Payment_Detail poAPPaymentDetail;
-    private Model_AP_Payment_Adjustment poAPPaymentAdjustment;
+    private Model_AP_Payment_Adjustment poAPPaymentAdjustment;    
+    private Model_Check_Printing_Master poCheckPrintingMaster;    
+    private Model_Check_Printing_Request poCheckPrintingDetail;
 }

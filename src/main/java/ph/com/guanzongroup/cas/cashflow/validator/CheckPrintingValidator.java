@@ -4,17 +4,19 @@ import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
-public class DisbursementValidator implements GValidator{
+public class CheckPrintingValidator implements GValidator{
     GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
     
-    Model_Disbursement_Master poMaster;
-    ArrayList<Model_Disbursement_Detail> poDetail;
+    Model_Check_Printing_Master poMaster;
+    ArrayList<Model_Payment_Request_Detail> poDetail;
 
     @Override
     public void setApplicationDriver(Object applicationDriver) {
@@ -28,14 +30,14 @@ public class DisbursementValidator implements GValidator{
 
     @Override
     public void setMaster(Object value) {
-        poMaster = (Model_Disbursement_Master) value;
+        poMaster = (Model_Check_Printing_Master) value;
     }
 
     @Override
     public void setDetail(ArrayList<Object> value) {
         poDetail.clear();
         for(int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++){
-            poDetail.add((Model_Disbursement_Detail) value.get(lnCtr));
+            poDetail.add((Model_Payment_Request_Detail) value.get(lnCtr));
         }
     }
 
@@ -47,19 +49,21 @@ public class DisbursementValidator implements GValidator{
     @Override
     public JSONObject validate() {
         switch (psTranStat){
-            case PaymentRequestStatus.OPEN:
+            case CheckStatus.FLOAT:
                 return validateNew();
-            case PaymentRequestStatus.CONFIRMED:
+            case CheckStatus.OPEN:
                 return validateConfirmed();
-            case PaymentRequestStatus.PAID:
+            case CheckStatus.POSTED:
                 return validatePaid();
-            case PaymentRequestStatus.CANCELLED:
+            case CheckStatus.CANCELLED:
                 return validateCancelled();
-            case PaymentRequestStatus.VOID:
+            case CheckStatus.STALED:
                 return validateVoid();
-            case PaymentRequestStatus.POSTED:
+            case CheckStatus.STOP_PAYMENT:
                 return validatePosted();
-            case PaymentRequestStatus.RETURNED:
+            case CheckStatus.BOUNCED:
+                return validateReturned();
+            case CheckStatus.VOID:
                 return validateReturned();
             default:
                 poJSON = new JSONObject();
@@ -72,47 +76,30 @@ public class DisbursementValidator implements GValidator{
     private JSONObject validateNew(){
         poJSON = new JSONObject();
         
+        
+//        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
+//            poJSON.put("message", "Invalid Branch");
+//            return poJSON;
+//        }
 //        
-        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
-            poJSON.put("message", "Industry is missing or not set.");
-            return poJSON;
-        }
+//        if (poGrider.isMainOffice() || poGrider.isWarehouse()){
+//            if (poMaster.getDepartmentID()== null || poMaster.getDepartmentID().isEmpty()) {
+//                poJSON.put("message", "Department is not set");
+//                return poJSON;
+//            }
+//        }
         
-        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
-            poJSON.put("message", "Invalid Branch");
-            return poJSON;
-        }
-
-        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
-            poJSON.put("message", "Industry is missing or not set.");
-            return poJSON;
-        }
+//        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+//            poJSON.put("message", "Payee information is missing or not set.");
+//            return poJSON;
+//        }
         
-        if (poMaster.getCompanyID()== null || poMaster.getCompanyID().isEmpty()) {
-            poJSON.put("message", "Company is missing or not set.");
-            return poJSON;
-        }
-        
-        if (poMaster.getVoucherNo()== null || poMaster.getVoucherNo().isEmpty()) {
-            poJSON.put("message", "Voucher No is missing or not set.");
-            return poJSON;
-        }        
-        
-        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
-            poJSON.put("message", "Disbursement Type is missing or not set.");
-            return poJSON;
-        }
-        
-        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
-            poJSON.put("message", "Disbursement Type is missing or not set.");
-            return poJSON;
-        }
-        
-        
-        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
-            poJSON.put("message", "Payee is missing or not set.");
-            return poJSON;
-        }
+//        if (!poGrider.isMainOffice() || !poGrider.isWarehouse()){
+//            if (poMaster.getSeriesNo()== null || poMaster.getSeriesNo().isEmpty()) {
+//                poJSON.put("message", "Series No is not set");
+//                return poJSON;
+//            }
+//        }
         
         poJSON.put("result", "success");
         return poJSON;
@@ -120,6 +107,7 @@ public class DisbursementValidator implements GValidator{
     
     private JSONObject validateConfirmed(){
         poJSON = new JSONObject();
+                
         poJSON.put("result", "success");
         return poJSON;
     }

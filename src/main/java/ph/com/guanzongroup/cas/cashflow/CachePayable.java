@@ -34,7 +34,7 @@ public class CachePayable extends Transaction{
     }
     
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException{        
-        return super.openTransaction(transactionNo);
+        return openTransaction(transactionNo);
     }
     
     public JSONObject UpdateTransaction(){
@@ -43,7 +43,7 @@ public class CachePayable extends Transaction{
     
     public JSONObject AddDetail() throws CloneNotSupportedException{
         if (Detail(getDetailCount() - 1).getTransactionType().isEmpty() && 
-            Detail(getDetailCount() - 1).getGrossAmount() == 0.00) {
+            Detail(getDetailCount() - 1).getGrossAmount().doubleValue() == 0.00) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Last row has insufficient detail.");
@@ -129,7 +129,7 @@ public class CachePayable extends Transaction{
             Model item = detail.next(); // Store the item before checking conditions
 
             if ("".equals((String) item.getValue("sTranType"))
-                    || (double) item.getValue("nGrossAmt") <= 0.00) {
+                    || Double.parseDouble(String.valueOf(item.getValue("nGrossAmt"))) <= 0.00) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -142,7 +142,7 @@ public class CachePayable extends Transaction{
         
         if (getDetailCount() == 1){
             //do not allow a single item detail with no quantity order
-            if (Detail(0).getGrossAmount()== 0.00) {
+            if (Detail(0).getGrossAmount().doubleValue() == 0.00) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Your detail has zero gross amount.");
                 return poJSON;
