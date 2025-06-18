@@ -34,6 +34,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.SelectedITems;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
@@ -497,11 +498,11 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchBankAccount(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchBankAccount(String value,String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecordbyBanks(value,Banks, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
 //            Master().setBankAccountID(object.getModel().getBankAccountId());
@@ -650,11 +651,11 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.OPEN);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.VOID);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
@@ -663,11 +664,11 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.OPEN);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.OPEN);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setTransactionStatus(DisbursementStatic.VOID);
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
@@ -1280,7 +1281,7 @@ public class Disbursement extends Transaction {
         int insertedCount = 0;
 
         int detailCount = 0;
-        String sourceNo, sourceCode, particular;
+        String referNo, sourceCode, particular;
         double amount;
 
         switch (paymentType) {
@@ -1303,14 +1304,14 @@ public class Disbursement extends Transaction {
 
                 detailCount = poPaymentRequest.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    sourceNo = poPaymentRequest.Detail(i).getTransactionNo();
+                    referNo = poPaymentRequest.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
                     particular = poPaymentRequest.Detail(i).getParticularID();
                     amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
-                        if (Detail(j).getSourceNo().equals(sourceNo)
+                        if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
                                 && Detail(j).getParticular().equals(particular)) {
                             found = true;
@@ -1321,7 +1322,7 @@ public class Disbursement extends Transaction {
                     if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(sourceNo);
+                        Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
                         Detail(newIndex).setAmount(amount);
@@ -1350,14 +1351,14 @@ public class Disbursement extends Transaction {
 
                 detailCount = poApPayments.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    sourceNo = poApPayments.Detail(i).getTransactionNo();
+                    referNo = poApPayments.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
-                    particular = poApPayments.Detail(i).getSourceCode();
+                    particular = poApPayments.Detail(i).getSourceNo();
                     amount = poApPayments.Detail(i).getCreditAmount().doubleValue();
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
-                        if (Detail(j).getSourceNo().equals(sourceNo)
+                        if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
                                 && Detail(j).getParticular().equals(particular)) {
                             found = true;
@@ -1368,7 +1369,7 @@ public class Disbursement extends Transaction {
                     if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(sourceNo);
+                        Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
                         Detail(newIndex).setAmount(amount);
@@ -1397,14 +1398,14 @@ public class Disbursement extends Transaction {
 
                 detailCount = poCachePayable.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    sourceNo = poCachePayable.Detail(i).getTransactionNo();
+                    referNo = poCachePayable.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = poCachePayable.Detail(i).getTransactionType();
                     amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getGrossAmount()));
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
-                        if (Detail(j).getSourceNo().equals(sourceNo)
+                        if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
                                 && Detail(j).getParticular().equals(particular)) {
                             found = true;
@@ -1415,7 +1416,7 @@ public class Disbursement extends Transaction {
                     if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(sourceNo);
+                        Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
                         Detail(newIndex).setAmount(amount);
@@ -1660,6 +1661,34 @@ public class Disbursement extends Transaction {
 
     public void setCompanyID(String companyID) {
         psCompanyId = companyID;
+    }
+    
+    public String getVoucherNo() throws SQLException {
+        String lsSQL = "SELECT sVouchrNo FROM disbursement_master";
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
+                + " ORDER BY sVouchrNo DESC LIMIT 1");
+
+        String branchVoucherNo = DisbursementStatic.DEFAULT_VOUCHER_NO;  // default value
+
+        ResultSet loRS = null;
+        try {
+            System.out.println("EXECUTING SQL :  " + lsSQL);
+            loRS = poGRider.executeQuery(lsSQL);
+            
+            if (loRS != null && loRS.next()) {
+                String sSeries = loRS.getString("sVouchrNo");
+                if (sSeries != null && !sSeries.trim().isEmpty()) {
+                    long voucherNumber = Long.parseLong(sSeries);
+                    voucherNumber += 1;
+                    branchVoucherNo = String.format("%06d", voucherNumber); // format to 6 digits
+                }
+
+            }
+        } finally {
+            MiscUtil.close(loRS);  // Always close the ResultSet
+        }
+        return branchVoucherNo;
     }
 
 }

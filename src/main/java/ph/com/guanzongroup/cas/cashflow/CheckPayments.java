@@ -45,9 +45,53 @@ public class CheckPayments extends Parameter {
 
         if (poModel.getBranchCode() == null || poModel.getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Branch must not be empty.");
+            poJSON.put("message", "Branch is missing or not set.");
             return poJSON;
         }
+        
+        if (poModel.getBankID()== null || poModel.getBankID().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Bank is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getBankAcountID()== null || poModel.getBankAcountID().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Bank Account is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getPayorID()== null || poModel.getPayorID().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Payor is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getPayeeID()== null || poModel.getPayeeID().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getSourceCode()== null || poModel.getSourceCode().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Source Code is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getSourceNo()== null || poModel.getSourceNo().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Source No is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poModel.getLocation()== null || poModel.getLocation().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Location is missing or not set.");
+            return poJSON;
+        }
+        
+        
 //            if (poModel.getPayeeID().isEmpty()){
 //                poJSON.put("result", "error");
 //                poJSON.put("message", "Payee ID must not be empty.");
