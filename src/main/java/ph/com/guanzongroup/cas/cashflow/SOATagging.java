@@ -49,7 +49,6 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
  */
 public class SOATagging extends Transaction {
 
-    private boolean pbApproval = false;
     private boolean pbIsPrint = false;
     private String psIndustryId = "";
     private String psCompanyId = "";
@@ -129,29 +128,35 @@ public class SOATagging extends Transaction {
         }
 
         //validator
-//        poJSON = isEntryOkay(SOATaggingStatus.CONFIRMED);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        
         //Update others
-//        poJSON = setValueToOthers(lsStatus);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//        if (pbApproval) {
-//            if (poGRider.getUserLevel() == UserRight.ENCODER) {
-//                poJSON = ShowDialogFX.getUserApproval(poGRider);
-//                if (!"success".equals((String) poJSON.get("result"))) {
-//                    return poJSON;
-//                }
-//            }
-//        }
+        poJSON = setValueToOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
+            return poJSON;
+        }
+        
+        poJSON = saveUpdateOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
@@ -263,25 +268,17 @@ public class SOATagging extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(SOATaggingStatus.PAID);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
-        //Update purchase order
+        //Update others
 //        poJSON = setValueToOthers(lsStatus);
 //        if (!"success".equals((String) poJSON.get("result"))) {
 //            return poJSON;
 //        }
-        if (pbApproval) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-            }
-        }
-
+        
         poGRider.beginTrans("UPDATE STATUS", "PaidTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         //change status
@@ -291,12 +288,12 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
 
-        //Update Purchase Order, Serial Ledger, Inventory
-//        poJSON = saveUpdateOthers(SOATaggingStatus.PAID);
+//        poJSON = saveUpdateOthers(lsStatus);
 //        if (!"success".equals((String) poJSON.get("result"))) {
 //            poGRider.rollbackTrans();
 //            return poJSON;
 //        }
+        
         poGRider.commitTrans();
 
         poJSON = new JSONObject();
@@ -391,14 +388,14 @@ public class SOATagging extends Transaction {
                     return poJSON;
                 }
             }
-
-            //update Purchase Order
-//            poJSON = setValueToOthers(lsStatus);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
         }
 
+        //update 
+        poJSON = setValueToOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         poGRider.beginTrans("UPDATE STATUS", "CancelledTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         //change status
@@ -408,20 +405,12 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
 
-//        if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-//            //Update Purchase Order, Serial Ledger, Inventory
-//            poJSON = saveUpdateOthers(SOATaggingStatus.CONFIRMED);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                poGRider.rollbackTrans();
-//                return poJSON;
-//            }
-//        }
-        //Delete Inventory Serial
-//        poJSON = deleteInvSerial();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
+        poJSON = saveUpdateOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
         poGRider.commitTrans();
 
         poJSON = new JSONObject();
@@ -470,12 +459,12 @@ public class SOATagging extends Transaction {
                     return poJSON;
                 }
             }
-
-            //update Purchase Order
-//            poJSON = setValueToOthers(lsStatus);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
+        }
+        
+        //Update Others
+        poJSON = setValueToOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
         }
 
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -487,14 +476,12 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
 
-//        if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-//            //Update Purchase Order, Serial Ledger, Inventory
-//            poJSON = saveUpdateOthers(SOATaggingStatus.CONFIRMED);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                poGRider.rollbackTrans();
-//                return poJSON;
-//            }
-//        }
+        poJSON = saveUpdateOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        
         poGRider.commitTrans();
 
         poJSON = new JSONObject();
