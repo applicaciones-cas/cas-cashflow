@@ -45,7 +45,7 @@ public class Model_Check_Payments extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateNull("dCheckDte");
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateObject("sBranchCd", poGRider.getBranchCode());

@@ -52,7 +52,7 @@ public class CheckPrintingRequest extends Transaction {
         return saveTransaction();
     }
 
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException { 
         return openTransaction(transactionNo);
     }
 
@@ -284,7 +284,8 @@ public class CheckPrintingRequest extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-            if ("".equals((String) item.getValue("sSourceNo"))) {
+            if ("".equals((String) item.getValue("sSourceNo"))|| 
+                    (String) item.getValue("sSourceNo") == null) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -311,7 +312,7 @@ public class CheckPrintingRequest extends Transaction {
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
-        return isEntryOkay(CheckStatus.OPEN);
+        return isEntryOkay(CheckStatus.FLOAT);
     }
 
     @Override
@@ -394,6 +395,7 @@ public class CheckPrintingRequest extends Transaction {
                 System.out.println("Bank Account No : " + loRS.getString("sActNumbr"));
                 System.out.println("Date : " + loRS.getString("dTransact"));
                 System.out.println("Reference No : " + loRS.getString("sSourceNo"));
+                System.out.println("bank id : " + loRS.getString("sBankIDxx"));
                 System.out.println("----------------------------------");
 
                 paCheckPayment.add(Check_Payment_List());
@@ -429,62 +431,55 @@ public class CheckPrintingRequest extends Transaction {
     
     public JSONObject addCheckPaymentToCheckPrintRequest(String stransNox)
             throws CloneNotSupportedException, SQLException, GuanzonException {
-        boolean lbExist = false;
-        int i = 0;
-        poJSON = new JSONObject();
-        CheckPayments poCheckPayment;
-
-        poCheckPayment = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+        JSONObject poJSON = new JSONObject();
+        CheckPayments poCheckPayment = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poCheckPayment.setWithParentClass(true);
-        
-        if ("error".equals(poJSON.get("result"))) {
-            poJSON.put("result", "error");
-            return poJSON;
-        }
+
+        // Attempt to open the Check Payment record
         poJSON = poCheckPayment.openRecord(stransNox);
         if ("error".equals(poJSON.get("result"))) {
-            poJSON.put("result", "error");
             return poJSON;
         }
 
-        // Validate if the bank in Master is different from the bank in the list
-//        if (Master().getBankID() == null || !Master().getBankID().isEmpty()) {
-//            if (!Master().getBankID().equals(poCheckPayment.getModel().getBankID())) {
-//                poJSON.put("message", "Invalid addition of check; another bank already exists.");
-//                poJSON.put("result", "error");
-//                poJSON.put("warning", "true");
-//                return poJSON;
-//            }
-//        }
-        
-        for ( i = 0; i < Detail().size(); i++) {
-            
-                if (Detail(i).getSourceNo() == null || Detail(i).getSourceNo().isEmpty()) {
-                    continue;
-                }
-                if (Detail(i).getSourceNo().equals(poCheckPayment.getModel().getSourceNo())) {
-                    lbExist = true;
-                    break; 
-                }
-            
-        }
-        if (!lbExist) {
-            // Make sure you're writing to an empty row
-            Detail(getDetailCount() - 1).setSourceNo(poCheckPayment.getModel().getTransactionNo());
-//            Detail(getDetailCount() - 1).setBankReference(poCheckPayment.getModel().getR);
-//            Master().setPayeeID(poRecurringIssuance.getModel().getPayeeID());
+        String sourceNo = poCheckPayment.getModel().getSourceNo();
+        boolean lbExist = false;
+        int i;
 
-            // Only add the detail if it's not empty
-            if (Detail(getDetailCount() - 1).getSourceNo() != null && !Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
+        // Check if the sourceNo already exists in the detail list
+        for (i = 0; i < Detail().size(); i++) {
+            String detailSourceNo = Detail(i).getSourceNo();
+            if (detailSourceNo == null || detailSourceNo.isEmpty()) {
+                continue;
+            }
+
+            if (detailSourceNo.equals(sourceNo)) {
+                lbExist = true;
+                break;
+            }
+        }
+
+        if (!lbExist) {
+            // Set to the current last detail row
+//            Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
+//            poDV.setWithParent(true);
+//            poDV.InitTransaction();
+//            poDV.OpenTransaction(poCheckPayment.getModel().getSourceNo());
+            Detail(getDetailCount() - 1).setSourceNo(poCheckPayment.getModel().getTransactionNo());
+            
+            // Only add if the source number is properly set
+            if (Detail(getDetailCount() - 1).getSourceNo() != null
+                    && !Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
                 AddDetail();
             }
+            
         } else {
             poJSON.put("result", "error");
             poJSON.put("message", "Check Payment: " + Detail(i).getSourceNo() + " already exists in table at row " + (i + 1) + ".");
             poJSON.put("tableRow", i);
-            poJSON.put("warning", "false");
+            poJSON.put("warning", false);
             return poJSON;
         }
+
         // Return success
         poJSON.put("result", "success");
         return poJSON;

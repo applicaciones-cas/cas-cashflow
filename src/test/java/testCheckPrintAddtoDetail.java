@@ -34,7 +34,7 @@ public class testCheckPrintAddtoDetail {
     @Test
     public void testOpenTransaction() {
         JSONObject loJSON;
-        String transactionNo = "M00125000013";
+        String transactionNo = "M00125000012";
         String bankid = "M00124001";
         try {
             loJSON = poCheckPrint.CheckPrintingRequest().InitTransaction();
@@ -48,8 +48,8 @@ public class testCheckPrintAddtoDetail {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-//            poCheckPrint.CheckPrintingRequest().Master().setBankID(bankid);
-//            System.out.println("MASTER BANK ID : " + poCheckPrint.CheckPrintingRequest().Master().getBankID());
+            poCheckPrint.CheckPrintingRequest().Master().setBankID(bankid);
+            System.out.println("MASTER BANK ID : " + poCheckPrint.CheckPrintingRequest().Master().getBankID());
             loJSON = poCheckPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest(transactionNo);
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));

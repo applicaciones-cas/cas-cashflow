@@ -161,7 +161,7 @@ public class BankAccountMaster extends Parameter{
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
-            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+            return poModel.openRecord((String) poJSON.get("sBnkActID"));
         } else {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
