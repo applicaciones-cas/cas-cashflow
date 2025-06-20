@@ -404,7 +404,8 @@ public class CheckPrintingRequest extends Transaction {
                 + "  b.sBankName, "
                 + "  c.sActNumbr, "
                 + "  c.sActNamex, "
-                + "  a.cTranStat "
+                + "  a.cTranStat, "                
+                + "  a.sBranchCd "
                 + "FROM check_printing_master a "
                 + "LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
                 + "LEFT JOIN bank_account_master c ON a.sBankIDxx = c.sBankIDxx";
@@ -634,7 +635,7 @@ public class CheckPrintingRequest extends Transaction {
         }
         initSQL();
         String lsFilterCondition = String.join(" AND ",
-                " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         if (!psTranStat.isEmpty()) {
