@@ -14,7 +14,7 @@ public class exportXML {
 
     static CashflowControllers poDisbursement;
     static GRiderCAS poApp;
-    static String testFilePath = "D:/GGC_Maven_Systems/config/metadata/new/Model_Check_Payments.xml";
+    static String testFilePath = "D:/GGC_Maven_Systems/config/metadata/new/Model_Check_Printing_Master.xml";
 
     @BeforeClass
     public static void setUpClass() {
@@ -39,7 +39,7 @@ public class exportXML {
 
             String content = new String(Files.readAllBytes(Paths.get(testFilePath)));
             Assert.assertTrue("XML content missing root element.", content.contains("<metadata>"));
-            Assert.assertTrue("XML content missing table name.", content.contains("<table>Check_Payments</table>"));
+            Assert.assertTrue("XML content missing table name.", content.contains("<table>Check_Printing_Master</table>"));
 
             System.out.println("Exported metadata successfully to: " + testFilePath);
         } catch (IOException e) {

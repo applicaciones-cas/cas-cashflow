@@ -41,8 +41,8 @@ public class testGetDVMasterList {
     public void testGetPurchaseOrder() {
         JSONObject loJSON;
         
-        String industryId = "03";
-        String companyId = "0003";
+        String industryId = "02";
+        String companyId = "0002";
         try {
             loJSON = poDisbursementController.Disbursement().InitTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -57,7 +57,7 @@ public class testGetDVMasterList {
             loJSON = poDisbursementController.Disbursement().getDisbursement("", "",true);
 
             if ("success".equals((String) loJSON.get("result"))) {
-                System.out.println("RESULT" + (String) loJSON.get("message"));
+                System.out.println("RESULT " + (String) loJSON.get("message"));
                 for (int lnCntr = 0; lnCntr <= poDisbursementController.Disbursement().getDisbursementMasterCount()- 1; lnCntr++) {
                     System.out.println("poPurchasingController no:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).getTransactionNo());
                     System.out.println("poPurchasingController entry no:" + poDisbursementController.Disbursement().poDisbursementMaster(lnCntr).getEntryNo());

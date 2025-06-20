@@ -1,4 +1,4 @@
-package ph.com.guanzongroup.cas.cashflow;
+    package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -14,6 +14,9 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.parameter.Banks;
+import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Company;
+import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
@@ -256,6 +259,57 @@ public class CheckPrintingRequest extends Transaction {
 
         return poJSON;
     }
+    public JSONObject SearcIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Industry object = new ParamControllers(poGRider, logwrapr).Industry();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setIndustryID(object.getModel().getIndustryId());
+        }
+
+        return poJSON;
+    }
+    public JSONObject Searcbranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setBranchCode(object.getModel().getBranchCode());
+        }
+
+        return poJSON;
+    }
+    public JSONObject SearchCompany(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Company object = new ParamControllers(poGRider, logwrapr).Company();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            // waiting for the fields if it will added or not
+//            Master().setBranchCode(object.getModel().getBranchCode());
+        }
+
+        return poJSON;
+    }
+    
+    public JSONObject SearhBankAccount(String value,String BankID ,boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecordbyBanks(value, BankID,byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+//            Master().setBankID(object.getModel().getBranchCode());
+        }
+
+        return poJSON;
+    }
+
 
     /*End - Search Master References*/
 
@@ -341,8 +395,19 @@ public class CheckPrintingRequest extends Transaction {
 
     @Override
     public void initSQL() {
-        SQL_BROWSE = "";
+        SQL_BROWSE = "SELECT "
+                + "  a.sTransNox, "
+                + "  a.dTransact, "
+                + "  a.nTotalAmt, "
+                + "  b.sBankName, "
+                + "  c.sActNumbr, "
+                + "  c.sActNamex, "
+                + "  a.cTranStat "
+                + "FROM check_printing_master a "
+                + "LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + "LEFT JOIN bank_account_master c ON a.sBankIDxx = c.sBankIDxx";
     }
+
 
     @Override
     protected JSONObject isEntryOkay(String status) {
@@ -380,7 +445,8 @@ public class CheckPrintingRequest extends Transaction {
         String lsFilterCondition = String.join(" AND ",
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.cTranStat = " + SQLUtil.toSQL(Logical.NO),
-                " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED));
+                " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
+                " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES));
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
 
         System.out.println("Executing SQL: " + lsSQL);
@@ -483,6 +549,73 @@ public class CheckPrintingRequest extends Transaction {
         // Return success
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+    public JSONObject getCheckPrintingRequest(String fsTransactionNo, String fsPayee) throws SQLException, GuanzonException {
+        JSONObject loJSON = new JSONObject();
+        String lsTransStat = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+
+        initSQL();
+        String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+//                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()), 
+//                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
+                " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
+         " a.sBranchCd = " +  SQLUtil.toSQL( poGRider.getBranchCode()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+
+        lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
+        if (!psTranStat.isEmpty()) {
+            lsSQL = lsSQL + lsTransStat;
+        }
+        lsSQL = lsSQL + " GROUP BY  a.sTransNox"
+                + " ORDER BY dTransact ASC";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            poCheckPrinting = new ArrayList<>();
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                System.out.println("------------------------------------------------------------------------------");
+
+                poCheckPrinting.add(CheckPrintMasterList());
+                poCheckPrinting.get(poCheckPrinting.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record loaded successfully.");
+        } else {
+            poCheckPrinting = new ArrayList<>();
+            poCheckPrinting.add(CheckPrintMasterList());
+            loJSON.put("result", "error");
+            loJSON.put("continue", true);
+            loJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return loJSON;
+    }
+    private Model_Check_Printing_Master CheckPrintMasterList() {
+        return new CashflowModels(poGRider).CheckPrintingRequestMaster();
+    }
+
+    public int getPrintRequestMasterCount() {
+        return this.poCheckPrinting.size();
+    }
+
+    public Model_Check_Printing_Master poCheckPrinting(int row) {
+        return (Model_Check_Printing_Master) poCheckPrinting.get(row);
     }
 
 }

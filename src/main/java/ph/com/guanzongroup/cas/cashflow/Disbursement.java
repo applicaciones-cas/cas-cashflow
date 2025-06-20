@@ -494,6 +494,7 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setPayeeID(object.getModel().getPayeeID());
+             CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
         }
 
         return poJSON;
@@ -507,6 +508,7 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting()));
         }
 
         return poJSON;
@@ -635,7 +637,6 @@ public class Disbursement extends Transaction {
                         checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(SOURCE_CODE);
-                        checkPayments.getModel().setAmount(Master().getNetTotal());
                         
                     }
                     break;
@@ -654,14 +655,11 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setAmount(Master().getNetTotal());
-                                checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setAmount(Master().getNetTotal());
-                                checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
+                                
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
@@ -671,12 +669,10 @@ public class Disbursement extends Transaction {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
-                                checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.OPEN);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
@@ -1408,7 +1404,7 @@ public class Disbursement extends Transaction {
         return (Model_Disbursement_Master) poDisbursementMaster.get(row);
     }
 
-    public JSONObject computeFields() {
+   public JSONObject computeFields() {
         poJSON = new JSONObject();
         double lnTotalVatSales = 0.0000;
         double lnTotalVatRates = 0.00;
@@ -1429,40 +1425,29 @@ public class Disbursement extends Transaction {
 
         Master().setTransactionTotal(lnTotalPurchaseAmount);
         Master().setNetTotal(lnTotalPurchaseAmount - lnTotalVatAmount);
+        if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+            checkPayments.getModel().setAmount(Master().getNetTotal());
+        }
         poJSON.put("result", "success");
         poJSON.put("message", "computed successfully");
         return poJSON;
     }
 
     public void exportDisbursementMasterMetadataToXML(String filePath) throws SQLException, IOException {
-        String query = "SELECT"
-                + "  sTransNox"
-                + ", sBranchCD"
-                + ", dTransact"
-                + ", sBankIDxx"
-                + ", sBnkActID"
-                + ", sCheckNox"
-                + ", dCheckDte"
-                + ", sPayorIDx"
-                + ", sPayeeIDx"
-                + ", nAmountxx"
-                + ", sRemarksx"
-                + ", sSourceCd"
-                + ", sSourceNo"
-                + ", cLocation"
-                + ", cIsReplcd"
-                + ", cReleased"
-                + ", cPayeeTyp"
-                + ", cDisbMode"
-                + ", cClaimant"
-                + ", sAuthorze"
-                + ", cIsCrossx"
-                + ", cIsPayeex"
-                + ", cTranStat"
-                + ", sModified"
-                + ", dModified"
-                + ", dTimeStmp"
-                + " FROM check_payments";
+        String query =  "SELECT " +
+        "  sTransNox, " +
+        "  sBranchCd, " +
+        "  sIndstCdx, " +
+        "  dTransact, " +
+        "  sBankIDxx, " +
+        "  sRemarksx, " +
+        "  nEntryNox, " +
+        "  nTotalAmt, " +
+        "  cIsUpload, " +
+        "  cTranStat, " +
+        "  sModified, " +
+        "  dModified " +
+        "FROM check_printing_master";
 
         ResultSet rs = poGRider.executeQuery(query);
 
@@ -1476,7 +1461,7 @@ public class Disbursement extends Transaction {
         StringBuilder xml = new StringBuilder();
         xml.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         xml.append("<metadata>\n");
-        xml.append("  <table>Check_Payments</table>\n");
+        xml.append("  <table>Check_Printing_Master</table>\n");
 
         for (int i = 1; i <= columnCount; i++) {
             xml.append("  <column>\n");

@@ -222,11 +222,11 @@ public class Model_Bank_Account_Master extends Model {
     }
         
     public JSONObject setBankPrinting(boolean value) {
-        return setValue("cSectionx", value ? "1" : "0");
+        return setValue("cBankPrnt", value ? "1" : "0");
     }
 
     public boolean isBankPrinting() {
-        return ((String) getValue("cSectionx")).equals("1");
+        return ((String) getValue("cBankPrnt")).equals("1");
     }
     
     public JSONObject setMonitor(boolean value) {

@@ -16,6 +16,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
@@ -39,9 +40,10 @@ public class Model_Check_Printing_Master extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateObject("nTotalAmt", DisbursementStatic.DefaultValues.default_value_double_0000);
-//            poEntity.updateBoolean("cIsUpload", false);
-
+            poEntity.updateObject("nTotalAmt", CheckPrintRequestStatus.DefaultValues.default_value_double_0000);
+            poEntity.updateObject("cIsUpload", CheckPrintRequestStatus.OPEN);
+//            poEntity.updateObject("cTranStat", CheckPrintRequestStatus.OPEN);
+            
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
@@ -69,6 +71,22 @@ public class Model_Check_Printing_Master extends Model {
 
     public String getTransactionNo() {
         return (String) getValue("sTransNox");
+    }
+
+    public JSONObject setBranchCode(String branchCode) {
+        return setValue("sBranchCd", branchCode);
+    }
+
+    public String getBranchCode() {
+        return (String) getValue("sBranchCd");
+    }
+    
+    public JSONObject setIndustryID(String industryID) {
+        return setValue("sIndstCdx", industryID);
+    }
+
+    public String getIndustryID() {
+        return (String) getValue("sIndstCdx");
     }
 
     public JSONObject setTransactionDate(Date transactionDate) {
@@ -118,6 +136,14 @@ public class Model_Check_Printing_Master extends Model {
     public boolean isUploaded() {
         return ((String) getValue("cIsUpload")).equals("1");
     }
+    
+    public JSONObject setTransactionStatus(String transactionStatus) {
+        return setValue("cTranStat", transactionStatus);
+    }
+
+    public String getTransactionStatus() {
+        return (String) getValue("cTranStat");
+    }
 
     public JSONObject setModifyingId(String modifyingId) {
         return setValue("sModified", modifyingId);
@@ -160,24 +186,24 @@ public class Model_Check_Printing_Master extends Model {
         }
     }
     
-    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
-        if (!"".equals((String) getValue("sBnkActID"))) {
-            if (poBankAccountMaster.getEditMode() == EditMode.READY
-                    && poBankAccountMaster.getBankAccountId().equals((String) getValue("sBnkActID"))) {
-                return poBankAccountMaster;
-            } else {
-                poJSON = poBankAccountMaster.openRecord((String) getValue("sBnkActID"));
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poBankAccountMaster;
-                } else {
-                    poBankAccountMaster.initialize();
-                    return poBankAccountMaster;
-                }
-            }
-        } else {
-            poBankAccountMaster.initialize();
-            return poBankAccountMaster;
-        }
-    }
+//    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
+//        if (!"".equals((String) getValue("sBnkActID"))) {
+//            if (poBankAccountMaster.getEditMode() == EditMode.READY
+//                    && poBankAccountMaster.getBankAccountId().equals((String) getValue("sBnkActID"))) {
+//                return poBankAccountMaster;
+//            } else {
+//                poJSON = poBankAccountMaster.openRecord((String) getValue("sBnkActID"));
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poBankAccountMaster;
+//                } else {
+//                    poBankAccountMaster.initialize();
+//                    return poBankAccountMaster;
+//                }
+//            }
+//        } else {
+//            poBankAccountMaster.initialize();
+//            return poBankAccountMaster;
+//        }
+//    }
 
 }
