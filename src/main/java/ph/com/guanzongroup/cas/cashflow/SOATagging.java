@@ -1325,7 +1325,9 @@ public class SOATagging extends Transaction {
                     System.out.println("--------------------------AP PAYMENT--------------------------");
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("------------------------------------------------------------------------------");
-                    return true;
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        return true;
+                    }
                 }
             }
             MiscUtil.close(loRS);
@@ -1344,7 +1346,9 @@ public class SOATagging extends Transaction {
                     System.out.println("--------------------------DV--------------------------");
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("------------------------------------------------------------------------------");
-                    return true;
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        return true;
+                    }
                 }
             }
             MiscUtil.close(loRS);
@@ -1362,6 +1366,7 @@ public class SOATagging extends Transaction {
         poJSON = new JSONObject();
         paPaymentRequest = new ArrayList<>();
         paCachePayable = new ArrayList<>();
+        paAPAdjustment = new ArrayList<>();
         int lnCtr;
 
         //Update Purchase Order exist in PO Receiving Detail

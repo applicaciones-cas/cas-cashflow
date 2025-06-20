@@ -39,7 +39,7 @@ public class testAPPaymentAdjustment {
 
         instance = MiscUtil.Connect();
         
-        poAPPaymentAdjustment = new CashflowControllers(instance, null).APPayementAdjustment();
+        poAPPaymentAdjustment = new CashflowControllers(instance, null).APPaymentAdjustment();
     }
 
 //    @Test
