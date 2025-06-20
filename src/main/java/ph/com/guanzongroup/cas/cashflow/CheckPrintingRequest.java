@@ -26,6 +26,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckPrintingValidator;
@@ -67,7 +68,7 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CheckStatus.FLOAT;
+        String lsStatus = CheckPrintRequestStatus.CONFIRMED;
         boolean lbConfirm = true;
 
         if (getEditMode() != EditMode.READY) {
@@ -83,7 +84,7 @@ public class CheckPrintingRequest extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(CheckStatus.FLOAT);
+        poJSON = isEntryOkay(CheckPrintRequestStatus.CONFIRMED);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -196,7 +197,7 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CheckStatus.OPEN;
+        String lsStatus = CheckPrintRequestStatus.VOID;
         boolean lbConfirm = true;
 
         if (getEditMode() != EditMode.READY) {
@@ -212,7 +213,7 @@ public class CheckPrintingRequest extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(CheckStatus.FLOAT);
+        poJSON = isEntryOkay(CheckPrintRequestStatus.VOID);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
