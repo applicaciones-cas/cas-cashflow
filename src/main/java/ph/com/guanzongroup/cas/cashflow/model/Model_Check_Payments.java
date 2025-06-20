@@ -48,7 +48,8 @@ public class Model_Check_Payments extends Model {
             poEntity.updateNull("dCheckDte");
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
-            poEntity.updateObject("sBranchCd", poGRider.getBranchCode());
+            poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
+            poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -264,6 +265,22 @@ public class Model_Check_Payments extends Model {
 
     public String getTransactionStatus() {
         return (String) getValue("cTranStat");
+    }
+    
+    public JSONObject setProcessed(String processed) {
+        return setValue("cProcessd", processed);
+    }
+
+    public String getProcessed() {
+        return (String) getValue("cProcessd");
+    }
+    
+    public JSONObject setPrint(String print) {
+        return setValue("cPrintxxx", print);
+    }
+
+    public String getPrint() {
+        return (String) getValue("cPrintxxx");
     }
 
     public JSONObject setModifyingId(String modifyingId) {

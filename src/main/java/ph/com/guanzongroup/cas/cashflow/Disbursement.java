@@ -637,6 +637,7 @@ public class Disbursement extends Transaction {
                         checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(SOURCE_CODE);
+                        checkPayments.getModel().setBranchCode(Master().getBranchCode());
                         
                     }
                     break;

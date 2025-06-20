@@ -448,6 +448,7 @@ public class CheckPrintingRequest extends Transaction {
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.cTranStat = " + SQLUtil.toSQL(Logical.NO),
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES));
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
 
@@ -627,13 +628,14 @@ public class CheckPrintingRequest extends Transaction {
             for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                 lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
             }
-            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+            lsTransStat = "  a.cTranStat IN (" + lsTransStat.substring(2) + ")";
         } else {
-            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            lsTransStat = "  a.cTranStat = " + SQLUtil.toSQL(psTranStat);
         }
         initSQL();
-        String lsFilterCondition = String.join(
-                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+        String lsFilterCondition = String.join(" AND ",
+                " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         if (!psTranStat.isEmpty()) {
             lsSQL = lsSQL + lsTransStat;
@@ -656,6 +658,22 @@ public class CheckPrintingRequest extends Transaction {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    
+    
+    public JSONObject ExportTransaction(String fsValue) throws GuanzonException, SQLException  {
+        poJSON = new JSONObject();
+        String BankCode = Master().Banks().getBankCode();
+        switch (BankCode) {
+            case "BDO":
+                
+                
+                
+                break;
+            default:
+                throw new AssertionError();
+        }
+        return poJSON;
     }
 
 
