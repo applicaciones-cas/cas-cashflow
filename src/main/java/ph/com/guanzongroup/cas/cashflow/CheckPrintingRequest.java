@@ -497,10 +497,11 @@ public class CheckPrintingRequest extends Transaction {
         }
         return paCheckPayment.size();
     }
-    
     public JSONObject addCheckPaymentToCheckPrintRequest(String stransNox)
             throws CloneNotSupportedException, SQLException, GuanzonException {
-        JSONObject poJSON = new JSONObject();
+        poJSON = new JSONObject();
+        boolean lbExist = false;
+        int lnRow = 0;
         CheckPayments poCheckPayment = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poCheckPayment.setWithParentClass(true);
 
@@ -509,43 +510,41 @@ public class CheckPrintingRequest extends Transaction {
         if ("error".equals(poJSON.get("result"))) {
             return poJSON;
         }
-
-        String sourceNo = poCheckPayment.getModel().getSourceNo();
-        boolean lbExist = false;
-        int i;
-
-        // Check if the sourceNo already exists in the detail list
-        for (i = 0; i < Detail().size(); i++) {
-            String detailSourceNo = Detail(i).getSourceNo();
-            if (detailSourceNo == null || detailSourceNo.isEmpty()) {
-                continue;
-            }
-
-            if (detailSourceNo.equals(sourceNo)) {
-                lbExist = true;
-                break;
+        // Validate if the payee in Master is different from the payee in the RecurringIssuance
+        if (!Master().getBankID().isEmpty()) {
+            if (!Master().getBankID().equals(poCheckPayment.getModel().getBankID())) {
+                poJSON.put("message", "Invalid addition of ; another payee already exists.");
+                poJSON.put("result", "error");
+                poJSON.put("warning", "true");
+                return poJSON;
             }
         }
 
+        // Check if the particular already exists in the details
+        for (lnRow = 0; lnRow < getDetailCount(); lnRow++) {
+            if (Detail(lnRow).getSourceNo() == null || Detail(lnRow).getSourceNo().isEmpty()) {
+                continue;
+            }
+
+            if (Detail(lnRow).getSourceNo().equals(poCheckPayment.getModel().getSourceNo())) {
+                lbExist = true;
+                break; // Stop checking once a match is found
+            }
+        }
+
+        // If the particular doesn't exist, proceed to add it
         if (!lbExist) {
-            // Set to the current last detail row
-//            Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
-//            poDV.setWithParent(true);
-//            poDV.InitTransaction();
-//            poDV.OpenTransaction(poCheckPayment.getModel().getSourceNo());
             Detail(getDetailCount() - 1).setSourceNo(poCheckPayment.getModel().getTransactionNo());
-            
-            // Only add if the source number is properly set
-            if (Detail(getDetailCount() - 1).getSourceNo() != null
-                    && !Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
+            Master().setBankID(poCheckPayment.getModel().getBankID());
+            // Only add the detail if it's not empty
+            if (Detail(getDetailCount() - 1).getSourceNo() != null && !Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
                 AddDetail();
             }
-            
         } else {
             poJSON.put("result", "error");
-            poJSON.put("message", "Check Payment: " + Detail(i).getSourceNo() + " already exists in table at row " + (i + 1) + ".");
-            poJSON.put("tableRow", i);
-            poJSON.put("warning", false);
+            poJSON.put("message", "Refer No: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
+            poJSON.put("tableRow", lnRow);
+            poJSON.put("warning", "false");
             return poJSON;
         }
 
@@ -553,6 +552,7 @@ public class CheckPrintingRequest extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
+    
     
     public JSONObject getCheckPrintingRequest(String fsTransactionNo, String fsPayee) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
@@ -628,9 +628,9 @@ public class CheckPrintingRequest extends Transaction {
             for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                 lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
             }
-            lsTransStat = "  a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
         } else {
-            lsTransStat = "  a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            lsTransStat = " AND  a.cTranStat = " + SQLUtil.toSQL(psTranStat);
         }
         initSQL();
         String lsFilterCondition = String.join(" AND ",
@@ -675,6 +675,8 @@ public class CheckPrintingRequest extends Transaction {
         }
         return poJSON;
     }
+    
+    
 
 
 }
