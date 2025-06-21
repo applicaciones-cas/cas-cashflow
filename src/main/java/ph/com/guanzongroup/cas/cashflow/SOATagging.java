@@ -1178,6 +1178,8 @@ public class SOATagging extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
 //            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
+        
+        computeFields();
 
         //Update linked transactions
         poJSON = setValueToOthers(Master().getTransactionStatus());

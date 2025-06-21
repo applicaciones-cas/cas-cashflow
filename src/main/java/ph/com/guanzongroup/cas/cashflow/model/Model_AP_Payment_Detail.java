@@ -7,11 +7,15 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 /**
@@ -23,6 +27,8 @@ public class Model_AP_Payment_Detail extends Model {
     //reference objects
     Model_Payment_Request_Master poPaymentRequest;
     Model_Cache_Payable_Master poCachePayable;
+    
+    CachePayable poCachePayableTrans;
 
     @Override
     public void initialize() {
@@ -54,12 +60,17 @@ public class Model_AP_Payment_Detail extends Model {
             CashflowModels gl = new CashflowModels(poGRider);
             poPaymentRequest = gl.PaymentRequestMaster();
             poCachePayable = gl.Cache_Payable_Master();
+            
+            CashflowControllers glController = new CashflowControllers(poGRider, logwrapr);
+            poCachePayableTrans = glController.CachePayable();
             //end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
             System.exit(1);
+        } catch (GuanzonException ex) {
+            Logger.getLogger(Model_AP_Payment_Detail.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
 
@@ -191,6 +202,27 @@ public class Model_AP_Payment_Detail extends Model {
         } else {
             poCachePayable.initialize();
             return poCachePayable;
+        }
+    }
+    
+    public CachePayable CachePayable() throws SQLException, GuanzonException, CloneNotSupportedException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poCachePayableTrans.getEditMode() == EditMode.READY
+                    && poCachePayableTrans.Master().getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poCachePayableTrans;
+            } else {
+                poJSON = poCachePayableTrans.OpenTransaction((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poCachePayableTrans;
+                } else {
+                    poCachePayableTrans.InitTransaction();
+                    return poCachePayableTrans;
+                }
+            }
+        } else {
+            poCachePayableTrans.InitTransaction();
+            return poCachePayableTrans;
         }
     }
     //end reference object models
