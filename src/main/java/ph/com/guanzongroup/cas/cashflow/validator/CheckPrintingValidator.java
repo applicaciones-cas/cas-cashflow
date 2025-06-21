@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
@@ -15,7 +15,7 @@ public class CheckPrintingValidator implements GValidator{
     String psTranStat;
     JSONObject poJSON;
     
-    Model_Check_Printing_Master poMaster;
+    Model_Check_Printing_Request_Master poMaster;
     ArrayList<Model_Payment_Request_Detail> poDetail;
 
     @Override
@@ -30,7 +30,7 @@ public class CheckPrintingValidator implements GValidator{
 
     @Override
     public void setMaster(Object value) {
-        poMaster = (Model_Check_Printing_Master) value;
+        poMaster = (Model_Check_Printing_Request_Master) value;
     }
 
     @Override

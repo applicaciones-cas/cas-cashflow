@@ -24,6 +24,7 @@ public class Model_Disbursement_Detail extends Model {
 
     Model_Particular poParticular;
     Model_Tax_Code poTaxCode;
+    String InvType = "";
 
     @Override
     public void initialize() {
@@ -164,6 +165,14 @@ public class Model_Disbursement_Detail extends Model {
 
     public Number getTaxAmount() {
         return (Number) getValue("nTaxAmtxx");
+    }
+    
+    public String setInvType(String invType) {
+        return this.InvType = invType;
+    }
+
+    public String getInvType() {
+        return this.InvType;
     }
 
     public Model_Particular Particular() throws SQLException, GuanzonException {

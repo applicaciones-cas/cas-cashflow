@@ -452,6 +452,18 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
+    public JSONObject SearchParticular(String value, int row,boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+           Detail(row).setParticular(object.getModel().getParticularID());
+        }
+        return poJSON;
+    }
+    
     public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
         object.setRecordStatus("1");
@@ -1166,7 +1178,7 @@ public class Disbursement extends Transaction {
         int insertedCount = 0;
 
         int detailCount = 0;
-        String referNo, sourceCode, particular;
+        String referNo, sourceCode, particular,invType = "";
         double amount;
 
         switch (paymentType) {
@@ -1193,6 +1205,7 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
                     particular = poPaymentRequest.Detail(i).getParticularID();
                     amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
+                    invType = "";
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1210,7 +1223,8 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
-                        Detail(newIndex).setAmount(amount);
+                        Detail(newIndex).setAmount(amount);                   
+                        Detail(newIndex).setInvType(invType);
                         insertedCount++;
                     }
                 }
@@ -1240,6 +1254,13 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = poApPayments.Detail(i).getSourceNo();
                     amount = poApPayments.Detail(i).getCreditAmount().doubleValue();
+                    CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                    poJSON = poCachePayable.InitTransaction();
+                    poJSON = poCachePayable.OpenTransaction(sourceCode);
+                    
+                    for (int c = 0; c < poCachePayable.getDetailCount(); c++) {
+                        invType = poCachePayable.Detail(c).InvType().getDescription();
+                    }
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1257,7 +1278,8 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
-                        Detail(newIndex).setAmount(amount);
+                        Detail(newIndex).setAmount(amount);                        
+                        Detail(newIndex).setInvType(invType);
                         insertedCount++;
                     }
                 }
@@ -1287,6 +1309,7 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = poCachePayable.Detail(i).getTransactionType();
                     amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getGrossAmount()));
+                    invType = poCachePayable.Detail(i).InvType().getDescription();
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1304,7 +1327,8 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticular(particular);
-                        Detail(newIndex).setAmount(amount);
+                        Detail(newIndex).setAmount(amount);                   
+                        Detail(newIndex).setInvType(invType);
                         insertedCount++;
                     }
                 }

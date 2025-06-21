@@ -1,10 +1,15 @@
     package ph.com.guanzongroup.cas.cashflow;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
@@ -22,8 +27,8 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
@@ -34,7 +39,7 @@ import ph.com.guanzongroup.cas.cashflow.validator.CheckPrintingValidator;
 public class CheckPrintingRequest extends Transaction {
 
     
-    List<Model_Check_Printing_Master> poCheckPrinting;
+    List<Model_Check_Printing_Request_Master> poCheckPrinting;
     List<Model_Check_Payments> paCheckPayment;
     List<CheckPayments> poCheckPayments;
     public JSONObject InitTransaction() {
@@ -60,6 +65,33 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException { 
         return openTransaction(transactionNo);
     }
+    
+    @Override
+    protected JSONObject openTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
+    this.poJSON = this.poMaster.openRecord(transactionNo);
+    if (!"success".equals(this.poJSON.get("result"))) {
+      this.poJSON.put("message", "Unable to open transaction master record.");
+      clear();
+      return this.poJSON;
+    } 
+    this.paDetail.clear();
+    for (int lnCtr = 0; lnCtr < ((Integer)this.poMaster.getValue("nEntryNox")).intValue(); lnCtr++) {
+      Model loDetail = (Model)this.poDetail.clone();
+      loDetail.newRecord();
+      this.poJSON = loDetail.openRecord(transactionNo, Integer.valueOf(lnCtr + 1));
+      if (!"success".equals(this.poJSON.get("result"))) {
+        this.poJSON.put("message", "Unable to open transaction detail record.");
+        clear();
+        return this.poJSON;
+      } 
+      this.paDetail.add(loDetail);
+    } 
+    this.pnEditMode = 1;
+    this.pbRecordExist = true;
+    this.poJSON = new JSONObject();
+    this.poJSON.put("result", "success");
+    return this.poJSON;
+  }
 
     public JSONObject UpdateTransaction() {
         return updateTransaction();
@@ -321,13 +353,13 @@ public class CheckPrintingRequest extends Transaction {
     }
 
     @Override
-    public Model_Check_Printing_Master Master() {
-        return (Model_Check_Printing_Master) poMaster;
+    public Model_Check_Printing_Request_Master Master() {
+        return (Model_Check_Printing_Request_Master) poMaster;
     }
 
     @Override
-    public Model_Check_Printing_Request Detail(int row) {
-        return (Model_Check_Printing_Request) paDetail.get(row);
+    public Model_Check_Printing_Request_Detail Detail(int row) {
+        return (Model_Check_Printing_Request_Detail) paDetail.get(row);
     }
 
     @Override
@@ -610,7 +642,7 @@ public class CheckPrintingRequest extends Transaction {
         MiscUtil.close(loRS);
         return loJSON;
     }
-    private Model_Check_Printing_Master CheckPrintMasterList() {
+    private Model_Check_Printing_Request_Master CheckPrintMasterList() {
         return new CashflowModels(poGRider).CheckPrintingRequestMaster();
     }
 
@@ -618,8 +650,8 @@ public class CheckPrintingRequest extends Transaction {
         return this.poCheckPrinting.size();
     }
 
-    public Model_Check_Printing_Master poCheckPrinting(int row) {
-        return (Model_Check_Printing_Master) poCheckPrinting.get(row);
+    public Model_Check_Printing_Request_Master poCheckPrinting(int row) {
+        return (Model_Check_Printing_Request_Master) poCheckPrinting.get(row);
     }
     
     public JSONObject SearchTransaction(String fsValue) throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -667,7 +699,82 @@ public class CheckPrintingRequest extends Transaction {
         String BankCode = Master().Banks().getBankCode();
         switch (BankCode) {
             case "BDO":
-                
+                File outputFile = new File("D:/ExportedData.xlsx");
+                if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
+                    System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
+                    return poJSON;
+                }
+
+                // Sample data arrays
+                String[] lastNames = {"Juan", "Maria", "Pedro"};
+                String[] firstNames = {"Dela Cruz", "Reyes", "Santos"};
+                String[] birthYears = {"1990", "1985", "1992"};
+
+                // Validate data consistency
+                int recordCount = lastNames.length;
+                if (firstNames.length != recordCount || birthYears.length != recordCount) {
+                    System.err.println("❌ Data arrays have inconsistent lengths.");
+                    return poJSON;
+                }
+
+                // Create workbook and sheet
+                Workbook workbook = new XSSFWorkbook();
+                Sheet sheet = workbook.createSheet("Export");
+
+                // === ADD HEADER ROW ===
+                String[] header = {"CC", String.valueOf(getDetailCount()), String.valueOf(Master().getTotalAmount()), "", "", "", ""};
+                Row headerRow = sheet.createRow(0);
+                for (int i = 0; i < header.length; i++) {
+                    headerRow.createCell(i).setCellValue(header[i]);
+                }
+
+                // Collect all person data
+                List<String[][]> allPeople = new ArrayList<>();
+                for (int i = 0; i < recordCount; i++) {
+                    // Skip person if any required value is missing
+                    if (isNullOrEmpty(lastNames[i]) || isNullOrEmpty(firstNames[i]) || isNullOrEmpty(birthYears[i])) {
+                        System.err.println("⚠️ Skipping person at index " + i + " due to missing data.");
+                        continue;
+                    }
+
+                    String[][] personDetails = {
+                        {"", "1 LAST NAME", lastNames[i], firstNames[i], ""},
+                        {"", "2 HOUSE NO", "123", "Brgy. Sample", "City"},
+                        {"", "3 BIRTH DATE", "01", "January", birthYears[i]},
+                        {"", "4 DAILY WAGE", "500", "15000", ""},
+                        {"", "5 REMARKS", "N/A", "", ""}
+                    };
+                    allPeople.add(personDetails);
+                }
+
+                // Write data rows after header
+                int startRow = 1;
+                for (String[][] person : allPeople) {
+                    for (String[] detailRow : person) {
+                        if (isRowEmpty(detailRow)) {
+                            continue; // Skip empty rows
+                        }
+                        Row row = sheet.createRow(startRow++);
+                        for (int col = 0; col < detailRow.length; col++) {
+                            row.createCell(col).setCellValue(detailRow[col]);
+                        }
+                    }
+                }
+
+                // Auto-size columns
+                for (int i = 0; i < 6; i++) {
+                    sheet.autoSizeColumn(i);
+                }
+
+                // Save workbook
+                try (FileOutputStream fileOut = new FileOutputStream(outputFile)) {
+                    workbook.write(fileOut);
+                    workbook.close();
+                    System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
+                } catch (IOException e) {
+                    System.err.println("❌ Failed to write Excel file.");
+                    e.printStackTrace();
+                }
                 
                 
                 break;
@@ -678,6 +785,19 @@ public class CheckPrintingRequest extends Transaction {
     }
     
     
+    
+    // === Helpers ===
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
+    }
 
-
+    private static boolean isRowEmpty(String[] row) {
+        for (String cell : row) {
+            if (cell != null && !cell.trim().isEmpty()) {
+                return false; // Has content
+            }
+        }
+        return true; // All blank
+    }
 }
+

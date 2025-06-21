@@ -10,8 +10,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
@@ -30,7 +30,7 @@ public class CashflowModels {
     
     public Model_Cache_Payable_Detail Cache_Payable_Detail(){
         if (poGRider == null){
-            System.err.println("GLModels.Cache_Payable_Detail: Application driver is not set.");
+            System.err.println("CashflowModels.Cache_Payable_Detail: Application driver is not set.");
             return null;
         }
         
@@ -47,7 +47,7 @@ public class CashflowModels {
     
     public Model_Cache_Payable_Master Cache_Payable_Master(){
         if (poGRider == null){
-            System.err.println("GLModels.Cache_Payable_Master: Application driver is not set.");
+            System.err.println("CashflowModels.Cache_Payable_Master: Application driver is not set.");
             return null;
         }
         
@@ -64,7 +64,7 @@ public class CashflowModels {
     
     public Model_Bank_Account_Master Bank_Account_Master(){
         if (poGRider == null){
-            System.err.println("GLModels.Bank_Account_Master: Application driver is not set.");
+            System.err.println("CashflowModels.Bank_Account_Master: Application driver is not set.");
             return null;
         }
         
@@ -81,7 +81,7 @@ public class CashflowModels {
     
     public Model_Bank_Account_Ledger Bank_Account_Ledger(){
         if (poGRider == null){
-            System.err.println("GLModels.Bank_Account_Master: Application driver is not set.");
+            System.err.println("CashflowModels.Bank_Account_Master: Application driver is not set.");
             return null;
         }
         
@@ -98,7 +98,7 @@ public class CashflowModels {
     
     public Model_Recurring_Issuance Recurring_Issuance(){
         if (poGRider == null){
-            System.err.println("GLModels.Recurring_Issuance: Application driver is not set.");
+            System.err.println("CashflowModels.Recurring_Issuance: Application driver is not set.");
             return null;
         }
         
@@ -115,7 +115,7 @@ public class CashflowModels {
     
     public Model_Account_Chart Account_Chart(){
         if (poGRider == null){
-            System.err.println("GLModels.Account_Chart: Application driver is not set.");
+            System.err.println("CashflowModels.Account_Chart: Application driver is not set.");
             return null;
         }
         
@@ -132,7 +132,7 @@ public class CashflowModels {
     
     public Model_Transaction_Account_Chart Transaction_Account_Chart(){
         if (poGRider == null){
-            System.err.println("GLModels.Account_Chart: Application driver is not set.");
+            System.err.println("CashflowModels.Account_Chart: Application driver is not set.");
             return null;
         }
         
@@ -149,7 +149,7 @@ public class CashflowModels {
     
     public Model_Journal_Master Journal_Master(){
         if (poGRider == null){
-            System.err.println("GLModels.Journal_Master: Application driver is not set.");
+            System.err.println("CashflowModels.Journal_Master: Application driver is not set.");
             return null;
         }
         
@@ -166,7 +166,7 @@ public class CashflowModels {
     
     public Model_Journal_Detail Journal_Detail(){
         if (poGRider == null){
-            System.err.println("GLModels.Journal_Detail: Application driver is not set.");
+            System.err.println("CashflowModels.Journal_Detail: Application driver is not set.");
             return null;
         }
         
@@ -183,7 +183,7 @@ public class CashflowModels {
     
     public Model_Particular Particular(){
         if (poGRider == null){
-            System.err.println("GLModels.Particular: Application driver is not set.");
+            System.err.println("CashflowModels.Particular: Application driver is not set.");
             return null;
         }
         
@@ -200,7 +200,7 @@ public class CashflowModels {
     
     public Model_Payee Payee(){
         if (poGRider == null){
-            System.err.println("GLModels.Payee: Application driver is not set.");
+            System.err.println("CashflowModels.Payee: Application driver is not set.");
             return null;
         }
         
@@ -216,7 +216,7 @@ public class CashflowModels {
     }
     public Model_Payment_Request_Master PaymentRequestMaster(){
         if (poGRider == null){
-            System.err.println("GLModels.PaymentRequestMaster: Application driver is not set.");
+            System.err.println("CashflowModels.PaymentRequestMaster: Application driver is not set.");
             return null;
         }
         
@@ -233,7 +233,7 @@ public class CashflowModels {
 
     public Model_Payment_Request_Detail PaymentRequestDetail(){
         if (poGRider == null){
-            System.err.println("GLModels.PaymentRequestDetail: Application driver is not set.");
+            System.err.println("CashflowModels.PaymentRequestDetail: Application driver is not set.");
             return null;
         }
         
@@ -250,7 +250,7 @@ public class CashflowModels {
     
     public Model_Disbursement_Master DisbursementMaster(){
         if (poGRider == null){
-            System.err.println("GLModels.PaymentRequestMaster: Application driver is not set.");
+            System.err.println("CashflowModels.PaymentRequestMaster: Application driver is not set.");
             return null;
         }
         
@@ -267,7 +267,7 @@ public class CashflowModels {
 
     public Model_Disbursement_Detail DisbursementDetail(){
         if (poGRider == null){
-            System.err.println("GLModels.PaymentRequestDetail: Application driver is not set.");
+            System.err.println("CashflowModels.PaymentRequestDetail: Application driver is not set.");
             return null;
         }
         
@@ -284,7 +284,7 @@ public class CashflowModels {
     
     public Model_Check_Payments CheckPayments(){
         if (poGRider == null){
-            System.err.println("GLModels.CheckPayments: Application driver is not set.");
+            System.err.println("CashflowModels.CheckPayments: Application driver is not set.");
             return null;
         }
         
@@ -301,7 +301,7 @@ public class CashflowModels {
        
     public Model_AP_Payment_Master SOATaggingMaster(){
         if (poGRider == null){
-            System.err.println("GLModels.SOATaggingMaster: Application driver is not set.");
+            System.err.println("CashflowModels.SOATaggingMaster: Application driver is not set.");
             return null;
         }
         
@@ -318,7 +318,7 @@ public class CashflowModels {
     
     public Model_AP_Payment_Detail SOATaggingDetails(){
         if (poGRider == null){
-            System.err.println("GLModels.SOATaggingDetails: Application driver is not set.");
+            System.err.println("CashflowModels.SOATaggingDetails: Application driver is not set.");
             return null;
         }
         
@@ -335,7 +335,7 @@ public class CashflowModels {
 
     public Model_AP_Payment_Adjustment APPaymentAdjustment(){
         if (poGRider == null){
-            System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
+            System.err.println("CashflowModels.APPaymentAdjustment: Application driver is not set.");
             return null;
         }
         
@@ -350,34 +350,34 @@ public class CashflowModels {
         return poAPPaymentAdjustment;
     }
 
-    public Model_Check_Printing_Master CheckPrintingRequestMaster(){
+    public Model_Check_Printing_Request_Master CheckPrintingRequestMaster(){
         if (poGRider == null){
-            System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
+            System.err.println("CashflowModels.CheckPrintingRequestMaster: Application driver is not set.");
             return null;
         }
         
         if (poCheckPrintingMaster == null){
-            poCheckPrintingMaster = new Model_Check_Printing_Master();
+            poCheckPrintingMaster = new Model_Check_Printing_Request_Master();
             poCheckPrintingMaster.setApplicationDriver(poGRider);
-            poCheckPrintingMaster.setXML("Model_Check_Printing_Master");
-            poCheckPrintingMaster.setTableName("check_printing_master");
+            poCheckPrintingMaster.setXML("Model_Check_Printing_Request_Master");
+            poCheckPrintingMaster.setTableName("Check_Printing_Request_Master");
             poCheckPrintingMaster.initialize();
         }
 
         return poCheckPrintingMaster;
     }
 
-    public Model_Check_Printing_Request CheckPrintingRequestDetail(){
+    public Model_Check_Printing_Request_Detail CheckPrintingRequestDetail(){
         if (poGRider == null){
-            System.err.println("GLModels.APPaymentAdjustment: Application driver is not set.");
+            System.err.println("CashflowModels.CheckPrintingRequestDetail: Application driver is not set.");
             return null;
         }
         
         if (poCheckPrintingDetail == null){
-            poCheckPrintingDetail = new Model_Check_Printing_Request();
+            poCheckPrintingDetail = new Model_Check_Printing_Request_Detail();
             poCheckPrintingDetail.setApplicationDriver(poGRider);
-            poCheckPrintingDetail.setXML("Model_Check_Printing_Request");
-            poCheckPrintingDetail.setTableName("check_printing_request");
+            poCheckPrintingDetail.setXML("Model_Check_Printing_Request_Detail");
+            poCheckPrintingDetail.setTableName("Check_Printing_Request_Detail");
             poCheckPrintingDetail.initialize();
         }
 
@@ -426,6 +426,6 @@ public class CashflowModels {
     private Model_AP_Payment_Master poAPPaymentMaster;    
     private Model_AP_Payment_Detail poAPPaymentDetail;
     private Model_AP_Payment_Adjustment poAPPaymentAdjustment;    
-    private Model_Check_Printing_Master poCheckPrintingMaster;    
-    private Model_Check_Printing_Request poCheckPrintingDetail;
+    private Model_Check_Printing_Request_Master poCheckPrintingMaster;    
+    private Model_Check_Printing_Request_Detail poCheckPrintingDetail;
 }

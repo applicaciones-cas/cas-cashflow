@@ -2,11 +2,17 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.cas.parameter.model.Model_Inv_Type;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Cache_Payable_Detail extends Model {    
+    
+    
+    Model_Inv_Type poInvType;
     @Override
     public void initialize() {
         try {
@@ -32,9 +38,11 @@ public class Model_Cache_Payable_Detail extends Model {
             poEntity.moveToCurrentRow();
 
             poEntity.absolute(1);
-
             ID = "sTransNox";
             ID2 = "nEntryNox";
+            
+            ParamModels model = new ParamModels(poGRider);
+            poInvType = model.InventoryType();
             
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -118,5 +126,26 @@ public class Model_Cache_Payable_Detail extends Model {
     @Override
     public String getNextCode(){
         return ""; 
+    }
+    
+    public Model_Inv_Type InvType() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sTranType"))) {
+            if (poInvType.getEditMode() == EditMode.READY
+                    && poInvType.getInventoryTypeId().equals((String) getValue("sTranType"))) {
+                return poInvType;
+            } else {
+                poJSON = poInvType.openRecord((String) getValue("sTranType"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poInvType;
+                } else {
+                    poInvType.initialize();
+                    return poInvType;
+                }
+            }
+        } else {
+            poInvType.initialize();
+            return poInvType;
+        }
     }
 }

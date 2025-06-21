@@ -18,7 +18,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
  *
  * @author User
  */
-public class Model_Check_Printing_Request extends Model {
+public class Model_Check_Printing_Request_Detail extends Model {
     Model_Disbursement_Master poDVMaster;
 
 

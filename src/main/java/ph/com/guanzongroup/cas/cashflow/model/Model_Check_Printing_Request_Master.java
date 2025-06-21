@@ -17,13 +17,12 @@ import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
  *
  * @author User
  */
-public class Model_Check_Printing_Master extends Model {
+public class Model_Check_Printing_Request_Master extends Model {
 
   
     Model_Bank_Account_Master poBankAccountMaster;
