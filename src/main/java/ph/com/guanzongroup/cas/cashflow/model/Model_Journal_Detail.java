@@ -54,11 +54,11 @@ public class Model_Journal_Detail extends Model {
         return (String) getValue("sTransNox");
     }
     
-    public JSONObject setEntryNo(int entryNo){
+    public JSONObject setEntryNumber(int entryNo){
         return setValue("nEntryNox", entryNo);
     }
 
-    public int getEntryNo() {
+    public int getEntryNumber() {
         return (int) getValue("nEntryNox");
     }
     
@@ -75,7 +75,7 @@ public class Model_Journal_Detail extends Model {
     }
 
     public double getDebitAmount() {
-        return (double) getValue("nDebitAmt");
+        return Double.parseDouble(String.valueOf(getValue("nDebitAmt")));
     }
     
     public JSONObject setCreditAmount(double amount){
@@ -83,7 +83,7 @@ public class Model_Journal_Detail extends Model {
     }
 
     public double getCreditAmount() {
-        return (double) getValue("nCredtAmt");
+        return Double.parseDouble(String.valueOf(getValue("nCredtAmt")));
     }
     
     public JSONObject setForMonthOf(Date date){
