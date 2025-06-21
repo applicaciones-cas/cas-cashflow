@@ -243,7 +243,7 @@ public class APPaymentAdjustment extends Parameter {
                 poCachePayable.AddDetail();
             }
 
-            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType("PAdj");
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(APPaymentAdjustmentStatus.TRANSTYPE);
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
