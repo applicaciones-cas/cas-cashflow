@@ -1253,7 +1253,7 @@ public class Disbursement extends Transaction {
 //                    amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
                     
                     
-                    referNo = poApPayments.Detail(i).getTransactionNo();
+                    referNo = poApPayments.Detail(i).getSourceNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = poApPayments.Detail(i).getSourceNo();
                     amount = poApPayments.Detail(i).getAppliedAmount().doubleValue();
