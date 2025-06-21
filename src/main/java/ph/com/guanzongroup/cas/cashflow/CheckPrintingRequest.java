@@ -65,34 +65,6 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException { 
         return openTransaction(transactionNo);
     }
-    
-    @Override
-    protected JSONObject openTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
-    this.poJSON = this.poMaster.openRecord(transactionNo);
-    if (!"success".equals(this.poJSON.get("result"))) {
-      this.poJSON.put("message", "Unable to open transaction master record.");
-      clear();
-      return this.poJSON;
-    } 
-    this.paDetail.clear();
-    for (int lnCtr = 0; lnCtr < ((Integer)this.poMaster.getValue("nEntryNox")).intValue(); lnCtr++) {
-      Model loDetail = (Model)this.poDetail.clone();
-      loDetail.newRecord();
-      this.poJSON = loDetail.openRecord(transactionNo, Integer.valueOf(lnCtr + 1));
-      if (!"success".equals(this.poJSON.get("result"))) {
-        this.poJSON.put("message", "Unable to open transaction detail record.");
-        clear();
-        return this.poJSON;
-      } 
-      this.paDetail.add(loDetail);
-    } 
-    this.pnEditMode = 1;
-    this.pbRecordExist = true;
-    this.poJSON = new JSONObject();
-    this.poJSON.put("result", "success");
-    return this.poJSON;
-  }
-
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
