@@ -118,8 +118,8 @@ public class Model_Cache_Payable_Master extends Model {
         return setValue("nEntryNox", entryNo);
     }
 
-    public Number getEntryNo() {
-        return (Number) getValue("nEntryNox");
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
     }
     
     public JSONObject setClientId(String clientId){

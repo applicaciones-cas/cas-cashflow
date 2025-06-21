@@ -79,48 +79,48 @@ public class Model_Cache_Payable_Detail extends Model {
         return setValue("nGrossAmt", amount);
     }
 
-    public Number getGrossAmount() {
-        return (Number) getValue("nGrossAmt");
+    public double getGrossAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nGrossAmt")));
     }
     
     public JSONObject setDiscountAmount(Number amount){
         return setValue("nDiscAmtx", amount);
     }
 
-    public Number getDiscountAmount() {
-        return (Number) getValue("nDiscAmtx");
+    public double getDiscountAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nDiscAmtx")));
     }
     
     public JSONObject setDeductionAmount(Number amount){
         return setValue("nDeductnx", amount);
     }
 
-    public Number getDeductionAmount() {
-        return (Number) getValue("nDeductnx");
+    public double getDeductionAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nDeductnx")));
     }
     
     public JSONObject setPayables(Number amount){
         return setValue("nPayables", amount);
     }
 
-    public Number getPayables() {
-        return (Number) getValue("nPayables");
+    public double getPayables() {
+        return Double.parseDouble(String.valueOf(getValue("nPayables")));
     }
     
     public JSONObject setReceivables(Number amount){
         return setValue("nRecvbles", amount);
     }
 
-    public Number getReceivables() {
-        return (Number) getValue("nRecvbles");
+    public double getReceivables() {
+        return Double.parseDouble(String.valueOf(getValue("nRecvbles")));
     }
     
     public JSONObject setAmountPaid(Number amount){
         return setValue("nAmtPaidx", amount);
     }
 
-    public Number getAmountPaid() {
-        return (Number) getValue("nAmtPaidx");
+    public double getAmountPaid() {
+        return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
     }
         
     @Override

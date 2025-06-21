@@ -9,11 +9,15 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Journal_Master extends Model {
+    Model_Industry poIndustry;
+    Model_Company poCompany;
     Model_Branch poBranch;
     Model_Department poDepartment;
     
@@ -56,6 +60,22 @@ public class Model_Journal_Master extends Model {
 
     public String getTransactionNo() {
         return (String) getValue("sTransNox");
+    }
+    
+    public JSONObject setIndustryCode(String industryCode) {
+        return setValue("sIndstCdx", industryCode);
+    }
+
+    public String getIndustryCode() {
+        return (String) getValue("sIndstCdx");
+    }
+    
+    public JSONObject setCompanyId(String companyId) {
+        return setValue("sCompnyCd", companyId);
+    }
+
+    public String getCompanyId() {
+        return (String) getValue("sCompnyCd");
     }
 
     public JSONObject setTransactionDate(Date date) {
@@ -114,11 +134,11 @@ public class Model_Journal_Master extends Model {
         return (String) getValue("sSourceNo");
     }
     
-    public JSONObject setEntryNo(int entryNo){
+    public JSONObject setEntryNumber(int entryNo){
         return setValue("nEntryNox", entryNo);
     }
 
-    public int getEntryNo() {
+    public int getEntryNumber() {
         return (int) getValue("nEntryNox");
     }
         
@@ -149,6 +169,48 @@ public class Model_Journal_Master extends Model {
     @Override
     public String getNextCode(){
         return ""; 
+    }
+    
+    public Model_Industry Industry() throws SQLException, GuanzonException{
+        if (!"".equals((String) getValue("sIndstCdx"))){
+            if (poIndustry.getEditMode() == EditMode.READY && 
+                poIndustry.getIndustryId().equals((String) getValue("sIndstCdx")))
+                return poIndustry;
+            else{
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
+
+                if ("success".equals((String) poJSON.get("result")))
+                    return poIndustry;
+                else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
+        }
+    }
+    
+    public Model_Company Company() throws SQLException, GuanzonException{
+        if (!"".equals((String) getValue("sCompnyID"))){
+            if (poCompany.getEditMode() == EditMode.READY && 
+                poCompany.getCompanyId().equals((String) getValue("sCompnyID")))
+                return poCompany;
+            else{
+                poJSON = poCompany.openRecord((String) getValue("sCompnyID"));
+
+                if ("success".equals((String) poJSON.get("result")))
+                    return poCompany;
+                else {
+                    poCompany.initialize();
+                    return poCompany;
+                }
+            }
+        } else {
+            poCompany.initialize();
+            return poCompany;
+        }
     }
     
     public Model_Branch Branch() throws SQLException, GuanzonException{

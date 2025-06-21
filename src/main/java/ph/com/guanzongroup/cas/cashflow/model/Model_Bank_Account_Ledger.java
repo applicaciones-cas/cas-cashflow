@@ -96,7 +96,7 @@ public class Model_Bank_Account_Ledger extends Model {
     }
 
     public double getAmountIn() {
-        return (double) getValue("nAmountIn");
+        return Double.parseDouble(String.valueOf(getValue("nAmountIn")));
     }
     
     public JSONObject setAmountOut(double amount){
@@ -104,7 +104,7 @@ public class Model_Bank_Account_Ledger extends Model {
     }
 
     public double getAmountOut() {
-        return (double) getValue("nAmountOt");
+        return Double.parseDouble(String.valueOf(getValue("nAmountOt")));
     }
  
     public JSONObject setPostedDate(Date date) {

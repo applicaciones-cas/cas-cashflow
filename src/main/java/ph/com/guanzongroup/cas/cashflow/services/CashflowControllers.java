@@ -4,7 +4,9 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
+import org.guanzon.cas.parameter.TaxCode;
 import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
+import ph.com.guanzongroup.cas.cashflow.AccountChart;
 import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
@@ -209,6 +211,41 @@ public class CashflowControllers {
         poCheckPrintingRequest.setWithParent(false);
         return poCheckPrintingRequest;        
     }
+    
+    public APPaymentAdjustment APPaymentAdjustment() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("CashflowControllers.AccountChart: Application driver is not set.");
+            return null;
+        }
+        
+        if (poAPPaymentAdjustment != null) return poAPPaymentAdjustment;
+        
+        poAPPaymentAdjustment = new APPaymentAdjustment();
+        poAPPaymentAdjustment.setApplicationDriver(poGRider);
+        poAPPaymentAdjustment.setWithParentClass(true);
+        poAPPaymentAdjustment.setLogWrapper(poLogWrapper);
+        poAPPaymentAdjustment.initialize();
+        poAPPaymentAdjustment.newRecord();
+        return poAPPaymentAdjustment;        
+    }
+    
+    public AccountChart AccountChart() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("CashflowControllers.AccountChart: Application driver is not set.");
+            return null;
+        }
+        
+        if (poAccountChart != null) return poAccountChart;
+        
+        poAccountChart = new AccountChart();
+        poAccountChart.setApplicationDriver(poGRider);
+        poAccountChart.setWithParentClass(true);
+        poAccountChart.setLogWrapper(poLogWrapper);
+        poAccountChart.initialize();
+        poAccountChart.newRecord();
+        return poAccountChart;        
+    }
+
        
     @Override
     protected void finalize() throws Throwable {
@@ -226,6 +263,7 @@ public class CashflowControllers {
             poCheckPayments = null;            
             poPaymentRequest = null;
             poCheckPrintingRequest = null;
+            poAccountChart = null;
             
             poLogWrapper = null;
             poGRider = null;
@@ -248,4 +286,5 @@ public class CashflowControllers {
     private SOATagging poSOATagging;
     private APPaymentAdjustment poAPPaymentAdjustment;
     private CheckPrintingRequest poCheckPrintingRequest;
+    private AccountChart poAccountChart;
 }
