@@ -202,7 +202,7 @@ public class Model_AP_Payment_Master extends Model {
 
     public Number getVatAmount() {
         if (getValue("nVATAmtxx") == null || "".equals(getValue("nVATAmtxx"))) {
-            return 0.00;
+            return 0.0000;
         }
         return (Number) getValue("nVATAmtxx");
     }
@@ -213,7 +213,7 @@ public class Model_AP_Payment_Master extends Model {
 
     public Number getVatExempt() {
         if (getValue("nVatExmpt") == null || "".equals(getValue("nVatExmpt"))) {
-            return 0.00;
+            return 0.0000;
         }
         return (Number) getValue("nVatExmpt");
     }
@@ -224,7 +224,7 @@ public class Model_AP_Payment_Master extends Model {
 
     public Number getZeroRatedVat() {
         if (getValue("nZeroRted") == null || "".equals(getValue("nZeroRted"))) {
-            return 0.00;
+            return 0.0000;
         }
         return (Number) getValue("nZeroRted");
     }

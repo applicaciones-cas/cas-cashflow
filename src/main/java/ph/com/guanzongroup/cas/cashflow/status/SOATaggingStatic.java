@@ -13,4 +13,5 @@ public class SOATaggingStatic {
     //Payable Type
     public static final String PaymentRequest = "PRF";
     public static final String CachePayable = "Cche";
+    public static final String APPaymentAdjustment = "PAdj";
 }

@@ -30,8 +30,11 @@ import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 
 /**
  *
@@ -73,10 +76,18 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         //Populate cache payables
-        if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)){
+        if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED) 
+                || getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CANCELLED) ){
             poJSON = populateCachePayable(true, getModel().getTransactionStatus());
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
+            }
+            
+            if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CANCELLED)){
+                poJSON = checkLinkedPayment();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
         }
         
@@ -180,24 +191,30 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
         poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
         poCachePayable.InitTransaction();
-        poCachePayable.setWithParent(true);
         
-        if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
-            if(isSave){
-                //Update cache payables
-                if(getCachePayable().isEmpty()){
+        if(isSave){
+            //Update cache payables
+            if(getCachePayable().isEmpty()){
+                if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
                     poJSON = poCachePayable.NewTransaction();
                     if ("error".equals((String) poJSON.get("result"))){
                         return poJSON;
                     }
-                } else {
-                    poJSON = poCachePayable.OpenTransaction(getCachePayable());
-                    if ("error".equals((String) poJSON.get("result"))){
-                        return poJSON;
-                    }
                 }
-            
             } else {
+                poJSON = poCachePayable.OpenTransaction(getCachePayable());
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+
+                poJSON = poCachePayable.UpdateTransaction();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            }
+
+        } else {
+            if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
                 poJSON = poCachePayable.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -205,31 +222,39 @@ public class APPaymentAdjustment extends Parameter {
             }
         }
         
-        //Cache Payable Master
-        poCachePayable.Master().setIndustryCode(getModel().getIndustryId());
-        poCachePayable.Master().setBranchCode(getModel().getBranchCode());
-        poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); //TODO
-        poCachePayable.Master().setCompanyId(getModel().getCompanyId());
-        poCachePayable.Master().setClientId(getModel().getClientId());
-        poCachePayable.Master().setSourceCode(SOURCE_CODE);
-        poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
-        poCachePayable.Master().setReferNo(getModel().getReferenceNo()); //TODO
-        poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); //TODO
-        poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); //TODO
-        poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); //TODO
-        poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); //TODO
         
-        //Cache Payable Detail
-        if(poCachePayable.getDetailCount() < 0){
-            poCachePayable.AddDetail();
+        if(poCachePayable.getEditMode() == EditMode.ADDNEW || poCachePayable.getEditMode() == EditMode.UPDATE){
+            //Cache Payable Master
+            poCachePayable.Master().setIndustryCode(getModel().getIndustryId());
+            poCachePayable.Master().setBranchCode(getModel().getBranchCode());
+            poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); 
+            poCachePayable.Master().setCompanyId(getModel().getCompanyId());
+            poCachePayable.Master().setClientId(getModel().getClientId());
+            poCachePayable.Master().setSourceCode("PAdj");
+            poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
+            poCachePayable.Master().setReferNo(getModel().getReferenceNo()); 
+            poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); 
+            poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); 
+            poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
+            poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
+
+            //Cache Payable Detail
+            if(poCachePayable.getDetailCount() < 0){
+                poCachePayable.AddDetail();
+            }
+
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(APPaymentAdjustmentStatus.TRANSTYPE);
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setReceivables(getModel().getCreditAmount().doubleValue());
+            
+            
+            if(status.equals(APPaymentAdjustmentStatus.CANCELLED)){
+                poCachePayable.Master().setTransactionStatus("2");
+            }
+            
         }
-        
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(SOURCE_CODE);
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
-        poCachePayable.Detail(poCachePayable.getDetailCount()-1).setReceivables(getModel().getCreditAmount().doubleValue());
-        
         return poJSON;
     }
     
@@ -457,7 +482,6 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         poModel.setTransactionStatus(APPaymentAdjustmentStatus.CANCELLED);
-        
         poJSON = SaveTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -923,9 +947,11 @@ public class APPaymentAdjustment extends Parameter {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         try {
-            
-            if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)){
+            if(poCachePayable != null){
                 if(poCachePayable.getEditMode() == EditMode.ADDNEW || poCachePayable.getEditMode() == EditMode.UPDATE){
+                    poCachePayable.setWithParent(true);
+                    poCachePayable.Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                    poCachePayable.Master().setModifiedDate(poGRider.getServerDate());
                     poJSON = poCachePayable.SaveTransaction();
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -934,10 +960,84 @@ public class APPaymentAdjustment extends Parameter {
             }
             
         } catch (CloneNotSupportedException ex) {
-            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(APPaymentAdjustment.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         
         poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    private JSONObject checkLinkedPayment(){
+        poJSON = new JSONObject();
+        try {
+            //Cache payable
+            String lsCachePayable = "";
+            Model_Cache_Payable_Master loCachePayable = new CashflowModels(poGRider).Cache_Payable_Master();
+            String lsSQL = MiscUtil.makeSelect(loCachePayable);
+            lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(getModel().getTransactionNo()) );
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            if (MiscUtil.RecordCount(loRS) >= 0) {
+                if (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------Cache Payable--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    lsCachePayable = loRS.getString("sTransNox");
+                }
+            } 
+            
+            MiscUtil.close(loRS);
+            
+            //SOA Tagging
+            if(lsCachePayable != null && !"".equals(lsCachePayable)){
+                lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
+                        " b.sSourceNo = " + SQLUtil.toSQL(lsCachePayable)
+                        + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
+                        + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.VOID)
+                );
+                System.out.println("Executing SQL: " + lsSQL);
+                loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------SOA Tagging--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "AP Payment Adjustment already linked to SOA : " + loRS.getString("sTransNox"));
+                        return poJSON;
+                    }
+                }
+                MiscUtil.close(loRS);
+            
+                //Disbursement
+                lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
+                        " b.sSourceNo = " + SQLUtil.toSQL(lsCachePayable)
+                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
+                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
+                );
+                System.out.println("Executing SQL: " + lsSQL);
+                loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------DV--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "AP Payment Adjustment already linked to DV : " + loRS.getString("sTransNox"));
+                        return poJSON;
+                    }
+                }
+                MiscUtil.close(loRS);
+            }
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
         return poJSON;
     }
     
@@ -977,5 +1077,21 @@ public class APPaymentAdjustment extends Parameter {
                 + " LEFT JOIN payee c ON c.sPayeeIDx = a.sIssuedTo "
                 + " LEFT JOIN company d ON d.sCompnyID = a.sCompnyID  "
                 + " LEFT JOIN industry e ON e.sIndstCdx = a.sIndstCdx ";
+    }
+    
+    public String getAPPaymentSQL() {
+        return " SELECT "
+                + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
+                + " , sum(b.nAppliedx) AS nAppliedx"
+                + " FROM ap_payment_master a "
+                + " LEFT JOIN ap_payment_detail b ON b.sTransNox = a.sTransNox ";
+    }
+    
+    public String getDVPaymentSQL() {
+        return " SELECT "
+                + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
+                + " , sum(b.nAmountxx) AS nAppliedx"
+                + " FROM disbursement_master a "
+                + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
     }
 }

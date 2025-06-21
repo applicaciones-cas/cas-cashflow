@@ -18,4 +18,6 @@ public class APPaymentAdjustmentStatus { //PENDING TODO
     public static final  String PAID = "5"; 
     public static final  String RETURNED = "6"; 
     
+    public static final  String TRANSTYPE = "0008";  //Adjustment
+    
 }
