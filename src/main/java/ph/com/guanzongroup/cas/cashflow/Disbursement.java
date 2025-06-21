@@ -1070,7 +1070,6 @@ public class Disbursement extends Transaction {
                     + "FROM AP_Payment_Master a "
                     + "WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + "  AND (a.nTranTotl - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + "  AND a.cProcessd = '" + PaymentRequestStatus.OPEN + "' "
                     + "  AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + "  AND a.sCompnyID = '" + Master().getCompanyID() + "'"
             );
@@ -1093,7 +1092,6 @@ public class Disbursement extends Transaction {
                     + "FROM Payment_Request_Master b "
                     + "WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + "  AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + "  AND b.cProcessd = '" + PaymentRequestStatus.OPEN + "' "
                     + "  AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + "  AND b.sCompnyID = '" + Master().getCompanyID() + "'"
             );
@@ -1116,7 +1114,6 @@ public class Disbursement extends Transaction {
                     + "FROM Cache_Payable_Master c "
                     + "WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + "  AND (c.nGrossAmt - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
-                    + "  AND c.cProcessd = '" + PaymentRequestStatus.OPEN + "' "
                     + "  AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + "  AND c.sCompnyID = '" + Master().getCompanyID() + "'"
             );
@@ -1250,13 +1247,20 @@ public class Disbursement extends Transaction {
 
                 detailCount = poApPayments.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
+//                    referNo = poPaymentRequest.Detail(i).getTransactionNo();
+//                    sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
+//                    particular = poPaymentRequest.Detail(i).getParticularID();
+//                    amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
+                    
+                    
                     referNo = poApPayments.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = poApPayments.Detail(i).getSourceNo();
-                    amount = poApPayments.Detail(i).getCreditAmount().doubleValue();
+                    amount = poApPayments.Detail(i).getAppliedAmount().doubleValue();
+                    
                     CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
                     poJSON = poCachePayable.InitTransaction();
-                    poJSON = poCachePayable.OpenTransaction(sourceCode);
+                    poJSON = poCachePayable.OpenTransaction(referNo);
                     
                     for (int c = 0; c < poCachePayable.getDetailCount(); c++) {
                         invType = poCachePayable.Detail(c).InvType().getDescription();
@@ -1308,7 +1312,7 @@ public class Disbursement extends Transaction {
                     referNo = poCachePayable.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = poCachePayable.Detail(i).getTransactionType();
-                    amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getGrossAmount()));
+                    amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getPayables()));
                     invType = poCachePayable.Detail(i).InvType().getDescription();
 
                     boolean found = false;
