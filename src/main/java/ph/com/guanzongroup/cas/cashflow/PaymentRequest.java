@@ -61,7 +61,7 @@ public class PaymentRequest extends Transaction {
     public JSONObject SaveTransaction() throws SQLException, CloneNotSupportedException, GuanzonException {
         return saveTransaction();
     }
-
+    
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }

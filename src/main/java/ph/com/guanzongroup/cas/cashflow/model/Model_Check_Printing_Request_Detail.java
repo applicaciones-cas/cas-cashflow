@@ -18,7 +18,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
  *
  * @author User
  */
-public class Model_Check_Printing_Request extends Model {
+public class Model_Check_Printing_Request_Detail extends Model {
     Model_Disbursement_Master poDVMaster;
 
 
@@ -121,10 +121,10 @@ public class Model_Check_Printing_Request extends Model {
     public Model_Disbursement_Master DisbursementMaster() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sSourceNo"))) {
             if (poDVMaster.getEditMode() == EditMode.READY
-                    && poDVMaster.getTransactionNo().equals((String) getValue("sTransNox"))) {
+                    && poDVMaster.getTransactionNo().equals((String) getValue("sSourceNo"))) {
                 return poDVMaster;
             } else {
-                poJSON = poDVMaster.openRecord((String) getValue("sTransNox"));
+                poJSON = poDVMaster.openRecord((String) getValue("sSourceNo"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poDVMaster;

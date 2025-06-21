@@ -155,14 +155,6 @@ public class Model_Disbursement_Master extends Model {
         return (String) getValue("cDisbrsTp");
     }
 
-    public JSONObject setBankReferenceNo(String bankReferenceNo) {
-        return setValue("sBankRefr", bankReferenceNo);
-    }
-
-    public String getBankReferenceNo() {
-        return (String) getValue("sBankRefr");
-    }
-
     public JSONObject setPayeeID(String payeeID) {
         return setValue("sPayeeIDx", payeeID);
     }
