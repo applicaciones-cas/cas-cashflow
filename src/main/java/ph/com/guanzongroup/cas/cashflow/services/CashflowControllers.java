@@ -13,6 +13,7 @@ import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
+import ph.com.guanzongroup.cas.cashflow.Journal;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
@@ -178,23 +179,6 @@ public class CashflowControllers {
         return poSOATagging;        
     }
     
-    public APPaymentAdjustment APPayementAdjustment(){
-        if (poGRider == null){
-            poLogWrapper.severe("GLControllers.APPayementAdjustment: Application driver is not set.");
-            return null;
-        }
-        
-        if (poAPPaymentAdjustment != null) return poAPPaymentAdjustment;
-        
-        poAPPaymentAdjustment = new APPaymentAdjustment();
-        poAPPaymentAdjustment.setApplicationDriver(poGRider);
-        poAPPaymentAdjustment.setApplicationDriver(poGRider);
-        poAPPaymentAdjustment.setWithParentClass(false);
-        poAPPaymentAdjustment.setLogWrapper(poLogWrapper);
-        poAPPaymentAdjustment.initialize();
-        return poAPPaymentAdjustment;        
-    }
-    
     public CheckPrintingRequest CheckPrintingRequest(){
         if (poGRider == null){
             poLogWrapper.severe("CashflowController.CheckPrintingRequest: Application driver is not set.");
@@ -212,9 +196,9 @@ public class CashflowControllers {
         return poCheckPrintingRequest;        
     }
     
-    public APPaymentAdjustment APPaymentAdjustment() throws SQLException, GuanzonException{
+    public APPaymentAdjustment APPaymentAdjustment(){
         if (poGRider == null){
-            poLogWrapper.severe("CashflowControllers.AccountChart: Application driver is not set.");
+            poLogWrapper.severe("CashflowControllers.APPaymentAdjustment: Application driver is not set.");
             return null;
         }
         
@@ -222,10 +206,9 @@ public class CashflowControllers {
         
         poAPPaymentAdjustment = new APPaymentAdjustment();
         poAPPaymentAdjustment.setApplicationDriver(poGRider);
-        poAPPaymentAdjustment.setWithParentClass(true);
+        poAPPaymentAdjustment.setWithParentClass(false);
         poAPPaymentAdjustment.setLogWrapper(poLogWrapper);
         poAPPaymentAdjustment.initialize();
-        poAPPaymentAdjustment.newRecord();
         return poAPPaymentAdjustment;        
     }
     
@@ -244,6 +227,22 @@ public class CashflowControllers {
         poAccountChart.initialize();
         poAccountChart.newRecord();
         return poAccountChart;        
+    }
+    
+    public Journal Journal() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("CashflowControllers.Journal: Application driver is not set.");
+            return null;
+        }
+        
+        if (poJournal != null) return poJournal;
+        
+        poJournal = new Journal();
+        poJournal.setApplicationDriver(poGRider);
+        poJournal.setBranchCode(poGRider.getBranchCode());
+        poJournal.setLogWrapper(poLogWrapper);
+        poJournal.setWithParent(true);
+        return poJournal;        
     }
 
        
@@ -287,4 +286,5 @@ public class CashflowControllers {
     private APPaymentAdjustment poAPPaymentAdjustment;
     private CheckPrintingRequest poCheckPrintingRequest;
     private AccountChart poAccountChart;
+    private Journal poJournal;
 }
