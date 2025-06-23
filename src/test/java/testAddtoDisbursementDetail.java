@@ -59,7 +59,7 @@ public class testAddtoDisbursementDetail {
                 System.out.println("Detail #" + (i + 1));
                 System.out.println("  Source No   : " + poDisbursement.Disbursement().Detail(i).getSourceNo());
                 System.out.println("  Source Code : " + poDisbursement.Disbursement().Detail(i).getSourceCode());
-                System.out.println("  particular : " + poDisbursement.Disbursement().Detail(i).getParticular());
+                System.out.println("  particular : " + poDisbursement.Disbursement().Detail(i).getParticularID());
                 System.out.println("  Amount      : " + poDisbursement.Disbursement().Detail(i).getAmount());
                 System.out.println("------------------------------------");
             }

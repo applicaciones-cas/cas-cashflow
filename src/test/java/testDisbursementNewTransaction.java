@@ -113,7 +113,7 @@ public class testDisbursementNewTransaction {
             poDisbursement.Disbursement().Detail(0).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(0).setSourceNo("M00125000024");
             poDisbursement.Disbursement().Detail(0).setAccountCode("M00125000024");
-            poDisbursement.Disbursement().Detail(0).setParticular("001");
+            poDisbursement.Disbursement().Detail(0).setParticularID("001");
             poDisbursement.Disbursement().Detail(0).setAmount(5000.0000);
             poDisbursement.Disbursement().Detail(0).setAmountApplied(0.0000);
             
@@ -123,7 +123,7 @@ public class testDisbursementNewTransaction {
             poDisbursement.Disbursement().Detail(1).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(1).setSourceNo("M00125000024");
             poDisbursement.Disbursement().Detail(1).setAccountCode("M00125000024");
-            poDisbursement.Disbursement().Detail(1).setParticular("002");
+            poDisbursement.Disbursement().Detail(1).setParticularID("002");
             poDisbursement.Disbursement().Detail(1).setAmount(5000.0000);
             poDisbursement.Disbursement().Detail(1).setAmountApplied(0.0000);
             
@@ -133,7 +133,7 @@ public class testDisbursementNewTransaction {
             poDisbursement.Disbursement().Detail(2).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(2).setSourceNo("P0w125000026");
             poDisbursement.Disbursement().Detail(2).setAccountCode("P0w125000026");
-            poDisbursement.Disbursement().Detail(2).setParticular("003");
+            poDisbursement.Disbursement().Detail(2).setParticularID("003");
             poDisbursement.Disbursement().Detail(2).setAmount(5000.0000);
             poDisbursement.Disbursement().Detail(2).setAmountApplied(0.0000);
            

@@ -428,7 +428,7 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject AddDetail() throws CloneNotSupportedException {
-        if (Detail(getDetailCount() - 1).getParticular().isEmpty()) {
+        if (Detail(getDetailCount() - 1).getParticularID().isEmpty()) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Last row has empty item.");
@@ -460,7 +460,7 @@ public class Disbursement extends Transaction {
         poJSON = object.searchRecord(value, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-           Detail(row).setParticular(object.getModel().getParticularID());
+           Detail(row).setParticularID(object.getModel().getParticularID());
         }
         return poJSON;
     }
@@ -893,7 +893,7 @@ public class Disbursement extends Transaction {
 
         if (lbUpdated) {
             for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
-                lbUpdated = loRecord.Detail(lnCtr).getParticular().equals(Detail(lnCtr).getParticular());
+                lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
                 if (lbUpdated) {
                     lbUpdated = loRecord.Detail(lnCtr).getAmount().equals(Detail(lnCtr).getAmount());
                 }
@@ -965,22 +965,22 @@ public class Disbursement extends Transaction {
             System.out.println("TransNo : " + (lnCtr + 1) + " : " + Detail(lnCtr).getTransactionNo());
             System.out.println("sourceno : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceNo());
             System.out.println("sourceCode : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceCode());
-            System.out.println("particular : " + (lnCtr + 1) + " : " + Detail(lnCtr).getParticular());
+            System.out.println("particular : " + (lnCtr + 1) + " : " + Detail(lnCtr).getParticularID());
             System.out.println("------------------------------------------------------------------ ");
             
             switch (Master().getEditMode()) {
                 case EditMode.ADDNEW:
-                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), true);
+                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticularID(), true);
                     break;
                 case EditMode.UPDATE:
-                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), false);
+                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticularID(), false);
                     break;
             }
         }
         //Update stock request removed
         for (lnCtr = 0; lnCtr <= getDetailRemovedCount() - 1; lnCtr++) {
             //Purchase Order
-            updateDisbursementsSource(DetailRemove(lnCtr).getSourceNo(), DetailRemove(lnCtr).getSourceCode(), DetailRemove(lnCtr).getParticular(), false);
+            updateDisbursementsSource(DetailRemove(lnCtr).getSourceNo(), DetailRemove(lnCtr).getSourceCode(), DetailRemove(lnCtr).getParticularID(), false);
         }
         poJSON.put("result", "success");
         return poJSON;
@@ -1212,7 +1212,7 @@ public class Disbursement extends Transaction {
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
-                                && Detail(j).getParticular().equals(particular)) {
+                                && Detail(j).getParticularID().equals(particular)) {
                             found = true;
                             break;
                         }
@@ -1223,7 +1223,7 @@ public class Disbursement extends Transaction {
                         int newIndex = getDetailCount() - 1;
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticular(particular);
+                        Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);                   
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
@@ -1278,7 +1278,7 @@ public class Disbursement extends Transaction {
                         int newIndex = getDetailCount() - 1;
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticular(particular);
+                        Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);                        
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
@@ -1326,7 +1326,7 @@ public class Disbursement extends Transaction {
                         int newIndex = getDetailCount() - 1;
                         Detail(newIndex).setSourceNo(referNo);
                         Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticular(particular);
+                        Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);                   
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
