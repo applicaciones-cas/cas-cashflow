@@ -110,11 +110,11 @@ public class Model_Disbursement_Detail extends Model {
         return (String) getValue("sAcctCode");
     }
 
-    public JSONObject setParticular(String particular) {
+    public JSONObject setParticularID(String particular) {
         return setValue("sPrtclrID", particular);
     }
 
-    public String getParticular() {
+    public String getParticularID() {
         return (String) getValue("sPrtclrID");
     }
 

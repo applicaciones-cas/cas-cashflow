@@ -1253,7 +1253,7 @@ public class Disbursement extends Transaction {
                 for (int i = 0; i < detailCount; i++) {                    
                     referNo = poApPayments.Detail(i).getSourceNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
-                    particular = poApPayments.Detail(i).getSourceNo();
+                    particular = "";
                     amount = poApPayments.Detail(i).getAppliedAmount().doubleValue();
                     
                     CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
@@ -1267,8 +1267,7 @@ public class Disbursement extends Transaction {
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
-                                && Detail(j).getSourceCode().equals(sourceCode)
-                                && Detail(j).getParticular().equals(particular)) {
+                                && Detail(j).getSourceCode().equals(sourceCode)) {
                             found = true;
                             break;
                         }
@@ -1309,15 +1308,14 @@ public class Disbursement extends Transaction {
                 for (int i = 0; i < detailCount; i++) {
                     referNo = poCachePayable.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
-                    particular = poCachePayable.Detail(i).getTransactionType();
+                    particular = "";
                     amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getPayables()));
                     invType = poCachePayable.Detail(i).InvType().getDescription();
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
-                                && Detail(j).getSourceCode().equals(sourceCode)
-                                && Detail(j).getParticular().equals(particular)) {
+                                && Detail(j).getSourceCode().equals(sourceCode)) {
                             found = true;
                             break;
                         }

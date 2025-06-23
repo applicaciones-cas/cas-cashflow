@@ -672,6 +672,7 @@ public class CheckPrintingRequest extends Transaction {
         String BankCode = Master().Banks().getBankCode();
         switch (BankCode) {
             case "BDO":
+                
                 File outputFile = new File("D:/ExportedData.xlsx");
                 if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
                     System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
@@ -695,7 +696,7 @@ public class CheckPrintingRequest extends Transaction {
                 Sheet sheet = workbook.createSheet("Export");
 
                 // === ADD HEADER ROW ===
-                String[] header = {"CC", String.valueOf(getDetailCount()), String.valueOf(Master().getTotalAmount()), "", "", "", ""};
+                String[] header = {"CC", String.valueOf(getDetailCount()), String.valueOf(Master().getTotalAmount()), "", "", "", "","","","","","","","","",""};
                 Row headerRow = sheet.createRow(0);
                 for (int i = 0; i < header.length; i++) {
                     headerRow.createCell(i).setCellValue(header[i]);
