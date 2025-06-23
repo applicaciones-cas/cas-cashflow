@@ -65,6 +65,7 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException { 
         return openTransaction(transactionNo);
     }
+    
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
@@ -410,7 +411,7 @@ public class CheckPrintingRequest extends Transaction {
                 + "  c.sActNamex, "
                 + "  a.cTranStat, "                
                 + "  a.sBranchCd "
-                + "FROM check_printing_master a "
+                + "FROM check_printing_request_master a "
                 + "LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
                 + "LEFT JOIN bank_account_master c ON a.sBankIDxx = c.sBankIDxx";
     }
