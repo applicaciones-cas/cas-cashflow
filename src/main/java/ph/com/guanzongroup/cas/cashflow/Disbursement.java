@@ -59,6 +59,7 @@ public class Disbursement extends Transaction {
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
+        poCachePayable = new ArrayList<>();
         poToCertify = new ArrayList<>();
         return initialize();
     }
@@ -756,7 +757,6 @@ public class Disbursement extends Transaction {
                     poPaymentRequest.get(lnList).Master().setModifiedDate(poGRider.getServerDate());
                 }
                 
-                System.out.print("PRF EDIT MODE afterset :   " + poPaymentRequest.get(poPaymentRequest.size() - 1).getEditMode());
                 break;
 
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
@@ -967,10 +967,14 @@ public class Disbursement extends Transaction {
             System.out.println("sourceCode : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceCode());
             System.out.println("particular : " + (lnCtr + 1) + " : " + Detail(lnCtr).getParticular());
             System.out.println("------------------------------------------------------------------ ");
-            if (Master().getEditMode() == EditMode.ADDNEW) {
-                updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), true);
-            } else if (Master().getEditMode() == EditMode.UPDATE) {
-                updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), false);
+            
+            switch (Master().getEditMode()) {
+                case EditMode.ADDNEW:
+                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), true);
+                    break;
+                case EditMode.UPDATE:
+                        updateDisbursementsSource(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), Detail(lnCtr).getParticular(), false);
+                    break;
             }
         }
         //Update stock request removed
@@ -1246,13 +1250,7 @@ public class Disbursement extends Transaction {
                 }
 
                 detailCount = poApPayments.getDetailCount();
-                for (int i = 0; i < detailCount; i++) {
-//                    referNo = poPaymentRequest.Detail(i).getTransactionNo();
-//                    sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
-//                    particular = poPaymentRequest.Detail(i).getParticularID();
-//                    amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
-                    
-                    
+                for (int i = 0; i < detailCount; i++) {                    
                     referNo = poApPayments.Detail(i).getSourceNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = poApPayments.Detail(i).getSourceNo();
