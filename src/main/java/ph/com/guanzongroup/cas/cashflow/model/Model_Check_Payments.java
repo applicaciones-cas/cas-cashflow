@@ -79,6 +79,14 @@ public class Model_Check_Payments extends Model {
         return date;
     }
 
+    public JSONObject setIndustryID(String industryID) {
+        return setValue("sIndstCdx", industryID);
+    }
+
+    public String getIndustryID() {
+        return (String) getValue("sIndstCdx");
+    }
+
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
     }
@@ -266,7 +274,7 @@ public class Model_Check_Payments extends Model {
     public String getTransactionStatus() {
         return (String) getValue("cTranStat");
     }
-    
+
     public JSONObject setProcessed(String processed) {
         return setValue("cProcessd", processed);
     }
@@ -274,7 +282,7 @@ public class Model_Check_Payments extends Model {
     public String getProcessed() {
         return (String) getValue("cProcessd");
     }
-    
+
     public JSONObject setPrint(String print) {
         return setValue("cPrintxxx", print);
     }
@@ -383,7 +391,7 @@ public class Model_Check_Payments extends Model {
             return poBanks;
         }
     }
-    
+
     public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sBnkActID"))) {
             if (poBankAccountMaster.getEditMode() == EditMode.READY
