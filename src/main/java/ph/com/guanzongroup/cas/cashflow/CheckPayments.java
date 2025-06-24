@@ -40,8 +40,6 @@ public class CheckPayments extends Parameter {
     public JSONObject isEntryOkay() throws SQLException {
         poJSON = new JSONObject();
 
-        poJSON = new JSONObject();
-
         if (poModel.getBranchCode() == null || poModel.getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Branch is missing or not set.");

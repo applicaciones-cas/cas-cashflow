@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -33,6 +35,7 @@ public class CheckPrinting extends Transaction {
     List<Model_Disbursement_Master> poDisbursementMaster;
     private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
+    private BankAccountMaster bankAccount;
     List<PaymentRequest> poPaymentRequest;
     List<SOATagging> poApPayments;
     List<CachePayable> poCachePayable;
@@ -301,25 +304,33 @@ public class CheckPrinting extends Transaction {
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException {
         /*Put system validations and other assignments here*/
+        String sourceNo = "";
         poJSON = new JSONObject();
 
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
+            sourceNo = (String) item.getValue("sSourceNo");
+            Number amount = (Number) item.getValue("nAmountxx");
 
-            if ("".equals((String) item.getValue("sStockIDx"))
-                    || (int) item.getValue("nQuantity") <= 0) {
+            if (amount.doubleValue() <= 0 || "".equals(sourceNo)) {
                 detail.remove(); // Correctly remove the item
+                if (Master().getEditMode() == EditMode.UPDATE) {
+                    paDetailRemoved.add(item);
+                }
             }
         }
 
+        
+
+        
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
-
+        
 //        if (getDetailCount() == 1) {
 //            //do not allow a single item detail with no quantity order
 //            if (Detail(0).getQuantity().doubleValue() == 0.00) {
@@ -333,6 +344,53 @@ public class CheckPrinting extends Transaction {
         return poJSON;
     }
 
+    public JSONObject saveCheckPayments() throws SQLException, GuanzonException, CloneNotSupportedException {
+        System.out.println("EDIT MODE Ng CHECK PAYM : " + checkPayments.getEditMode());
+        
+        checkPayments.setWithParentClass(true);
+        if ("error".equals(checkPayments.saveRecord().get("result"))) {
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
+        System.out.println("EDIT MODE Ng bankAccount  : " + bankAccount.getEditMode());
+        
+        bankAccount.setWithParentClass(true);
+        if ("error".equals(bankAccount.saveRecord().get("result"))) {
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    @Override
+    public JSONObject initFields() {
+        //Put initial model values here/
+        poJSON = new JSONObject();
+        try {
+            //Put initial model values here/
+            poJSON = new JSONObject();
+            Master().setBranchCode(poGRider.getBranchCode());
+            Master().setIndustryID(psIndustryId);
+            Master().setCompanyID(psCompanyId);
+            Master().setTransactionDate(poGRider.getServerDate());
+            Master().setTransactionStatus(DisbursementStatic.OPEN);
+
+        } catch (SQLException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    private String psIndustryId = "";
+    private String psCompanyId = "";
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
@@ -341,9 +399,23 @@ public class CheckPrinting extends Transaction {
 
     @Override
     public JSONObject saveOthers() {
-        /*Only modify this if there are other tables to modify except the master and detail tables*/
-        poJSON = new JSONObject();
-
+        try {
+            /*Only modify this if there are other tables to modify except the master and detail tables*/
+            poJSON = new JSONObject();
+            poJSON = saveCheckPayments();
+            if ("error".equals(poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+            poJSON = saveBankAccountMaster();
+            if ("error".equals(poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+            
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+            Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
+        }
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -354,14 +426,7 @@ public class CheckPrinting extends Transaction {
         System.out.println("Transaction saved successfully.");
     }
 
-    @Override
-    public JSONObject initFields() {
-        /*Put initial model values here*/
-        poJSON = new JSONObject();
-
-        poJSON.put("result", "success");
-        return poJSON;
-    }
+    
 
     @Override
     public void initSQL() {
@@ -421,12 +486,6 @@ public class CheckPrinting extends Transaction {
         if (!lsTransStat.isEmpty()) {
             lsSQL += lsTransStat;
         }
-//        if (isCheckPayment) {
-//            lsSQL = lsSQL + " AND  a.cDisbrsTp = '0'";
-//        }
-//        if (isNotPrintbyBank    ) {
-//            lsSQL = lsSQL + " AND  a.cBankPrnt = '0'";
-//        }
 
         // Grouping and sorting
         lsSQL += " GROUP BY a.sTransNox ORDER BY a.dTransact ASC";
@@ -461,6 +520,13 @@ public class CheckPrinting extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
+    public CheckPayments CheckPayments() {
+        return (CheckPayments) checkPayments;
+    }
+    
+    public BankAccountMaster BankAccountMaster() {
+        return (BankAccountMaster) bankAccount;
+    }
     
     private Model_Disbursement_Master DisbursementMasterList() {
         return new CashflowModels(poGRider).DisbursementMaster();
@@ -473,6 +539,103 @@ public class CheckPrinting extends Transaction {
     public Model_Disbursement_Master poDisbursementMaster(int row) {
         return (Model_Disbursement_Master) poDisbursementMaster.get(row);
     }
+    public JSONObject setCheckpayment() throws GuanzonException, SQLException {
+        if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
+                || Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+            // Only initialize if null, or you want to force recreate each time
+            int editMode = Master().getEditMode();
+            String transactionNo = Master().getTransactionNo();
+            
+            String checkPaymentTransactionNo = "";
+            if (checkPayments == null) {
+                checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+                checkPayments.setWithParentClass(true);
+            }
+
+            switch (editMode) {
+                case EditMode.ADDNEW:
+                    if (checkPayments.getEditMode() != EditMode.ADDNEW) {
+                        checkPayments.newRecord();
+                        
+                        checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
+                        checkPayments.getModel().setSourceNo(Master().getTransactionNo());
+                        checkPayments.getModel().setSourceCode(Master().CheckPayments().getSourceCode());
+                        checkPayments.getModel().setBranchCode(Master().getBranchCode());
+                        
+                    }
+                    break;
+                case EditMode.READY:
+                    if (checkPayments.getEditMode() != EditMode.READY) {
+                        checkPaymentTransactionNo = checkPayments.getTransactionNoOfCheckPayment(transactionNo, Master().CheckPayments().getSourceCode());
+                        checkPayments.openRecord(checkPaymentTransactionNo);
+                    }
+                    break;
+
+                case EditMode.UPDATE:
+                    if (checkPayments.getEditMode() != EditMode.UPDATE) {
+                        checkPaymentTransactionNo = checkPayments.getTransactionNoOfCheckPayment(transactionNo, Master().CheckPayments().getSourceCode());
+                        checkPayments.openRecord(checkPaymentTransactionNo);
+                        checkPayments.updateRecord();
+                        System.out.println("SETCHECK EDIT MODE : " + checkPayments.getEditMode());
+                        boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
+                        if (disbursementTypeChanged) {
+                            if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            } else {
+                                
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            }
+                        }
+                    } else {
+                        boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
+                        if (disbursementTypeChanged) {
+                            if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.OPEN);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            } else {
+                                checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
+                                checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                                checkPayments.getModel().setModifyingId(poGRider.getUserID());
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
     
+    public JSONObject setBankAccountCheckNo() throws GuanzonException, SQLException {
+        if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
+                || Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+            // Only initialize if null, or you want to force recreate each time
+            int editMode = Master().getEditMode();
+            String transactionNo = Master().getTransactionNo();
+            
+            String bankAccountID = "";
+            if (bankAccount == null) {
+                bankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+                bankAccount.setWithParentClass(true);
+            }
+
+            if (bankAccount.getEditMode() != EditMode.UPDATE) {
+                bankAccountID = Master().CheckPayments().getBankAcountID();
+                bankAccount.openRecord(bankAccountID);
+                bankAccount.updateRecord();
+                
+//              a
+                bankAccount.getModel().setModifiedDate(poGRider.getServerDate());
+                bankAccount.getModel().setModifyingId(poGRider.getUserID());
+            }   
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
     
 }

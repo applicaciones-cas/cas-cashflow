@@ -878,39 +878,40 @@ public class Disbursement extends Transaction {
                 }
             }
         }
+        if (DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())) {
+            Disbursement loRecord = new CashflowControllers(poGRider, null).Disbursement();
+            loRecord.InitTransaction();
+            loRecord.OpenTransaction(Master().getTransactionNo());
 
-        Disbursement loRecord = new CashflowControllers(poGRider, null).Disbursement();
-        loRecord.InitTransaction();
-        loRecord.OpenTransaction(Master().getTransactionNo());
+            lbUpdated = loRecord.getDetailCount() == getDetailCount();
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
+            }
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
+            }
 
-        lbUpdated = loRecord.getDetailCount() == getDetailCount();
-        if (lbUpdated) {
-            lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
-        }
-        if (lbUpdated) {
-            lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
-        }
+            if (lbUpdated) {
+                for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
+                    lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
+                    if (lbUpdated) {
+                        lbUpdated = loRecord.Detail(lnCtr).getAmount().equals(Detail(lnCtr).getAmount());
+                    }
+                    if (lbUpdated) {
+                        lbUpdated = loRecord.Detail(lnCtr).getTAxCode().equals(Detail(lnCtr).getTAxCode());
+                    }
 
-        if (lbUpdated) {
-            for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
-                lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
-                if (lbUpdated) {
-                    lbUpdated = loRecord.Detail(lnCtr).getAmount().equals(Detail(lnCtr).getAmount());
-                }
-                if (lbUpdated) {
-                    lbUpdated = loRecord.Detail(lnCtr).getTAxCode().equals(Detail(lnCtr).getTAxCode());
-                }
-
-                if (!lbUpdated) {
-                    break;
+                    if (!lbUpdated) {
+                        break;
+                    }
                 }
             }
-        }
 
-        if (lbUpdated) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No update has been made.");
-            return poJSON;
+            if (lbUpdated) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No update has been made.");
+                return poJSON;
+            }
         }
 
         if (getDetailCount() == 1) {
