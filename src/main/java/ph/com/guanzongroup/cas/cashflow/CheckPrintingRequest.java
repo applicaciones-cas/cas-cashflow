@@ -8,7 +8,9 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -667,111 +669,151 @@ public class CheckPrintingRequest extends Transaction {
     }
     
     
-    public JSONObject ExportTransaction(String fsValue) throws GuanzonException, SQLException  {
-        poJSON = new JSONObject();
-        String BankCode = Master().Banks().getBankCode();
-        switch (BankCode) {
-            case "BDO":
-                
-                File outputFile = new File("D:/ExportedData.xlsx");
-                if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
-                    System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
-                    return poJSON;
-                }
+    public JSONObject ExportTransaction(String fsValue) throws GuanzonException, SQLException {
+    poJSON = new JSONObject();
+    String bankCode = Master().Banks().getBankCode();
 
-                // Sample data arrays
-                String[] lastNames = {"Juan", "Maria", "Pedro"};
-                String[] firstNames = {"Dela Cruz", "Reyes", "Santos"};
-                String[] birthYears = {"1990", "1985", "1992"};
+    if (!"BDO".equals(bankCode)) {
+        throw new AssertionError("Unsupported bank code: " + bankCode);
+    }
 
-                // Validate data consistency
-                int recordCount = lastNames.length;
-                if (firstNames.length != recordCount || birthYears.length != recordCount) {
-                    System.err.println("❌ Data arrays have inconsistent lengths.");
-                    return poJSON;
-                }
-
-                // Create workbook and sheet
-                Workbook workbook = new XSSFWorkbook();
-                Sheet sheet = workbook.createSheet("Export");
-
-                // === ADD HEADER ROW ===
-                String[] header = {"CC", String.valueOf(getDetailCount()), String.valueOf(Master().getTotalAmount()), "", "", "", "","","","","","","","","",""};
-                Row headerRow = sheet.createRow(0);
-                for (int i = 0; i < header.length; i++) {
-                    headerRow.createCell(i).setCellValue(header[i]);
-                }
-
-                // Collect all person data
-                List<String[][]> allPeople = new ArrayList<>();
-                for (int i = 0; i < recordCount; i++) {
-                    // Skip person if any required value is missing
-                    if (isNullOrEmpty(lastNames[i]) || isNullOrEmpty(firstNames[i]) || isNullOrEmpty(birthYears[i])) {
-                        System.err.println("⚠️ Skipping person at index " + i + " due to missing data.");
-                        continue;
-                    }
-
-                    String[][] personDetails = {
-                        {"", "1 LAST NAME", lastNames[i], firstNames[i], ""},
-                        {"", "2 HOUSE NO", "123", "Brgy. Sample", "City"},
-                        {"", "3 BIRTH DATE", "01", "January", birthYears[i]},
-                        {"", "4 DAILY WAGE", "500", "15000", ""},
-                        {"", "5 REMARKS", "N/A", "", ""}
-                    };
-                    allPeople.add(personDetails);
-                }
-
-                // Write data rows after header
-                int startRow = 1;
-                for (String[][] person : allPeople) {
-                    for (String[] detailRow : person) {
-                        if (isRowEmpty(detailRow)) {
-                            continue; // Skip empty rows
-                        }
-                        Row row = sheet.createRow(startRow++);
-                        for (int col = 0; col < detailRow.length; col++) {
-                            row.createCell(col).setCellValue(detailRow[col]);
-                        }
-                    }
-                }
-
-                // Auto-size columns
-                for (int i = 0; i < 6; i++) {
-                    sheet.autoSizeColumn(i);
-                }
-
-                // Save workbook
-                try (FileOutputStream fileOut = new FileOutputStream(outputFile)) {
-                    workbook.write(fileOut);
-                    workbook.close();
-                    System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
-                } catch (IOException e) {
-                    System.err.println("❌ Failed to write Excel file.");
-                    e.printStackTrace();
-                }
-                
-                
-                break;
-            default:
-                throw new AssertionError();
-        }
+    File outputFile = new File("D:/ExportedData.xlsx");
+    if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
+        System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
         return poJSON;
     }
-    
-    
-    
-    // === Helpers ===
-    private static boolean isNullOrEmpty(String value) {
-        return value == null || value.trim().isEmpty();
+//
+//    // Debug print details
+//    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++){
+//        System.out.println("===============================================");
+//        System.out.println("No : " + (lnCntr + 1));
+//        System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
+//        System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
+//        System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
+//        System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
+//        System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+//        System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+//        System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+//        System.out.println("===============================================");
+//    }
+
+    Workbook workbook = new XSSFWorkbook();
+    Sheet sheet = workbook.createSheet("Export");
+
+    // === Add header row ===
+    String[] header = {
+        "CC", 
+        String.valueOf(Master().getEntryNumber()), 
+        String.valueOf(Master().getTotalAmount()), 
+        "", "", "", "","","","", "", "", "","","",""
+    };
+    Row headerRow = sheet.createRow(0);
+    for (int i = 0; i < header.length; i++) {
+        headerRow.createCell(i).setCellValue(header[i]);
     }
 
-    private static boolean isRowEmpty(String[] row) {
-        for (String cell : row) {
-            if (cell != null && !cell.trim().isEmpty()) {
-                return false; // Has content
+    // === Collect data dynamically from Detail() ===
+    List<String[][]> allRequest = new ArrayList<>();
+    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++){
+        System.out.println("===============================================");
+        System.out.println("No : " + (lnCntr + 1));
+        System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
+        System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
+        System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
+        System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
+        System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+        System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+        System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+        System.out.println("===============================================");
+    
+
+        // Extract values
+        String sourceNo = Detail(lnCntr).getSourceNo();
+        String transactionNo = Detail(lnCntr).DisbursementMaster().getTransactionNo();
+        String transDate = Detail(lnCntr).DisbursementMaster().getTransactionDate() != null 
+            ? Detail(lnCntr).DisbursementMaster().getTransactionDate().toString() : "";
+        String netTotal = Detail(lnCntr).DisbursementMaster().getNetTotal() != null 
+            ? Detail(lnCntr).DisbursementMaster().getNetTotal().toString() : "";
+        String checkNo = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo();
+        String checkDate = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate() != null 
+            ? Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate().toString() : "";
+        String checkAmount = Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount() != null 
+            ? Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount().toString() : "";
+
+        // Skip if critical fields are missing
+//        if (isNullOrEmpty(sourceNo) || isNullOrEmpty(transactionNo) || isNullOrEmpty(checkNo)) {
+//            System.err.println("⚠️ Skipping detail " + lnCntr + " due to missing critical data.");
+//            continue;
+//        }
+
+        // Build the data rows for this detail
+        String[][] RequestDetails = {
+            {"D", "", sourceNo, "", ""},
+            {"C", "", transactionNo, "", ""},
+            {"W", "", transDate, "", ""},
+            {"V", "", netTotal, "", ""},
+            {"A", "", checkNo, "", ""},
+            {"B", "", checkDate, "", ""},
+            {"E", "", checkAmount, "", ""}
+        };
+
+        allRequest.add(RequestDetails);
+    }
+
+    // === Write data to sheet ===
+    int startRow = 1;
+    for (String[][] person : allRequest) {
+        for (int r = 0; r < person.length; r++) {
+            String[] detailRow = person[r];
+            if (isRowEmpty(detailRow)) {
+                continue;
+            }
+            Row row = sheet.createRow(startRow++);
+            for (int col = 0; col < detailRow.length; col++) {
+                row.createCell(col).setCellValue(detailRow[col]);
             }
         }
-        return true; // All blank
     }
+
+    // Auto-size first 6 columns
+    for (int i = 0; i < 6; i++) {
+        sheet.autoSizeColumn(i);
+    }
+
+    // === Save Excel file ===
+    FileOutputStream fileOut = null;
+    try {
+        fileOut = new FileOutputStream(outputFile);
+        workbook.write(fileOut);
+        System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
+    } catch (IOException e) {
+        System.err.println("❌ Failed to write Excel file.");
+        e.printStackTrace();
+    } finally {
+        try {
+            if (fileOut != null) fileOut.close();
+            workbook.close();
+        } catch (IOException ignored) {}
+    }
+
+    return poJSON;
+}
+
+// === Helpers ===
+private static boolean isNullOrEmpty(String value) {
+    return value == null || value.trim().isEmpty();
+}
+
+private static boolean isRowEmpty(String[] row) {
+    for (String cell : row) {
+        if (cell != null && !cell.trim().isEmpty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+   
 }
 

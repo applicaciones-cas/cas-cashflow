@@ -428,7 +428,7 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject AddDetail() throws CloneNotSupportedException {
-        if (Detail(getDetailCount() - 1).getParticularID().isEmpty()) {
+        if (Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Last row has empty item.");
