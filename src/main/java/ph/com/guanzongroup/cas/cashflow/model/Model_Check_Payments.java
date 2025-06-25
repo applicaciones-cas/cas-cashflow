@@ -4,11 +4,12 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
+import org.guanzon.appdriver.agent.systables.TransactionStatusHistory;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -17,6 +18,7 @@ import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -33,6 +35,8 @@ public class Model_Check_Payments extends Model {
     Model_Bank_Account_Master poBankAccountMaster;
     Model_Branch poBranch;
     Model_Banks poBanks;
+    Model_Industry poIndustry;
+    Model_Transaction_Status_History poTransactionStatusHistory;
 
     @Override
     public void initialize() {
@@ -60,6 +64,7 @@ public class Model_Check_Payments extends Model {
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
             poBanks = model.Banks();
+            poIndustry = model.Industry();
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
             poBankAccountMaster = cashFlow.Bank_Account_Master();
@@ -409,6 +414,47 @@ public class Model_Check_Payments extends Model {
         } else {
             poBankAccountMaster.initialize();
             return poBankAccountMaster;
+        }
+    }
+
+    public Model_Industry Industry() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
+                return poIndustry;
+            } else {
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poIndustry;
+                } else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
+        }
+    }
+
+    public Model_Transaction_Status_History TransactionStatusHistory() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poTransactionStatusHistory.getEditMode() == EditMode.READY
+                    && poTransactionStatusHistory.getSourceNo().equals((String) getValue("sTransNox"))) {
+                return poTransactionStatusHistory;
+            } else {
+                poJSON = poTransactionStatusHistory.openRecord((String) getValue("sTransNox"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poTransactionStatusHistory;
+                } else {
+                    poTransactionStatusHistory.initialize();
+                    return poTransactionStatusHistory;
+                }
+            }
+        } else {
+            poTransactionStatusHistory.initialize();
+            return poTransactionStatusHistory;
         }
     }
 
