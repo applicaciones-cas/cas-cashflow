@@ -638,4 +638,27 @@ public class CheckPrinting extends Transaction {
         return poJSON;
     }
     
+    public JSONObject checkNoExists(String checkNo) throws SQLException {
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT sCheckNox FROM check_payments";
+        lsSQL = MiscUtil.addCondition(lsSQL, "sCheckNox = " + SQLUtil.toSQL(checkNo) + " LIMIT 1");
+
+        ResultSet loRS = null;
+        try {
+            System.out.println("CHECKING EXISTENCE SQL: " + lsSQL);
+            loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS != null && loRS.next()) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Check no " + loRS.getString("sCheckNox") + " is already exist");
+            } else {
+                poJSON.put("result", "success");
+            }
+        } finally {
+            MiscUtil.close(loRS);
+        }
+        return poJSON;
+    }
+
+    
 }
