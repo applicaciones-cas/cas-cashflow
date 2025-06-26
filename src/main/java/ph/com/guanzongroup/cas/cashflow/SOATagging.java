@@ -1385,12 +1385,21 @@ public class SOATagging extends Transaction {
                     paPaymentRequest.get(paPaymentRequest.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
                     paPaymentRequest.get(paPaymentRequest.size() - 1).UpdateTransaction();
                     paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("1");
 
                     switch (status) {
                         case SOATaggingStatus.VOID:
                         case SOATaggingStatus.CANCELLED:
                         case SOATaggingStatus.RETURNED:
-                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
+                            if(getLinkedPayment(paPaymentRequest.get(paPaymentRequest.size() - 1).Master().getTransactionNo()) ){
+                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+                            } else {
+                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
+                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0");
+                            }
+                            break;
+                        case SOATaggingStatus.CONFIRMED:
+                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("1");
                             break;
                     }
 
@@ -1415,13 +1424,13 @@ public class SOATagging extends Transaction {
                         case SOATaggingStatus.CANCELLED:
                         case SOATaggingStatus.RETURNED:
                             paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()) );
-//                            paCachePayable.get(paCachePayable.size() - 1).isWithSOA(false);
+                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
                             if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
                                 paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
                             }
                             break;
                         case SOATaggingStatus.CONFIRMED:
-//                            paCachePayable.get(paCachePayable.size() - 1).isWithSOA(true);
+                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
                             break;
                     }
                     break;
