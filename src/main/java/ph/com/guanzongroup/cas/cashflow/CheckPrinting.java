@@ -1,6 +1,7 @@
 package ph.com.guanzongroup.cas.cashflow;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -25,6 +26,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.SelectedITems;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
@@ -53,6 +55,7 @@ import javafx.scene.Node;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
+import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class CheckPrinting extends Transaction {
 
@@ -713,25 +716,21 @@ public class CheckPrinting extends Transaction {
                     poJSON = dvMaster.UpdateTransaction();
                     setCheckpayment();
                     payeeName = dvMaster.Master().CheckPayments().Payee().getPayeeName();
-                    checkDate = dvMaster.Master().CheckPayments().getCheckDate().toString();
+                    checkDate = CustomCommonUtil.formatDateToMMDDYYYY(dvMaster.Master().CheckPayments().getCheckDate());
                     amountNumeric = dvMaster.Master().CheckPayments().getAmount().toString();
+                    amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
+                    
                     
                     System.out.println("===============================================");
                     System.out.println("No : " + (i + 1));
                     System.out.println("transactionNo No : " + fsTransactionNos.get(i));
                     System.out.println("payeeName : " + payeeName);
                     System.out.println("checkDate : " + checkDate);
-                    System.out.println("amountNumeric : " + amountNumeric);                    
+                    System.out.println("amountNumeric : " + amountNumeric);   
+                    System.out.println("amountWords : " + amountWords);  
                     System.out.println("===============================================");
                 // Store transaction for printing
                 transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
-
-                // Print the voucher for each transaction inside the loop
-                Canvas canvas = new Canvas(612, 792);
-                GraphicsContext gc = canvas.getGraphicsContext2D();
-
-                // Draw the voucher for the transaction
-                drawVoucher(gc, transactions.get(i));
 
                 // Now print the voucher using PrinterJob
                     if (showPrintPreview(transactions.get(i))) {
@@ -769,8 +768,20 @@ public class CheckPrinting extends Transaction {
     job.getJobSettings().setJobName("Voucher-" + tx.transactionNo);
 
     boolean okay = job.printPage(layout, voucherNode);
-    if (okay) job.endJob(); else job.cancelJob();
+    if (okay) {
+        job.endJob();
+        
+        System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo +
+                           " for " + tx.payeeName +
+                           " | Amount: ₱" + tx.amountNumeric);
+    } else {
+        job.cancelJob();
+        System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
+    }
 }
+    
+    
+    
     private boolean showPrintPreview(Transaction tx) {
     Printer printer = Printer.getDefaultPrinter();
     PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
@@ -811,7 +822,7 @@ private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts)
     root.setPrefSize(widthPts, heightPts);
 
     // Font and spacing setup
-    Font mono12 = Font.font("Courier New", 12);
+    Font mono12 = Font.font("Arial Narrow", 11);
     double y = 20;
     double lh = 18;
     double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
@@ -820,20 +831,20 @@ private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts)
     java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
 
     // --- Row 1: checkdate aligned at column 40
-    Text checkDate = new Text(col.apply(75), y,  tx.checkDate);
+    Text checkDate = new Text(col.apply(70), y,  tx.checkDate);
     checkDate.setFont(mono12);
     y += lh * 2;
 
     // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
-    Text payeeName = new Text(col.apply(25), y, "*** " + tx.payeeName.toUpperCase() + " ***");
+    Text payeeName = new Text(col.apply(20), y, "*** " + tx.payeeName.toUpperCase() + " ***");
     payeeName.setFont(mono12);
 
-    Text checkAmt = new Text(col.apply(75), y, "₱" + tx.amountNumeric);
+    Text checkAmt = new Text(col.apply(70), y, "₱" + CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric,false));
     checkAmt.setFont(mono12);
     y += lh;
 
     // --- Row 3: amount in words centered at column 8
-    Text amtWords = new Text(col.apply(15), y, "SAMPLE AMOUNT IN MILLION THOUSAND OR HUNDREDS"); // e.g., "ONE MILLION PESOS"
+    Text amtWords = new Text(col.apply(8), y, "=== " +NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric))+ " ==="); // e.g., "ONE MILLION PESOS"
     amtWords.setFont(mono12);
 
     root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
@@ -841,25 +852,6 @@ private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts)
 }
 
 
-
-private void drawVoucher(GraphicsContext gc, Transaction tx) {
-    gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
-
-    gc.setFont(Font.font("Courier New", 12));  // font size in points
-
-    double y = 20;
-    double lh = 18;
-
-    gc.fillText("METROBANK PAYMENT VOUCHER", 150, y); y += lh * 2;
-    gc.fillText("Client Ref No   : " + tx.transactionNo, 50, y); y += lh;
-    gc.fillText("Voucher No      : " + tx.transactionNo, 50, y); y += lh;
-    gc.fillText("Check Date      : " + tx.checkDate, 50, y); y += lh;
-    gc.fillText("Payee Name      : " + tx.payeeName, 50, y); y += lh;
-    gc.fillText("Amount Numeric  : PHP " + tx.amountNumeric, 50, y); y += lh;
-    y += lh;
-    gc.strokeRect(50, y, 200, 50);
-    gc.fillText("Authorized Signature", 55, y + 65);
-}
 
 
 
