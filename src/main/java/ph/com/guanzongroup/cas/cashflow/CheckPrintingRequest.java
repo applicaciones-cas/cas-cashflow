@@ -1,4 +1,4 @@
-    package ph.com.guanzongroup.cas.cashflow;
+package ph.com.guanzongroup.cas.cashflow;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -8,6 +8,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -40,17 +42,17 @@ import ph.com.guanzongroup.cas.cashflow.validator.CheckPrintingValidator;
 
 public class CheckPrintingRequest extends Transaction {
 
-    
     List<Model_Check_Printing_Request_Master> poCheckPrinting;
     List<Model_Check_Payments> paCheckPayment;
     List<CheckPayments> poCheckPayments;
+
     public JSONObject InitTransaction() {
         SOURCE_CODE = "chK";
 
         poMaster = new CashflowModels(poGRider).CheckPrintingRequestMaster();
         poDetail = new CashflowModels(poGRider).CheckPrintingRequestDetail();
         paDetail = new ArrayList<>();
-        
+
         poCheckPayments = new ArrayList<>();
 
         return initialize();
@@ -64,10 +66,10 @@ public class CheckPrintingRequest extends Transaction {
         return saveTransaction();
     }
 
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException { 
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }
-    
+
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
@@ -268,6 +270,7 @@ public class CheckPrintingRequest extends Transaction {
 
         return poJSON;
     }
+
     public JSONObject SearcIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus("1");
@@ -280,6 +283,7 @@ public class CheckPrintingRequest extends Transaction {
 
         return poJSON;
     }
+
     public JSONObject Searcbranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus("1");
@@ -292,28 +296,29 @@ public class CheckPrintingRequest extends Transaction {
 
         return poJSON;
     }
+
     public JSONObject SearchCompany(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Company object = new ParamControllers(poGRider, logwrapr).Company();
+        Disbursement db = new CashflowControllers(poGRider, logwrapr).Disbursement();
         object.setRecordStatus("1");
 
         poJSON = object.searchRecord(value, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-            // waiting for the fields if it will added or not
-//            Master().setBranchCode(object.getModel().getBranchCode());
+            Master().setCompanyID(object.getModel().getCompanyId());
         }
 
         return poJSON;
     }
-    
-    public JSONObject SearhBankAccount(String value,String BankID ,boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+
+    public JSONObject SearhBankAccount(String value, String BankID, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecordbyBanks(value, BankID,byCode);
+        poJSON = object.searchRecordbyBanks(value, BankID, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-//            Master().setBankID(object.getModel().getBranchCode());
+//            Master().setBankID(object.getModel().getBankAccountId());
         }
 
         return poJSON;
@@ -321,7 +326,6 @@ public class CheckPrintingRequest extends Transaction {
 
 
     /*End - Search Master References*/
-
     @Override
     public String getSourceCode() {
         return SOURCE_CODE;
@@ -347,8 +351,8 @@ public class CheckPrintingRequest extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-            if ("".equals((String) item.getValue("sSourceNo"))|| 
-                    (String) item.getValue("sSourceNo") == null) {
+            if ("".equals((String) item.getValue("sSourceNo"))
+                    || (String) item.getValue("sSourceNo") == null) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -358,7 +362,7 @@ public class CheckPrintingRequest extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
         }
-        
+
 //        if (getDetailCount() == 1) {
 //            //do not allow a single item detail with no quantity order
 //            if (Detail(0).getQuantity().doubleValue() == 0.00) {
@@ -367,7 +371,6 @@ public class CheckPrintingRequest extends Transaction {
 //                return poJSON;
 //            }
 //        }
-
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -411,13 +414,12 @@ public class CheckPrintingRequest extends Transaction {
                 + "  b.sBankName, "
                 + "  c.sActNumbr, "
                 + "  c.sActNamex, "
-                + "  a.cTranStat, "                
+                + "  a.cTranStat, "
                 + "  a.sBranchCd "
-                + "FROM check_printing_request_master a "
-                + "LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + " FROM check_printing_request_master a "
+                + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
                 + "LEFT JOIN bank_account_master c ON a.sBankIDxx = c.sBankIDxx";
     }
-
 
     @Override
     protected JSONObject isEntryOkay(String status) {
@@ -428,7 +430,7 @@ public class CheckPrintingRequest extends Transaction {
         poJSON = loValidator.validate();
         return poJSON;
     }
-    
+
     public JSONObject getDVwithAuthorizeCheckPayment() throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsSQL = "SELECT "
@@ -492,6 +494,66 @@ public class CheckPrintingRequest extends Transaction {
         MiscUtil.close(loRS);
         return loJSON;
     }
+
+    public JSONObject getDVwithAuthorizeCheckPayment(String fsCompanyID, String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
+        JSONObject loJSON = new JSONObject();
+        String lsSQL = "SELECT "
+                + " a.sTransNox, "
+                + " a.sBranchCd, "
+                + " a.dTransact, "
+                + " a.sBankIDxx, "
+                + " a.sCheckNox, "
+                + " a.dCheckDte, "
+                + " b.sBankName, "
+                + " c.sActNumbr, "
+                + " c.sActNamex, "
+                + " e.sPayeeNme, "
+                + " d.sTransNox AS disbursementTransNox, "
+                + " a.sSourceNo, "
+                + " d.cDisbrsTp, "
+                + " a.cTranStat "
+                + " FROM check_payments a "
+                + " LEFT JOIN banks b ON a.sBankIDxx = b.sBankIDxx "
+                + " LEFT JOIN bank_account_master c ON a.sBnkActID = c.sBnkActID "
+                + " LEFT JOIN disbursement_master d ON a.sSourceNo = d.sTransNox "
+                + " LEFT JOIN payee e ON d.sPayeeIDx = e.sPayeeIDx";
+        String lsFilterCondition = String.join(" AND ",
+                " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
+                " a.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT),
+                " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
+                " d.sCompnyID LIKE " + SQLUtil.toSQL("%" + fsCompanyID),
+                " b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " c.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
+
+        lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
+
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            paCheckPayment = new ArrayList<>();
+            while (loRS.next()) {
+                paCheckPayment.add(Check_Payment_List());
+                paCheckPayment.get(paCheckPayment.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record loaded successfully.");
+        } else {
+            paCheckPayment = new ArrayList<>();
+            paCheckPayment.add(Check_Payment_List());
+            loJSON.put("result", "error");
+            loJSON.put("continue", true);
+            loJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return loJSON;
+    }
+
     private Model_Check_Payments Check_Payment_List() {
         return new CashflowModels(poGRider).CheckPayments();
     }
@@ -499,12 +561,14 @@ public class CheckPrintingRequest extends Transaction {
     public Model_Check_Payments CheckPayments(int row) {
         return (Model_Check_Payments) paCheckPayment.get(row);
     }
+
     public int getCheckPaymentCount() {
         if (paCheckPayment == null) {
             return 0;
         }
         return paCheckPayment.size();
     }
+
     public JSONObject addCheckPaymentToCheckPrintRequest(String stransNox)
             throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -521,7 +585,7 @@ public class CheckPrintingRequest extends Transaction {
         // Validate if the payee in Master is different from the payee in the RecurringIssuance
         if (!Master().getBankID().isEmpty()) {
             if (!Master().getBankID().equals(poCheckPayment.getModel().getBankID())) {
-                poJSON.put("message", "Invalid addition of ; another payee already exists.");
+                poJSON.put("message", "Invalid addition of detail: another bank already exists.");
                 poJSON.put("result", "error");
                 poJSON.put("warning", "true");
                 return poJSON;
@@ -560,8 +624,7 @@ public class CheckPrintingRequest extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    
+
     public JSONObject getCheckPrintingRequest(String fsTransactionNo, String fsPayee) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsTransStat = "";
@@ -576,10 +639,10 @@ public class CheckPrintingRequest extends Transaction {
 
         initSQL();
         String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-//                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()), 
-//                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
+                //                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                //                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
-         " a.sBranchCd = " +  SQLUtil.toSQL( poGRider.getBranchCode()));
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
@@ -617,6 +680,7 @@ public class CheckPrintingRequest extends Transaction {
         MiscUtil.close(loRS);
         return loJSON;
     }
+
     private Model_Check_Printing_Request_Master CheckPrintMasterList() {
         return new CashflowModels(poGRider).CheckPrintingRequestMaster();
     }
@@ -628,7 +692,7 @@ public class CheckPrintingRequest extends Transaction {
     public Model_Check_Printing_Request_Master poCheckPrinting(int row) {
         return (Model_Check_Printing_Request_Master) poCheckPrinting.get(row);
     }
-    
+
     public JSONObject SearchTransaction(String fsValue) throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
@@ -667,21 +731,20 @@ public class CheckPrintingRequest extends Transaction {
             return poJSON;
         }
     }
-    
-    
+
     public JSONObject ExportTransaction(String fsValue) throws GuanzonException, SQLException {
-    poJSON = new JSONObject();
-    String bankCode = Master().Banks().getBankCode();
+        poJSON = new JSONObject();
+        String bankCode = Master().Banks().getBankCode();
 
-    if (!"BDO".equals(bankCode)) {
-        throw new AssertionError("Unsupported bank code: " + bankCode);
-    }
+        if (!"BDO".equals(bankCode)) {
+            throw new AssertionError("Unsupported bank code: " + bankCode);
+        }
 
-    File outputFile = new File("D:/ExportedData.xlsx");
-    if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
-        System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
-        return poJSON;
-    }
+        File outputFile = new File("D:/ExportedData.xlsx");
+        if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
+            System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
+            return poJSON;
+        }
 //
 //    // Debug print details
 //    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++){
@@ -697,123 +760,130 @@ public class CheckPrintingRequest extends Transaction {
 //        System.out.println("===============================================");
 //    }
 
-    Workbook workbook = new XSSFWorkbook();
-    Sheet sheet = workbook.createSheet("Export");
+        Workbook workbook = new XSSFWorkbook();
+        Sheet sheet = workbook.createSheet("Export");
 
-    // === Add header row ===
-    String[] header = {
-        "CC", 
-        String.valueOf(Master().getEntryNumber()), 
-        String.valueOf(Master().getTotalAmount()), 
-        "", "", "", "","","","", "", "", "","","",""
-    };
-    Row headerRow = sheet.createRow(0);
-    for (int i = 0; i < header.length; i++) {
-        headerRow.createCell(i).setCellValue(header[i]);
-    }
+        // === Add header row ===
+        String[] header = {
+            "CC",
+            String.valueOf(Master().getEntryNumber()),
+            String.valueOf(Master().getTotalAmount()),
+            "", "", "", "", "", "", "", "", "", "", "", "", ""
+        };
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < header.length; i++) {
+            headerRow.createCell(i).setCellValue(header[i]);
+        }
 
-    // === Collect data dynamically from Detail() ===
-    List<String[][]> allRequest = new ArrayList<>();
-    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++){
-        System.out.println("===============================================");
-        System.out.println("No : " + (lnCntr + 1));
-        System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
-        System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
-        System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
-        System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
-        System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
-        System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
-        System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
-        System.out.println("===============================================");
-    
+        // === Collect data dynamically from Detail() ===
+        List<String[][]> allRequest = new ArrayList<>();
+        for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++) {
+            System.out.println("===============================================");
+            System.out.println("No : " + (lnCntr + 1));
+            System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
+            System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
+            System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
+            System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
+            System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+            System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+            System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+            System.out.println("===============================================");
 
-        // Extract values
-        String sourceNo = Detail(lnCntr).getSourceNo();
-        String transactionNo = Detail(lnCntr).DisbursementMaster().getTransactionNo();
-        String transDate = Detail(lnCntr).DisbursementMaster().getTransactionDate() != null 
-            ? Detail(lnCntr).DisbursementMaster().getTransactionDate().toString() : "";
-        String netTotal = Detail(lnCntr).DisbursementMaster().getNetTotal() != null 
-            ? Detail(lnCntr).DisbursementMaster().getNetTotal().toString() : "";
-        String checkNo = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo();
-        String checkDate = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate() != null 
-            ? Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate().toString() : "";
-        String checkAmount = Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount() != null 
-            ? Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount().toString() : "";
+            // Extract values
+            String sourceNo = Detail(lnCntr).getSourceNo();
+            String transactionNo = Detail(lnCntr).DisbursementMaster().getTransactionNo();
+            String transDate = Detail(lnCntr).DisbursementMaster().getTransactionDate() != null
+                    ? Detail(lnCntr).DisbursementMaster().getTransactionDate().toString() : "";
+            String netTotal = Detail(lnCntr).DisbursementMaster().getNetTotal() != null
+                    ? Detail(lnCntr).DisbursementMaster().getNetTotal().toString() : "";
+            String checkNo = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo();
+            String checkDate = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate() != null
+                    ? Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate().toString() : "";
+            String checkAmount = Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount() != null
+                    ? Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount().toString() : "";
 
-        // Skip if critical fields are missing
+            // Skip if critical fields are missing
 //        if (isNullOrEmpty(sourceNo) || isNullOrEmpty(transactionNo) || isNullOrEmpty(checkNo)) {
 //            System.err.println("⚠️ Skipping detail " + lnCntr + " due to missing critical data.");
 //            continue;
 //        }
+            // Build the data rows for this detail
+            String[][] RequestDetails = {
+                {"D", "", sourceNo, "", ""},
+                {"C", "", transactionNo, "", ""},
+                {"W", "", transDate, "", ""},
+                {"V", "", netTotal, "", ""},
+                {"A", "", checkNo, "", ""},
+                {"B", "", checkDate, "", ""},
+                {"E", "", checkAmount, "", ""}
+            };
 
-        // Build the data rows for this detail
-        String[][] RequestDetails = {
-            {"D", "", sourceNo, "", ""},
-            {"C", "", transactionNo, "", ""},
-            {"W", "", transDate, "", ""},
-            {"V", "", netTotal, "", ""},
-            {"A", "", checkNo, "", ""},
-            {"B", "", checkDate, "", ""},
-            {"E", "", checkAmount, "", ""}
-        };
+            allRequest.add(RequestDetails);
+        }
 
-        allRequest.add(RequestDetails);
-    }
-
-    // === Write data to sheet ===
-    int startRow = 1;
-    for (String[][] person : allRequest) {
-        for (int r = 0; r < person.length; r++) {
-            String[] detailRow = person[r];
-            if (isRowEmpty(detailRow)) {
-                continue;
-            }
-            Row row = sheet.createRow(startRow++);
-            for (int col = 0; col < detailRow.length; col++) {
-                row.createCell(col).setCellValue(detailRow[col]);
+        // === Write data to sheet ===
+        int startRow = 1;
+        for (String[][] person : allRequest) {
+            for (int r = 0; r < person.length; r++) {
+                String[] detailRow = person[r];
+                if (isRowEmpty(detailRow)) {
+                    continue;
+                }
+                Row row = sheet.createRow(startRow++);
+                for (int col = 0; col < detailRow.length; col++) {
+                    row.createCell(col).setCellValue(detailRow[col]);
+                }
             }
         }
-    }
 
-    // Auto-size first 6 columns
-    for (int i = 0; i < 6; i++) {
-        sheet.autoSizeColumn(i);
-    }
+        // Auto-size first 6 columns
+        for (int i = 0; i < 6; i++) {
+            sheet.autoSizeColumn(i);
+        }
 
-    // === Save Excel file ===
-    FileOutputStream fileOut = null;
-    try {
-        fileOut = new FileOutputStream(outputFile);
-        workbook.write(fileOut);
-        System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
-    } catch (IOException e) {
-        System.err.println("❌ Failed to write Excel file.");
-        e.printStackTrace();
-    } finally {
+        // === Save Excel file ===
+        FileOutputStream fileOut = null;
         try {
-            if (fileOut != null) fileOut.close();
-            workbook.close();
-        } catch (IOException ignored) {}
-    }
+            fileOut = new FileOutputStream(outputFile);
+            workbook.write(fileOut);
+            System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
+        } catch (IOException e) {
+            System.err.println("❌ Failed to write Excel file.");
+            e.printStackTrace();
+        } finally {
+            try {
+                if (fileOut != null) {
+                    fileOut.close();
+                }
+                workbook.close();
+            } catch (IOException ignored) {
+            }
+        }
 
-    return poJSON;
-}
+        return poJSON;
+    }
 
 // === Helpers ===
-private static boolean isNullOrEmpty(String value) {
-    return value == null || value.trim().isEmpty();
-}
-
-private static boolean isRowEmpty(String[] row) {
-    for (String cell : row) {
-        if (cell != null && !cell.trim().isEmpty()) {
-            return false;
-        }
+    private static boolean isNullOrEmpty(String value) {
+        return value == null || value.trim().isEmpty();
     }
-    return true;
+
+    private static boolean isRowEmpty(String[] row) {
+        for (String cell : row) {
+            if (cell != null && !cell.trim().isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void resetMaster() {
+        poMaster = new CashflowModels(poGRider).CheckPrintingRequestMaster();
+    }
+
+    public void resetOthers() {
+        paCheckPayment = new ArrayList<>();
+        poCheckPayments = new ArrayList<>();
+    }
+
 }
-
-
-   
-}
-
