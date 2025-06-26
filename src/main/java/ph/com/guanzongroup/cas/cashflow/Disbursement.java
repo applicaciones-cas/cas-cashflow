@@ -333,9 +333,9 @@ public class Disbursement extends Transaction {
         poJSON.put("result", "success");
 
         if (lbConfirm) {
-            poJSON.put("message", "Transaction certified successfully.");
+            poJSON.put("message", "Transaction authorized successfully.");
         } else {
-            poJSON.put("message", "Transaction certifiying request submitted successfully.");
+            poJSON.put("message", "Transaction authorizing request submitted successfully.");
         }
 
         return poJSON;
@@ -378,7 +378,7 @@ public class Disbursement extends Transaction {
         if (lbConfirm) {
             poJSON.put("message", "Transactions returned successfully.");
         } else {
-            poJSON.put("message", "Transactions returned request submitted successfully.");
+            poJSON.put("message", "Transactions returning request submitted successfully.");
         }
 
         return poJSON;
@@ -419,9 +419,9 @@ public class Disbursement extends Transaction {
         poJSON.put("result", "success");
 
         if (lbConfirm) {
-            poJSON.put("message", "Transactions returned successfully.");
+            poJSON.put("message", "Transactions dissapproved successfully.");
         } else {
-            poJSON.put("message", "Transactions returned request submitted successfully.");
+            poJSON.put("message", "Transactions dissapproving request submitted successfully.");
         }
 
         return poJSON;
@@ -545,6 +545,52 @@ public class Disbursement extends Transaction {
 //                " a.sSupplier LIKE " + SQLUtil.toSQL("%" + fsSupplierID),
 //                " f.sCategrCd LIKE " + SQLUtil.toSQL("%" + Master().getCategoryCode()),
 //                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferID));
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+        if (!psTranStat.isEmpty()) {
+            lsSQL = lsSQL + lsTransStat;
+        }
+
+        lsSQL = lsSQL + " GROUP BY a.sTransNox";
+        System.out.println("SQL EXECUTED xxx : " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                fsValue,
+                "Transaction No»Transaction Date»Branch»Supplier",
+                "a.sTransNox»a.dTransact»c.sBranchNm»supplier",
+                "a.sTransNox»a.dTransact»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
+                1);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+
+    public JSONObject SearchTransactionForDVHistory(String fsValue, String fsRefNo, String fsSuppPayeeID) throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+
+        initSQL();
+
+        String lsFilterCondition = String.join(" AND ",
+                //                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                //                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsRefNo),
+                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsSuppPayeeID));
 
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         if (!psTranStat.isEmpty()) {
@@ -1042,7 +1088,11 @@ public class Disbursement extends Transaction {
                 + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
                 + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
                 + " JOIN client_master e ON d.sClientID = e.sClientID "
-                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID";
+                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
+                + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
+                + " LEFT JOIN other_payments h ON a.sTransNox = h.sSourceNo"
+                + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
+                + " LEFT JOIN bank_account_master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID";
     }
 
     @Override
@@ -1065,18 +1115,18 @@ public class Disbursement extends Transaction {
             }
             lsSQL.append(
                     "SELECT "
-                    + "    a.sTransNox, "
-                    + "    a.dTransact, "
-                    + "    (a.nTranTotl - a.nAmtPaidx) AS Balance, "
-                    + "    'SOA' AS TransactionType, "
-                    + "    'AP_Payment_Master' AS SourceTable, "
-                    + "    a.sIndstCdx AS Industry, "
-                    + "    a.sCompnyID AS Company "
-                    + "FROM AP_Payment_Master a "
-                    + "WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + "  AND (a.nTranTotl - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + "  AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + "  AND a.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " a.sTransNox, "
+                    + " a.dTransact, "
+                    + " (a.nTranTotl - a.nAmtPaidx) AS Balance, "
+                    + " 'SOA' AS TransactionType, "
+                    + " 'AP_Payment_Master' AS SourceTable, "
+                    + " a.sIndstCdx AS Industry, "
+                    + " a.sCompnyID AS Company "
+                    + " FROM AP_Payment_Master a "
+                    + " WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+                    + " AND (a.nTranTotl - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
+                    + " AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
+                    + " AND a.sCompnyID = '" + Master().getCompanyID() + "'"
             );
             hasCondition = true;
         }
@@ -1087,18 +1137,18 @@ public class Disbursement extends Transaction {
             }
             lsSQL.append(
                     "SELECT "
-                    + "    b.sTransNox, "
-                    + "    b.dTransact, "
-                    + "    (b.nNetTotal - b.nAmtPaidx) AS Balance, "
-                    + "    'PRF' AS TransactionType, "
-                    + "    'Payment_Request_Master' AS SourceTable, "
-                    + "    b.sIndstCdx AS Industry, "
-                    + "    b.sCompnyID AS Company "
-                    + "FROM Payment_Request_Master b "
-                    + "WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + "  AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + "  AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + "  AND b.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " b.sTransNox, "
+                    + " b.dTransact, "
+                    + " (b.nNetTotal - b.nAmtPaidx) AS Balance, "
+                    + " 'PRF' AS TransactionType, "
+                    + " 'Payment_Request_Master' AS SourceTable, "
+                    + " b.sIndstCdx AS Industry, "
+                    + " b.sCompnyID AS Company "
+                    + " FROM Payment_Request_Master b "
+                    + " WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+                    + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
+                    + " AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
+                    + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"
             );
             hasCondition = true;
         }
@@ -1109,18 +1159,18 @@ public class Disbursement extends Transaction {
             }
             lsSQL.append(
                     "SELECT "
-                    + "    c.sTransNox, "
-                    + "    c.dTransact, "
-                    + "    (c.nGrossAmt - c.nAmtPaidx) AS Balance, "
-                    + "    'Cche' AS TransactionType, "
-                    + "    'Cache_Payable_Master' AS SourceTable, "
-                    + "    c.sIndstCdx AS Industry, "
-                    + "    c.sCompnyID AS Company "
-                    + "FROM Cache_Payable_Master c "
-                    + "WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + "  AND (c.nGrossAmt - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
-                    + "  AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + "  AND c.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " c.sTransNox, "
+                    + " c.dTransact, "
+                    + " (c.nGrossAmt - c.nAmtPaidx) AS Balance, "
+                    + " 'Cche' AS TransactionType, "
+                    + " 'Cache_Payable_Master' AS SourceTable, "
+                    + " c.sIndstCdx AS Industry, "
+                    + " c.sCompnyID AS Company "
+                    + " FROM Cache_Payable_Master c "
+                    + " WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+                    + " AND (c.nGrossAmt - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
+                    + " AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
+                    + " AND c.sCompnyID = '" + Master().getCompanyID() + "'"
             );
             hasCondition = true;
         }
@@ -1418,67 +1468,24 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    private Model_Disbursement_Master DisbursementMasterList() {
-        return new CashflowModels(poGRider).DisbursementMaster();
-    }
-
-    public int getDisbursementMasterCount() {
-        return this.poDisbursementMaster.size();
-    }
-
-    public Model_Disbursement_Master poDisbursementMaster(int row) {
-        return (Model_Disbursement_Master) poDisbursementMaster.get(row);
-    }
-
-    public JSONObject getDisbursement(String fsBankID, String fsBankAccountID, String fsCheckNo) throws SQLException, GuanzonException {
+    public JSONObject getDisbursementForCertification(String fsDVNo, String fsSupplierPayee, String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        // Build transaction status condition
-        String lsSQL = "SELECT"
-                + " a.sTransNox,"
-                + " a.dTransact,"
-                + " c.sBranchNm,"
-                + " d.sPayeeNme,"
-                + " e.sCompnyNm AS supplier,"
-                + " f.sDescript,"
-                + " a.nNetTotal,"
-                + " a.cDisbrsTp "
-                + " FROM "
-                + " Disbursement_Master a "
-                + " JOIN Disbursement_Detail b"
-                + " ON a.sTransNox = b.sTransNox "
-                + " JOIN Branch c "
-                + " ON a.sBranchCd = c.sBranchCd "
-                + " JOIN Payee d"
-                + " ON a.sPayeeIDx = d.sPayeeIDx "
-                + " JOIN client_master e"
-                + " ON d.sClientID = e.sClientID "
-                + " JOIN particular f "
-                + " ON b.sPrtclrID = f.sPrtclrID "
-                + " JOIN check_payments g "
-                + " ON a.sTransNox = g.sSourceNo";
-
+        initSQL();
         String lsFilterCondition = String.join(" AND ",
-                " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
-                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
-                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
-                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo),
-                " g.cTranStat IN ('1', '5')");
-        lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
+                " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.VERIFIED),
+                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsDVNo),
+                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsSupplierPayee),
+                " i.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " j.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
-        lsSQL += " GROUP BY a.sTransNox ORDER BY a.dTransact ASC";
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
-
         int lnCtr = 0;
-
         if (MiscUtil.RecordCount(loRS)
                 >= 0) {
             poDisbursementMaster = new ArrayList<>();
             while (loRS.next()) {
-                // Print the result set
-                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                System.out.println("dTransact: " + loRS.getDate("dTransact"));
-                System.out.println("------------------------------------------------------------------------------");
 
                 poDisbursementMaster.add(DisbursementMasterList());
                 poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
@@ -1497,6 +1504,142 @@ public class Disbursement extends Transaction {
 
         MiscUtil.close(loRS);
         return poJSON;
+    }
+
+    public JSONObject getDisbursementForVerification(String fsRefNo, String fsSupplierPayee) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr < psTranStat.length(); lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else if (!psTranStat.isEmpty()) {
+            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                //                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                //                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsRefNo),
+                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsSupplierPayee));
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+        if (!lsTransStat.isEmpty()) {
+            lsSQL += lsTransStat;
+        }
+        lsSQL += " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS)
+                >= 0) {
+            poDisbursementMaster = new ArrayList<>();
+            while (loRS.next()) {
+                poDisbursementMaster.add(DisbursementMasterList());
+                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            poJSON.put("result", "success");
+            poJSON.put("message", "Record loaded successfully.");
+        } else {
+            poDisbursementMaster = new ArrayList<>();
+            poDisbursementMaster.add(DisbursementMasterList());
+            poJSON.put("result", "error");
+            poJSON.put("continue", true);
+            poJSON.put("message", "No record found .");
+        }
+
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+
+    public JSONObject getDisbursementForCheckAuthorization(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.CERTIFIED),
+                " i.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " j.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS)
+                >= 0) {
+            poDisbursementMaster = new ArrayList<>();
+            while (loRS.next()) {
+                poDisbursementMaster.add(DisbursementMasterList());
+                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            poJSON.put("result", "success");
+            poJSON.put("message", "Record loaded successfully.");
+        } else {
+            poDisbursementMaster = new ArrayList<>();
+            poDisbursementMaster.add(DisbursementMasterList());
+            poJSON.put("result", "error");
+            poJSON.put("continue", true);
+            poJSON.put("message", "No record found .");
+        }
+
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+
+    public JSONObject getDisbursementForCheckStatusUpdate(String fsBankID, String fsBankAccountID, String fsCheckNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
+                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
+                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo),
+                " g.cTranStat IN ('1', '5')");
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+
+        if (MiscUtil.RecordCount(loRS)
+                >= 0) {
+            poDisbursementMaster = new ArrayList<>();
+            while (loRS.next()) {
+                poDisbursementMaster.add(DisbursementMasterList());
+                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            poJSON.put("result", "success");
+            poJSON.put("message", "Record loaded successfully.");
+        } else {
+            poDisbursementMaster = new ArrayList<>();
+            poDisbursementMaster.add(DisbursementMasterList());
+            poJSON.put("result", "error");
+            poJSON.put("continue", true);
+            poJSON.put("message", "No record found .");
+        }
+
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+
+    private Model_Disbursement_Master DisbursementMasterList() {
+        return new CashflowModels(poGRider).DisbursementMaster();
+    }
+
+    public int getDisbursementMasterCount() {
+        return this.poDisbursementMaster.size();
+    }
+
+    public Model_Disbursement_Master poDisbursementMaster(int row) {
+        return (Model_Disbursement_Master) poDisbursementMaster.get(row);
     }
 
     public JSONObject computeFields() {
