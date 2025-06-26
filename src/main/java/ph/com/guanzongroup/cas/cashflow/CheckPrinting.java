@@ -1,10 +1,9 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
@@ -29,6 +28,31 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.text.Font;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
+import javafx.print.Printer;
+import javafx.print.Paper;
+import javafx.print.PageLayout;
+import javafx.print.PageOrientation;
+import javafx.print.PrinterJob;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.layout.Pane;
+import javafx.scene.text.Text;
 
 public class CheckPrinting extends Transaction {
 
@@ -41,6 +65,8 @@ public class CheckPrinting extends Transaction {
     List<CachePayable> poCachePayable;
     List<Model> paDetailRemoved;
     List<SelectedITems> poToCertify;
+    private final List<Transaction> transactions = new ArrayList<>();
+    int transSize = 0;
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "Chk";
 
@@ -659,6 +685,199 @@ public class CheckPrinting extends Transaction {
         }
         return poJSON;
     }
+    
+    public JSONObject PrintCheck(List<String> fsTransactionNos) throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        String bank = Master().CheckPayments().Banks().getBankCode();
+        String transactionno= "";
+        String payeeName = "";
+        String checkDate = "";
+        String amountNumeric = "";
+        String amountWords = "";
+        transSize = fsTransactionNos.size();
+        switch (bank) {
+            case "BDO":
+                if (fsTransactionNos.isEmpty()) {
+                    poJSON.put("error", "No transactions selected.");
+                    return poJSON;
+                }
+                Disbursement dvMaster = new CashflowControllers(poGRider, logwrapr).Disbursement();
+                dvMaster.setWithParent(true);
+                dvMaster.InitTransaction();
+                for( int i = 0; i<fsTransactionNos.size();i++){  
+                    transactionno = fsTransactionNos.get(i);
+                    poJSON = dvMaster.OpenTransaction(transactionno);
+                    if("error".equals(poJSON.get("result"))){
+                        return poJSON;
+                    }
+                    poJSON = dvMaster.UpdateTransaction();
+                    setCheckpayment();
+                    payeeName = dvMaster.Master().CheckPayments().Payee().getPayeeName();
+                    checkDate = dvMaster.Master().CheckPayments().getCheckDate().toString();
+                    amountNumeric = dvMaster.Master().CheckPayments().getAmount().toString();
+                    
+                    System.out.println("===============================================");
+                    System.out.println("No : " + (i + 1));
+                    System.out.println("transactionNo No : " + fsTransactionNos.get(i));
+                    System.out.println("payeeName : " + payeeName);
+                    System.out.println("checkDate : " + checkDate);
+                    System.out.println("amountNumeric : " + amountNumeric);                    
+                    System.out.println("===============================================");
+                // Store transaction for printing
+                transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
+
+                // Print the voucher for each transaction inside the loop
+                Canvas canvas = new Canvas(612, 792);
+                GraphicsContext gc = canvas.getGraphicsContext2D();
+
+                // Draw the voucher for the transaction
+                drawVoucher(gc, transactions.get(i));
+
+                // Now print the voucher using PrinterJob
+                    if (showPrintPreview(transactions.get(i))) {
+                        printVoucher( transactions.get(i));
+                    }
+                    
+                    
+            }
+
+            break;
+
+        default:
+            throw new AssertionError();
+    }
+    return poJSON;
+}
+    
+    private void printVoucher(Transaction tx) {
+    Printer printer = Printer.getDefaultPrinter();
+    if (printer == null) { System.err.println("No default printer."); return; }
+
+    PrinterJob job = PrinterJob.createPrinterJob(printer);
+    if (job == null)     { System.err.println("Cannot create job.");  return; }
+
+    PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                                                 PageOrientation.PORTRAIT,
+                                                 Printer.MarginType.HARDWARE_MINIMUM);
+
+    double pw = layout.getPrintableWidth();   // points
+    double ph = layout.getPrintableHeight();
+
+    Node voucherNode = buildVoucherNode(tx, pw, ph);
+
+    job.getJobSettings().setPageLayout(layout);
+    job.getJobSettings().setJobName("Voucher-" + tx.transactionNo);
+
+    boolean okay = job.printPage(layout, voucherNode);
+    if (okay) job.endJob(); else job.cancelJob();
+}
+    private boolean showPrintPreview(Transaction tx) {
+    Printer printer = Printer.getDefaultPrinter();
+    PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                                                 PageOrientation.PORTRAIT,
+                                                 Printer.MarginType.HARDWARE_MINIMUM);
+
+    double pw = layout.getPrintableWidth();
+    double ph = layout.getPrintableHeight();
+
+    Node voucher = buildVoucherNode(tx, pw, ph);
+
+    // Wrap in a Group so zooming keeps proportions if the user resizes the window
+    Group zoomRoot = new Group(voucher);
+    ScrollPane scroll = new ScrollPane(zoomRoot);
+    scroll.setFitToWidth(true);
+    scroll.setFitToHeight(true);
+
+    Button btnPrint  = new Button("Print");
+    Button btnCancel = new Button("Cancel");
+    btnPrint.setOnAction(e -> { ((Stage)btnPrint.getScene().getWindow()).setUserData(Boolean.TRUE); ((Stage)btnPrint.getScene().getWindow()).close(); });
+    btnCancel.setOnAction(e -> ((Stage)btnCancel.getScene().getWindow()).close());
+
+    HBox footer = new HBox(10, btnPrint, btnCancel);
+    footer.setAlignment(Pos.CENTER_RIGHT);
+    footer.setPadding(new Insets(10));
+
+    Stage stage = new Stage();
+    stage.initModality(Modality.APPLICATION_MODAL);
+    stage.setTitle("Print Preview DV " + tx.transactionNo);
+    stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 660, 820));
+    stage.showAndWait();
+
+    return Boolean.TRUE.equals(stage.getUserData());
+}
+/** Builds a voucher as a vector node hierarchy – no Canvas, no signature box. */
+private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
+    Pane root = new Pane();
+    root.setPrefSize(widthPts, heightPts);
+
+    // Font and spacing setup
+    Font mono12 = Font.font("Courier New", 12);
+    double y = 20;
+    double lh = 18;
+    double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+
+    // Function to calculate X based on character column
+    java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+
+    // --- Row 1: checkdate aligned at column 40
+    Text checkDate = new Text(col.apply(75), y,  tx.checkDate);
+    checkDate.setFont(mono12);
+    y += lh * 2;
+
+    // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
+    Text payeeName = new Text(col.apply(25), y, "*** " + tx.payeeName.toUpperCase() + " ***");
+    payeeName.setFont(mono12);
+
+    Text checkAmt = new Text(col.apply(75), y, "₱" + tx.amountNumeric);
+    checkAmt.setFont(mono12);
+    y += lh;
+
+    // --- Row 3: amount in words centered at column 8
+    Text amtWords = new Text(col.apply(15), y, "SAMPLE AMOUNT IN MILLION THOUSAND OR HUNDREDS"); // e.g., "ONE MILLION PESOS"
+    amtWords.setFont(mono12);
+
+    root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
+    return root;
+}
+
+
+
+private void drawVoucher(GraphicsContext gc, Transaction tx) {
+    gc.clearRect(0, 0, gc.getCanvas().getWidth(), gc.getCanvas().getHeight());
+
+    gc.setFont(Font.font("Courier New", 12));  // font size in points
+
+    double y = 20;
+    double lh = 18;
+
+    gc.fillText("METROBANK PAYMENT VOUCHER", 150, y); y += lh * 2;
+    gc.fillText("Client Ref No   : " + tx.transactionNo, 50, y); y += lh;
+    gc.fillText("Voucher No      : " + tx.transactionNo, 50, y); y += lh;
+    gc.fillText("Check Date      : " + tx.checkDate, 50, y); y += lh;
+    gc.fillText("Payee Name      : " + tx.payeeName, 50, y); y += lh;
+    gc.fillText("Amount Numeric  : PHP " + tx.amountNumeric, 50, y); y += lh;
+    y += lh;
+    gc.strokeRect(50, y, 200, 50);
+    gc.fillText("Authorized Signature", 55, y + 65);
+}
+
+
+
+
+// Transaction data class for holding the transaction info
+private static class Transaction {
+    final String transactionNo, payeeName, checkDate, amountNumeric;
+    final BigDecimal amountNumericValue;
+
+    Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric, BigDecimal amountNumericValue) {
+        this.transactionNo = transactionNo;
+        this.payeeName = payeeName;
+        this.checkDate = checkDate;
+        this.amountNumeric = amountNumeric;
+        this.amountNumericValue = amountNumericValue;
+    }
+}
+}
 
     
-}
+
