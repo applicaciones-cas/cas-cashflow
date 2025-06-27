@@ -75,6 +75,15 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
         
+        if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
+            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+        }
+        
         //Populate cache payables
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED) 
                 || getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CANCELLED) ){
@@ -133,12 +142,12 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
 
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-        }
+//        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+//            poJSON = ShowDialogFX.getUserApproval(poGRider);
+//            if (!"success".equals((String) poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//        }
         
         //Populate cache payables
 //        poJSON = populateCachePayable(false, APPaymentAdjustmentStatus.CONFIRMED);
@@ -311,14 +320,14 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
 
-        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-            }
-        }
+//        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
+//            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+//                poJSON = ShowDialogFX.getUserApproval(poGRider);
+//                if (!"success".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                }
+//            }
+//        }
         
         poJSON = UpdateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -557,7 +566,6 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         poModel.setTransactionStatus(APPaymentAdjustmentStatus.VOID);
-        
         poJSON = SaveTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
