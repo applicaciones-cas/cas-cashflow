@@ -25,8 +25,10 @@ public class Model_Journal_Detail extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateObject("dTransact", SQLUtil.toDate("1900-01-01", SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            poEntity.updateObject("dForMonth", SQLUtil.toDate("1900-01-01", SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateObject("nEntryNox", 0);
+            poEntity.updateObject("nDebitAmt", 0.0000);
+            poEntity.updateObject("nCredtAmt", 0.0000);
             //end - assign default values
 
             poEntity.insertRow();
@@ -34,7 +36,9 @@ public class Model_Journal_Detail extends Model {
 
             poEntity.absolute(1);
 
-            ID = poEntity.getMetaData().getColumnLabel(1);
+            ID = "sTransNox";
+            ID2 = "nEntryNox";
+            ID3 = "sAcctCode";
             
             CashflowModels model = new CashflowModels(poGRider);
             poAccountChart = model.Account_Chart();
