@@ -14,6 +14,7 @@ import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Model_Journal_Master extends Model {
     Model_Industry poIndustry;
@@ -33,7 +34,8 @@ public class Model_Journal_Master extends Model {
 
             //assign default values
             poEntity.updateObject("dTransact", SQLUtil.toDate("1900-01-01", SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            poEntity.updateObject("cTranStat", JournalStatus.OPEN);
+            poEntity.updateObject("nEntryNox", 0);
             //end - assign default values
 
             poEntity.insertRow();
@@ -168,7 +170,7 @@ public class Model_Journal_Master extends Model {
     
     @Override
     public String getNextCode(){
-        return ""; 
+        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
     
     public Model_Industry Industry() throws SQLException, GuanzonException{

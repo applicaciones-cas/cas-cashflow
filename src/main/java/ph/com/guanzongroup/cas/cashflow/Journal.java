@@ -1,20 +1,26 @@
 package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.TransactionStatus;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Journal extends Transaction{   
     public JSONObject InitTransaction(){      
@@ -43,15 +49,66 @@ public class Journal extends Transaction{
     }
     
     public JSONObject AddDetail() throws CloneNotSupportedException{
-        if (Detail(getDetailCount() - 1).getAccountCode().isEmpty() && 
-            (Detail(getDetailCount() - 1).getDebitAmount() == 0.00 && Detail(getDetailCount() - 1).getCreditAmount()== 0.00)) {
-            poJSON = new JSONObject();
+        if (getDetailCount() > 0) {
+            if (Detail(getDetailCount() - 1).getAccountCode().isEmpty() && 
+                (Detail(getDetailCount() - 1).getDebitAmount() == 0.00 && Detail(getDetailCount() - 1).getCreditAmount()== 0.00)) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has insufficient detail.");
+                return poJSON;
+            }
+        }
+        return addDetail();
+    }
+    
+    public JSONObject ConfirmTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = JournalStatus.CONFIRMED;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Last row has insufficient detail.");
+            poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-        
-        return addDetail();
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(JournalStatus.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction confirmed successfully.");
+        } else {
+            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        }
+
+        return poJSON;
     }
     
     /*Seach Detail References*/
@@ -132,6 +189,15 @@ public class Journal extends Transaction{
     public Model_Journal_Detail Detail(int row) {
         return (Model_Journal_Detail) paDetail.get(row);
     }    
+    
+    @Override
+    public int getDetailCount() {
+        if (paDetail == null) {
+            paDetail = new ArrayList<>();
+        }
+
+        return paDetail.size();
+    }
         
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException{
@@ -143,7 +209,7 @@ public class Journal extends Transaction{
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-            if ("".equals((String) item.getValue("sAcctCode"))) {
+            if ("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -153,6 +219,8 @@ public class Journal extends Transaction{
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
         }
+        
+        Master().setEntryNumber(getDetailCount());
         
         if (getDetailCount() == 1){
             //do not allow a single item detail with no quantity order
@@ -206,11 +274,11 @@ public class Journal extends Transaction{
     protected JSONObject isEntryOkay(String status){
         poJSON = new JSONObject();
         
-        if (Master().getIndustryCode().isEmpty()){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Industry must not be empty.");
-            return poJSON;
-        }
+//        if (Master().getIndustryCode().isEmpty()){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Industry must not be empty.");
+//            return poJSON;
+//        }
         
         if (Master().getCompanyId().isEmpty()){
             poJSON.put("result", "error");
