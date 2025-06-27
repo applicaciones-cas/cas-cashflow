@@ -1005,9 +1005,11 @@ public class APPaymentAdjustment extends Parameter {
                         System.out.println("--------------------------SOA Tagging--------------------------");
                         System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                         System.out.println("------------------------------------------------------------------------------");
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "AP Payment Adjustment already linked to SOA : " + loRS.getString("sTransNox"));
-                        return poJSON;
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "AP Payment Adjustment already linked to SOA : " + loRS.getString("sTransNox"));
+                            return poJSON;
+                        }
                     }
                 }
                 MiscUtil.close(loRS);
@@ -1027,9 +1029,11 @@ public class APPaymentAdjustment extends Parameter {
                         System.out.println("--------------------------DV--------------------------");
                         System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                         System.out.println("------------------------------------------------------------------------------");
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "AP Payment Adjustment already linked to DV : " + loRS.getString("sTransNox"));
-                        return poJSON;
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "AP Payment Adjustment already linked to DV : " + loRS.getString("sTransNox"));
+                            return poJSON;
+                        }
                     }
                 }
                 MiscUtil.close(loRS);

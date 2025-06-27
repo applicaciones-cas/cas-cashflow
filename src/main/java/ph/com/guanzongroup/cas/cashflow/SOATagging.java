@@ -1013,6 +1013,13 @@ public class SOATagging extends Transaction {
                 ldblDebitAmt = loPaymentRequest.Master().getTranTotal();
                 lsClientId = loPaymentRequest.Master().Payee().getClientID();
                 
+                if ((lsCompanyId == null || lsCompanyId.isEmpty()) && (Master().getCompanyId() == null || "".equals(Master().getCompanyId()))){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "The selected PRF does not have an associated company. Please select a company before choosing a PRF transaction.");
+                    poJSON.put("row", lnCtr);
+                    return poJSON;
+                }
+                
                 if(Master().getClientId() == null || "".equals(Master().getClientId())){
                     Master().setClientId(lsClientId);
                 } else {

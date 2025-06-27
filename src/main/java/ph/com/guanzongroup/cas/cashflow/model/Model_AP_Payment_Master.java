@@ -58,10 +58,10 @@ public class Model_AP_Payment_Master extends Model {
             poEntity.updateObject("nTaxAmntx", 0.0000);
             poEntity.updateObject("nNetTotal", 0.0000);
             poEntity.updateObject("nAmtPaidX", 0.0000);
+            poEntity.updateObject("nVATAmtxx", 0.0000);
+            poEntity.updateObject("nVatExmpt", 0.0000);
+            poEntity.updateObject("nZeroRted", 0.0000);
             poEntity.updateObject("nFreightx", 0.00);
-            poEntity.updateObject("nVATAmtxx", 0.00);
-            poEntity.updateObject("nVatExmpt", 0.00);
-            poEntity.updateObject("nZeroRted", 0.00);
             poEntity.updateString("cTranStat", SOATaggingStatus.OPEN);
             //end - assign default values
 
