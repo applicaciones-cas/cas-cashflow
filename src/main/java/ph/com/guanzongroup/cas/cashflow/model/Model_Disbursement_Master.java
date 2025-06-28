@@ -265,39 +265,22 @@ public class Model_Disbursement_Master extends Model {
     public String getBankPrint() {
         return (String) getValue("cBankPrnt");
     }
-//
-//    public JSONObject setPayeeType(String payeeType){
-//        return setValue("cPayeeTyp", payeeType);
-//    }
-//
-//    public String getPayeeType(){
-//        return (String) getValue("cPayeeTyp");
-//    }
-//
-//    public JSONObject setPickUpType(String pickUpType){
-//        return setValue("cPickUpTp", pickUpType);
-//    }
-//
-//    public String getPickUpType(){
-//        return (String) getValue("cPickUpTp");
-//    }
-//
-//    public JSONObject setClaimant(String claimant){
-//        return setValue("cClaimant", claimant);
-//    }
-//
-//    public String getClaimant(){
-//        return (String) getValue("cClaimant");
-//    }
-//
-//
-//    public JSONObject setAuthorize(String authorize){
-//        return setValue("sAuthorze", authorize);
-//    }
-//
-//    public String getAuthorize(){
-//        return (String) getValue("sAuthorze");
-//    }
+    
+    public JSONObject setPrint(String print) {
+        return setValue("cPrintxxx", print);
+    }
+
+    public String getPrint() {
+        return (String) getValue("cPrintxxx");
+    }
+    
+    public JSONObject setDatePrint(Date datePrint) {
+        return setValue("dPrintxxx", datePrint);
+    }
+
+    public Date getDatePrint() {
+        return (Date) getValue("dPrintxxx");
+    }
 
     public JSONObject setTransactionStatus(String transactionStatus) {
         return setValue("cTranStat", transactionStatus);

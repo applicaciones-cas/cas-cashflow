@@ -436,10 +436,15 @@ public class CheckPrinting extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-            poJSON = saveBankAccountMaster();
-            if ("error".equals(poJSON.get("result"))) {
-                poGRider.rollbackTrans();
-                return poJSON;
+            
+            if(bankAccount!=null){
+                if (bankAccount.getEditMode() == EditMode.ADDNEW || bankAccount.getEditMode() == EditMode.UPDATE) {
+                    poJSON = saveBankAccountMaster();
+                    if ("error".equals(poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                }
             }
 
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
@@ -689,6 +694,17 @@ public class CheckPrinting extends Transaction {
 
     public JSONObject PrintCheck(List<String> fsTransactionNos) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
+        this.InitTransaction();
+         for (int i = 0; i < fsTransactionNos.size(); i++) {
+             this.OpenTransaction(fsTransactionNos.get(i));
+             this.UpdateTransaction();
+             this.setCheckpayment();
+             checkPayments.getEditMode();
+             checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+             checkPayments.getModel().setDatePrint(poGRider.getServerDate());
+             System.out.println("CHECK TRansaction : " + checkPayments.getModel().getTransactionNo());
+             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
+             
         String bank = Master().CheckPayments().Banks().getBankCode();
         String transactionno = "";
         String payeeName = "";
@@ -702,7 +718,7 @@ public class CheckPrinting extends Transaction {
                     poJSON.put("error", "No transactions selected.");
                     return poJSON;
                 }
-                for (int i = 0; i < fsTransactionNos.size(); i++) {
+                
                     transactionno = fsTransactionNos.get(i);
                     payeeName = checkPayments.getModel().Payee().getPayeeName();
                     checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
@@ -722,18 +738,14 @@ public class CheckPrinting extends Transaction {
 
                     // Now print the voucher using PrinterJob
                     if (showPrintPreview(transactions.get(i))) {
-                        checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
-                        checkPayments.getModel().setDatePrint(poGRider.getServerDate());
-                         System.out.println(" get : " +  Master().CheckPayments().getPrint());
-                         System.out.println(" get : " +  Master().CheckPayments().getDatePrint());
                         printVoucher(transactions.get(i));
-                        System.out.println(" get : " +  Master().CheckPayments().getDatePrint());
-                        System.out.println("EDIT MODE : " + checkPayments.getEditMode());
                     }
-                }
+                
                 break;
             default:
                 throw new AssertionError();
+        }
+        this.SaveTransaction();
         }
         return poJSON;
     }
