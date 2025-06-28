@@ -417,18 +417,26 @@ public class CheckPrintingRequest extends Transaction {
 
     @Override
     public void initSQL() {
-        SQL_BROWSE = "SELECT "
+
+        SQL_BROWSE = " SELECT "
                 + "  a.sTransNox, "
                 + "  a.dTransact, "
                 + "  a.nTotalAmt, "
-                + "  b.sBankName, "
-                + "  c.sActNumbr, "
-                + "  c.sActNamex, "
+                + "  c.sBankName, "
+                + "  d.sActNumbr, "
+                + "  d.sActNamex, "
                 + "  a.cTranStat, "
                 + "  a.sBranchCd "
-                + " FROM check_printing_request_master a "
-                + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
-                + "LEFT JOIN bank_account_master c ON a.sBankIDxx = c.sBankIDxx";
+                + " FROM "
+                + "  check_printing_request_master a "
+                + "  LEFT JOIN check_printing_request_detail b "
+                + "    ON a.sTransNox = b.sTransNox "
+                + "  LEFT JOIN banks c ON a.sBankIDxx = c.sBankIDxx "
+                + "  LEFT JOIN bank_account_master d ON a.sBankIDxx = d.sBankIDxx "
+                + "  LEFT JOIN check_payments e ON b.sSourceNo = e.sTransNox "
+                + "  LEFT JOIN disbursement_detail f ON e.sSourceNo = f.sTransNox "
+                + "  LEFT JOIN disbursement_master g ON f.sTransNox = g.sTransNox";
+
     }
 
     @Override
@@ -533,8 +541,8 @@ public class CheckPrintingRequest extends Transaction {
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sIndstCdx LIKE " + SQLUtil.toSQL("%" + Master().getIndustryID()),
-                " d.sCompnyID LIKE " + SQLUtil.toSQL("%" + Master().getCompanyID()),
+                " d.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " c.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
@@ -674,6 +682,59 @@ public class CheckPrintingRequest extends Transaction {
                 System.out.println("dTransact: " + loRS.getDate("dTransact"));
                 System.out.println("------------------------------------------------------------------------------");
 
+                poCheckPrinting.add(CheckPrintMasterList());
+                poCheckPrinting.get(poCheckPrinting.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record loaded successfully.");
+        } else {
+            poCheckPrinting = new ArrayList<>();
+            poCheckPrinting.add(CheckPrintMasterList());
+            loJSON.put("result", "error");
+            loJSON.put("continue", true);
+            loJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return loJSON;
+    }
+
+    public JSONObject getCheckPrintingRequest(String fsTransactionNo) throws SQLException, GuanzonException {
+        JSONObject loJSON = new JSONObject();
+        String lsTransStat = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                " g.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+
+        lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
+        if (!psTranStat.isEmpty()) {
+            lsSQL = lsSQL + lsTransStat;
+        }
+        lsSQL = lsSQL + " GROUP BY  a.sTransNox"
+                + " ORDER BY a.dTransact ASC";
+        System.out.println("Executing SQL: " + lsSQL);
+
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            poCheckPrinting = new ArrayList<>();
+            while (loRS.next()) {
                 poCheckPrinting.add(CheckPrintMasterList());
                 poCheckPrinting.get(poCheckPrinting.size() - 1).openRecord(loRS.getString("sTransNox"));
                 lnCtr++;

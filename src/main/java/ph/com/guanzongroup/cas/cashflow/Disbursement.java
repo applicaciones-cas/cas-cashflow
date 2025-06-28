@@ -1480,8 +1480,8 @@ public class Disbursement extends Transaction {
         initSQL();
         String lsFilterCondition = String.join(" AND ",
                 " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.VERIFIED),
-                " a.sIndstCdx LIKE " + SQLUtil.toSQL("%" + Master().getIndustryID()),
-                " a.sCompnyID LIKE " + SQLUtil.toSQL("%" + Master().getCompanyID()),
+                " a.sIndstCdx = " + Master().getIndustryID(),
+                " a.sCompnyID  = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " i.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " j.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
@@ -1569,8 +1569,8 @@ public class Disbursement extends Transaction {
         initSQL();
         String lsFilterCondition = String.join(" AND ",
                 " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.CERTIFIED),
-                " a.sIndstCdx LIKE " + SQLUtil.toSQL("%" + Master().getIndustryID()),
-                " a.sCompnyID LIKE " + SQLUtil.toSQL("%" + Master().getCompanyID()),
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " i.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " j.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
