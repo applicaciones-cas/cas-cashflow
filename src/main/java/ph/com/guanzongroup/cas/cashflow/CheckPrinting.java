@@ -51,6 +51,7 @@ import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
+import org.guanzon.cas.parameter.Banks;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class CheckPrinting extends Transaction {
@@ -306,6 +307,18 @@ public class CheckPrinting extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setIndustryID(object.getModel().getIndustryId());
+        }
+
+        return poJSON;
+    }
+
+    public JSONObject SearchBanks(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Banks object = new ParamControllers(poGRider, logwrapr).Banks();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().CheckPayments().setBankID(object.getModel().getBankID());
         }
 
         return poJSON;
