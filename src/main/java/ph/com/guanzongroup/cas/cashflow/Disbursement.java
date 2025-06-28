@@ -1283,6 +1283,7 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);
+                        Detail(newIndex).setAccountCode(poPaymentRequest.Detail(i).Particular().getAccountCode());
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
                     }
