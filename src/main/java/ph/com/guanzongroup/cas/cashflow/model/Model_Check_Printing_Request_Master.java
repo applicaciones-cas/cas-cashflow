@@ -15,8 +15,10 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Company;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
 
 /**
@@ -28,7 +30,9 @@ public class Model_Check_Printing_Request_Master extends Model {
     Model_Bank_Account_Master poBankAccountMaster;
     Model_Banks poBanks;
     String psCompanyID;
+    String psBankAccountID;
     Model_Company poCompany;
+    Model_Industry poIndustry;
 
     @Override
     public void initialize() {
@@ -53,7 +57,11 @@ public class Model_Check_Printing_Request_Master extends Model {
 
             ParamModels model = new ParamModels(poGRider);
             poCompany = model.Company();
+
+            poIndustry = model.Industry();
             poBanks = model.Banks();
+            CashflowModels cModel = new CashflowModels(poGRider);
+            poBankAccountMaster = cModel.Bank_Account_Master();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
@@ -171,6 +179,14 @@ public class Model_Check_Printing_Request_Master extends Model {
         return psCompanyID;
     }
 
+    public void setBankAccountID(String bankAccountID) {
+        this.psBankAccountID = bankAccountID;
+    }
+
+    public String getBankAccountID() {
+        return psBankAccountID;
+    }
+
     @Override
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
@@ -217,23 +233,43 @@ public class Model_Check_Printing_Request_Master extends Model {
         }
     }
 
-//    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
-//        if (!"".equals((String) getValue("sBnkActID"))) {
-//            if (poBankAccountMaster.getEditMode() == EditMode.READY
-//                    && poBankAccountMaster.getBankAccountId().equals((String) getValue("sBnkActID"))) {
-//                return poBankAccountMaster;
-//            } else {
-//                poJSON = poBankAccountMaster.openRecord((String) getValue("sBnkActID"));
-//                if ("success".equals((String) poJSON.get("result"))) {
-//                    return poBankAccountMaster;
-//                } else {
-//                    poBankAccountMaster.initialize();
-//                    return poBankAccountMaster;
-//                }
-//            }
-//        } else {
-//            poBankAccountMaster.initialize();
-//            return poBankAccountMaster;
-//        }
-//    }
+    public Model_Industry Industry() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
+                return poIndustry;
+            } else {
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poIndustry;
+                } else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
+        }
+    }
+
+    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
+        if (!"".equals(psBankAccountID)) {
+            if (poBankAccountMaster.getEditMode() == EditMode.READY
+                    && poBankAccountMaster.getBankAccountId().equals(psBankAccountID)) {
+                return poBankAccountMaster;
+            } else {
+                poJSON = poBankAccountMaster.openRecord(psBankAccountID);
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBankAccountMaster;
+                } else {
+                    poBankAccountMaster.initialize();
+                    return poBankAccountMaster;
+                }
+            }
+        } else {
+            poBankAccountMaster.initialize();
+            return poBankAccountMaster;
+        }
+    }
 }

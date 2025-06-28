@@ -45,6 +45,16 @@ public class CheckPrintingRequest extends Transaction {
     List<Model_Check_Printing_Request_Master> poCheckPrinting;
     List<Model_Check_Payments> paCheckPayment;
     List<CheckPayments> poCheckPayments;
+    private String psIndustryId = "";
+    private String psCompanyId = "";
+
+    public void setIndustryID(String industryID) {
+        psIndustryId = industryID;
+    }
+
+    public void setCompanyID(String companyID) {
+        psCompanyId = companyID;
+    }
 
     public JSONObject InitTransaction() {
         SOURCE_CODE = "chK";
@@ -318,7 +328,7 @@ public class CheckPrintingRequest extends Transaction {
         poJSON = object.searchRecordbyBanks(value, BankID, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-//            Master().setBankID(object.getModel().getBankAccountId());
+            Master().setBankAccountID(object.getModel().getBankAccountId());
         }
 
         return poJSON;
@@ -495,7 +505,7 @@ public class CheckPrintingRequest extends Transaction {
         return loJSON;
     }
 
-    public JSONObject getDVwithAuthorizeCheckPayment(String fsCompanyID, String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
+    public JSONObject getDVwithAuthorizeCheckPayment(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsSQL = "SELECT "
                 + " a.sTransNox, "
@@ -523,7 +533,8 @@ public class CheckPrintingRequest extends Transaction {
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sCompnyID LIKE " + SQLUtil.toSQL("%" + fsCompanyID),
+                " d.sIndstCdx LIKE " + SQLUtil.toSQL("%" + Master().getIndustryID()),
+                " d.sCompnyID LIKE " + SQLUtil.toSQL("%" + Master().getCompanyID()),
                 " b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " c.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
@@ -879,6 +890,8 @@ public class CheckPrintingRequest extends Transaction {
 
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).CheckPrintingRequestMaster();
+        Master().setIndustryID(psIndustryId);
+        Master().setCompanyID(psCompanyId);
     }
 
     public void resetOthers() {

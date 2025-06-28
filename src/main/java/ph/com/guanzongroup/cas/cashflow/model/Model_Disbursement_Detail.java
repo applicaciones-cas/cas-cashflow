@@ -143,11 +143,11 @@ public class Model_Disbursement_Detail extends Model {
         return "1".equals(String.valueOf(value));
     }
 
-    public JSONObject setTAxCode(String taxCode) {
+    public JSONObject setTaxCode(String taxCode) {
         return setValue("sTaxCodex", taxCode);
     }
 
-    public String getTAxCode() {
+    public String getTaxCode() {
         return (String) getValue("sTaxCodex");
     }
 
@@ -166,7 +166,7 @@ public class Model_Disbursement_Detail extends Model {
     public Number getTaxAmount() {
         return (Number) getValue("nTaxAmtxx");
     }
-    
+
     public String setInvType(String invType) {
         return this.InvType = invType;
     }
