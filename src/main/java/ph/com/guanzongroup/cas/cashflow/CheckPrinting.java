@@ -75,8 +75,7 @@ public class CheckPrinting extends Transaction {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
-        
-        
+
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
@@ -379,8 +378,6 @@ public class CheckPrinting extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-
 
     public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
         System.out.println("EDIT MODE Ng bankAccount  : " + bankAccount.getEditMode());
@@ -419,6 +416,14 @@ public class CheckPrinting extends Transaction {
     private String psIndustryId = "";
     private String psCompanyId = "";
 
+    public void setIndustryID(String industryID) {
+        psIndustryId = industryID;
+    }
+
+    public void setCompanyID(String companyID) {
+        psCompanyId = companyID;
+    }
+
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
@@ -436,8 +441,8 @@ public class CheckPrinting extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-            
-            if(bankAccount!=null){
+
+            if (bankAccount != null) {
                 if (bankAccount.getEditMode() == EditMode.ADDNEW || bankAccount.getEditMode() == EditMode.UPDATE) {
                     poJSON = saveBankAccountMaster();
                     if ("error".equals(poJSON.get("result"))) {
@@ -463,21 +468,41 @@ public class CheckPrinting extends Transaction {
     @Override
     public void initSQL() {
         SQL_BROWSE = "SELECT "
-                + " a.sTransNox,"
-                + " a.dTransact,"
-                + " c.sBranchNm,"
-                + " d.sPayeeNme,"
-                + " e.sCompnyNm AS supplier,"
-                + " f.sDescript,"
-                + " a.nNetTotal, "
-                + " a.cDisbrsTp, "
-                + " a.cBankPrnt "
-                + " FROM Disbursement_Master a "
-                + " JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
-                + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
-                + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " JOIN client_master e ON d.sClientID = e.sClientID "
-                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID";
+                + "  a.sTransNox,"
+                + "  a.dTransact,"
+                + "  c.sBranchNm,"
+                + "  d.sPayeeNme,"
+                + "  e.sCompnyNm AS supplier,"
+                + "  f.sDescript,"
+                + "  a.nNetTotal,"
+                + "  a.cDisbrsTp,"
+                + "  a.cBankPrnt"
+                + " FROM "
+                + "  Disbursement_Master a "
+                + "  JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
+                + "  JOIN Branch c ON a.sBranchCd = c.sBranchCd "
+                + "  JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
+                + "  JOIN client_master e ON d.sClientID = e.sClientID "
+                + "  JOIN particular f ON b.sPrtclrID = f.sPrtclrID "
+                + "  LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo ";
+
+//
+//        SQL_BROWSE = "SELECT "
+//                + " a.sTransNox,"
+//                + " a.dTransact,"
+//                + " c.sBranchNm,"
+//                + " d.sPayeeNme,"
+//                + " e.sCompnyNm AS supplier,"
+//                + " f.sDescript,"
+//                + " a.nNetTotal, "
+//                + " a.cDisbrsTp, "
+//                + " a.cBankPrnt "
+//                + " FROM Disbursement_Master a "
+//                + " JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
+//                + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
+//                + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
+//                + " JOIN client_master e ON d.sClientID = e.sClientID "
+//                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID";
     }
 
     @Override
@@ -533,6 +558,49 @@ public class CheckPrinting extends Transaction {
                 System.out.println("dTransact: " + loRS.getDate("dTransact"));
                 System.out.println("------------------------------------------------------------------------------");
 
+                poDisbursementMaster.add(DisbursementMasterList());
+                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            poJSON.put("result", "success");
+            poJSON.put("message", "Record loaded successfully.");
+        } else {
+            poDisbursementMaster = new ArrayList<>();
+            poDisbursementMaster.add(DisbursementMasterList());
+            poJSON.put("result", "error");
+            poJSON.put("continue", true);
+            poJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+
+    public JSONObject getDisbursementForCheckPrinting(String fsBankID, String fsBankAccountID, String fsDVDateFrom, String fsDVDateTo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                " a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.cBankPrnt = " + SQLUtil.toSQL(Logical.NO),
+                " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
+                " a.dTransact BETWEEN " + SQLUtil.toSQL(fsDVDateFrom),
+                SQLUtil.toSQL(fsDVDateTo));
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC");
+
+        System.out.println("Executing SQL: " + lsSQL);
+
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            poDisbursementMaster = new ArrayList<>();
+            while (loRS.next()) {
                 poDisbursementMaster.add(DisbursementMasterList());
                 poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
                 lnCtr++;
@@ -695,30 +763,42 @@ public class CheckPrinting extends Transaction {
     public JSONObject PrintCheck(List<String> fsTransactionNos) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         this.InitTransaction();
-         for (int i = 0; i < fsTransactionNos.size(); i++) {
-             this.OpenTransaction(fsTransactionNos.get(i));
-             this.UpdateTransaction();
-             this.setCheckpayment();
-             checkPayments.getEditMode();
-             checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
-             checkPayments.getModel().setDatePrint(poGRider.getServerDate());
-             System.out.println("CHECK TRansaction : " + checkPayments.getModel().getTransactionNo());
-             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
-             
-        String bank = Master().CheckPayments().Banks().getBankCode();
-        String transactionno = "";
-        String payeeName = "";
-        String checkDate = "";
-        String amountNumeric = "";
-        String amountWords = "";
-        transSize = fsTransactionNos.size();
-        switch (bank) {
-            case "BDO":
-                if (fsTransactionNos.isEmpty()) {
-                    poJSON.put("error", "No transactions selected.");
-                    return poJSON;
-                }
-                
+        for (int i = 0; i < fsTransactionNos.size(); i++) {
+            this.OpenTransaction(fsTransactionNos.get(i));
+            this.UpdateTransaction();
+            this.setCheckpayment();
+            checkPayments.getEditMode();
+            checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+            checkPayments.getModel().setDatePrint(poGRider.getServerDate());
+            System.out.println("CHECK TRansaction : " + checkPayments.getModel().getTransactionNo());
+            System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
+            boolean isDVPrinted = "1".equals(Master().getPrint());
+            if (!isDVPrinted) {
+                poJSON.put("message", "Cheque printing requires the Disbursement to be printed first.");
+                poJSON.put("result", "error");
+                return poJSON;
+            }
+
+            boolean isChequePrinted = "1".equals(Master().CheckPayments().getPrint());
+            if (isChequePrinted) {
+                poJSON.put("message", "This Cheque " + Master().CheckPayments().getCheckNo() + " has already been printed.");
+                poJSON.put("result", "error");
+                return poJSON;
+            }
+            String bank = Master().CheckPayments().Banks().getBankCode();
+            String transactionno = "";
+            String payeeName = "";
+            String checkDate = "";
+            String amountNumeric = "";
+            String amountWords = "";
+            transSize = fsTransactionNos.size();
+            switch (bank) {
+                case "BDO":
+                    if (fsTransactionNos.isEmpty()) {
+                        poJSON.put("error", "No transactions selected.");
+                        return poJSON;
+                    }
+
                     transactionno = fsTransactionNos.get(i);
                     payeeName = checkPayments.getModel().Payee().getPayeeName();
                     checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
@@ -740,12 +820,12 @@ public class CheckPrinting extends Transaction {
                     if (showPrintPreview(transactions.get(i))) {
                         printVoucher(transactions.get(i));
                     }
-                
-                break;
-            default:
-                throw new AssertionError();
-        }
-        this.SaveTransaction();
+
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+            this.SaveTransaction();
         }
         return poJSON;
     }
@@ -778,7 +858,7 @@ public class CheckPrinting extends Transaction {
         boolean okay = job.printPage(layout, voucherNode);
         if (okay) {
             job.endJob();
-            
+
             System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo
                     + " for " + tx.payeeName
                     + " | Amount: ₱" + tx.amountNumeric);
