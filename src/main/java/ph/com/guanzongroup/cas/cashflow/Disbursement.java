@@ -466,6 +466,7 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             Detail(row).setParticularID(object.getModel().getParticularID());
+            Detail(row).setAccountCode(object.getModel().getAccountCode());
         }
         return poJSON;
     }
