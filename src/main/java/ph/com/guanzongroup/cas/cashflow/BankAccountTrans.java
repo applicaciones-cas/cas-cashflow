@@ -4,12 +4,13 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Date;
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 
-public class BankAccountTrans {
+public class BankAccountTrans {    
     private GRiderCAS poGRider;
 
     private ResultSet poMaster;
@@ -21,6 +22,8 @@ public class BankAccountTrans {
     private String pcReferNox; 
     private String psCheckNox; 
     private String psSerialNo; 
+    
+    private int pnLstLdger;
     
     private Date pdTransact; 
     private Date pdPostedxx; 
@@ -334,17 +337,63 @@ public class BankAccountTrans {
     
     public JSONObject UpdateReferences(String bankAccountId,
                                         String serialNo,
-                                        String checkNo){
+                                        String checkNo) throws SQLException, GuanzonException{
     
         psBnkActID = bankAccountId;
         psSerialNo = serialNo;
         psCheckNox = checkNo;
         
-        return updateRefNo();
+        return updateRefNo(psCheckNox);
     }
     
-    private JSONObject updateRefNo(){
+    private double get(String bankAccountId, String transactionDate) throws SQLException{
+        String lsSQL = "SELECT nLedgerNo FROM Bank_Account_Ledger" +
+                        " WHERE sBnkActID = " + SQLUtil.toSQL(bankAccountId) +
+                            " AND dPostedxx = " + SQLUtil.toSQL(transactionDate) +
+                        " ORDER BY dPostedxx DESC, nLedgerNo DESC LIMIT 1";
+        
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        
+        if (loRS.next()){
+            pnLstLdger = loRS.getInt("nLedgerNo");
+        } else {
+            pnLstLdger = 0;
+        }
+        
+        lsSQL = "SELECT ";
+        
+        return 0;
+    }
+    
+    private JSONObject updateRefNo(String checkNo) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
+        
+        String lsSQL;
+        
+        if (!psSerialNo.isEmpty()){
+            lsSQL = "UPDATE Bank_Account_Master SET " +
+                    "  sSerialNo = " + SQLUtil.toSQL(psSerialNo) +
+                    " WHERE sBranchxx = " + SQLUtil.toSQL(psBranchCd) +
+                        " AND sBnkActID = " + SQLUtil.toSQL(psBnkActID);
+            
+            if (poGRider.executeQuery(lsSQL, "Bank_Account_Master", psBranchCd, "", "") <= 0){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Unable to update bank branch information!");
+                return poJSON;
+            }
+        }
+        
+        if (!checkNo.isEmpty()){
+            lsSQL = "UPDATE Bank_Account_Master SET" +
+                    "  sCheckNox = " + SQLUtil.toSQL(checkNo) +
+                    " WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID);
+            
+            if (poGRider.executeQuery(lsSQL, "Bank_Account_Master", psBranchCd, "", "") <= 0){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Unable to update bank branch information!");
+                return poJSON;
+            }
+        }
         
         poJSON.put("result", "success");
         return poJSON;
