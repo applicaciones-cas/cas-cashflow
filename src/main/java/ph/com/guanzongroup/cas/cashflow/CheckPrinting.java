@@ -318,9 +318,24 @@ public class CheckPrinting extends Transaction {
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            Master().CheckPayments().setBankID(object.getModel().getBankID());
+            CheckPayments().getModel().setBankID(object.getModel().getBankID());
         }
 
+        return poJSON;
+    }
+
+    public JSONObject SearhBankAccountForCheckPrinting(String value, String BankID, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+        object.setRecordStatus("1");
+        if (BankID != null && !BankID.isEmpty()) {
+            poJSON = object.searchRecordbyBanks(value, BankID, byCode);
+            if ("success".equals((String) poJSON.get("result"))) {
+                CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+            }
+        } else {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Please enter Bank First.");
+        }
         return poJSON;
     }
 
