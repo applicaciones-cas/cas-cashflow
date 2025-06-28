@@ -29,4 +29,8 @@ public class CheckStatus {
         public static final double default_value_double = 0.00;
         public static final int default_value_integer = 0;
     }
+    public static class PrintStatus {
+        public static final String OPEN = "0";
+        public static final String PRINTED = "1";
+    }
 }

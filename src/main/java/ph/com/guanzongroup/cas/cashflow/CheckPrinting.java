@@ -30,11 +30,8 @@ import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
-import javafx.scene.canvas.Canvas;
-import javafx.scene.canvas.GraphicsContext;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Stream;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -52,7 +49,6 @@ import javafx.print.PageOrientation;
 import javafx.print.PrinterJob;
 import javafx.scene.Group;
 import javafx.scene.Node;
-import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
@@ -62,20 +58,25 @@ public class CheckPrinting extends Transaction {
     List<Model_Disbursement_Master> poDisbursementMaster;
     private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
+//    private Disbursement dvMaster;
     private BankAccountMaster bankAccount;
     List<PaymentRequest> poPaymentRequest;
     List<SOATagging> poApPayments;
     List<CachePayable> poCachePayable;
     List<Model> paDetailRemoved;
     List<SelectedITems> poToCertify;
+
     private final List<Transaction> transactions = new ArrayList<>();
     int transSize = 0;
+
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "Chk";
 
-       poMaster = new CashflowModels(poGRider).DisbursementMaster();
+        poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+        
+        
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
@@ -311,10 +312,7 @@ public class CheckPrinting extends Transaction {
         return poJSON;
     }
 
-    
-
     /*End - Search Master References*/
-
     @Override
     public String getSourceCode() {
         return SOURCE_CODE;
@@ -351,15 +349,12 @@ public class CheckPrinting extends Transaction {
             }
         }
 
-        
-
-        
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
-        
+
 //        if (getDetailCount() == 1) {
 //            //do not allow a single item detail with no quantity order
 //            if (Detail(0).getQuantity().doubleValue() == 0.00) {
@@ -368,26 +363,28 @@ public class CheckPrinting extends Transaction {
 //                return poJSON;
 //            }
 //        }
-
         poJSON.put("result", "success");
         return poJSON;
     }
 
     public JSONObject saveCheckPayments() throws SQLException, GuanzonException, CloneNotSupportedException {
         System.out.println("EDIT MODE Ng CHECK PAYM : " + checkPayments.getEditMode());
-        
+        poJSON = new JSONObject();
+
         checkPayments.setWithParentClass(true);
-        if ("error".equals(checkPayments.saveRecord().get("result"))) {
-            poJSON.put("result", "error");
+        poJSON = checkPayments.saveRecord();
+        if ("error".equals(poJSON.get("result"))) {
             return poJSON;
         }
         poJSON.put("result", "success");
         return poJSON;
     }
     
+
+
     public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
         System.out.println("EDIT MODE Ng bankAccount  : " + bankAccount.getEditMode());
-        
+
         bankAccount.setWithParentClass(true);
         if ("error".equals(bankAccount.saveRecord().get("result"))) {
             poJSON.put("result", "error");
@@ -396,6 +393,7 @@ public class CheckPrinting extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
+
     @Override
     public JSONObject initFields() {
         //Put initial model values here/
@@ -420,6 +418,7 @@ public class CheckPrinting extends Transaction {
     }
     private String psIndustryId = "";
     private String psCompanyId = "";
+
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
@@ -431,6 +430,7 @@ public class CheckPrinting extends Transaction {
         try {
             /*Only modify this if there are other tables to modify except the master and detail tables*/
             poJSON = new JSONObject();
+            System.out.println("EDIT MODE : " + checkPayments.getEditMode());
             poJSON = saveCheckPayments();
             if ("error".equals(poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -441,7 +441,7 @@ public class CheckPrinting extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-            
+
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -454,8 +454,6 @@ public class CheckPrinting extends Transaction {
         /*This procedure was called when saving was complete*/
         System.out.println("Transaction saved successfully.");
     }
-
-    
 
     @Override
     public void initSQL() {
@@ -486,8 +484,7 @@ public class CheckPrinting extends Transaction {
         poJSON = loValidator.validate();
         return poJSON;
     }
-    
-    
+
     public JSONObject getDisbursement(String fsTransactionNo, String fsPayee) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         // Build transaction status condition
@@ -502,8 +499,7 @@ public class CheckPrinting extends Transaction {
         }
 
         initSQL();
-        
-        
+
         String lsFilterCondition = String.join(" AND ",
                 " a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
@@ -549,14 +545,15 @@ public class CheckPrinting extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
+
     public CheckPayments CheckPayments() {
         return (CheckPayments) checkPayments;
     }
-    
+
     public BankAccountMaster BankAccountMaster() {
         return (BankAccountMaster) bankAccount;
     }
-    
+
     private Model_Disbursement_Master DisbursementMasterList() {
         return new CashflowModels(poGRider).DisbursementMaster();
     }
@@ -568,13 +565,14 @@ public class CheckPrinting extends Transaction {
     public Model_Disbursement_Master poDisbursementMaster(int row) {
         return (Model_Disbursement_Master) poDisbursementMaster.get(row);
     }
+
     public JSONObject setCheckpayment() throws GuanzonException, SQLException {
         if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
                 || Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
             // Only initialize if null, or you want to force recreate each time
             int editMode = Master().getEditMode();
             String transactionNo = Master().getTransactionNo();
-            
+
             String checkPaymentTransactionNo = "";
             if (checkPayments == null) {
                 checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
@@ -585,12 +583,12 @@ public class CheckPrinting extends Transaction {
                 case EditMode.ADDNEW:
                     if (checkPayments.getEditMode() != EditMode.ADDNEW) {
                         checkPayments.newRecord();
-                        
+
                         checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(Master().CheckPayments().getSourceCode());
                         checkPayments.getModel().setBranchCode(Master().getBranchCode());
-                        
+
                     }
                     break;
                 case EditMode.READY:
@@ -613,7 +611,7 @@ public class CheckPrinting extends Transaction {
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             } else {
-                                
+
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.VOID);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
@@ -639,14 +637,14 @@ public class CheckPrinting extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     public JSONObject setBankAccountCheckNo() throws GuanzonException, SQLException {
         if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
                 || Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
             // Only initialize if null, or you want to force recreate each time
             int editMode = Master().getEditMode();
             String transactionNo = Master().getTransactionNo();
-            
+
             String bankAccountID = "";
             if (bankAccount == null) {
                 bankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
@@ -657,16 +655,16 @@ public class CheckPrinting extends Transaction {
                 bankAccountID = Master().CheckPayments().getBankAcountID();
                 bankAccount.openRecord(bankAccountID);
                 bankAccount.updateRecord();
-                
+
 //              a
                 bankAccount.getModel().setModifiedDate(poGRider.getServerDate());
                 bankAccount.getModel().setModifyingId(poGRider.getUserID());
-            }   
+            }
         }
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     public JSONObject checkNoExists(String checkNo) throws SQLException {
         poJSON = new JSONObject();
         String lsSQL = "SELECT sCheckNox FROM check_payments";
@@ -688,11 +686,11 @@ public class CheckPrinting extends Transaction {
         }
         return poJSON;
     }
-    
+
     public JSONObject PrintCheck(List<String> fsTransactionNos) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         String bank = Master().CheckPayments().Banks().getBankCode();
-        String transactionno= "";
+        String transactionno = "";
         String payeeName = "";
         String checkDate = "";
         String amountNumeric = "";
@@ -704,172 +702,168 @@ public class CheckPrinting extends Transaction {
                     poJSON.put("error", "No transactions selected.");
                     return poJSON;
                 }
-                Disbursement dvMaster = new CashflowControllers(poGRider, logwrapr).Disbursement();
-                dvMaster.setWithParent(true);
-                dvMaster.InitTransaction();
-                for( int i = 0; i<fsTransactionNos.size();i++){  
+                for (int i = 0; i < fsTransactionNos.size(); i++) {
                     transactionno = fsTransactionNos.get(i);
-                    poJSON = dvMaster.OpenTransaction(transactionno);
-                    if("error".equals(poJSON.get("result"))){
-                        return poJSON;
-                    }
-                    poJSON = dvMaster.UpdateTransaction();
-                    setCheckpayment();
-                    payeeName = dvMaster.Master().CheckPayments().Payee().getPayeeName();
-                    checkDate = CustomCommonUtil.formatDateToMMDDYYYY(dvMaster.Master().CheckPayments().getCheckDate());
-                    amountNumeric = dvMaster.Master().CheckPayments().getAmount().toString();
+                    payeeName = checkPayments.getModel().Payee().getPayeeName();
+                    checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
+                    amountNumeric = Master().CheckPayments().getAmount().toString();
                     amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
-                    
-                    
+
                     System.out.println("===============================================");
                     System.out.println("No : " + (i + 1));
                     System.out.println("transactionNo No : " + fsTransactionNos.get(i));
                     System.out.println("payeeName : " + payeeName);
                     System.out.println("checkDate : " + checkDate);
-                    System.out.println("amountNumeric : " + amountNumeric);   
-                    System.out.println("amountWords : " + amountWords);  
+                    System.out.println("amountNumeric : " + amountNumeric);
+                    System.out.println("amountWords : " + amountWords);
                     System.out.println("===============================================");
-                // Store transaction for printing
-                transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
+                    // Store transaction for printing
+                    transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
 
-                // Now print the voucher using PrinterJob
+                    // Now print the voucher using PrinterJob
                     if (showPrintPreview(transactions.get(i))) {
-                        printVoucher( transactions.get(i));
+                        checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+                        checkPayments.getModel().setDatePrint(poGRider.getServerDate());
+                         System.out.println(" get : " +  Master().CheckPayments().getPrint());
+                         System.out.println(" get : " +  Master().CheckPayments().getDatePrint());
+                        printVoucher(transactions.get(i));
+                        System.out.println(" get : " +  Master().CheckPayments().getDatePrint());
+                        System.out.println("EDIT MODE : " + checkPayments.getEditMode());
                     }
-                    
-                    
-            }
-
-            break;
-
-        default:
-            throw new AssertionError();
+                }
+                break;
+            default:
+                throw new AssertionError();
+        }
+        return poJSON;
     }
-    return poJSON;
-}
-    
+
     private void printVoucher(Transaction tx) {
-    Printer printer = Printer.getDefaultPrinter();
-    if (printer == null) { System.err.println("No default printer."); return; }
+        Printer printer = Printer.getDefaultPrinter();
+        if (printer == null) {
+            System.err.println("No default printer.");
+            return;
+        }
 
-    PrinterJob job = PrinterJob.createPrinterJob(printer);
-    if (job == null)     { System.err.println("Cannot create job.");  return; }
+        PrinterJob job = PrinterJob.createPrinterJob(printer);
+        if (job == null) {
+            System.err.println("Cannot create job.");
+            return;
+        }
 
-    PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
-                                                 PageOrientation.PORTRAIT,
-                                                 Printer.MarginType.HARDWARE_MINIMUM);
+        PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                PageOrientation.PORTRAIT,
+                Printer.MarginType.HARDWARE_MINIMUM);
 
-    double pw = layout.getPrintableWidth();   // points
-    double ph = layout.getPrintableHeight();
+        double pw = layout.getPrintableWidth();   // points
+        double ph = layout.getPrintableHeight();
 
-    Node voucherNode = buildVoucherNode(tx, pw, ph);
+        Node voucherNode = buildVoucherNode(tx, pw, ph);
 
-    job.getJobSettings().setPageLayout(layout);
-    job.getJobSettings().setJobName("Voucher-" + tx.transactionNo);
+        job.getJobSettings().setPageLayout(layout);
+        job.getJobSettings().setJobName("Voucher-" + tx.transactionNo);
 
-    boolean okay = job.printPage(layout, voucherNode);
-    if (okay) {
-        job.endJob();
-        
-        System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo +
-                           " for " + tx.payeeName +
-                           " | Amount: ₱" + tx.amountNumeric);
-    } else {
-        job.cancelJob();
-        System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
+        boolean okay = job.printPage(layout, voucherNode);
+        if (okay) {
+            job.endJob();
+            
+            System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo
+                    + " for " + tx.payeeName
+                    + " | Amount: ₱" + tx.amountNumeric);
+        } else {
+            job.cancelJob();
+            System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
+        }
     }
-}
-    
-    
-    
+
     private boolean showPrintPreview(Transaction tx) {
-    Printer printer = Printer.getDefaultPrinter();
-    PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
-                                                 PageOrientation.PORTRAIT,
-                                                 Printer.MarginType.HARDWARE_MINIMUM);
+        Printer printer = Printer.getDefaultPrinter();
+        PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                PageOrientation.PORTRAIT,
+                Printer.MarginType.HARDWARE_MINIMUM);
 
-    double pw = layout.getPrintableWidth();
-    double ph = layout.getPrintableHeight();
+        double pw = layout.getPrintableWidth();
+        double ph = layout.getPrintableHeight();
 
-    Node voucher = buildVoucherNode(tx, pw, ph);
+        Node voucher = buildVoucherNode(tx, pw, ph);
 
-    // Wrap in a Group so zooming keeps proportions if the user resizes the window
-    Group zoomRoot = new Group(voucher);
-    ScrollPane scroll = new ScrollPane(zoomRoot);
-    scroll.setFitToWidth(true);
-    scroll.setFitToHeight(true);
+        // Wrap in a Group so zooming keeps proportions if the user resizes the window
+        Group zoomRoot = new Group(voucher);
+        ScrollPane scroll = new ScrollPane(zoomRoot);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
 
-    Button btnPrint  = new Button("Print");
-    Button btnCancel = new Button("Cancel");
-    btnPrint.setOnAction(e -> { ((Stage)btnPrint.getScene().getWindow()).setUserData(Boolean.TRUE); ((Stage)btnPrint.getScene().getWindow()).close(); });
-    btnCancel.setOnAction(e -> ((Stage)btnCancel.getScene().getWindow()).close());
+        Button btnPrint = new Button("Print");
+        Button btnCancel = new Button("Cancel");
+        btnPrint.setOnAction(e -> {
+            ((Stage) btnPrint.getScene().getWindow()).setUserData(Boolean.TRUE);
+            ((Stage) btnPrint.getScene().getWindow()).close();
+        });
+        btnCancel.setOnAction(e -> ((Stage) btnCancel.getScene().getWindow()).close());
 
-    HBox footer = new HBox(10, btnPrint, btnCancel);
-    footer.setAlignment(Pos.CENTER_RIGHT);
-    footer.setPadding(new Insets(10));
+        HBox footer = new HBox(10, btnPrint, btnCancel);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setPadding(new Insets(10));
 
-    Stage stage = new Stage();
-    stage.initModality(Modality.APPLICATION_MODAL);
-    stage.setTitle("Print Preview DV " + tx.transactionNo);
-    stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 660, 820));
-    stage.showAndWait();
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Print Preview DV " + tx.transactionNo);
+        stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 660, 820));
+        stage.showAndWait();
 
-    return Boolean.TRUE.equals(stage.getUserData());
-}
-/** Builds a voucher as a vector node hierarchy – no Canvas, no signature box. */
-private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
-    Pane root = new Pane();
-    root.setPrefSize(widthPts, heightPts);
+        return Boolean.TRUE.equals(stage.getUserData());
+    }
 
-    // Font and spacing setup
-    Font mono12 = Font.font("Arial Narrow", 11);
-    double y = 20;
-    double lh = 18;
-    double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+    /**
+     * Builds a voucher as a vector node hierarchy – no Canvas, no signature
+     * box.
+     */
+    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
+        Pane root = new Pane();
+        root.setPrefSize(widthPts, heightPts);
 
-    // Function to calculate X based on character column
-    java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+        // Font and spacing setup
+        Font mono12 = Font.font("Arial Narrow", 11);
+        double y = 20;
+        double lh = 18;
+        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
 
-    // --- Row 1: checkdate aligned at column 40
-    Text checkDate = new Text(col.apply(70), y,  tx.checkDate);
-    checkDate.setFont(mono12);
-    y += lh * 2;
+        // Function to calculate X based on character column
+        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
 
-    // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
-    Text payeeName = new Text(col.apply(20), y, "*** " + tx.payeeName.toUpperCase() + " ***");
-    payeeName.setFont(mono12);
+        // --- Row 1: checkdate aligned at column 40
+        Text checkDate = new Text(col.apply(70), y, tx.checkDate);
+        checkDate.setFont(mono12);
+        y += lh * 2;
 
-    Text checkAmt = new Text(col.apply(70), y, "₱" + CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric,false));
-    checkAmt.setFont(mono12);
-    y += lh;
+        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
+        Text payeeName = new Text(col.apply(20), y, "*** " + tx.payeeName.toUpperCase() + " ***");
+        payeeName.setFont(mono12);
 
-    // --- Row 3: amount in words centered at column 8
-    Text amtWords = new Text(col.apply(8), y, "=== " +NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric))+ " ==="); // e.g., "ONE MILLION PESOS"
-    amtWords.setFont(mono12);
+        Text checkAmt = new Text(col.apply(70), y, "₱" + CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
+        checkAmt.setFont(mono12);
+        y += lh;
 
-    root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
-    return root;
-}
+        // --- Row 3: amount in words centered at column 8
+        Text amtWords = new Text(col.apply(8), y, "=== " + NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) + " ==="); // e.g., "ONE MILLION PESOS"
+        amtWords.setFont(mono12);
 
-
-
-
-
+        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
+        return root;
+    }
 
 // Transaction data class for holding the transaction info
-private static class Transaction {
-    final String transactionNo, payeeName, checkDate, amountNumeric;
-    final BigDecimal amountNumericValue;
+    private static class Transaction {
 
-    Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric, BigDecimal amountNumericValue) {
-        this.transactionNo = transactionNo;
-        this.payeeName = payeeName;
-        this.checkDate = checkDate;
-        this.amountNumeric = amountNumeric;
-        this.amountNumericValue = amountNumericValue;
+        final String transactionNo, payeeName, checkDate, amountNumeric;
+        final BigDecimal amountNumericValue;
+
+        Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric, BigDecimal amountNumericValue) {
+            this.transactionNo = transactionNo;
+            this.payeeName = payeeName;
+            this.checkDate = checkDate;
+            this.amountNumeric = amountNumeric;
+            this.amountNumericValue = amountNumericValue;
+        }
     }
 }
-}
-
-    
-

@@ -22,6 +22,8 @@ import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
+import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
@@ -53,7 +55,8 @@ public class Model_Check_Payments extends Model {
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
-            poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
+            poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
+            poEntity.updateNull("dPrintxxx");
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -84,13 +87,7 @@ public class Model_Check_Payments extends Model {
         return date;
     }
 
-    public JSONObject setIndustryID(String industryID) {
-        return setValue("sIndstCdx", industryID);
-    }
 
-    public String getIndustryID() {
-        return (String) getValue("sIndstCdx");
-    }
 
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
@@ -106,6 +103,14 @@ public class Model_Check_Payments extends Model {
 
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
+    }
+    
+    public JSONObject setIndustryID(String industryID) {
+        return setValue("sIndstCdx", industryID);
+    }
+
+    public String getIndustryID() {
+        return (String) getValue("sIndstCdx");
     }
 
     public JSONObject setTransactionDate(Date transactionDate) {
@@ -294,6 +299,14 @@ public class Model_Check_Payments extends Model {
 
     public String getPrint() {
         return (String) getValue("cPrintxxx");
+    }
+    
+    public JSONObject setDatePrint(Date datePrint) {
+        return setValue("dPrintxxx", datePrint);
+    }
+
+    public Date getDatePrint() {
+        return (Date) getValue("dPrintxxx");
     }
 
     public JSONObject setModifyingId(String modifyingId) {
