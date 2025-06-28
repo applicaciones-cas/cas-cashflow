@@ -85,11 +85,11 @@ public class APPaymentValidator  implements GValidator{
             return poJSON;
         }
         
-        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
-            poJSON.put("result","error");
-            poJSON.put("message", "Invalid Industry ID");
-            return poJSON;
-        }
+//        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+//            poJSON.put("result","error");
+//            poJSON.put("message", "Invalid Industry ID");
+//            return poJSON;
+//        }
         
         if (poMaster.getCompanyId()== null || poMaster.getCompanyId().isEmpty()) {
             poJSON.put("result","error");

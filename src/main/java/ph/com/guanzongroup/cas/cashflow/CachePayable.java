@@ -192,11 +192,11 @@ public class CachePayable extends Transaction{
     protected JSONObject isEntryOkay(String status){
         poJSON = new JSONObject();
         
-        if (Master().getIndustryCode().isEmpty()){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Industry must not be empty.");
-            return poJSON;
-        }
+//        if (Master().getIndustryCode().isEmpty()){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Industry must not be empty.");
+//            return poJSON;
+//        }
         
         if (Master().getBranchCode().isEmpty()){
             poJSON.put("result", "error");
@@ -222,11 +222,11 @@ public class CachePayable extends Transaction{
             return poJSON;
         }
         
-        if (Master().getBankId().isEmpty()){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Bank must not be empty.");
-            return poJSON;
-        }
+//        if (Master().getBankId().isEmpty()){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Bank must not be empty.");
+//            return poJSON;
+//        }
         
         if (Master().getGrossAmount() == 0.00){
             poJSON.put("result", "error");

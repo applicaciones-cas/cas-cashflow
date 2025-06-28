@@ -109,7 +109,7 @@ public class AccountChart extends Parameter{
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Description»Account",
+                "ID»Description»Account»Industry",
                 "sAcctCode»sDescript»sGLCodexx»xIndustry",
                 "a.sAcctCode»a.sDescript»a.sGLCodexx»IFNULL(b.sDescript, '')",
                 byCode ? 0 : 1);

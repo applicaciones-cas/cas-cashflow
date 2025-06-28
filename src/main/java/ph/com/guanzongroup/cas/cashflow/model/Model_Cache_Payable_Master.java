@@ -49,6 +49,7 @@ public class Model_Cache_Payable_Master extends Model {
             poEntity.updateObject("nRecvbles", 0.00);
             poEntity.updateObject("nAmtPaidx", 0.00);
             poEntity.updateObject("cProcessd", "0");
+            poEntity.updateObject("cWithSOAx", "0");
             poEntity.updateObject("cTranStat", "0");
             //end - assign default values
 
@@ -291,11 +292,19 @@ public class Model_Cache_Payable_Master extends Model {
     }
     
     public JSONObject setProcessed(boolean processed) {
-        return setValue("cTranStat", processed ? "1" : "0");
+        return setValue("cProcessd", processed ? "1" : "0");
     }
 
     public boolean isProcessed() {
-        return ((String) getValue("cTranStat")).equals("1");        
+        return ((String) getValue("cProcessd")).equals("1");        
+    }
+    
+    public JSONObject setWithSoa(boolean withSoa) {
+        return setValue("cWithSOAx", withSoa ? "1" : "0");
+    }
+
+    public boolean isWithSoa() {
+        return ((String) getValue("cWithSOAx")).equals("1");        
     }
 
     public JSONObject setModifyingId(String modifyingId) {
