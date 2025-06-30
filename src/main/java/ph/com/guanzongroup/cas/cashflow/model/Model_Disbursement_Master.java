@@ -43,6 +43,8 @@ public class Model_Disbursement_Master extends Model {
 
             MiscUtil.initRowSet(poEntity);
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateNull("dPrintxxx");
+            poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateObject("nEntryNox", DisbursementStatic.DefaultValues.default_value_integer);
             poEntity.updateObject("nTranTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nDiscTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
@@ -265,7 +267,7 @@ public class Model_Disbursement_Master extends Model {
     public String getBankPrint() {
         return (String) getValue("cBankPrnt");
     }
-    
+
     public JSONObject setPrint(String print) {
         return setValue("cPrintxxx", print);
     }
@@ -273,7 +275,7 @@ public class Model_Disbursement_Master extends Model {
     public String getPrint() {
         return (String) getValue("cPrintxxx");
     }
-    
+
     public JSONObject setDatePrint(Date datePrint) {
         return setValue("dPrintxxx", datePrint);
     }
@@ -401,7 +403,7 @@ public class Model_Disbursement_Master extends Model {
             return poIndustry;
         }
     }
-    
+
     public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sTransNox"))) {
             if (poCheckPayments.getEditMode() == EditMode.READY
@@ -422,5 +424,5 @@ public class Model_Disbursement_Master extends Model {
             return poCheckPayments;
         }
     }
-    
+
 }
