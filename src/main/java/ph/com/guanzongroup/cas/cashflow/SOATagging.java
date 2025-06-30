@@ -1521,6 +1521,7 @@ public class SOATagging extends Transaction {
             //Save Update AP Payment Adjustment
             for (lnCtr = 0; lnCtr <= paAPAdjustment.size() - 1; lnCtr++) {
                 paAPAdjustment.get(lnCtr).setWithParentClass(true);
+                paAPAdjustment.get(lnCtr).isWithParent(true);
                 paAPAdjustment.get(lnCtr).getModel().setModifyingBy(poGRider.Encrypt(poGRider.getUserID()));
                 paAPAdjustment.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
                 poJSON = paAPAdjustment.get(lnCtr).SaveTransaction();
