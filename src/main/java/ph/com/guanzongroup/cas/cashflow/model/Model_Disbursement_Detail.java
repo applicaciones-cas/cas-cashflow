@@ -10,6 +10,7 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.cas.parameter.model.Model_Inv_Type;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
@@ -23,6 +24,7 @@ import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 public class Model_Disbursement_Detail extends Model {
 
     Model_Particular poParticular;
+    Model_Inv_Type poInvType;
     Model_Tax_Code poTaxCode;
     String InvType = "";
 
@@ -56,6 +58,7 @@ public class Model_Disbursement_Detail extends Model {
             poParticular = cashFlow.Particular();
             ParamModels model = new ParamModels(poGRider);
             poTaxCode = model.TaxCode();
+            poInvType = model.InventoryType();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -217,4 +220,24 @@ public class Model_Disbursement_Detail extends Model {
         }
     }
 
+//    public Model_Inv_Type InvType() throws SQLException, GuanzonException {
+//        if (!"".equals((String) getValue("sTaxCodex"))) {
+//            if (poInvType.getEditMode() == EditMode.READY
+//                    && poInvType.getInventoryTypeId().equals((String) getValue("sTaxCodex"))) {
+//                return poInvType;
+//            } else {
+//                poJSON = poInvType.openRecord((String) getValue("sTaxCodex"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poInvType;
+//                } else {
+//                    poInvType.initialize();
+//                    return poInvType;
+//                }
+//            }
+//        } else {
+//            poInvType.initialize();
+//            return poInvType;
+//        }
+//    }
 }

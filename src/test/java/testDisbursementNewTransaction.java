@@ -109,7 +109,7 @@ public class testDisbursementNewTransaction {
             }
 
             
-            poDisbursement.Disbursement().Detail(0).setTAxCode(taxCode);
+            poDisbursement.Disbursement().Detail(0).setTaxCode(taxCode);
             poDisbursement.Disbursement().Detail(0).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(0).setSourceNo("M00125000024");
             poDisbursement.Disbursement().Detail(0).setAccountCode("M00125000024");
@@ -119,7 +119,7 @@ public class testDisbursementNewTransaction {
             
             poDisbursement.Disbursement().AddDetail();
 //            
-            poDisbursement.Disbursement().Detail(1).setTAxCode(taxCode);
+            poDisbursement.Disbursement().Detail(1).setTaxCode(taxCode);
             poDisbursement.Disbursement().Detail(1).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(1).setSourceNo("M00125000024");
             poDisbursement.Disbursement().Detail(1).setAccountCode("M00125000024");
@@ -129,7 +129,7 @@ public class testDisbursementNewTransaction {
             
             poDisbursement.Disbursement().AddDetail();
 //            
-            poDisbursement.Disbursement().Detail(2).setTAxCode(taxCode);
+            poDisbursement.Disbursement().Detail(2).setTaxCode(taxCode);
             poDisbursement.Disbursement().Detail(2).setSourceCode("PRF");
             poDisbursement.Disbursement().Detail(2).setSourceNo("P0w125000026");
             poDisbursement.Disbursement().Detail(2).setAccountCode("P0w125000026");

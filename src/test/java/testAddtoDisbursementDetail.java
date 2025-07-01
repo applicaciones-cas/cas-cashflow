@@ -34,8 +34,8 @@ public class testAddtoDisbursementDetail {
     @Test
     public void testOpenTransaction() {
         JSONObject loJSON;
-        String transactionNo = "M00125000024";
-        String TransactionType = "PRF";
+        String transactionNo = "M00125000002";
+        String TransactionType = "Cche";
 
         try {
             loJSON = poDisbursement.Disbursement().InitTransaction();
@@ -61,6 +61,7 @@ public class testAddtoDisbursementDetail {
                 System.out.println("  Source Code : " + poDisbursement.Disbursement().Detail(i).getSourceCode());
                 System.out.println("  particular : " + poDisbursement.Disbursement().Detail(i).getParticularID());
                 System.out.println("  Amount      : " + poDisbursement.Disbursement().Detail(i).getAmount());
+                System.out.println("  InvType      : " + poDisbursement.Disbursement().Detail(i).getInvType());
                 System.out.println("------------------------------------");
             }
             
