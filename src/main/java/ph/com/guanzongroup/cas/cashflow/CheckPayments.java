@@ -11,7 +11,6 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
-import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -41,8 +40,6 @@ public class CheckPayments extends Parameter {
     public JSONObject isEntryOkay() throws SQLException {
         poJSON = new JSONObject();
 
-        poJSON = new JSONObject();
-
         if (poModel.getBranchCode() == null || poModel.getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Branch is missing or not set.");
@@ -61,17 +58,6 @@ public class CheckPayments extends Parameter {
             return poJSON;
         }
         
-//        if (poModel.getPayorID()== null || poModel.getPayorID().isEmpty()) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Payor is missing or not set.");
-//            return poJSON;
-//        }
-        
-//        if (poModel.getPayeeID()== null || poModel.getPayeeID().isEmpty()) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Payee is missing or not set.");
-//            return poJSON;
-//        }
         
         if (poModel.getSourceCode()== null || poModel.getSourceCode().isEmpty()) {
             poJSON.put("result", "error");
@@ -85,41 +71,6 @@ public class CheckPayments extends Parameter {
             return poJSON;
         }
         
-//        if (poModel.getLocation()== null || poModel.getLocation().isEmpty()) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Location is missing or not set.");
-//            return poJSON;
-//        }
-        
-        
-//            if (poModel.getPayeeID().isEmpty()){
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Payee ID must not be empty.");
-//                return poJSON;
-//            }
-//            
-
-//        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "User is not allowed to save record.");
-//            return poJSON;
-//        } else {
-//            poJSON = new JSONObject();
-//            
-//            if (poModel.getBranchCode()== null ||  poModel.getBranchCode().isEmpty()){
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Branch must not be empty.");
-//                return poJSON;
-//            }
-//            
-//            if (poModel.getPayeeID().isEmpty()){
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Payee ID must not be empty.");
-//                return poJSON;
-//            }
-//            
-//            
-//        }
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());
 
@@ -131,33 +82,6 @@ public class CheckPayments extends Parameter {
     public Model_Check_Payments getModel() {
         return poModel;
     }
-
-//    @Override
-//    public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException{
-//        String lsSQL = getSQ_Browse();
-//        
-//        poJSON = ShowDialogFX.Search(poGRider,
-//                lsSQL,
-//                value,
-//                "Branch»Banks»Payee»Amount»Check Date",
-//                "sBranchCd»xBankName»xPayeeNme»nAmountxx»dCheckDte",
-//                ".sBranchCd»IFNULL(b.sBankNamex, '')»IFNULL(a.sPayeeIDx, '')»IFNULL(d.sPayeeNme, '')»a.nAmountxx»a.dCheckDte",
-//                byCode ? 0 : 1);
-//
-//        if (poJSON != null) {
-//            return poModel.openRecord((String) poJSON.get("sPrtclrID"),
-//                                        (String) poJSON.get("sBranchCd"),
-//                                        (String) poJSON.get("sPayeeIDx"),
-//                                        (String) poJSON.get("sAcctNoxx"));
-//        } else {
-//            poJSON = new JSONObject();
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "No record loaded.");
-//            return poJSON;
-//        }
-//    }
-//    
-//  
     @Override
     public JSONObject searchRecord(String fsValue, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();

@@ -14,8 +14,11 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.parameter.model.Model_Banks;
+import org.guanzon.cas.parameter.model.Model_Company;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
 
 /**
@@ -24,9 +27,12 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
  */
 public class Model_Check_Printing_Request_Master extends Model {
 
-  
     Model_Bank_Account_Master poBankAccountMaster;
     Model_Banks poBanks;
+    String psCompanyID;
+    String psBankAccountID;
+    Model_Company poCompany;
+    Model_Industry poIndustry;
 
     @Override
     public void initialize() {
@@ -42,7 +48,7 @@ public class Model_Check_Printing_Request_Master extends Model {
             poEntity.updateObject("nTotalAmt", CheckPrintRequestStatus.DefaultValues.default_value_double_0000);
             poEntity.updateObject("cIsUpload", CheckPrintRequestStatus.OPEN);
 //            poEntity.updateObject("cTranStat", CheckPrintRequestStatus.OPEN);
-            
+
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
@@ -50,7 +56,12 @@ public class Model_Check_Printing_Request_Master extends Model {
             ID = "sTransNox";
 
             ParamModels model = new ParamModels(poGRider);
+            poCompany = model.Company();
+
+            poIndustry = model.Industry();
             poBanks = model.Banks();
+            CashflowModels cModel = new CashflowModels(poGRider);
+            poBankAccountMaster = cModel.Bank_Account_Master();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
@@ -79,7 +90,7 @@ public class Model_Check_Printing_Request_Master extends Model {
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
     }
-    
+
     public JSONObject setIndustryID(String industryID) {
         return setValue("sIndstCdx", industryID);
     }
@@ -103,7 +114,7 @@ public class Model_Check_Printing_Request_Master extends Model {
     public String getBankID() {
         return (String) getValue("sBankIDxx");
     }
-    
+
     public JSONObject setRemarks(String remarks) {
         return setValue("sRemarksx", remarks);
     }
@@ -111,15 +122,15 @@ public class Model_Check_Printing_Request_Master extends Model {
     public String getRemarks() {
         return (String) getValue("sRemarksx");
     }
-    
-    public JSONObject setEntryNumber(int entryNumber){
+
+    public JSONObject setEntryNumber(int entryNumber) {
         return setValue("nEntryNox", entryNumber);
     }
 
     public int getEntryNumber() {
         return (int) getValue("nEntryNox");
     }
-    
+
     public JSONObject setTotalAmount(Number TotalAmount) {
         return setValue("nTotalAmt", TotalAmount);
     }
@@ -127,7 +138,7 @@ public class Model_Check_Printing_Request_Master extends Model {
     public Number getTotalAmount() {
         return (Number) getValue("nTotalAmt");
     }
-    
+
     public JSONObject isUploaded(boolean isUploaded) {
         return setValue("cIsUpload", isUploaded ? "1" : "0");
     }
@@ -135,7 +146,7 @@ public class Model_Check_Printing_Request_Master extends Model {
     public boolean isUploaded() {
         return ((String) getValue("cIsUpload")).equals("1");
     }
-    
+
     public JSONObject setTransactionStatus(String transactionStatus) {
         return setValue("cTranStat", transactionStatus);
     }
@@ -158,6 +169,22 @@ public class Model_Check_Printing_Request_Master extends Model {
 
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
+    }
+
+    public void setCompanyID(String companyID) {
+        this.psCompanyID = companyID;
+    }
+
+    public String getCompanyID() {
+        return psCompanyID;
+    }
+
+    public void setBankAccountID(String bankAccountID) {
+        this.psBankAccountID = bankAccountID;
+    }
+
+    public String getBankAccountID() {
+        return psBankAccountID;
     }
 
     @Override
@@ -184,25 +211,65 @@ public class Model_Check_Printing_Request_Master extends Model {
             return poBanks;
         }
     }
-    
-//    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
-//        if (!"".equals((String) getValue("sBnkActID"))) {
-//            if (poBankAccountMaster.getEditMode() == EditMode.READY
-//                    && poBankAccountMaster.getBankAccountId().equals((String) getValue("sBnkActID"))) {
-//                return poBankAccountMaster;
-//            } else {
-//                poJSON = poBankAccountMaster.openRecord((String) getValue("sBnkActID"));
-//                if ("success".equals((String) poJSON.get("result"))) {
-//                    return poBankAccountMaster;
-//                } else {
-//                    poBankAccountMaster.initialize();
-//                    return poBankAccountMaster;
-//                }
-//            }
-//        } else {
-//            poBankAccountMaster.initialize();
-//            return poBankAccountMaster;
-//        }
-//    }
 
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(psCompanyID)) {
+            if (poCompany.getEditMode() == EditMode.READY
+                    && poCompany.getCompanyId().equals(psCompanyID)) {
+                return poCompany;
+            } else {
+                poJSON = poCompany.openRecord(psCompanyID);
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poCompany;
+                } else {
+                    poCompany.initialize();
+                    return poCompany;
+                }
+            }
+        } else {
+            poCompany.initialize();
+            return poCompany;
+        }
+    }
+
+    public Model_Industry Industry() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
+                return poIndustry;
+            } else {
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poIndustry;
+                } else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
+        }
+    }
+
+    public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
+        if (!"".equals(psBankAccountID)) {
+            if (poBankAccountMaster.getEditMode() == EditMode.READY
+                    && poBankAccountMaster.getBankAccountId().equals(psBankAccountID)) {
+                return poBankAccountMaster;
+            } else {
+                poJSON = poBankAccountMaster.openRecord(psBankAccountID);
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBankAccountMaster;
+                } else {
+                    poBankAccountMaster.initialize();
+                    return poBankAccountMaster;
+                }
+            }
+        } else {
+            poBankAccountMaster.initialize();
+            return poBankAccountMaster;
+        }
+    }
 }

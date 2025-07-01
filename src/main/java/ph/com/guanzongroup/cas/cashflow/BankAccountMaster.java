@@ -29,11 +29,11 @@ public class BankAccountMaster extends Parameter{
     public JSONObject isEntryOkay() throws SQLException {
         poJSON = new JSONObject();
         
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
-            poJSON.put("result", "error");
-            poJSON.put("message", "User is not allowed to save record.");
-            return poJSON;
-        } else {
+//        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "User is not allowed to save record.");
+//            return poJSON;
+//        } else {
             poJSON = new JSONObject();
             
             if (poModel.getBankAccountId()== null ||  poModel.getBankAccountId().isEmpty()){
@@ -77,7 +77,7 @@ public class BankAccountMaster extends Parameter{
                 poJSON.put("message", "Account name must not be empty.");
                 return poJSON;
             }
-        }
+//        }
         
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());

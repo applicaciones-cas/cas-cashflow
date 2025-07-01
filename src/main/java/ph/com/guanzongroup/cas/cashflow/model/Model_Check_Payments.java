@@ -4,11 +4,12 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
+import org.guanzon.appdriver.agent.systables.TransactionStatusHistory;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -17,9 +18,12 @@ import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
+import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
@@ -33,6 +37,8 @@ public class Model_Check_Payments extends Model {
     Model_Bank_Account_Master poBankAccountMaster;
     Model_Branch poBranch;
     Model_Banks poBanks;
+    Model_Industry poIndustry;
+    Model_Transaction_Status_History poTransactionStatusHistory;
 
     @Override
     public void initialize() {
@@ -45,11 +51,12 @@ public class Model_Check_Payments extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateNull("dCheckDte");
+            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
-            poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
+            poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
+            poEntity.updateNull("dPrintxxx");
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -60,6 +67,7 @@ public class Model_Check_Payments extends Model {
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
             poBanks = model.Banks();
+            poIndustry = model.Industry();
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
             poBankAccountMaster = cashFlow.Bank_Account_Master();
@@ -79,6 +87,8 @@ public class Model_Check_Payments extends Model {
         return date;
     }
 
+
+
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
     }
@@ -93,6 +103,14 @@ public class Model_Check_Payments extends Model {
 
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
+    }
+    
+    public JSONObject setIndustryID(String industryID) {
+        return setValue("sIndstCdx", industryID);
+    }
+
+    public String getIndustryID() {
+        return (String) getValue("sIndstCdx");
     }
 
     public JSONObject setTransactionDate(Date transactionDate) {
@@ -266,7 +284,7 @@ public class Model_Check_Payments extends Model {
     public String getTransactionStatus() {
         return (String) getValue("cTranStat");
     }
-    
+
     public JSONObject setProcessed(String processed) {
         return setValue("cProcessd", processed);
     }
@@ -274,13 +292,21 @@ public class Model_Check_Payments extends Model {
     public String getProcessed() {
         return (String) getValue("cProcessd");
     }
-    
+
     public JSONObject setPrint(String print) {
         return setValue("cPrintxxx", print);
     }
 
     public String getPrint() {
         return (String) getValue("cPrintxxx");
+    }
+    
+    public JSONObject setDatePrint(Date datePrint) {
+        return setValue("dPrintxxx", datePrint);
+    }
+
+    public Date getDatePrint() {
+        return (Date) getValue("dPrintxxx");
     }
 
     public JSONObject setModifyingId(String modifyingId) {
@@ -383,7 +409,7 @@ public class Model_Check_Payments extends Model {
             return poBanks;
         }
     }
-    
+
     public Model_Bank_Account_Master Bank_Account_Master() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sBnkActID"))) {
             if (poBankAccountMaster.getEditMode() == EditMode.READY
@@ -401,6 +427,47 @@ public class Model_Check_Payments extends Model {
         } else {
             poBankAccountMaster.initialize();
             return poBankAccountMaster;
+        }
+    }
+
+    public Model_Industry Industry() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
+                return poIndustry;
+            } else {
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poIndustry;
+                } else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
+        }
+    }
+
+    public Model_Transaction_Status_History TransactionStatusHistory() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poTransactionStatusHistory.getEditMode() == EditMode.READY
+                    && poTransactionStatusHistory.getSourceNo().equals((String) getValue("sTransNox"))) {
+                return poTransactionStatusHistory;
+            } else {
+                poJSON = poTransactionStatusHistory.openRecord((String) getValue("sTransNox"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poTransactionStatusHistory;
+                } else {
+                    poTransactionStatusHistory.initialize();
+                    return poTransactionStatusHistory;
+                }
+            }
+        } else {
+            poTransactionStatusHistory.initialize();
+            return poTransactionStatusHistory;
         }
     }
 

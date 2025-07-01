@@ -166,6 +166,14 @@ public class Model_Payment_Request_Master extends Model {
         return (Number) getValue("nTranTotl");
     }
 
+    public JSONObject setRemarks(String remarks) {
+        return setValue("sRemarksx", remarks);
+    }
+
+    public String getRemarks() {
+        return (String) getValue("sRemarksx");
+    }    
+    
     public JSONObject setDiscountAmount(Number discountAmount) {
         return setValue("nDiscAmtx", discountAmount);
     }
@@ -221,29 +229,29 @@ public class Model_Payment_Request_Master extends Model {
     public String getSourceNo() {
         return (String) getValue("sSourceNo");
     }
-
-    public JSONObject setTransactionStatus(String transactionStatus) {
-        return setValue("cTranStat", transactionStatus);
+  
+    public JSONObject setWithSoa(String process) {
+        return setValue("cWithSOAx", process);
     }
 
-    public String getTransactionStatus() {
-        return (String) getValue("cTranStat");
+    public String getWithSoa() {
+        return (String) getValue("cWithSOAx");
     }
-
-    public JSONObject setRemarks(String remarks) {
-        return setValue("sRemarksx", remarks);
-    }
-
-    public String getRemarks() {
-        return (String) getValue("sRemarksx");
-    }
-
+    
     public JSONObject setProcess(String process) {
         return setValue("cProcessd", process);
     }
 
     public String getProcess() {
         return (String) getValue("cProcessd");
+    }    
+    
+    public JSONObject setTransactionStatus(String transactionStatus) {
+        return setValue("cTranStat", transactionStatus);
+    }
+
+    public String getTransactionStatus() {
+        return (String) getValue("cTranStat");
     }
     
     public JSONObject setModifyingId(String modifyingId) {
@@ -261,6 +269,7 @@ public class Model_Payment_Request_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+
 
     @Override
     public String getNextCode() {
