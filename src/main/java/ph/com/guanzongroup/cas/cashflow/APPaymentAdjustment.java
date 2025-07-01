@@ -44,6 +44,7 @@ public class APPaymentAdjustment extends Parameter {
 
     private String psIndustryId = "";
     private String psCompanyId = "";
+    private boolean pbWithParent = false;
 
     Model_AP_Payment_Adjustment poModel;
     List<Model_AP_Payment_Adjustment> paModel;
@@ -76,10 +77,12 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
+            if(!pbWithParent){
+                if (poGRider.getUserLevel() == UserRight.ENCODER) {
+                    poJSON = ShowDialogFX.getUserApproval(poGRider);
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                 }
             }
         }
@@ -103,6 +106,10 @@ public class APPaymentAdjustment extends Parameter {
         return saveRecord();
     }
 
+    public void isWithParent(boolean isWithParent){
+        pbWithParent = isWithParent;
+    }
+    
     public JSONObject OpenTransaction(String transactionNo)
             throws CloneNotSupportedException,
             SQLException,
@@ -113,7 +120,7 @@ public class APPaymentAdjustment extends Parameter {
     public JSONObject UpdateTransaction() {
         return updateRecord();
     }
-
+    
     public JSONObject ConfirmTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -239,13 +246,14 @@ public class APPaymentAdjustment extends Parameter {
             poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); 
             poCachePayable.Master().setCompanyId(getModel().getCompanyId());
             poCachePayable.Master().setClientId(getModel().getClientId());
-            poCachePayable.Master().setSourceCode("PAdj");
+            poCachePayable.Master().setSourceCode("PAdj"); //TODO
             poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
             poCachePayable.Master().setReferNo(getModel().getReferenceNo()); 
             poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); 
             poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); 
             poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
+            poCachePayable.Master().setTransactionStatus("1");
 
             //Cache Payable Detail
             if(poCachePayable.getDetailCount() < 0){
