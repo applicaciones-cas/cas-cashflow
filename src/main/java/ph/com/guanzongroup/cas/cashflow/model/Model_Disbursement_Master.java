@@ -43,6 +43,8 @@ public class Model_Disbursement_Master extends Model {
 
             MiscUtil.initRowSet(poEntity);
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateNull("dPrintxxx");
+            poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateObject("nEntryNox", DisbursementStatic.DefaultValues.default_value_integer);
             poEntity.updateObject("nTranTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nDiscTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
@@ -265,39 +267,22 @@ public class Model_Disbursement_Master extends Model {
     public String getBankPrint() {
         return (String) getValue("cBankPrnt");
     }
-//
-//    public JSONObject setPayeeType(String payeeType){
-//        return setValue("cPayeeTyp", payeeType);
-//    }
-//
-//    public String getPayeeType(){
-//        return (String) getValue("cPayeeTyp");
-//    }
-//
-//    public JSONObject setPickUpType(String pickUpType){
-//        return setValue("cPickUpTp", pickUpType);
-//    }
-//
-//    public String getPickUpType(){
-//        return (String) getValue("cPickUpTp");
-//    }
-//
-//    public JSONObject setClaimant(String claimant){
-//        return setValue("cClaimant", claimant);
-//    }
-//
-//    public String getClaimant(){
-//        return (String) getValue("cClaimant");
-//    }
-//
-//
-//    public JSONObject setAuthorize(String authorize){
-//        return setValue("sAuthorze", authorize);
-//    }
-//
-//    public String getAuthorize(){
-//        return (String) getValue("sAuthorze");
-//    }
+
+    public JSONObject setPrint(String print) {
+        return setValue("cPrintxxx", print);
+    }
+
+    public String getPrint() {
+        return (String) getValue("cPrintxxx");
+    }
+
+    public JSONObject setDatePrint(Date datePrint) {
+        return setValue("dPrintxxx", datePrint);
+    }
+
+    public Date getDatePrint() {
+        return (Date) getValue("dPrintxxx");
+    }
 
     public JSONObject setTransactionStatus(String transactionStatus) {
         return setValue("cTranStat", transactionStatus);
@@ -418,7 +403,7 @@ public class Model_Disbursement_Master extends Model {
             return poIndustry;
         }
     }
-    
+
     public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sTransNox"))) {
             if (poCheckPayments.getEditMode() == EditMode.READY
@@ -439,5 +424,5 @@ public class Model_Disbursement_Master extends Model {
             return poCheckPayments;
         }
     }
-    
+
 }
