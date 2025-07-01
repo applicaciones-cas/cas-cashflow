@@ -53,6 +53,7 @@ public class APPaymentAdjustment extends Parameter {
 
     @Override
     public void initialize() {
+//        SOURCE_CODE = "APAd"; //Conflict in parameter baseclass
         psRecdStat = Logical.YES;
         pbInitRec = true;
 

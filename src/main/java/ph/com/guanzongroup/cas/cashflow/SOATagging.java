@@ -63,7 +63,7 @@ public class SOATagging extends Transaction {
     List<Model> paDetailRemoved;
 
     public JSONObject InitTransaction() {
-        SOURCE_CODE = "SOA";
+        SOURCE_CODE = "SOAt";
 
         poMaster = new CashflowModels(poGRider).SOATaggingMaster();
         poDetail = new CashflowModels(poGRider).SOATaggingDetails();

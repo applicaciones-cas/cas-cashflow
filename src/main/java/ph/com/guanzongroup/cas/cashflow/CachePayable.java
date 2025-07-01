@@ -17,7 +17,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class CachePayable extends Transaction{   
     public JSONObject InitTransaction(){      
-        SOURCE_CODE = "Cche";
+        SOURCE_CODE = "CcPy";
         
         poMaster = new CashflowModels(poGRider).Cache_Payable_Master();
         poDetail = new CashflowModels(poGRider).Cache_Payable_Detail();

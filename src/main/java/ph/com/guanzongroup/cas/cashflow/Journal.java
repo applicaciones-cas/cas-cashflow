@@ -24,7 +24,7 @@ import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Journal extends Transaction{   
     public JSONObject InitTransaction(){      
-        SOURCE_CODE = "Jrnl";
+        SOURCE_CODE = "JREn";
         
         poMaster = new CashflowModels(poGRider).Journal_Master();
         poDetail = new CashflowModels(poGRider).Journal_Detail();
@@ -203,13 +203,22 @@ public class Journal extends Transaction{
     public JSONObject willSave() throws SQLException, GuanzonException{
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
-        
+        String lsDebitAmt = "";
+        String lsCreditAmt = "";
         //remove items with no stockid or quantity order       
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
-
-            if ("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null) {
+            
+            if(item.getValue("nDebitAmt") != null && !"".equals(item.getValue("nDebitAmt"))){
+                lsDebitAmt = item.getValue("nDebitAmt").toString();
+            }
+            if(item.getValue("nCredtAmt") != null && !"".equals(item.getValue("nCredtAmt"))){
+                lsCreditAmt = item.getValue("nCredtAmt").toString();
+            }
+            
+            if ( ("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null)
+                || (Double.valueOf(lsDebitAmt) <= 0.00 && Double.valueOf(lsCreditAmt) <= 0.00)){
                 detail.remove(); // Correctly remove the item
             }
         }
