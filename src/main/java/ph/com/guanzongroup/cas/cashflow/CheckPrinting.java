@@ -35,6 +35,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
 import java.util.ArrayList;
+import java.util.concurrent.CountDownLatch;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +61,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.text.Text;
 import javax.swing.JButton;
 import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
 import net.sf.jasperreports.engine.JRException;
 import net.sf.jasperreports.engine.JasperCompileManager;
 import net.sf.jasperreports.engine.JasperFillManager;
@@ -70,7 +72,9 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.swing.JRViewer;
 import net.sf.jasperreports.swing.JRViewerToolbar;
 import net.sf.jasperreports.view.JasperViewer;
+import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
@@ -827,11 +831,25 @@ public class CheckPrinting extends Transaction {
                 return poJSON;
             }
 
-            boolean isChequePrinted = "1".equals(Master().CheckPayments().getPrint());
+            boolean isChequePrinted = CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint());
             if (isChequePrinted) {
-                poJSON.put("message", "This Cheque " + Master().CheckPayments().getCheckNo() + " has already been printed.");
-                poJSON.put("result", "error");
-                return poJSON;
+                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                    boolean proceed = ShowMessageFX.YesNo(
+                            null,
+                            "Check Printing",
+                            "This check has already been printed and recorded.\n"
+                            + "Reprinting should only be done with proper authorization.\n"
+                            + "Do you wish to proceed with reprinting?"
+                    );
+                    if (proceed) {
+                        poJSON = ShowDialogFX.getUserApproval(poGRider);
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    } else {
+                        return poJSON;
+                    }
+                }
             }
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = "";
@@ -1006,166 +1024,235 @@ public class CheckPrinting extends Transaction {
             this.amountNumericValue = amountNumericValue;
         }
     }
-    
-    
-    
-   /* ==============================================================
+
+    /* ==============================================================
  *  Main method : single preview window for all transactions
  * ============================================================ */
-public JSONObject printTransaction(List<String> fsTransactionNos)
-        throws CloneNotSupportedException, SQLException, GuanzonException {
+    public JSONObject printTransaction(List<String> fsTransactionNos)
+            throws CloneNotSupportedException, SQLException, GuanzonException {
 
-    JSONObject poJSON = new JSONObject();
-    JasperPrint  masterPrint  = null;       // grows page‑by‑page
-    JasperReport jasperReport = null;       // compiled once
+        JSONObject poJSON = new JSONObject();
+        JasperPrint masterPrint = null;       // grows page‑by‑page
+        JasperReport jasperReport = null;       // compiled once
+        String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; //set draft as default
+        try {
+            /* --- 1. compile report design only once -------------------- */
+            String jrxmlPath = "D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
+            jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
-    try {
-        /* --- 1. compile report design only once -------------------- */
-        String jrxmlPath = "D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
-        jasperReport = JasperCompileManager.compileReport(jrxmlPath);
+            /* --- 2. iterate over every voucher ------------------------- */
+            for (String txnNo : fsTransactionNos) {
 
-        /* --- 2. iterate over every voucher ------------------------- */
-        for (String txnNo : fsTransactionNos) {
+                /* 2.1 domain‑level work … (same as before) */
+                this.OpenTransaction(txnNo);
+                this.UpdateTransaction();
+                this.setCheckpayment();
+                checkPayments.getEditMode();
+                Master().setPrint(DisbursementStatic.VERIFIED);
+                Master().setDatePrint(poGRider.getServerDate());
 
-            /* domain‑level work */
-            this.OpenTransaction(txnNo);
-            this.UpdateTransaction();
-            this.setCheckpayment();
-            checkPayments.getEditMode();
-            Master().setPrint(DisbursementStatic.VERIFIED);
-            Master().setDatePrint(poGRider.getServerDate());
+                /* 2.2 parameters … (same as before) */
+                Map<String, Object> params = new HashMap<>();
+                params.put("sVoucherNo", Master().getVoucherNo());
+                params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
+                params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
+                params.put("sBankName", Master().CheckPayments().Banks().getBankName());
+                params.put("sCheckNox", Master().CheckPayments().getCheckNo());
+                params.put("dCheckDte", Master().CheckPayments().getCheckDate());
+                params.put("nCheckAmountxx", Master().CheckPayments().getAmount().doubleValue());
 
-            /* parameters */
-            Map<String, Object> params = new HashMap<String, Object>();
-            params.put("sVoucherNo",     Master().getVoucherNo());
-            params.put("dTransDte",      new java.sql.Date(Master().getTransactionDate().getTime()));
-            params.put("sPayeeNme",      Master().CheckPayments().Payee().getPayeeName());
-            params.put("sBankName",      Master().CheckPayments().Banks().getBankName());
-            params.put("sCheckNox",      Master().CheckPayments().getCheckNo());
-            params.put("dCheckDte",      Master().CheckPayments().getCheckDate());
-            params.put("nCheckAmountxx", Master().CheckPayments().getAmount().doubleValue());
+                switch (Master().getPrint()) {
+                    case CheckStatus.PrintStatus.PRINTED:
+                        watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
+                        break;
+                    case CheckStatus.PrintStatus.OPEN:
+                        watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\none.png";
+                        break;
+                }
+                params.put("watermarkImagePath", watermarkPath);
+                
+                /* 2.3 details … (same as before) */
+                List<OrderDetail> orderDetails = new ArrayList<>();
+                for (int i = 0; i < getDetailCount(); i++) {
+                    orderDetails.add(new OrderDetail(
+                            i + 1,
+                            Detail(i).Particular().getDescription(),
+                            Detail(i).Particular().getDescription(),
+                            Detail(i).getAmount().doubleValue()
+                    ));
+                }
 
-            /* details */
-            List<OrderDetail> orderDetails = new ArrayList<OrderDetail>();
-            for (int i = 0; i < getDetailCount(); i++) {
-                orderDetails.add(new OrderDetail(
-                        Integer.valueOf(i + 1),
-                        Detail(i).Particular().getDescription(),
-                        Detail(i).Particular().getDescription(),
-                        Double.valueOf(Detail(i).getAmount().doubleValue())
-                ));
+                /* 2.4 fill voucher */
+                JasperPrint currentPrint = JasperFillManager.fillReport(
+                        jasperReport,
+                        params,
+                        new JRBeanCollectionDataSource(orderDetails)
+                );
+
+                /* 2.5 show viewer — either merge (single) or block‑until‑close (multi) */
+                if (fsTransactionNos.size() == 1) {
+                    // keep old single‑voucher behaviour
+                    masterPrint = currentPrint;
+                } else {
+                    showViewerAndWait(currentPrint);   // ⬅️ new helper (see below)
+                }
+
+
+                /* 2.6 persist status … (unchanged) */
+                // this.SaveTransaction();
             }
 
-            /* fill this voucher */
-            JasperPrint currentPrint = JasperFillManager.fillReport(
-                    jasperReport,
-                    params,
-                    new JRBeanCollectionDataSource(orderDetails)
-            );
-
-            /* append its pages to the master print */
-            if (masterPrint == null) {
-                masterPrint = currentPrint;
-            } else {
-                masterPrint.getPages().addAll(currentPrint.getPages());
+            /* --- 3. one viewer window for everything ------------------- */
+            if (masterPrint != null) {
+                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
+                viewer.setVisible(true);
             }
 
-            /* persist status */
-//            this.SaveTransaction();
+            poJSON.put("result", "success");
+
+        } catch (JRException | SQLException | GuanzonException ex) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction print aborted!");
+            Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
         }
 
-        /* --- 3. one viewer window for everything ------------------- */
-        if (masterPrint != null) {
-            CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
-            viewer.setVisible(true);
-        }
-
-        poJSON.put("result", "success");
-
-    } catch (JRException | SQLException | GuanzonException ex) {
-        poJSON.put("result", "error");
-        poJSON.put("message", "Transaction print aborted!");
-        Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
+        return poJSON;
     }
 
-    return poJSON;
-}
+    private void showViewerAndWait(JasperPrint print) {
+        // create viewer on Swing thread
+        final CustomJasperViewer viewer = new CustomJasperViewer(print);
+        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-/* ==============================================================
- *  DTO for the detail band
- * ============================================================ */
-public static class OrderDetail {
+        final CountDownLatch latch = new CountDownLatch(1);
+        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                latch.countDown();             // release when user closes
+            }
+        });
 
-    private final Integer nRowNo;
-    private final String  sParticular;
-    private final String  sRemarks;
-    private final Double  nTotalAmount;
-
-    public OrderDetail(Integer rowNo, String particular, String remarks, Double totalAmt) {
-        this.nRowNo       = rowNo;
-        this.sParticular  = particular;
-        this.sRemarks     = remarks;
-        this.nTotalAmount = totalAmt;
-    }
-
-    public Integer getnRowNo()       { return nRowNo; }
-    public String  getsParticular()  { return sParticular; }
-    public String  getsRemarks()     { return sRemarks; }
-    public Double  getnTotalAmount() { return nTotalAmount; }
-}
-
-/* ==============================================================
- *  Viewer that re‑wires the Print button (Java‑8‑only code)
- * ============================================================ */
-public class CustomJasperViewer extends JasperViewer {
-
-    public CustomJasperViewer(final JasperPrint jasperPrint) {
-        super(jasperPrint, false);
-        customizePrintButton(jasperPrint);
-    }
-
-    /* ---- toolbar patch ------------------------------------------ */
-    private void customizePrintButton(final JasperPrint jasperPrint) {
+        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
 
         try {
-            JRViewer viewer = findJRViewer(this);
-            if (viewer == null) {
-                System.out.println("JRViewer not found!");
-                return;
-            }
+            latch.await();                     // 🔴 blocks here until viewer closes
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt(); // keep interruption status
+        }
+    }
 
-            for (int i = 0; i < viewer.getComponentCount(); i++) {
-                if (viewer.getComponent(i) instanceof JRViewerToolbar) {
+    /* 4️⃣  after the loop — unchanged for single‑voucher case */
+ /* ==============================================================
+ *  DTO for the detail band
+ * ============================================================ */
+    public static class OrderDetail {
 
-                    JRViewerToolbar toolbar = (JRViewerToolbar) viewer.getComponent(i);
+        private final Integer nRowNo;
+        private final String sParticular;
+        private final String sRemarks;
+        private final Double nTotalAmount;
 
-                    for (int j = 0; j < toolbar.getComponentCount(); j++) {
-                        if (toolbar.getComponent(j) instanceof JButton) {
+        public OrderDetail(Integer rowNo, String particular, String remarks, Double totalAmt) {
+            this.nRowNo = rowNo;
+            this.sParticular = particular;
+            this.sRemarks = remarks;
+            this.nTotalAmount = totalAmt;
+        }
 
-                            final JButton button = (JButton) toolbar.getComponent(j);
+        public Integer getnRowNo() {
+            return nRowNo;
+        }
 
-                            if ("Print".equals(button.getToolTipText())) {
-                                /* remove existing handlers */
-                                ActionListener[] old = button.getActionListeners();
-                                for (int k = 0; k < old.length; k++) {
-                                    button.removeActionListener(old[k]);
-                                }
+        public String getsParticular() {
+            return sParticular;
+        }
 
-                                /* add our own (anonymous inner‑class, not lambda) */
-                                button.addActionListener(new ActionListener() {
-                                    @Override
-                                    public void actionPerformed(ActionEvent e) {
-                                        try {
-                                            boolean ok = JasperPrintManager.printReport(jasperPrint, true);
-                                            if (ok) {
-                                                PrintTransaction(true);
-                                            } else {
+        public String getsRemarks() {
+            return sRemarks;
+        }
+
+        public Double getnTotalAmount() {
+            return nTotalAmount;
+        }
+    }
+
+    /* ==============================================================
+ *  Viewer that re‑wires the Print button (Java‑8‑only code)
+ * ============================================================ */
+    public class CustomJasperViewer extends JasperViewer {
+
+        public CustomJasperViewer(final JasperPrint jasperPrint) {
+            super(jasperPrint, false);
+            customizePrintButton(jasperPrint);
+        }
+
+        /* ---- toolbar patch ------------------------------------------ */
+        private void customizePrintButton(final JasperPrint jasperPrint) {
+
+            try {
+                JRViewer viewer = findJRViewer(this);
+                if (viewer == null) {
+                    System.out.println("JRViewer not found!");
+                    return;
+                }
+
+                for (int i = 0; i < viewer.getComponentCount(); i++) {
+                    if (viewer.getComponent(i) instanceof JRViewerToolbar) {
+
+                        JRViewerToolbar toolbar = (JRViewerToolbar) viewer.getComponent(i);
+
+                        for (int j = 0; j < toolbar.getComponentCount(); j++) {
+                            if (toolbar.getComponent(j) instanceof JButton) {
+
+                                final JButton button = (JButton) toolbar.getComponent(j);
+
+                                if ("Print".equals(button.getToolTipText())) {
+                                    /* remove existing handlers */
+                                    ActionListener[] old = button.getActionListeners();
+                                    for (int k = 0; k < old.length; k++) {
+                                        button.removeActionListener(old[k]);
+                                    }
+
+                                    /* add our own (anonymous inner‑class, not lambda) */
+                                    button.addActionListener(new ActionListener() {
+                                        @Override
+                                        public void actionPerformed(ActionEvent e) {
+                                            try {
+                                                boolean ok = JasperPrintManager.printReport(jasperPrint, true);
+                                                if (ok) {
+
+                                                    PrintTransaction(true);
+                                                    Master().getEditMode();
+                                                    Master().setPrint(DisbursementStatic.VERIFIED);
+                                                    Master().setDatePrint(poGRider.getServerDate());
+
+                                                    Master().setModifyingId(poGRider.getUserID());
+                                                    Master().setModifiedDate(poGRider.getServerDate());
+                                                    SaveTransaction();
+                                                    CustomJasperViewer.this.dispose();
+                                                } else {
+                                                    Platform.runLater(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                            ShowMessageFX.Warning(
+                                                                    "Printing was canceled by the user.",
+                                                                    "Print Purchase Order", null);
+                                                            SwingUtilities.invokeLater(new Runnable() {
+                                                                @Override
+                                                                public void run() {
+                                                                    CustomJasperViewer.this.toFront();
+                                                                }
+                                                            });
+                                                        }
+                                                    });
+                                                }
+                                            } catch (final JRException ex) {
                                                 Platform.runLater(new Runnable() {
                                                     @Override
                                                     public void run() {
                                                         ShowMessageFX.Warning(
-                                                            "Printing was canceled by the user.",
-                                                            "Print Purchase Order", null);
+                                                                "Print Failed: " + ex.getMessage(),
+                                                                "Computerized Accounting System", null);
                                                         SwingUtilities.invokeLater(new Runnable() {
                                                             @Override
                                                             public void run() {
@@ -1174,118 +1261,75 @@ public class CustomJasperViewer extends JasperViewer {
                                                         });
                                                     }
                                                 });
+                                            } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+                                                Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
                                             }
-                                        } catch (final JRException ex) {
-                                            Platform.runLater(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    ShowMessageFX.Warning(
-                                                        "Print Failed: " + ex.getMessage(),
-                                                        "Computerized Accounting System", null);
-                                                    SwingUtilities.invokeLater(new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            CustomJasperViewer.this.toFront();
-                                                        }
-                                                    });
-                                                }
-                                            });
-                                        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
-                                            Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
                                         }
-                                    }
-                                });
+                                    });
+                                }
                             }
                         }
+                        toolbar.revalidate();
+                        toolbar.repaint();
                     }
-                    toolbar.revalidate();
-                    toolbar.repaint();
+                }
+            } catch (Exception e) {
+                System.out.println("Error customizing print button: " + e.getMessage());
+            }
+        }
+
+        /* ---- save printed status & messaging ------------------------- */
+        private void PrintTransaction(boolean fbIsPrinted)
+                throws SQLException, CloneNotSupportedException, GuanzonException {
+            final String msg = fbIsPrinted
+                    ? "Transaction printed successfully."
+                    : "Transaction print aborted.";
+
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    ShowMessageFX.Information(msg, "Print Disbursement", null);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            CustomJasperViewer.this.toFront();
+                        }
+                    });
+                }
+            });
+        }
+
+        private void warnAndRefocus(final String m) {
+            Platform.runLater(new Runnable() {
+                @Override
+                public void run() {
+                    ShowMessageFX.Warning(m, "Print Purchase Order", null);
+                    SwingUtilities.invokeLater(new Runnable() {
+                        @Override
+                        public void run() {
+                            CustomJasperViewer.this.toFront();
+                        }
+                    });
+                }
+            });
+        }
+
+        /* ---- recursive search for JRViewer --------------------------- */
+        private JRViewer findJRViewer(Component parent) {
+            if (parent instanceof JRViewer) {
+                return (JRViewer) parent;
+            }
+            if (parent instanceof Container) {
+                Component[] comps = ((Container) parent).getComponents();
+                for (int i = 0; i < comps.length; i++) {
+                    JRViewer v = findJRViewer(comps[i]);
+                    if (v != null) {
+                        return v;
+                    }
                 }
             }
-        } catch (Exception e) {
-            System.out.println("Error customizing print button: " + e.getMessage());
+            return null;
         }
     }
-
-    /* ---- save printed status & messaging ------------------------- */
-    private void PrintTransaction(boolean fbIsPrinted)
-            throws SQLException, CloneNotSupportedException, GuanzonException {
-
-        if (fbIsPrinted) {
-//            if (CheckStatus.FLOAT.equals((String) poMaster.getValue("cTranStat"))) {
-
-//                poJSON = OpenTransaction((String) poMaster.getValue("sTransNox"));
-//                if ("error".equals(poJSON.get("result"))) {
-//                    warnAndRefocus((String) poJSON.get("message"));
-//                    return;
-//                }
-//
-//                poJSON = UpdateTransaction();
-//                if ("error".equals(poJSON.get("result"))) {
-//                    warnAndRefocus((String) poJSON.get("message"));
-//                    return;
-//                }
-
-                Master().setPrint(Logical.YES);
-                Master().setModifiedDate(poGRider.getServerDate());
-                Master().setModifyingId(poGRider.getUserID());
-         
-
-                poJSON = SaveTransaction();
-                if ("error".equals(poJSON.get("result"))) {
-                    warnAndRefocus((String) poJSON.get("message"));
-                    return;
-                }
-//            }
-        }
-
-        final String msg = fbIsPrinted
-                ? "Transaction printed successfully."
-                : "Transaction print aborted.";
-
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                ShowMessageFX.Information(msg, "Print Purchase Order", null);
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        CustomJasperViewer.this.toFront();
-                    }
-                });
-            }
-        });
-    }
-
-    private void warnAndRefocus(final String m) {
-        Platform.runLater(new Runnable() {
-            @Override
-            public void run() {
-                ShowMessageFX.Warning(m, "Print Purchase Order", null);
-                SwingUtilities.invokeLater(new Runnable() {
-                    @Override
-                    public void run() {
-                        CustomJasperViewer.this.toFront();
-                    }
-                });
-            }
-        });
-    }
-
-    /* ---- recursive search for JRViewer --------------------------- */
-    private JRViewer findJRViewer(Component parent) {
-        if (parent instanceof JRViewer) {
-            return (JRViewer) parent;
-        }
-        if (parent instanceof Container) {
-            Component[] comps = ((Container) parent).getComponents();
-            for (int i = 0; i < comps.length; i++) {
-                JRViewer v = findJRViewer(comps[i]);
-                if (v != null) { return v; }
-            }
-        }
-        return null;
-    }
-}
 
 }
