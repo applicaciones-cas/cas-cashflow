@@ -11,7 +11,7 @@ package ph.com.guanzongroup.cas.cashflow.status;
  */
 public class SOATaggingStatic {
     //Payable Type
-    public static final String PaymentRequest = "PRF";
-    public static final String CachePayable = "Cche";
-    public static final String APPaymentAdjustment = "PAdj";
+    public static final String PaymentRequest = "PRFx";
+    public static final String CachePayable = "CcPy";
+    public static final String APPaymentAdjustment = "APAd";
 }

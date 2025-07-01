@@ -7,6 +7,7 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -63,7 +64,7 @@ public class SOATagging extends Transaction {
     List<Model> paDetailRemoved;
 
     public JSONObject InitTransaction() {
-        SOURCE_CODE = "SOA";
+        SOURCE_CODE = "SOAt";
 
         poMaster = new CashflowModels(poGRider).SOATaggingMaster();
         poDetail = new CashflowModels(poGRider).SOATaggingDetails();
@@ -1248,7 +1249,7 @@ public class SOATagging extends Transaction {
                         + getPayment(Detail(row).getSourceNo()));
                 if (ldblBalance < 0) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Invalid transaction balance " + ldblBalance + " for source no " + Detail(row).getSourceNo() + ".");
+                    poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
                     return poJSON;
                 }
@@ -1259,7 +1260,7 @@ public class SOATagging extends Transaction {
                         + getPayment(Detail(row).getSourceNo()));
                 if (ldblBalance < 0) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Invalid transaction balance " + ldblBalance + " for source no " + Detail(row).getSourceNo() + ".");
+                    poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
                     return poJSON;
                 }
@@ -1267,6 +1268,21 @@ public class SOATagging extends Transaction {
         }
 
         return poJSON;
+    }
+    
+    public static String setIntegerValueToDecimalFormat(Object foObject, boolean fbIs4Decimal) {
+        String lsDecimalFormat = fbIs4Decimal ? "#,##0.0000" : "#,##0.00";
+        DecimalFormat format = new DecimalFormat(lsDecimalFormat);
+        try {
+            if (foObject != null) {
+                return format.format(Double.parseDouble(String.valueOf(foObject)));
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Invalid number format for input - " + foObject);
+        } catch (Exception e) {
+            System.err.println("An unexpected error occurred: " + e.getMessage());
+        }
+        return fbIs4Decimal ? "0.0000" : "0.00";
     }
 
     private double getPayment(String sourceNo) {
