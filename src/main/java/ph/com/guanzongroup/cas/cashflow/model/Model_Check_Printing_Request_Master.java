@@ -131,12 +131,12 @@ public class Model_Check_Printing_Request_Master extends Model {
         return (int) getValue("nEntryNox");
     }
 
-    public JSONObject setTotalAmount(Number TotalAmount) {
+    public JSONObject setTotalAmount(double TotalAmount) {
         return setValue("nTotalAmt", TotalAmount);
     }
 
-    public Number getTotalAmount() {
-        return (Number) getValue("nTotalAmt");
+    public double getTotalAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nTotalAmt")));
     }
 
     public JSONObject isUploaded(boolean isUploaded) {

@@ -61,7 +61,7 @@ public class PaymentRequest extends Transaction {
     public JSONObject SaveTransaction() throws SQLException, CloneNotSupportedException, GuanzonException {
         return saveTransaction();
     }
-    
+
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }
@@ -239,7 +239,7 @@ public class PaymentRequest extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if(PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))){
+        if (PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
@@ -247,7 +247,7 @@ public class PaymentRequest extends Transaction {
                 }
             }
         }
-        
+
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
 
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -329,8 +329,8 @@ public class PaymentRequest extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
-        if(PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))){
+
+        if (PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
@@ -563,9 +563,9 @@ public class PaymentRequest extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-            Number amount = (Number) item.getValue("nAmountxx");
+            double amount = (double) item.getValue("nAmountxx");
 
-            if (amount.doubleValue() <= 0) {
+            if (amount <= 0) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -583,13 +583,13 @@ public class PaymentRequest extends Transaction {
                 lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
             }
             if (lbUpdated) {
-                lbUpdated = loRecord.Master().getTranTotal().doubleValue() == Master().getTranTotal().doubleValue();
+                lbUpdated = loRecord.Master().getTranTotal() == Master().getTranTotal();
             }
             if (lbUpdated) {
                 for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
                     lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
                     if (lbUpdated) {
-                        lbUpdated = loRecord.Detail(lnCtr).getAmount().doubleValue() == Detail(lnCtr).getAmount().doubleValue();
+                        lbUpdated = loRecord.Detail(lnCtr).getAmount() == Detail(lnCtr).getAmount();
                     }
                     //FOR FUTURE
 //                    if (lbUpdated) {
@@ -618,7 +618,7 @@ public class PaymentRequest extends Transaction {
 
         if (getDetailCount() == 1) {
             //do not allow a single item detail with no quantity order
-            if (Detail(0).getAmount().equals(0)) {
+            if (Detail(0).getAmount() == 0.00) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Particular has 0 amount.");
                 return poJSON;
@@ -907,8 +907,8 @@ public class PaymentRequest extends Transaction {
         double detailNetAmount = 0.0000;
 
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            totalAmount += Detail(lnCtr).getAmount().doubleValue();
-            totalDiscountAmount += Detail(lnCtr).getAddDiscount().doubleValue();
+            totalAmount += Detail(lnCtr).getAmount();
+            totalDiscountAmount += Detail(lnCtr).getAddDiscount();
 //            if (Detail(lnCtr).getVatable().equals("1")) {
 //                poJSON = computeNetPayableDetails(Detail(lnCtr).getAmount().doubleValue() - Detail(lnCtr).getAddDiscount().doubleValue(), true, 0.12, 0.0000);
 //            } else {
@@ -934,7 +934,7 @@ public class PaymentRequest extends Transaction {
         int lastRow = getDetailCount() - 1;
 
         for (int lnRow = 0; lnRow <= lastRow; lnRow++) {
-            double amount = Detail(lnRow).getAmount().doubleValue();
+            double amount = Detail(lnRow).getAmount();
             String particularID = (String) Detail(lnRow).getValue("sPrtclrID");
 
             if (!particularID.isEmpty()) {
@@ -1030,10 +1030,10 @@ public class PaymentRequest extends Transaction {
 
         initSQL();
         String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()), 
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
-         " a.sBranchCd = " +  SQLUtil.toSQL( poGRider.getBranchCode()));
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
@@ -1122,82 +1122,79 @@ public class PaymentRequest extends Transaction {
 //        return poJSON;
 //    }
     private JSONObject setValueToOthers(String status)
-        throws CloneNotSupportedException, SQLException, GuanzonException {
+            throws CloneNotSupportedException, SQLException, GuanzonException {
 
-    poJSON = new JSONObject();
-    poRecurringIssuances = new ArrayList<>();
+        poJSON = new JSONObject();
+        poRecurringIssuances = new ArrayList<>();
 
-    for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-        String particularID = Detail(lnCtr).getParticularID();
-        String branchCode = Master().getBranchCode();
-        String payeeID = Master().getPayeeID();
-        String accountNo = Detail(lnCtr).Recurring() != null
-                ? Detail(lnCtr).Recurring().getAccountNo()
-                : null;
+        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+            String particularID = Detail(lnCtr).getParticularID();
+            String branchCode = Master().getBranchCode();
+            String payeeID = Master().getPayeeID();
+            String accountNo = Detail(lnCtr).Recurring() != null
+                    ? Detail(lnCtr).Recurring().getAccountNo()
+                    : null;
 
-        // Skip if accountNo is missing or not found in recurring_issuance
-        if (accountNo == null || !isRecurringIssuance(particularID, branchCode, payeeID, accountNo)) {
-            continue;
+            // Skip if accountNo is missing or not found in recurring_issuance
+            if (accountNo == null || !isRecurringIssuance(particularID, branchCode, payeeID, accountNo)) {
+                continue;
+            }
+
+            System.out.printf("RECURRING RECORD: #%d - PartID: %s | Branch: %s | Payee: %s | AccNo: %s%n",
+                    lnCtr + 1, particularID, branchCode, payeeID, accountNo);
+
+            updateRecurringIssuance(particularID, branchCode, payeeID, accountNo);
         }
 
-        System.out.printf("RECURRING RECORD: #%d - PartID: %s | Branch: %s | Payee: %s | AccNo: %s%n",
-                lnCtr + 1, particularID, branchCode, payeeID, accountNo);
-
-        updateRecurringIssuance(particularID, branchCode, payeeID, accountNo);
+        poJSON.put("result", "success");
+        return poJSON;
     }
 
-    poJSON.put("result", "success");
-    return poJSON;
-}
+    private boolean isRecurringIssuance(String particularID, String branch, String payee, String accountNo)
+            throws SQLException, GuanzonException {
 
+        RecurringIssuance issuance = RecurringIssuance();
+        JSONObject result = issuance.poModel.openRecord(particularID, branch, payee, accountNo);
 
-private boolean isRecurringIssuance(String particularID, String branch, String payee, String accountNo)
-        throws SQLException, GuanzonException {
-
-    RecurringIssuance issuance = RecurringIssuance();
-    JSONObject result = issuance.poModel.openRecord(particularID, branch, payee, accountNo);
-
-    // Safe Java 8–compatible check without .has() or .optString()
-    try {
-        Object value = result.get("sPrtclrID");
-        return value != null && !"".equals(String.valueOf(value));
-    } catch (Exception e) {
-        return false;
+        // Safe Java 8–compatible check without .has() or .optString()
+        try {
+            Object value = result.get("sPrtclrID");
+            return value != null && !"".equals(String.valueOf(value));
+        } catch (Exception e) {
+            return false;
+        }
     }
-}
-
 
     private RecurringIssuance RecurringIssuance() throws GuanzonException, SQLException {
         return new CashflowControllers(poGRider, logwrapr).RecurringIssuance();
     }
 
     private void updateRecurringIssuance(String particularID, String branch, String payee, String accountNo)
-        throws GuanzonException, SQLException, CloneNotSupportedException {
+            throws GuanzonException, SQLException, CloneNotSupportedException {
 
-    RecurringIssuance issuance = RecurringIssuance();
-    poRecurringIssuances.add(issuance);
+        RecurringIssuance issuance = RecurringIssuance();
+        poRecurringIssuances.add(issuance);
 
-    System.out.printf("Updating Recurring Issuance: PartID=%s | Branch=%s | Payee=%s | Account=%s%n",
-            particularID, branch, payee, accountNo);
+        System.out.printf("Updating Recurring Issuance: PartID=%s | Branch=%s | Payee=%s | Account=%s%n",
+                particularID, branch, payee, accountNo);
 
-    JSONObject record = issuance.poModel.openRecord(particularID, branch, payee, accountNo);
-    System.out.println("Record Loaded: " + record.toString());
-    System.out.println("Edit Mode (before): " + issuance.poModel.getEditMode());
+        JSONObject record = issuance.poModel.openRecord(particularID, branch, payee, accountNo);
+        System.out.println("Record Loaded: " + record.toString());
+        System.out.println("Edit Mode (before): " + issuance.poModel.getEditMode());
 
-    issuance.poModel.updateRecord();
+        issuance.poModel.updateRecord();
 
-    // Set updated values
-    issuance.poModel.setParticularID(particularID);
-    issuance.poModel.setBranchCode(branch);
-    issuance.poModel.setPayeeID(payee);
-    issuance.poModel.setAccountNo(accountNo);
-    issuance.poModel.setLastPRFTrans(Master().getTransactionNo());
-    issuance.poModel.setModifyingId(poGRider.getUserID());
-    issuance.poModel.setModifiedDate(poGRider.getServerDate());
+        // Set updated values
+        issuance.poModel.setParticularID(particularID);
+        issuance.poModel.setBranchCode(branch);
+        issuance.poModel.setPayeeID(payee);
+        issuance.poModel.setAccountNo(accountNo);
+        issuance.poModel.setLastPRFTrans(Master().getTransactionNo());
+        issuance.poModel.setModifyingId(poGRider.getUserID());
+        issuance.poModel.setModifiedDate(poGRider.getServerDate());
 
-    System.out.println("Edit Mode (after): " + issuance.poModel.getEditMode());
-}
-
+        System.out.println("Edit Mode (after): " + issuance.poModel.getEditMode());
+    }
 
     private JSONObject saveUpdates()
             throws CloneNotSupportedException, SQLException, GuanzonException {

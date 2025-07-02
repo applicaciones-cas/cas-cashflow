@@ -13,10 +13,11 @@ import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Recurring_Issuance extends Model {
+
     Model_Particular poParticular;
     Model_Branch poBranch;
     Model_Payee poPayee;
-    
+
     @Override
     public void initialize() {
         try {
@@ -40,7 +41,7 @@ public class Model_Recurring_Issuance extends Model {
             ID2 = "sBranchCd";
             ID3 = "sPayeeIDx";
             ID4 = "sAcctNoxx";
-            
+
             poBranch = new ParamModels(poGRider).Branch();
             poPayee = new CashflowModels(poGRider).Payee();
             poParticular = new CashflowModels(poGRider).Particular();
@@ -59,55 +60,55 @@ public class Model_Recurring_Issuance extends Model {
     public String getParticularID() {
         return (String) getValue("sPrtclrID");
     }
-       
-    public JSONObject setBranchCode(String branchCode){
+
+    public JSONObject setBranchCode(String branchCode) {
         return setValue("sBranchCd", branchCode);
     }
 
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
     }
-    
-    public JSONObject setPayeeID(String payeeId){
+
+    public JSONObject setPayeeID(String payeeId) {
         return setValue("sPayeeIDx", payeeId);
     }
 
     public String getPayeeID() {
         return (String) getValue("sPayeeIDx");
     }
-    
-    public JSONObject setAccountNo(String accountNo){
+
+    public JSONObject setAccountNo(String accountNo) {
         return setValue("sAcctNoxx", accountNo);
     }
 
     public String getAccountNo() {
         return (String) getValue("sAcctNoxx");
     }
-    
-    public JSONObject setAccountName(String accountName){
+
+    public JSONObject setAccountName(String accountName) {
         return setValue("sAcctName", accountName);
     }
 
     public String getAccountName() {
         return (String) getValue("sAcctName");
     }
-    
-    public JSONObject setAmount(double amount){
+
+    public JSONObject setAmount(double amount) {
         return setValue("nAmountxx", amount);
     }
 
     public double getAmount() {
-        return (double) getValue("nAmountxx");
+        return Double.parseDouble(String.valueOf(getValue("nAmountxx")));
     }
-    
-    public JSONObject setMonth(int month){
+
+    public JSONObject setMonth(int month) {
         return setValue("nMonthxxx", month);
     }
 
     public int getMonth() {
         return (int) getValue("nMonthxxx");
     }
-    
+
     public JSONObject setBillingDate(Date billingDate) {
         return setValue("dBillDate", billingDate);
     }
@@ -115,7 +116,7 @@ public class Model_Recurring_Issuance extends Model {
     public Date getBillingDate() {
         return (Date) getValue("dBillDate");
     }
-    
+
     public JSONObject setDueDate(Date dueDate) {
         return setValue("dDueUntil", dueDate);
     }
@@ -123,32 +124,32 @@ public class Model_Recurring_Issuance extends Model {
     public Date getDueDate() {
         return (Date) getValue("dDueUntil");
     }
-    
-    public JSONObject setVATRate(double rate){
+
+    public JSONObject setVATRate(double rate) {
         return setValue("nVATRatex", rate);
     }
 
     public double getVATRate() {
-        return (double) getValue("nVATRatex");
+        return Double.parseDouble(String.valueOf(getValue("nVATRatex")));
     }
-    
-    public JSONObject setTaxWithheldRate (double rate){
+
+    public JSONObject setTaxWithheldRate(double rate) {
         return setValue("nTWHldRte", rate);
     }
 
     public double getTaxWithheldRate() {
-        return (double) getValue("nTWHldRte");
+        return Double.parseDouble(String.valueOf(getValue("nTWHldRte")));
     }
-    
-    public JSONObject setLastPRFTrans(String lastPRFTrans){
+
+    public JSONObject setLastPRFTrans(String lastPRFTrans) {
         return setValue("sLastRqNo", lastPRFTrans);
     }
 
     public String getLastPRFTrans() {
         return (String) getValue("sLastRqNo");
     }
-        
-    public JSONObject setRecordStatus(String recordStatus){
+
+    public JSONObject setRecordStatus(String recordStatus) {
         return setValue("cRecdStat", recordStatus);
     }
 
@@ -171,23 +172,23 @@ public class Model_Recurring_Issuance extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-    
+
     @Override
-    public String getNextCode(){
-        return ""; 
+    public String getNextCode() {
+        return "";
     }
-    
-    public Model_Particular Particular() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sPrtclrID"))){
-            if (poParticular.getEditMode() == EditMode.READY && 
-                poParticular.getParticularID().equals((String) getValue("sPrtclrID")))
+
+    public Model_Particular Particular() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPrtclrID"))) {
+            if (poParticular.getEditMode() == EditMode.READY
+                    && poParticular.getParticularID().equals((String) getValue("sPrtclrID"))) {
                 return poParticular;
-            else{
+            } else {
                 poJSON = poParticular.openRecord((String) getValue("sPrtclrID"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poParticular;
-                else {
+                } else {
                     poParticular.initialize();
                     return poParticular;
                 }
@@ -197,18 +198,18 @@ public class Model_Recurring_Issuance extends Model {
             return poParticular;
         }
     }
-    
-    public Model_Branch Branch() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sBranchCd"))){
-            if (poBranch.getEditMode() == EditMode.READY && 
-                poBranch.getBranchCode().equals((String) getValue("sBranchCd")))
+
+    public Model_Branch Branch() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sBranchCd"))) {
+            if (poBranch.getEditMode() == EditMode.READY
+                    && poBranch.getBranchCode().equals((String) getValue("sBranchCd"))) {
                 return poBranch;
-            else{
+            } else {
                 poJSON = poBranch.openRecord((String) getValue("sBranchCd"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poBranch;
-                else {
+                } else {
                     poBranch.initialize();
                     return poBranch;
                 }
@@ -218,18 +219,18 @@ public class Model_Recurring_Issuance extends Model {
             return poBranch;
         }
     }
-    
-    public Model_Payee Payee() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sPayeeIDx"))){
-            if (poPayee.getEditMode() == EditMode.READY && 
-                poPayee.getPayeeID().equals((String) getValue("sPayeeIDx")))
+
+    public Model_Payee Payee() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPayeeIDx"))) {
+            if (poPayee.getEditMode() == EditMode.READY
+                    && poPayee.getPayeeID().equals((String) getValue("sPayeeIDx"))) {
                 return poPayee;
-            else{
+            } else {
                 poJSON = poPayee.openRecord((String) getValue("sPayeeIDx"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poPayee;
-                else {
+                } else {
                     poPayee.initialize();
                     return poPayee;
                 }

@@ -81,12 +81,12 @@ public class Model_Disbursement_Detail extends Model {
         return (String) getValue("sTransNox");
     }
 
-    public JSONObject setEntryNo(Number entryNo) {
+    public JSONObject setEntryNo(int entryNo) {
         return setValue("nEntryNox", entryNo);
     }
 
-    public Number getEntryNo() {
-        return (Number) getValue("nEntryNox");
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
     }
 
     public JSONObject setSourceCode(String sourceCode) {
@@ -121,20 +121,20 @@ public class Model_Disbursement_Detail extends Model {
         return (String) getValue("sPrtclrID");
     }
 
-    public JSONObject setAmount(Number amount) {
+    public JSONObject setAmount(double amount) {
         return setValue("nAmountxx", amount);
     }
 
-    public Number getAmount() {
-        return (Number) getValue("nAmountxx");
+    public double getAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nAmountxx")));
     }
 
-    public JSONObject setAmountApplied(Number amountApplied) {
+    public JSONObject setAmountApplied(double amountApplied) {
         return setValue("nAmtAppld", amountApplied);
     }
 
-    public Number getAmountApplied() {
-        return (Number) getValue("nAmtAppld");
+    public double getAmountApplied() {
+        return Double.parseDouble(String.valueOf(getValue("nAmtAppld")));
     }
 
     public JSONObject isWithVat(boolean iswithvat) {
@@ -154,20 +154,20 @@ public class Model_Disbursement_Detail extends Model {
         return (String) getValue("sTaxCodex");
     }
 
-    public JSONObject setTaxRates(Number taxRates) {
+    public JSONObject setTaxRates(double taxRates) {
         return setValue("nTaxRatex", taxRates);
     }
 
-    public Number getTaxRates() {
-        return (Number) getValue("nTaxRatex");
+    public double getTaxRates() {
+        return Double.parseDouble(String.valueOf(getValue("nTaxRatex")));
     }
 
-    public JSONObject setTaxAmount(Number taxamount) {
+    public JSONObject setTaxAmount(double taxamount) {
         return setValue("nTaxAmtxx", taxamount);
     }
 
-    public Number getTaxAmount() {
-        return (Number) getValue("nTaxAmtxx");
+    public double getTaxAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nTaxAmtxx")));
     }
 
     public String setInvType(String invType) {
