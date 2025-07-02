@@ -74,12 +74,12 @@ public class Model_Payment_Request_Detail extends Model {
         return (String) getValue("sTransNox");
     }
 
-    public JSONObject setEntryNo(Number entryNo) {
+    public JSONObject setEntryNo(int entryNo) {
         return setValue("nEntryNox", entryNo);
     }
 
-    public Number getEntryNo() {
-        return (Number) getValue("nEntryNox");
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
     }
 
     public JSONObject setParticularID(String particularID) {
@@ -98,28 +98,28 @@ public class Model_Payment_Request_Detail extends Model {
         return (String) getValue("sPRFRemxx");
     }
 
-    public JSONObject setAmount(Number amount) {
+    public JSONObject setAmount(double amount) {
         return setValue("nAmountxx", amount);
     }
 
-    public Number getAmount() {
-        return (Number) getValue("nAmountxx");
+    public double getAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nAmountxx")));
     }
 
-    public JSONObject setDiscount(Number discount) {
+    public JSONObject setDiscount(double discount) {
         return setValue("nDiscount", discount);
     }
 
-    public Number getDiscount() {
-        return (Number) getValue("nDiscount");
+    public double getDiscount() {
+        return Double.parseDouble(String.valueOf(getValue("nDiscount")));
     }
 
-    public JSONObject setAddDiscount(Number addDiscount) {
+    public JSONObject setAddDiscount(double addDiscount) {
         return setValue("nAddDiscx", addDiscount);
     }
 
-    public Number getAddDiscount() {
-        return (Number) getValue("nAddDiscx");
+    public double getAddDiscount() {
+        return Double.parseDouble(String.valueOf(getValue("nAddDiscx")));
     }
 
     public JSONObject setVatable(String vatable) {
@@ -130,12 +130,12 @@ public class Model_Payment_Request_Detail extends Model {
         return (String) getValue("cVATaxabl");
     }
 
-    public JSONObject setWithHoldingTax(Number withHoldingTax) {
+    public JSONObject setWithHoldingTax(double withHoldingTax) {
         return setValue("nTWithHld", withHoldingTax);
     }
 
-    public Number getWithHoldingTax() {
-        return (Number) getValue("nTWithHld");
+    public double getWithHoldingTax() {
+        return Double.parseDouble(String.valueOf(getValue("nTWithHld")));
     }
 
     public JSONObject setModifiedDate(Date modifiedDate) {

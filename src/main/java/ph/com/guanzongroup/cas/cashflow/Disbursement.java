@@ -482,7 +482,7 @@ public class Disbursement extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             Detail(row).setTaxCode(object.getModel().getTaxCode());
             Detail(row).setTaxRates(object.getModel().getRegularRate());
-            Detail(row).setTaxAmount((Detail(row).getAmount().doubleValue() * object.getModel().getRegularRate() / 100));
+            Detail(row).setTaxAmount((Detail(row).getAmount() * object.getModel().getRegularRate() / 100));
             poJSON = computeFields();
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -702,7 +702,7 @@ public class Disbursement extends Transaction {
                     if (checkPayments.getEditMode() != EditMode.ADDNEW) {
                         checkPayments.newRecord();
 
-                        checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
+                        checkPayments.getModel().setAmount(Master().getNetTotal());
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(SOURCE_CODE);
                         checkPayments.getModel().setBranchCode(Master().getBranchCode());
@@ -951,7 +951,7 @@ public class Disbursement extends Transaction {
                 for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
                     lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
                     if (lbUpdated) {
-                        lbUpdated = loRecord.Detail(lnCtr).getAmount().equals(Detail(lnCtr).getAmount());
+                        lbUpdated = loRecord.Detail(lnCtr).getAmount() == Detail(lnCtr).getAmount();
                     }
                     if (lbUpdated) {
                         lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
@@ -972,7 +972,7 @@ public class Disbursement extends Transaction {
 
         if (getDetailCount() == 1) {
             //do not allow a single item detail with no quantity order
-            if (Detail(0).getAmount().doubleValue() == 0.0000) {
+            if (Detail(0).getAmount() == 0.0000) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Your order has zero quantity.");
                 return poJSON;
@@ -1280,7 +1280,7 @@ public class Disbursement extends Transaction {
                     referNo = poPaymentRequest.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
                     particular = poPaymentRequest.Detail(i).getParticularID();
-                    amount = poPaymentRequest.Detail(i).getAmount().doubleValue();
+                    amount = poPaymentRequest.Detail(i).getAmount();
                     invType = "";
 
                     boolean found = false;
@@ -1674,8 +1674,8 @@ public class Disbursement extends Transaction {
         double lnTotalPurchaseAmount = 0.0000;
         double lnLessWithHoldingTax = 0.0000;
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-            lnTotalPurchaseAmount += Detail(lnCntr).getAmount().doubleValue();
-            lnTotalVatAmount += (Detail(lnCntr).getAmount().doubleValue() * (Detail(lnCntr).getTaxRates().doubleValue() / 100));
+            lnTotalPurchaseAmount += Detail(lnCntr).getAmount();
+            lnTotalVatAmount += (Detail(lnCntr).getAmount() * (Detail(lnCntr).getTaxRates() / 100));
         }
         if (lnTotalPurchaseAmount - lnTotalVatAmount < 0.0000) {
             poJSON.put("result", "error");
@@ -2035,7 +2035,7 @@ public class Disbursement extends Transaction {
             return poJSON;
         }
 
-        if (ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()) {
+        if (ldblDebitAmt < Master().getTransactionTotal() || ldblDebitAmt > Master().getTransactionTotal()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
             return poJSON;

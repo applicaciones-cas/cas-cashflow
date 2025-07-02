@@ -709,7 +709,7 @@ public class CheckPrinting extends Transaction {
                     if (checkPayments.getEditMode() != EditMode.ADDNEW) {
                         checkPayments.newRecord();
 
-                        checkPayments.getModel().setAmount(Master().getNetTotal().doubleValue());
+                        checkPayments.getModel().setAmount(Master().getNetTotal());
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(Master().CheckPayments().getSourceCode());
                         checkPayments.getModel().setBranchCode(Master().getBranchCode());
@@ -868,7 +868,7 @@ public class CheckPrinting extends Transaction {
                     transactionno = fsTransactionNos.get(i);
                     payeeName = checkPayments.getModel().Payee().getPayeeName();
                     checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
-                    amountNumeric = Master().CheckPayments().getAmount().toString();
+                    amountNumeric = String.valueOf(Master().CheckPayments().getAmount());
                     amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
 
                     System.out.println("===============================================");
@@ -1059,7 +1059,7 @@ public class CheckPrinting extends Transaction {
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
-                params.put("nCheckAmountxx", Master().CheckPayments().getAmount().doubleValue());
+                params.put("nCheckAmountxx", Master().CheckPayments().getAmount());
 
                 switch (Master().getPrint()) {
                     case CheckStatus.PrintStatus.PRINTED:
@@ -1070,7 +1070,7 @@ public class CheckPrinting extends Transaction {
                         break;
                 }
                 params.put("watermarkImagePath", watermarkPath);
-                
+
                 /* 2.3 details … (same as before) */
                 List<OrderDetail> orderDetails = new ArrayList<>();
                 for (int i = 0; i < getDetailCount(); i++) {
@@ -1078,7 +1078,7 @@ public class CheckPrinting extends Transaction {
                             i + 1,
                             Detail(i).Particular().getDescription(),
                             Detail(i).Particular().getDescription(),
-                            Detail(i).getAmount().doubleValue()
+                            Detail(i).getAmount()
                     ));
                 }
 

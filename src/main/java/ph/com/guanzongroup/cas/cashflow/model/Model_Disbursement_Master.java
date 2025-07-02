@@ -137,8 +137,8 @@ public class Model_Disbursement_Master extends Model {
         return setValue("nEntryNox", entryNo);
     }
 
-    public Number getEntryNo() {
-        return (Number) getValue("nEntryNox");
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
     }
 
     public JSONObject setVoucherNo(String voucherNo) {
@@ -165,83 +165,83 @@ public class Model_Disbursement_Master extends Model {
         return (String) getValue("sPayeeIDx");
     }
 
-    public JSONObject setTransactionTotal(Number transactionTotal) {
+    public JSONObject setTransactionTotal(double transactionTotal) {
         return setValue("nTranTotl", transactionTotal);
     }
 
-    public Number getTransactionTotal() {
-        return (Number) getValue("nTranTotl");
+    public double getTransactionTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nTranTotl")));
     }
 
-    public JSONObject setDiscountTotal(Number discountTotal) {
+    public JSONObject setDiscountTotal(double discountTotal) {
         return setValue("nDiscTotl", discountTotal);
     }
 
-    public Number getDiscountTotal() {
-        return (Number) getValue("nDiscTotl");
+    public double getDiscountTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nDiscTotl")));
     }
 
-    public JSONObject setWithTaxTotal(Number withTaxTotal) {
+    public JSONObject setWithTaxTotal(double withTaxTotal) {
         return setValue("nWTaxTotl", withTaxTotal);
     }
 
-    public Number getWithTaxTotal() {
-        return (Number) getValue("nWTaxTotl");
+    public double getWithTaxTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nWTaxTotl")));
     }
 
-    public JSONObject setNonVATSale(Number nonVATSale) {
+    public JSONObject setNonVATSale(double nonVATSale) {
         return setValue("nNonVATSl", nonVATSale);
     }
 
-//    public Number getNonVATSale(){
-//        return (Number) getValue("nNonVATSl");
+//    public double getNonVATSale(){
+//        return (double) getValue("nNonVATSl");
 //    }
 //
-//    public JSONObject setVATSale(Number VATSale){
+//    public JSONObject setVATSale(double VATSale){
 //        return setValue("nVATSales", VATSale);
 //    }
-    public Number getVATSale() {
-        return (Number) getValue("nVATSales");
+    public double getVATSale() {
+        return (double) getValue("nVATSales");
     }
 
-    public JSONObject setVATRates(Number vatRates) {
+    public JSONObject setVATRates(double vatRates) {
         return setValue("nVATRatex", vatRates);
     }
 
-    public Number getVATRates() {
-        return (Number) getValue("nVATRatex");
+    public double getVATRates() {
+        return (double) getValue("nVATRatex");
     }
 
-    public JSONObject setVATAmount(Number vatAmount) {
+    public JSONObject setVATAmount(double vatAmount) {
         return setValue("nVATAmtxx", vatAmount);
     }
 
-    public Number getVATAmount() {
-        return (Number) getValue("nVATAmtxx");
+    public double getVATAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nVATAmtxx")));
     }
 
-    public JSONObject setZeroVATSales(Number zeroVATSales) {
+    public JSONObject setZeroVATSales(double zeroVATSales) {
         return setValue("nZroVATSl", zeroVATSales);
     }
 
-    public Number getZeroVATSales() {
-        return (Number) getValue("nZroVATSl");
+    public double getZeroVATSales() {
+        return Double.parseDouble(String.valueOf(getValue("nZroVATSl")));
     }
 
-    public JSONObject setVATExmpt(Number vatExmpt) {
+    public JSONObject setVATExmpt(double vatExmpt) {
         return setValue("nVatExmpt", vatExmpt);
     }
 
-    public Number getVATExmpt() {
-        return (Number) getValue("nVatExmpt");
+    public double getVATExmpt() {
+        return Double.parseDouble(String.valueOf(getValue("nVatExmpt")));
     }
 
-    public JSONObject setNetTotal(Number netTotal) {
+    public JSONObject setNetTotal(double netTotal) {
         return setValue("nNetTotal", netTotal);
     }
 
-    public Number getNetTotal() {
-        return (Number) getValue("nNetTotal");
+    public double getNetTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nNetTotal")));
     }
 
     public JSONObject setRemarks(String remarks) {

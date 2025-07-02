@@ -101,7 +101,7 @@ public class Model_Payment_Request_Master extends Model {
     public String getIndustryID() {
         return (String) getValue("sIndstCdx");
     }
-    
+
     public JSONObject setCompanyID(String companyID) {
         return setValue("sCompnyID", companyID);
     }
@@ -109,7 +109,7 @@ public class Model_Payment_Request_Master extends Model {
     public String getCompanyID() {
         return (String) getValue("sCompnyID");
     }
-    
+
     public JSONObject setTransactionDate(Date transactionDate) {
         return setValue("dTransact", transactionDate);
     }
@@ -158,12 +158,12 @@ public class Model_Payment_Request_Master extends Model {
         return (String) getValue("sSeriesNo");
     }
 
-    public JSONObject setTranTotal(Number tranTotal) {
+    public JSONObject setTranTotal(double tranTotal) {
         return setValue("nTranTotl", tranTotal);
     }
 
-    public Number getTranTotal() {
-        return (Number) getValue("nTranTotl");
+    public double getTranTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nTranTotl")));
     }
 
     public JSONObject setRemarks(String remarks) {
@@ -172,46 +172,46 @@ public class Model_Payment_Request_Master extends Model {
 
     public String getRemarks() {
         return (String) getValue("sRemarksx");
-    }    
-    
-    public JSONObject setDiscountAmount(Number discountAmount) {
+    }
+
+    public JSONObject setDiscountAmount(double discountAmount) {
         return setValue("nDiscAmtx", discountAmount);
     }
 
-    public Number getDiscountAmount() {
-        return (Number) getValue("nDiscAmtx");
+    public double getDiscountAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nDiscAmtx")));
     }
 
-    public JSONObject setTaxAmount(Number taxAmount) {
+    public JSONObject setTaxAmount(double taxAmount) {
         return setValue("nTaxAmntx", taxAmount);
     }
 
-    public Number getTaxAmount() {
-        return (Number) getValue("nTaxAmntx");
+    public double getTaxAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nTaxAmntx")));
     }
 
-    public JSONObject setNetTotal(Number netTotal) {
+    public JSONObject setNetTotal(double netTotal) {
         return setValue("nNetTotal", netTotal);
     }
 
-    public Number getNetTotal() {
-        return (Number) getValue("nNetTotal");
+    public double getNetTotal() {
+        return Double.parseDouble(String.valueOf(getValue("nNetTotal")));
     }
 
-    public JSONObject setAmountPaid(Number amountPaid) {
+    public JSONObject setAmountPaid(double amountPaid) {
         return setValue("nAmtPaidx", amountPaid);
     }
 
-    public Number getAmountPaid() {
-        return (Number) getValue("nAmtPaidx");
+    public double getAmountPaid() {
+        return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
     }
 
     public JSONObject setEntryNo(int entryNo) {
         return setValue("nEntryNox", entryNo);
     }
 
-    public Number getEntryNo() {
-        return (Number) getValue("nEntryNox");
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
     }
 
     public JSONObject setSourceCode(String sourceCode) {
@@ -229,7 +229,7 @@ public class Model_Payment_Request_Master extends Model {
     public String getSourceNo() {
         return (String) getValue("sSourceNo");
     }
-  
+
     public JSONObject setWithSoa(String process) {
         return setValue("cWithSOAx", process);
     }
@@ -237,15 +237,15 @@ public class Model_Payment_Request_Master extends Model {
     public String getWithSoa() {
         return (String) getValue("cWithSOAx");
     }
-    
+
     public JSONObject setProcess(String process) {
         return setValue("cProcessd", process);
     }
 
     public String getProcess() {
         return (String) getValue("cProcessd");
-    }    
-    
+    }
+
     public JSONObject setTransactionStatus(String transactionStatus) {
         return setValue("cTranStat", transactionStatus);
     }
@@ -253,7 +253,7 @@ public class Model_Payment_Request_Master extends Model {
     public String getTransactionStatus() {
         return (String) getValue("cTranStat");
     }
-    
+
     public JSONObject setModifyingId(String modifyingId) {
         return setValue("sModified", modifyingId);
     }
@@ -269,7 +269,6 @@ public class Model_Payment_Request_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-
 
     @Override
     public String getNextCode() {
@@ -335,7 +334,8 @@ public class Model_Payment_Request_Master extends Model {
             return poBranch;
         }
     }
-        public Model_Company Company() throws GuanzonException, SQLException {
+
+    public Model_Company Company() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sCompnyID"))) {
             if (poCompany.getEditMode() == EditMode.READY
                     && poCompany.getCompanyId().equals((String) getValue("sCompnyID"))) {
@@ -354,8 +354,8 @@ public class Model_Payment_Request_Master extends Model {
             return poCompany;
         }
     }
-    
-        public Model_Industry Industry() throws GuanzonException, SQLException {
+
+    public Model_Industry Industry() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sIndstCdx"))) {
             if (poIndustry.getEditMode() == EditMode.READY
                     && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {

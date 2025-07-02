@@ -87,8 +87,6 @@ public class Model_Check_Payments extends Model {
         return date;
     }
 
-
-
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);
     }
@@ -104,7 +102,7 @@ public class Model_Check_Payments extends Model {
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
     }
-    
+
     public JSONObject setIndustryID(String industryID) {
         return setValue("sIndstCdx", industryID);
     }
@@ -169,12 +167,12 @@ public class Model_Check_Payments extends Model {
         return (String) getValue("sPayeeIDx");
     }
 
-    public JSONObject setAmount(Number amount) {
+    public JSONObject setAmount(double amount) {
         return setValue("nAmountxx", amount);
     }
 
-    public Number getAmount() {
-        return (Number) getValue("nAmountxx");
+    public double getAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nAmountxx")));
     }
 
     public JSONObject setRemarks(String remarks) {
@@ -300,7 +298,7 @@ public class Model_Check_Payments extends Model {
     public String getPrint() {
         return (String) getValue("cPrintxxx");
     }
-    
+
     public JSONObject setDatePrint(Date datePrint) {
         return setValue("dPrintxxx", datePrint);
     }
