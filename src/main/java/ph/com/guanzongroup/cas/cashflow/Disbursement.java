@@ -530,7 +530,7 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting()));
+            Master().setBankPrint(object.getModel().isBankPrinting() == true ? "1" : "0");
         }
 
         return poJSON;
@@ -1256,6 +1256,7 @@ public class Disbursement extends Transaction {
         int detailCount = 0;
         String referNo, sourceCode, particular, invType = "";
         double amount;
+        boolean isVatable = false;
 
         switch (paymentType) {
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST: {
@@ -1282,6 +1283,7 @@ public class Disbursement extends Transaction {
                     particular = poPaymentRequest.Detail(i).getParticularID();
                     amount = poPaymentRequest.Detail(i).getAmount();
                     invType = "";
+                    isVatable = poPaymentRequest.Detail(i).getVatable().equals("1");
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1300,6 +1302,7 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setSourceCode(sourceCode);
                         Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);
+                        Detail(newIndex).isWithVat(isVatable);
                         Detail(newIndex).setAccountCode(poPaymentRequest.Detail(i).Particular().getAccountCode());
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
