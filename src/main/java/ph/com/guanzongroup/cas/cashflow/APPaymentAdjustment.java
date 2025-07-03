@@ -33,6 +33,7 @@ import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 
@@ -45,6 +46,7 @@ public class APPaymentAdjustment extends Parameter {
     private String psIndustryId = "";
     private String psCompanyId = "";
     private boolean pbWithParent = false;
+    public String psSource_Code = "";
 
     Model_AP_Payment_Adjustment poModel;
     List<Model_AP_Payment_Adjustment> paModel;
@@ -53,6 +55,7 @@ public class APPaymentAdjustment extends Parameter {
 
     @Override
     public void initialize() {
+        psSource_Code = "APAd";
 //        SOURCE_CODE = "APAd"; //Conflict in parameter baseclass
         psRecdStat = Logical.YES;
         pbInitRec = true;
@@ -247,14 +250,14 @@ public class APPaymentAdjustment extends Parameter {
             poCachePayable.Master().setTransactionDate(poGRider.getServerDate()); 
             poCachePayable.Master().setCompanyId(getModel().getCompanyId());
             poCachePayable.Master().setClientId(getModel().getClientId());
-            poCachePayable.Master().setSourceCode("PAdj"); //TODO
+            poCachePayable.Master().setSourceCode(psSource_Code); //TODO
             poCachePayable.Master().setSourceNo(getModel().getTransactionNo());
             poCachePayable.Master().setReferNo(getModel().getReferenceNo()); 
             poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); 
             poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); 
             poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
-            poCachePayable.Master().setTransactionStatus("1");
+            poCachePayable.Master().setTransactionStatus(CachePayableStatus.CONFIRMED);
 
             //Cache Payable Detail
             if(poCachePayable.getDetailCount() < 0){
@@ -269,7 +272,7 @@ public class APPaymentAdjustment extends Parameter {
             
             
             if(status.equals(APPaymentAdjustmentStatus.CANCELLED)){
-                poCachePayable.Master().setTransactionStatus("2");
+                poCachePayable.Master().setTransactionStatus(CachePayableStatus.CANCELLED);
             }
             
         }
