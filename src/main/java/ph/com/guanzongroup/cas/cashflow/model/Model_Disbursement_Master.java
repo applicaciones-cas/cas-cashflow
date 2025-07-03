@@ -201,7 +201,7 @@ public class Model_Disbursement_Master extends Model {
 //        return setValue("nVATSales", VATSale);
 //    }
     public double getVATSale() {
-        return (double) getValue("nVATSales");
+        return Double.parseDouble(String.valueOf(getValue("nVATSales")));
     }
 
     public JSONObject setVATRates(double vatRates) {
@@ -209,7 +209,7 @@ public class Model_Disbursement_Master extends Model {
     }
 
     public double getVATRates() {
-        return (double) getValue("nVATRatex");
+        return Double.parseDouble(String.valueOf( getValue("nVATRatex")));
     }
 
     public JSONObject setVATAmount(double vatAmount) {
