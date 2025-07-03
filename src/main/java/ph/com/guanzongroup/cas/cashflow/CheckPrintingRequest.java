@@ -358,7 +358,7 @@ public class CheckPrintingRequest extends Transaction {
     }
 
     @Override
-    public JSONObject willSave() throws SQLException, GuanzonException {
+    public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
 
@@ -373,6 +373,11 @@ public class CheckPrintingRequest extends Transaction {
             }
         }
         
+      
+        poJSON = setValueToOthers(Master().getTransactionStatus());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
         
 
         //assign other info on detail
@@ -392,6 +397,63 @@ public class CheckPrintingRequest extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
+    
+    private JSONObject setValueToOthers(String status)
+            throws CloneNotSupportedException, SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+        poCheckPayments = new ArrayList<>();
+
+        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+            String sourceno = Detail(lnCtr).getSourceNo();
+            updateDV(sourceno);
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    private JSONObject saveUpdates(String status)
+            throws CloneNotSupportedException, GuanzonException, SQLException {
+        poJSON = new JSONObject();
+        int lnCtr;           
+               for (lnCtr = 0; lnCtr <= poCheckPayments.size() - 1; lnCtr++) {
+                poCheckPayments.get(lnCtr).setWithParentClass(true);
+                poJSON = poCheckPayments.get(lnCtr).saveRecord();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    System.out.println("Stock Request Saving " + (String) poJSON.get("message"));
+                    return poJSON;
+                }
+            }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    private CheckPayments CheckPayments() throws GuanzonException, SQLException {
+        return new CashflowControllers(poGRider, logwrapr).CheckPayments();
+    }
+    
+    private void updateDV(String sourceno)
+            throws GuanzonException, SQLException, CloneNotSupportedException {
+
+        Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
+        poDV.InitTransaction();
+        poDV.OpenTransaction(sourceno);
+        String checkTrans = poDV.Master().CheckPayments().getTransactionNo();
+        System.out.printf("Updating poCP: ",checkTrans);
+
+        poCheckPayments.add(CheckPayments());
+        poCheckPayments.get(poCheckPayments.size() - 1).initialize();
+        poCheckPayments.get(poCheckPayments.size() - 1).openRecord(checkTrans);
+        poCheckPayments.get(poCheckPayments.size() - 1).updateRecord();
+        
+        
+
+        
+        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
+        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifyingId(poGRider.getUserID());
+        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifiedDate(poGRider.getServerDate());
+        System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
+    }
 
     @Override
     public JSONObject save() {
@@ -401,11 +463,19 @@ public class CheckPrintingRequest extends Transaction {
 
     @Override
     public JSONObject saveOthers() {
-        /*Only modify this if there are other tables to modify except the master and detail tables*/
-        poJSON = new JSONObject();
-
-        poJSON.put("result", "success");
-        return poJSON;
+        try {
+            /*Only modify this if there are other tables to modify except the master and detail tables*/
+            poJSON = new JSONObject();
+            poJSON = saveUpdates(CheckStatus.PrintStatus.PRINTED);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+        } catch (CloneNotSupportedException | SQLException | GuanzonException ex) {
+            Logger.getLogger(CheckPrintingRequest.class.getName()).log(Level.SEVERE, null, ex);
+        }
+         poJSON.put("result", "success");
+            return poJSON;
     }
 
     @Override
@@ -552,6 +622,7 @@ public class CheckPrintingRequest extends Transaction {
                 " d.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN),
                 " c.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
@@ -607,6 +678,13 @@ public class CheckPrintingRequest extends Transaction {
         // Attempt to open the Check Payment record
         poJSON = poCheckPayment.openRecord(stransNox);
         if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+
+        if (poCheckPayment.getModel().getProcessed().equals(CheckStatus.PrintStatus.PRINTED)) {
+            poJSON.put("message", "The system has detected that this check has an existing request on record.");
+            poJSON.put("result", "error");
             return poJSON;
         }
         // Validate if the payee in Master is different from the payee in the RecurringIssuance
