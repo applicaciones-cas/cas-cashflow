@@ -643,7 +643,7 @@ public class PaymentRequest extends Transaction {
         }
 
         if (PaymentRequestStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-//            poJSON = setValueToOthers(Master().getTransactionStatus());
+            poJSON = setValueToOthers(Master().getTransactionStatus());
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
