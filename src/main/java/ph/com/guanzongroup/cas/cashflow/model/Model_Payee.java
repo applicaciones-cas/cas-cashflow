@@ -7,6 +7,7 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.client.model.Model_Client_Address;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
 import org.json.simple.JSONObject;
@@ -14,6 +15,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Payee extends Model {
     Model_Client_Master poClient;
+    Model_Client_Address poClientAddress;
     Model_Client_Master poAPClient;
     Model_Particular poParticular;
     
@@ -40,6 +42,7 @@ public class Model_Payee extends Model {
             
             ClientModels model = new ClientModels(poGRider);
             poClient = model.ClientMaster();
+            poClientAddress = model.ClientAddress();
             poAPClient = model.ClientMaster();
             
             CashflowModels gl = new CashflowModels(poGRider);
@@ -176,6 +179,27 @@ public class Model_Payee extends Model {
         } else {
             poClient.initialize();
             return poClient;
+        }
+    }
+    
+    public Model_Client_Address ClientAddress() throws SQLException, GuanzonException{
+        if (!"".equals((String) getValue("sClientID"))){
+            if (poClientAddress.getEditMode() == EditMode.READY && 
+                poClientAddress.getClientId().equals((String) getValue("sClientID")))
+                return poClientAddress;
+            else{
+                poJSON = poClientAddress.openRecord((String) getValue("sClientID"));
+
+                if ("success".equals((String) poJSON.get("result")))
+                    return poClientAddress;
+                else {
+                    poClientAddress.initialize();
+                    return poClientAddress;
+                }
+            }
+        } else {
+            poClientAddress.initialize();
+            return poClientAddress;
         }
     }
 }

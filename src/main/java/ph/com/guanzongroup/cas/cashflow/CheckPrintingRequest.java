@@ -5,9 +5,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.apache.poi.ss.usermodel.Row;
@@ -368,6 +372,8 @@ public class CheckPrintingRequest extends Transaction {
                 detail.remove(); // Correctly remove the item
             }
         }
+        
+        
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
@@ -792,8 +798,8 @@ public class CheckPrintingRequest extends Transaction {
                 lsSQL,
                 fsValue,
                 "Transaction No»Transaction Date»Bank",
-                "a.sTransNox»a.dTransact»b.sBankName",
-                "a.sTransNox»a.dTransact»b.sBankName",
+                "a.sTransNox»a.dTransact»c.sBankName",
+                "a.sTransNox»a.dTransact»c.sBankName",
                 1);
 
         if (poJSON != null) {
@@ -806,150 +812,242 @@ public class CheckPrintingRequest extends Transaction {
         }
     }
 
-    public JSONObject ExportTransaction(String fsValue) throws GuanzonException, SQLException {
-        poJSON = new JSONObject();
-        String bankCode = Master().Banks().getBankCode();
+    public JSONObject ExportTransaction(String fsValue) 
+        throws GuanzonException, SQLException, CloneNotSupportedException {
 
-        if (!"BDO".equals(bankCode)) {
-            throw new AssertionError("Unsupported bank code: " + bankCode);
-        }
+    poJSON = new JSONObject();
+    this.OpenTransaction(fsValue);
+    this.UpdateTransaction();
+    Master().isUploaded(true);
+    Master().setModifiedDate(poGRider.getServerDate());
+    Master().setModifyingId(poGRider.getUserID());
+    /* ── 0.  Guard bank code ─────────────────────────────────────── */
+    String bankCode = Master().Banks().getBankCode();
+    if (!"BDO".equals(bankCode)) {
+        throw new AssertionError("Unsupported bank code: " + bankCode);
+    }
 
-        File outputFile = new File("D:/ExportedData.xlsx");
-        if (!outputFile.getParentFile().exists() || !outputFile.getParentFile().canWrite()) {
-            System.err.println("❌ Cannot write to path: " + outputFile.getAbsolutePath());
+    /* ── 1.  Resolve / prepare export directory D:/ggcExports ───── */
+    File exportDir = new File("D:/ggcExports");
+    try {
+        if (!exportDir.exists() && !exportDir.mkdirs()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Cannot create export directory: " 
+                                   + exportDir.getAbsolutePath());
             return poJSON;
         }
-//
-//    // Debug print details
-//    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++){
-//        System.out.println("===============================================");
-//        System.out.println("No : " + (lnCntr + 1));
-//        System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
-//        System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
-//        System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
-//        System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
-//        System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
-//        System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
-//        System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
-//        System.out.println("===============================================");
-//    }
-
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Export");
-
-        // === Add header row ===
-        String[] header = {
-            "CC",
-            String.valueOf(Master().getEntryNumber()),
-            String.valueOf(Master().getTotalAmount()),
-            "", "", "", "", "", "", "", "", "", "", "", "", ""
-        };
-        Row headerRow = sheet.createRow(0);
-        for (int i = 0; i < header.length; i++) {
-            headerRow.createCell(i).setCellValue(header[i]);
+        if (!exportDir.canWrite()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Export directory not writable: " 
+                                   + exportDir.getAbsolutePath());
+            return poJSON;
         }
-
-        // === Collect data dynamically from Detail() ===
-        List<String[][]> allRequest = new ArrayList<>();
-        for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++) {
-            System.out.println("===============================================");
-            System.out.println("No : " + (lnCntr + 1));
-            System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getSourceNo());
-            System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
-            System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
-            System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
-            System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
-            System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
-            System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
-            System.out.println("===============================================");
-
-            // Extract values
-            String sourceNo = Detail(lnCntr).getSourceNo();
-            String transactionNo = Detail(lnCntr).DisbursementMaster().getTransactionNo();
-            String transDate = Detail(lnCntr).DisbursementMaster().getTransactionDate() != null
-                    ? Detail(lnCntr).DisbursementMaster().getTransactionDate().toString() : "";
-            String netTotal = Detail(lnCntr).DisbursementMaster().getNetTotal() != null
-                    ? Detail(lnCntr).DisbursementMaster().getNetTotal().toString() : "";
-            String checkNo = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo();
-            String checkDate = Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate() != null
-                    ? Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate().toString() : "";
-            String checkAmount = Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount() != null
-                    ? Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount().toString() : "";
-
-            // Skip if critical fields are missing
-//        if (isNullOrEmpty(sourceNo) || isNullOrEmpty(transactionNo) || isNullOrEmpty(checkNo)) {
-//            System.err.println("⚠️ Skipping detail " + lnCntr + " due to missing critical data.");
-//            continue;
-//        }
-            // Build the data rows for this detail
-            String[][] RequestDetails = {
-                {"D", "", sourceNo, "", ""},
-                {"C", "", transactionNo, "", ""},
-                {"W", "", transDate, "", ""},
-                {"V", "", netTotal, "", ""},
-                {"A", "", checkNo, "", ""},
-                {"B", "", checkDate, "", ""},
-                {"E", "", checkAmount, "", ""}
-            };
-
-            allRequest.add(RequestDetails);
-        }
-
-        // === Write data to sheet ===
-        int startRow = 1;
-        for (String[][] person : allRequest) {
-            for (int r = 0; r < person.length; r++) {
-                String[] detailRow = person[r];
-                if (isRowEmpty(detailRow)) {
-                    continue;
-                }
-                Row row = sheet.createRow(startRow++);
-                for (int col = 0; col < detailRow.length; col++) {
-                    row.createCell(col).setCellValue(detailRow[col]);
-                }
-            }
-        }
-
-        // Auto-size first 6 columns
-        for (int i = 0; i < 6; i++) {
-            sheet.autoSizeColumn(i);
-        }
-
-        // === Save Excel file ===
-        FileOutputStream fileOut = null;
-        try {
-            fileOut = new FileOutputStream(outputFile);
-            workbook.write(fileOut);
-            System.out.println("✅ Excel export completed: " + outputFile.getAbsolutePath());
-        } catch (IOException e) {
-            System.err.println("❌ Failed to write Excel file.");
-            e.printStackTrace();
-        } finally {
-            try {
-                if (fileOut != null) {
-                    fileOut.close();
-                }
-                workbook.close();
-            } catch (IOException ignored) {
-            }
-        }
-
+    } catch (SecurityException se) {
+        poJSON.put("result", "error");
+        poJSON.put("message", "No permission for export directory: " 
+                               + se.getMessage());
         return poJSON;
     }
 
-// === Helpers ===
-    private static boolean isNullOrEmpty(String value) {
-        return value == null || value.trim().isEmpty();
+    /* ── 2.  Build unique file name CheckPrintingRequest MMddyyyy[##].xlsx ─ */
+    DateTimeFormatter fmt   = DateTimeFormatter.ofPattern("MMddyyyy");
+    String baseName         = "CheckPrintingRequest_" + Master().getTransactionNo();
+    String fileName         = baseName + ".xlsx";
+    File   outputFile       = new File(exportDir, fileName);
+
+    int counter = 1;
+    while (outputFile.exists()) {
+        fileName   = baseName+ "_" + String.format("%02d", counter++) + ".xlsx";
+        outputFile = new File(exportDir, fileName);
     }
 
-    private static boolean isRowEmpty(String[] row) {
-        for (String cell : row) {
-            if (cell != null && !cell.trim().isEmpty()) {
-                return false;
+    /* ── 3.  Create workbook and sheet ───────────────────────────── */
+    Workbook workbook = new XSSFWorkbook();
+    Sheet sheet = workbook.createSheet(Master().getTransactionNo());
+
+    // Header row
+    String[] header = {
+        "CC",
+        String.valueOf(Master().getEntryNumber()),
+        String.valueOf(Master().getTotalAmount()),
+        "", "", "", "", "", "", "", "", "", "", "", "", ""
+    };
+    Row headerRow = sheet.createRow(0);
+    for (int i = 0; i < header.length; i++) {
+        headerRow.createCell(i).setCellValue(header[i]);
+    }
+
+    /* ── 4.  Collect details ─────────────────────────────────────── */
+    List<String[][]> allRequest = new ArrayList<>();
+    for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++) {
+        
+        String clientReferenceNo = "";
+        String VoucherNo = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .getVoucherNo())
+                                .map(Object::toString).orElse("");
+        String checkDate  = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .CheckPayments().getCheckDate())
+                                .map(Object::toString).orElse("");
+        String checkAmt   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .CheckPayments().getAmount())
+                                .map(Object::toString).orElse("");
+        String payeeClassification   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .CheckPayments().getPayeeType())
+                                .map(Object::toString).orElse("");
+        String payeecode   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .CheckPayments().getPayeeID())
+                                .map(Object::toString).orElse("");
+         String isCross = Detail(lnCntr)
+                    .DisbursementMaster()
+                    .CheckPayments()
+                    .isCross() ? "1" : "0";
+         
+         String payeeName   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster()
+                                              .CheckPayments().Payee().getPayeeName())
+                                .map(Object::toString).orElse("");
+        
+
+        String sourceNo   = Detail(lnCntr).getSourceNo();
+        String txnNo      = Detail(lnCntr).DisbursementMaster().getTransactionNo();
+        String transDate  = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().getTransactionDate())
+                                .map(Object::toString).orElse("");
+        String netTotal   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().getNetTotal())
+                                .map(Object::toString).orElse("");
+        String checkNo    = Detail(lnCntr).DisbursementMaster()
+                                          .CheckPayments().getCheckNo();
+        
+        String taxtPeriodFrom    = "";
+        String taxtPeriodTo    = "";
+        String payeetin    = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().Payee().Client().getTaxIdNumber())
+                                .map(Object::toString).orElse("");
+        String payeeaddress    = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().getAddress())
+                                .map(Object::toString).orElse("");
+        String payeezipcode    = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().Town().getZipCode())
+                                .map(Object::toString).orElse("");
+        String payeeForeignAddress    = "";
+        String payeeForeignZipCode    = "";
+        String PayorName    = "";
+        String payorTin    = "";
+        String payorAdress    = "";
+        String payorZIPCode   = "";
+        
+        
+        String taxCode   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementDetail().getTaxCode())
+                                .map(Object::toString).orElse("");
+        String FirstMonthQuarterIncome   = "";
+        String SecondMonthQuarterIncome   = "";
+        String SThirdMonthQuarterIncome   = "";
+        String Total   = "";
+        String TaxWithHeld   = "";
+        
+        String ReferenceNo   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().getTransactionNo())
+                                .map(Object::toString).orElse("");
+        String InvoiceDate   = "";
+        String InvoiceNo   = "";
+        String InvoiceAmount   = "";
+        String AdjustmentAmount   = "";
+        String VatAmount   = "";
+        String TaxAmount   = "";
+        String AmountPaid   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().getNetTotal())
+                                .map(Object::toString).orElse("");
+        String particulars   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementDetail().Particular().getDescription())
+                                .map(Object::toString).orElse("");
+        
+        
+        
+        String AccountTitle   = "";
+        String DebitAmount   = "";
+        String CreditAmount   = "";
+        
+        String lastName = payeeClassification.equals("0")
+                ? Optional.ofNullable(
+                        Detail(lnCntr).DisbursementMaster().CheckPayments().Payee().Client().getLastName()
+                ).map(Object::toString).orElse("")
+                : "";
+        String firstName = payeeClassification.equals("0")
+                ? Optional.ofNullable(
+                        Detail(lnCntr).DisbursementMaster().CheckPayments().Payee().Client().getFirstName()
+                ).map(Object::toString).orElse("")
+                : "";
+        String middleName = payeeClassification.equals("0")
+                ? Optional.ofNullable(
+                        Detail(lnCntr).DisbursementMaster().CheckPayments().Payee().Client().getMiddleName()
+                ).map(Object::toString).orElse("")
+                : "";
+        String disbursementMode   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().CheckPayments().getDesbursementMode())
+                                .map(Object::toString).orElse("");
+        String releasingBranch   = "";
+        String claimant   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().CheckPayments().getClaimant())
+                                .map(Object::toString).orElse("");
+        String authorizedRepresentative   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementMaster().CheckPayments().getAuthorize())
+                                .map(Object::toString).orElse("");
+
+        String[][] req = {
+            {"D", clientReferenceNo, VoucherNo, checkDate, checkAmt, payeeClassification, payeecode, isCross, payeeName,firstName,middleName,lastName,disbursementMode,releasingBranch,claimant,authorizedRepresentative,particulars},
+            {"C", taxtPeriodFrom, taxtPeriodTo, payeeName, payeetin, payeeaddress, payeezipcode, payeeForeignAddress, payeeForeignZipCode, PayorName, payorTin, payorAdress, payorZIPCode},
+            {"W", taxCode, FirstMonthQuarterIncome, SecondMonthQuarterIncome, SThirdMonthQuarterIncome, Total, TaxWithHeld},
+            {"V", ReferenceNo, InvoiceDate,  InvoiceNo, InvoiceAmount,AdjustmentAmount,VatAmount,TaxAmount,AmountPaid,particulars},
+            {"A", ReferenceNo, AccountTitle,   DebitAmount, CreditAmount}
+        };
+        allRequest.add(req);
+    }
+
+    /* ── 5.  Write rows to sheet ─────────────────────────────────── */
+    int rowIdx = 1;
+    for (String[][] detail : allRequest) {
+        for (String[] line : detail) {
+            if (isRowEmpty(line)) continue;
+            Row r = sheet.createRow(rowIdx++);
+            for (int c = 0; c < line.length; c++) {
+                r.createCell(c).setCellValue(line[c]);
             }
         }
-        return true;
     }
+    for (int i = 0; i < 6; i++) sheet.autoSizeColumn(i);
+
+    /* ── 6.  Save workbook ───────────────────────────────────────── */
+    try (FileOutputStream out = new FileOutputStream(outputFile)) {
+        workbook.write(out);
+        this.SaveTransaction();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Excel export completed: " 
+                               + outputFile.getAbsolutePath());
+    } catch (IOException ioEx) {
+        poJSON.put("result", "error");
+        poJSON.put("message", "Failed to write Excel file: " 
+                               + ioEx.getMessage());
+    } finally {
+        try { workbook.close(); } catch (IOException ignored) { }
+    }
+
+    return poJSON;
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────── */
+private static boolean isRowEmpty(String[] row) {
+    for (String cell : row) {
+        if (cell != null && !cell.trim().isEmpty()) return false;
+    }
+    return true;
+}
 
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).CheckPrintingRequestMaster();
@@ -960,6 +1058,18 @@ public class CheckPrintingRequest extends Transaction {
     public void resetOthers() {
         paCheckPayment = new ArrayList<>();
         poCheckPayments = new ArrayList<>();
+    }
+    
+    public JSONObject computeFields() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        double lnTotalCheckAmount= 0.0000;
+        for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+            lnTotalCheckAmount += Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount();
+        }
+        Master().setTotalAmount(lnTotalCheckAmount);
+        poJSON.put("result", "success");
+        poJSON.put("message", "computed successfully");
+        return poJSON;
     }
 
 }

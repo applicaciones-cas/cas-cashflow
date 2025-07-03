@@ -14,6 +14,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Maste
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
@@ -384,6 +386,40 @@ public class CashflowModels {
         return poCheckPrintingDetail;
     }
     
+    public Model_Document_Mapping DocumentMapingMaster(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.DocumentMapingMaster: Application driver is not set.");
+            return null;
+        }
+        
+        if (poDocumentMappingMaster == null){
+            poDocumentMappingMaster = new Model_Document_Mapping();
+            poDocumentMappingMaster.setApplicationDriver(poGRider);
+            poDocumentMappingMaster.setXML("Model_Document_Mapping");
+            poDocumentMappingMaster.setTableName("Document_Mapping");
+            poDocumentMappingMaster.initialize();
+        }
+
+        return poDocumentMappingMaster;
+    }
+
+    public Model_Document_Mapping_Detail DocumentMapingDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.DocumentMapingDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poDocumentMappingDetail == null){
+            poDocumentMappingDetail = new Model_Document_Mapping_Detail();
+            poDocumentMappingDetail.setApplicationDriver(poGRider);
+            poDocumentMappingDetail.setXML("Model_Document_Mapping_Detail");
+            poDocumentMappingDetail.setTableName("Document_Mapping_Detail");
+            poDocumentMappingDetail.initialize();
+        }
+
+        return poDocumentMappingDetail;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -398,6 +434,8 @@ public class CashflowModels {
             poJournalDetail = null;
             poCheckPrintingMaster = null;
             poCheckPrintingDetail = null;
+            poDocumentMappingMaster = null;
+            poDocumentMappingDetail = null;
 
             poGRider = null;
         } finally {
@@ -428,4 +466,6 @@ public class CashflowModels {
     private Model_AP_Payment_Adjustment poAPPaymentAdjustment;    
     private Model_Check_Printing_Request_Master poCheckPrintingMaster;    
     private Model_Check_Printing_Request_Detail poCheckPrintingDetail;
+    private Model_Document_Mapping poDocumentMappingMaster;    
+    private Model_Document_Mapping_Detail poDocumentMappingDetail;
 }

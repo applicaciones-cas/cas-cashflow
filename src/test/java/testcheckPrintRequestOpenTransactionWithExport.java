@@ -1,5 +1,7 @@
 
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -39,7 +41,8 @@ public class testcheckPrintRequestOpenTransactionWithExport {
                 Assert.fail();
             }
 
-//            loJSON = poCheckPrintRequest.CheckPrintingRequest().OpenTransaction("M00125000010");
+            try {
+                //            loJSON = poCheckPrintRequest.CheckPrintingRequest().OpenTransaction("M00125000010");
 //            if (!"success".equals((String) loJSON.get("result"))) {
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
@@ -60,7 +63,10 @@ public class testcheckPrintRequestOpenTransactionWithExport {
 //                    System.out.println("");
 //                 }
 //            }
-            loJSON = poCheckPrintRequest.CheckPrintingRequest().ExportTransaction("M00125000010");
+loJSON = poCheckPrintRequest.CheckPrintingRequest().ExportTransaction("M00125000010");
+            } catch (CloneNotSupportedException ex) {
+                Logger.getLogger(testcheckPrintRequestOpenTransactionWithExport.class.getName()).log(Level.SEVERE, null, ex);
+            }
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();

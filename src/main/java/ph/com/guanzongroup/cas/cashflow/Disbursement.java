@@ -1497,7 +1497,7 @@ public class Disbursement extends Transaction {
         initSQL();
         String lsFilterCondition = String.join(" AND ",
                 " a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.VERIFIED),
-                " a.sIndstCdx = " + Master().getIndustryID(),
+                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " a.sCompnyID  = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " i.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " j.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
