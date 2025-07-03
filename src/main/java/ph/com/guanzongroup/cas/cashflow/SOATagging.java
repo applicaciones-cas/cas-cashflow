@@ -1244,7 +1244,7 @@ public class SOATagging extends Transaction {
         double ldblBalance = 0.0000;
         switch (Detail(row).getSourceCode()) {
             case SOATaggingStatic.PaymentRequest:
-                ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal().doubleValue()
+                ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo()));
                 if (ldblBalance < 0) {
