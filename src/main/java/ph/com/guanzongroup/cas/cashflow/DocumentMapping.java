@@ -32,7 +32,7 @@ import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStaticData;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.PaymentRequestValidator;
 
-public class PaymentRequest extends Transaction {
+public class DocumentMapping extends Transaction {
 
     List<TransactionAttachment> paAttachments;
     List<Model_Recurring_Issuance> paRecurring;
@@ -43,13 +43,11 @@ public class PaymentRequest extends Transaction {
     private boolean pbApproval = false;
 
     public JSONObject InitTransaction() {
-        SOURCE_CODE = "PRF";
+        SOURCE_CODE = "DcMap";
 
-        poMaster = new CashflowModels(poGRider).PaymentRequestMaster();
-        poDetail = new CashflowModels(poGRider).PaymentRequestDetail();
+        poMaster = new CashflowModels(poGRider).DocumentMapingMaster();
+        poDetail = new CashflowModels(poGRider).DocumentMapingDetail();
         paDetail = new ArrayList<>();
-        paAttachments = new ArrayList<>();
-        poRecurringIssuances = new ArrayList<>();
 
         return initialize();
     }
@@ -563,91 +561,91 @@ public class PaymentRequest extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-           double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
+            double amount = (double) item.getValue("nAmountxx");
 
             if (amount <= 0) {
                 detail.remove(); // Correctly remove the item
             }
         }
 
-        if (PaymentRequestStatus.RETURNED.equals(Master().getTransactionStatus())) {
-            PaymentRequest loRecord = new CashflowControllers(poGRider, null).PaymentRequest();
-            loRecord.InitTransaction();
-            loRecord.OpenTransaction(Master().getTransactionNo());
-
-            lbUpdated = loRecord.getDetailCount() == getDetailCount();
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getPayeeID().equals(Master().getPayeeID());
-            }
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
-            }
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getTranTotal() == Master().getTranTotal();
-            }
-            if (lbUpdated) {
-                for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
-                    lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
-                    if (lbUpdated) {
-                        lbUpdated = loRecord.Detail(lnCtr).getAmount() == Detail(lnCtr).getAmount();
-                    }
-                    //FOR FUTURE
+//        if (PaymentRequestStatus.RETURNED.equals(Master().getTransactionStatus())) {
+//            DocumentMapping loRecord = new CashflowControllers(poGRider, null).PaymentRequest();
+//            loRecord.InitTransaction();
+//            loRecord.OpenTransaction(Master().getTransactionNo());
+//
+//            lbUpdated = loRecord.getDetailCount() == getDetailCount();
+//            if (lbUpdated) {
+//                lbUpdated = loRecord.Master().getPayeeID().equals(Master().getPayeeID());
+//            }
+//            if (lbUpdated) {
+//                lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
+//            }
+//            if (lbUpdated) {
+//                lbUpdated = loRecord.Master().getTranTotal() == Master().getTranTotal();
+//            }
+//            if (lbUpdated) {
+//                for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
+//                    lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
 //                    if (lbUpdated) {
-//                        lbUpdated = loRecord.Detail(lnCtr).getAddDiscount().doubleValue() == Detail(lnCtr).getAddDiscount().doubleValue();
+//                        lbUpdated = loRecord.Detail(lnCtr).getAmount() == Detail(lnCtr).getAmount();
 //                    }
-                    if (!lbUpdated) {
-                        break;
-                    }
-                }
-            }
-
-            if (lbUpdated) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "No update has been made.");
-                return poJSON;
-            }
-
-            Master().setTransactionStatus(PaymentRequestStatus.OPEN); //If edited update trasaction status into open
-        }
-
-        //assign other info on detail
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
-            Detail(lnCtr).setEntryNo(lnCtr + 1);
-        }
-
-        if (getDetailCount() == 1) {
-            //do not allow a single item detail with no quantity order
-            if (Detail(0).getAmount() == 0.00) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Particular has 0 amount.");
-                return poJSON;
-            }
-        }
-
-        //attachement checker
-        if (getTransactionAttachmentCount() > 0) {
-            Iterator<TransactionAttachment> attachment = TransactionAttachmentList().iterator();
-            while (attachment.hasNext()) {
-                TransactionAttachment item = attachment.next();
-
-                if ((String) item.getModel().getFileName() == null || "".equals(item.getModel().getFileName())) {
-                    attachment.remove();
-                }
-            }
-        }
-        //Set Transaction Attachments
-        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
-            TransactionAttachmentList(lnCtr).getModel().setSourceCode(SOURCE_CODE);
-            TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
-        }
-
-        if (PaymentRequestStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-//            poJSON = setValueToOthers(Master().getTransactionStatus());
-            if (!"success".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-        }
+//                    //FOR FUTURE
+////                    if (lbUpdated) {
+////                        lbUpdated = loRecord.Detail(lnCtr).getAddDiscount().doubleValue() == Detail(lnCtr).getAddDiscount().doubleValue();
+////                    }
+//                    if (!lbUpdated) {
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            if (lbUpdated) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No update has been made.");
+//                return poJSON;
+//            }
+//
+//            Master().setTransactionStatus(PaymentRequestStatus.OPEN); //If edited update trasaction status into open
+//        }
+//
+//        //assign other info on detail
+//        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+//            Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
+//            Detail(lnCtr).setEntryNo(lnCtr + 1);
+//        }
+//
+//        if (getDetailCount() == 1) {
+//            //do not allow a single item detail with no quantity order
+//            if (Detail(0).getAmount() == 0.00) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Particular has 0 amount.");
+//                return poJSON;
+//            }
+//        }
+//
+//        //attachement checker
+//        if (getTransactionAttachmentCount() > 0) {
+//            Iterator<TransactionAttachment> attachment = TransactionAttachmentList().iterator();
+//            while (attachment.hasNext()) {
+//                TransactionAttachment item = attachment.next();
+//
+//                if ((String) item.getModel().getFileName() == null || "".equals(item.getModel().getFileName())) {
+//                    attachment.remove();
+//                }
+//            }
+//        }
+//        //Set Transaction Attachments
+//        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
+//            TransactionAttachmentList(lnCtr).getModel().setSourceCode(SOURCE_CODE);
+//            TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+//        }
+//
+//        if (PaymentRequestStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+////            poJSON = setValueToOthers(Master().getTransactionStatus());
+//            if (!"success".equals((String) poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//        }
 
         poJSON.put("result", "success");
         return poJSON;
@@ -681,7 +679,7 @@ public class PaymentRequest extends Transaction {
 //                return poJSON;
 //            }
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
-            Logger.getLogger(PaymentRequest.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(DocumentMapping.class.getName()).log(Level.SEVERE, null, ex);
         }
 
         poJSON.put("result", "success");

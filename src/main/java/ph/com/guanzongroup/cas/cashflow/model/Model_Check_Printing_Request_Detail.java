@@ -20,6 +20,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
  */
 public class Model_Check_Printing_Request_Detail extends Model {
     Model_Disbursement_Master poDVMaster;
+    Model_Disbursement_Detail poDVDetail;
 
 
     @Override
@@ -35,7 +36,7 @@ public class Model_Check_Printing_Request_Detail extends Model {
 //            poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 //            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 //            poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
-            poEntity.updateString("cTranStat", CheckStatus.OPEN);
+              poEntity.updateObject("cTranStat", CheckStatus.OPEN);
 //            poEntity.updateObject("sBranchCd", poGRider.getBranchCode());
 
             poEntity.insertRow();
@@ -48,7 +49,7 @@ public class Model_Check_Printing_Request_Detail extends Model {
             
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poDVMaster = cashFlow.DisbursementMaster();
-
+            poDVDetail = cashFlow.DisbursementDetail();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
@@ -114,8 +115,8 @@ public class Model_Check_Printing_Request_Detail extends Model {
     }
 
     @Override
-    public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+    public String getNextCode(){
+        return ""; 
     }
 
     public Model_Disbursement_Master DisbursementMaster() throws SQLException, GuanzonException {
@@ -136,6 +137,27 @@ public class Model_Check_Printing_Request_Detail extends Model {
         } else {
             poDVMaster.initialize();
             return poDVMaster;
+        }
+    }
+    
+    public Model_Disbursement_Detail DisbursementDetail() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poDVDetail.getEditMode() == EditMode.READY
+                    && poDVDetail.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poDVDetail;
+            } else {
+                poJSON = poDVDetail.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poDVDetail;
+                } else {
+                    poDVDetail.initialize();
+                    return poDVDetail;
+                }
+            }
+        } else {
+            poDVDetail.initialize();
+            return poDVDetail;
         }
     }
 
