@@ -39,6 +39,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiConsumer;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -72,6 +73,7 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.swing.JRViewer;
 import net.sf.jasperreports.swing.JRViewerToolbar;
 import net.sf.jasperreports.view.JasperViewer;
+import org.apache.commons.lang3.function.TriConsumer;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.constant.UserRight;
@@ -728,6 +730,8 @@ public class CheckPrinting extends Transaction {
                         checkPaymentTransactionNo = checkPayments.getTransactionNoOfCheckPayment(transactionNo, Master().CheckPayments().getSourceCode());
                         checkPayments.openRecord(checkPaymentTransactionNo);
                         checkPayments.updateRecord();
+                        checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                        checkPayments.getModel().setModifyingId(poGRider.getUserID());
                         System.out.println("SETCHECK EDIT MODE : " + checkPayments.getEditMode());
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
@@ -976,39 +980,87 @@ public class CheckPrinting extends Transaction {
      * Builds a voucher as a vector node hierarchy – no Canvas, no signature
      * box.
      */
-    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
-        Pane root = new Pane();
-        root.setPrefSize(widthPts, heightPts);
+    /**
+ * Builds the voucher layout.  Each text node is placed by
+ * (row, col) where
+ *   row = line number   (0‑based)            →  Y = TOP + row * LINE_HEIGHT
+ *   col = character column (0‑based)         →  X = col * CHAR_WIDTH
+ */
+private Node buildVoucherNode(Transaction tx,
+                              double widthPts,
+                              double heightPts) {
 
-        // Font and spacing setup
-        Font mono12 = Font.font("Arial Narrow", 11);
-        double y = 20;
-        double lh = 18;
-        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+    /* layout constants */
+    final double TOP_MARGIN  = 21;
+    final double LINE_HEIGHT = 18;
+    final double CHAR_WIDTH  = 7;
+    final Font   FONT_MONO_11 = Font.font("Arial Narrow", 11);
 
-        // Function to calculate X based on character column
-        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+    Pane root = new Pane();
+    root.setPrefSize(widthPts, heightPts);
 
-        // --- Row 1: checkdate aligned at column 40
-        Text checkDate = new Text(col.apply(70), y, tx.checkDate);
-        checkDate.setFont(mono12);
-        y += lh * 2;
+    /* helper that drops a piece of text at (row, col) — now accepts doubles */
+    TriConsumer<Double, Double, String> add = (row, col, value) -> {
+        double x = col * CHAR_WIDTH;
+        double y = TOP_MARGIN + row * LINE_HEIGHT;
+        Text t = new Text(x, y, value == null ? "" : value);
+        t.setFont(FONT_MONO_11);
+        root.getChildren().add(t);
+    };
 
-        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
-        Text payeeName = new Text(col.apply(20), y, "*** " + tx.payeeName.toUpperCase() + " ***");
-        payeeName.setFont(mono12);
+    // Format check date: "07032025" => "07 03 2025" => " 0 7   0 3   2 0 2 5"
+    String rawDate = tx.checkDate.replace("-", "");  // e.g., "07032025"
+    String formattedDate = rawDate
+            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")  // "07 03 2025"
+            .replaceAll("", "   ")                           // adds space between every char
+            .trim();
 
-        Text checkAmt = new Text(col.apply(70), y, "₱" + CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
-        checkAmt.setFont(mono12);
-        y += lh;
+    /* place each field */
+    add.accept(0.75, 61.1, formattedDate);  // Row 1, Column 60
+    add.accept(2.25, 15.0, tx.payeeName.toUpperCase());
+    add.accept(2.10, 60.0,
+        CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
+    add.accept(3.25, 10.0,
+        NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)));
 
-        // --- Row 3: amount in words centered at column 8
-        Text amtWords = new Text(col.apply(8), y, "=== " + NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) + " ==="); // e.g., "ONE MILLION PESOS"
-        amtWords.setFont(mono12);
+    return root;
+}
 
-        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
-        return root;
-    }
+
+
+//    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
+//        Pane root = new Pane();
+//        root.setPrefSize(widthPts, heightPts);
+//
+//        // Font and spacing setup
+//        Font mono12 = Font.font("Arial Narrow", 11);
+//        double y = 20;
+//        double lh = 18;
+//        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+//
+//        // Function to calculate X based on character column
+//        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+//
+//        // --- Row 1: checkdate aligned at column 40
+//        Text checkDate = new Text(col.apply(60), y, tx.checkDate);
+//        checkDate.setFont(mono12);
+//        y += lh * 2;
+//
+//        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
+//        Text payeeName = new Text(col.apply(10), y,  tx.payeeName.toUpperCase() );
+//        payeeName.setFont(mono12);
+//
+//        Text checkAmt = new Text(col.apply(60), y,  CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
+//        checkAmt.setFont(mono12);
+//        y += lh;
+//
+//        // --- Row 3: amount in words centered at column 8
+//        Text amtWords = new Text(col.apply(10), y,  NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) ); // e.g., "ONE MILLION PESOS"
+//        amtWords.setFont(mono12);
+//
+//        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
+//        return root;
+//    }
 
 // Transaction data class for holding the transaction info
     private static class Transaction {

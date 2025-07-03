@@ -989,69 +989,6 @@ public class CheckPrintingRequest extends Transaction {
                                 Detail(lnCntr).DisbursementMaster()
                                               .CheckPayments().Payee().getPayeeName())
                                 .map(Object::toString).orElse("");
-        
-
-        String sourceNo   = Detail(lnCntr).getSourceNo();
-        String txnNo      = Detail(lnCntr).DisbursementMaster().getTransactionNo();
-        String transDate  = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().getTransactionDate())
-                                .map(Object::toString).orElse("");
-        String netTotal   = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().getNetTotal())
-                                .map(Object::toString).orElse("");
-        String checkNo    = Detail(lnCntr).DisbursementMaster()
-                                          .CheckPayments().getCheckNo();
-        
-        String taxtPeriodFrom    = "";
-        String taxtPeriodTo    = "";
-        String payeetin    = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().Payee().Client().getTaxIdNumber())
-                                .map(Object::toString).orElse("");
-        String payeeaddress    = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().getAddress())
-                                .map(Object::toString).orElse("");
-        String payeezipcode    = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().Town().getZipCode())
-                                .map(Object::toString).orElse("");
-        String payeeForeignAddress    = "";
-        String payeeForeignZipCode    = "";
-        String PayorName    = "";
-        String payorTin    = "";
-        String payorAdress    = "";
-        String payorZIPCode   = "";
-        
-        
-        String taxCode   = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementDetail().getTaxCode())
-                                .map(Object::toString).orElse("");
-        String FirstMonthQuarterIncome   = "";
-        String SecondMonthQuarterIncome   = "";
-        String SThirdMonthQuarterIncome   = "";
-        String Total   = "";
-        String TaxWithHeld   = "";
-        
-        String ReferenceNo   = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().getTransactionNo())
-                                .map(Object::toString).orElse("");
-        String InvoiceDate   = "";
-        String InvoiceNo   = "";
-        String InvoiceAmount   = "";
-        String AdjustmentAmount   = "";
-        String VatAmount   = "";
-        String TaxAmount   = "";
-        String AmountPaid   = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementMaster().getNetTotal())
-                                .map(Object::toString).orElse("");
-        String particulars   = Optional.ofNullable(
-                                Detail(lnCntr).DisbursementDetail().Particular().getDescription())
-                                .map(Object::toString).orElse("");
-        
-        
-        
-        String AccountTitle   = "";
-        String DebitAmount   = "";
-        String CreditAmount   = "";
-        
         String lastName = payeeClassification.equals("0")
                 ? Optional.ofNullable(
                         Detail(lnCntr).DisbursementMaster().CheckPayments().Payee().Client().getLastName()
@@ -1076,14 +1013,69 @@ public class CheckPrintingRequest extends Transaction {
                                 .map(Object::toString).orElse("");
         String authorizedRepresentative   = Optional.ofNullable(
                                 Detail(lnCntr).DisbursementMaster().CheckPayments().getAuthorize())
+                                .map(Object::toString).orElse(""); 
+        String particulars   = Optional.ofNullable(
+                                Detail(lnCntr).DisbursementDetail().Particular().getDescription())
                                 .map(Object::toString).orElse("");
+        
+//         
+//         
+//        
+//        String taxtPeriodFrom    = "";
+//        String taxtPeriodTo    = "";
+//        String payeetin    = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementMaster().Payee().Client().getTaxIdNumber())
+//                                .map(Object::toString).orElse("");
+//        String payeeaddress    = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().getAddress())
+//                                .map(Object::toString).orElse("");
+//        String payeezipcode    = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementMaster().Payee().ClientAddress().Town().getZipCode())
+//                                .map(Object::toString).orElse("");
+//        String payeeForeignAddress    = "";
+//        String payeeForeignZipCode    = "";
+//        String PayorName    = "";
+//        String payorTin    = "";
+//        String payorAdress    = "";
+//        String payorZIPCode   = "";
+//        
+//        
+//        String taxCode   = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementDetail().getTaxCode())
+//                                .map(Object::toString).orElse("");
+//        String FirstMonthQuarterIncome   = "";
+//        String SecondMonthQuarterIncome   = "";
+//        String SThirdMonthQuarterIncome   = "";
+//        String Total   = "";
+//        String TaxWithHeld   = "";
+//        
+//        String ReferenceNo   = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementMaster().getTransactionNo())
+//                                .map(Object::toString).orElse("");
+//        String InvoiceDate   = "";
+//        String InvoiceNo   = "";
+//        String InvoiceAmount   = "";
+//        String AdjustmentAmount   = "";
+//        String VatAmount   = "";
+//        String TaxAmount   = "";
+//        String AmountPaid   = Optional.ofNullable(
+//                                Detail(lnCntr).DisbursementMaster().getNetTotal())
+//                                .map(Object::toString).orElse("");
+//       
+//        
+//        
+//        String AccountTitle   = "";
+//        String DebitAmount   = "";
+//        String CreditAmount   = "";
+//        
+        
 
         String[][] req = {
             {"D", clientReferenceNo, VoucherNo, checkDate, checkAmt, payeeClassification, payeecode, isCross, payeeName,firstName,middleName,lastName,disbursementMode,releasingBranch,claimant,authorizedRepresentative,particulars},
-            {"C", taxtPeriodFrom, taxtPeriodTo, payeeName, payeetin, payeeaddress, payeezipcode, payeeForeignAddress, payeeForeignZipCode, PayorName, payorTin, payorAdress, payorZIPCode},
-            {"W", taxCode, FirstMonthQuarterIncome, SecondMonthQuarterIncome, SThirdMonthQuarterIncome, Total, TaxWithHeld},
-            {"V", ReferenceNo, InvoiceDate,  InvoiceNo, InvoiceAmount,AdjustmentAmount,VatAmount,TaxAmount,AmountPaid,particulars},
-            {"A", ReferenceNo, AccountTitle,   DebitAmount, CreditAmount}
+//            {"C", taxtPeriodFrom, taxtPeriodTo, payeeName, payeetin, payeeaddress, payeezipcode, payeeForeignAddress, payeeForeignZipCode, PayorName, payorTin, payorAdress, payorZIPCode},
+//            {"W", taxCode, FirstMonthQuarterIncome, SecondMonthQuarterIncome, SThirdMonthQuarterIncome, Total, TaxWithHeld},
+//            {"V", ReferenceNo, InvoiceDate,  InvoiceNo, InvoiceAmount,AdjustmentAmount,VatAmount,TaxAmount,AmountPaid,particulars},
+//            {"A", ReferenceNo, AccountTitle,   DebitAmount, CreditAmount}
         };
         allRequest.add(req);
     }
