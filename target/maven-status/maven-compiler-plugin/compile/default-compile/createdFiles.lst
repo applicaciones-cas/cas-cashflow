@@ -37,7 +37,6 @@ ph\com\guanzongroup\cas\cashflow\APPaymentAdjustment.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request_Master.class
 ph\com\guanzongroup\cas\cashflow\status\CheckStatus$DefaultValues.class
 ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Master.class
-ph\com\guanzongroup\cas\cashflow\SOATagging.class
 ph\com\guanzongroup\cas\cashflow\BankAccountTrans.class
 ph\com\guanzongroup\cas\cashflow\validator\DisbursementValidator.class
 ph\com\guanzongroup\cas\cashflow\CheckPrinting$CustomJasperViewer$2$1.class
