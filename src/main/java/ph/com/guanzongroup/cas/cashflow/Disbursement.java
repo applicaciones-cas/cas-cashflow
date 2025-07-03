@@ -1666,29 +1666,57 @@ public class Disbursement extends Transaction {
 
     public JSONObject computeFields() {
         poJSON = new JSONObject();
-        double lnTotalVatSales = 0.0000;
-        double lnTotalVatRates = 0.00;
-        double lnTotalVatAmount = 0.0000;
-        double lnTotalVatZeroRatedSales = 0.0000;
-        double lnTotalVatExemptSales = 0.0000;
-        double lnTotalPurchaseAmount = 0.0000;
-        double lnLessWithHoldingTax = 0.0000;
+
+        double lnTotalVatSales = 0.0000;         // Vatable Sales
+        double VAT_RATE = 0.12;                  // 12% VAT
+        double lnTotalVatAmount = 0.0000;        // VAT Amount
+        double lnTotalPurchaseAmount = 0.0000;   // Gross Purchased Amount
+        double lnLessWithHoldingTax = 0.0000;    // Withholding Tax
+        double lnTotalVatExemptSales = 0.0000;   // VAT EXEMPT
+
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-            lnTotalPurchaseAmount += Detail(lnCntr).getAmount();
-            lnTotalVatAmount += (Detail(lnCntr).getAmount() * (Detail(lnCntr).getTaxRates() / 100));
+            double detailAmount = Detail(lnCntr).getAmount();
+            double detailTaxRate = Detail(lnCntr).getTaxRates();
+
+            lnTotalPurchaseAmount += detailAmount;
+
+            // Withholding Tax Computation
+            lnLessWithHoldingTax += detailAmount * (detailTaxRate / 100);
+
+            if (Detail(lnCntr).isWithVat()) {
+                double lnVatableSales = detailAmount / (1 + VAT_RATE);
+                double lnVatAmount = detailAmount - lnVatableSales;
+
+                Master().setVATRates(VAT_RATE * 100);
+
+                lnTotalVatSales += lnVatableSales;
+                lnTotalVatAmount += lnVatAmount;
+            } else {
+                lnTotalVatExemptSales += detailAmount;
+            }
         }
-        if (lnTotalPurchaseAmount - lnTotalVatAmount < 0.0000) {
+
+        double lnNetAmountDue = lnTotalPurchaseAmount - lnLessWithHoldingTax;
+
+        if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Net Total Amount.");
             return poJSON;
         }
 
+        // Save Computed Values
         Master().setTransactionTotal(lnTotalPurchaseAmount);
-        Master().setWithTaxTotal(lnTotalVatAmount);
-        Master().setNetTotal(lnTotalPurchaseAmount - lnTotalVatAmount);
+        Master().setVATSale(lnTotalVatSales);
+        Master().setVATAmount(lnTotalVatAmount);
+        Master().setVATExmpt(lnTotalVatExemptSales);
+        Master().setZeroVATSales(0.00);
+        Master().setWithTaxTotal(lnLessWithHoldingTax);
+        Master().setNetTotal(lnNetAmountDue);
+
         if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
             checkPayments.getModel().setAmount(Master().getNetTotal());
         }
+
         poJSON.put("result", "success");
         poJSON.put("message", "computed successfully");
         return poJSON;

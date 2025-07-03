@@ -193,13 +193,14 @@ public class Model_Disbursement_Master extends Model {
         return setValue("nNonVATSl", nonVATSale);
     }
 
-//    public double getNonVATSale(){
-//        return (double) getValue("nNonVATSl");
-//    }
-//
-//    public JSONObject setVATSale(double VATSale){
-//        return setValue("nVATSales", VATSale);
-//    }
+    public double getNonVATSale() {
+        return Double.parseDouble(String.valueOf(getValue("nNonVATSl")));
+    }
+
+    public JSONObject setVATSale(double VATSale) {
+        return setValue("nVATSales", VATSale);
+    }
+
     public double getVATSale() {
         return Double.parseDouble(String.valueOf(getValue("nVATSales")));
     }
@@ -209,7 +210,7 @@ public class Model_Disbursement_Master extends Model {
     }
 
     public double getVATRates() {
-        return Double.parseDouble(String.valueOf( getValue("nVATRatex")));
+        return Double.parseDouble(String.valueOf(getValue("nVATRatex")));
     }
 
     public JSONObject setVATAmount(double vatAmount) {
