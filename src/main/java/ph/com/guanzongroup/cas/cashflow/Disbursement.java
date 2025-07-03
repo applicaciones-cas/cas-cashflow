@@ -8,8 +8,10 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.script.ScriptException;
@@ -986,6 +988,11 @@ public class Disbursement extends Transaction {
             }
         }
 
+        poJSON = validateTaxAmountIfSOAAndCachePayable();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
@@ -994,6 +1001,103 @@ public class Disbursement extends Transaction {
         if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
             poJSON = validateJournal();
             if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validateTaxAmountIfSOAAndCachePayable() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+        poJSON = loCachePayable.InitTransaction();
+        if (!"success".equals(poJSON.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No records found for Cache Payable.");
+            return poJSON;
+        }
+
+        SOATagging loApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
+        poJSON = loApPayments.InitTransaction();
+        if (!"success".equals(poJSON.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No records found for SOA Tagging.");
+            return poJSON;
+        }
+        Set<String> uniqueCashPayableNos = new HashSet<>();
+        Set<String> uniqueAccountsPayableNos = new HashSet<>();
+
+        for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+            String lsDetailSourceCd = Detail(lnCntr).getSourceCode();
+            String lsDetailSourceNo = Detail(lnCntr).getSourceNo();
+
+            if (DisbursementStatic.SourceCode.CASH_PAYABLE.equals(lsDetailSourceCd)) {
+                uniqueCashPayableNos.add(lsDetailSourceNo);
+            } else if (DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(lsDetailSourceCd)) {
+                uniqueAccountsPayableNos.add(lsDetailSourceNo);
+            }
+        }
+
+        for (String sourceItemCashPayableNo : uniqueCashPayableNos) {
+            poJSON = loCachePayable.OpenTransaction(sourceItemCashPayableNo);
+            if (!"success".equals(poJSON.get("result"))) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No records found for Cache Payable reference no.: " + sourceItemCashPayableNo);
+                return poJSON;
+            }
+
+            double lnTotalCacheWithholdingTax = 0.00;
+
+            // Sum withholding tax for this Cache Payable reference
+            for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+                String lnDetailCacheSourceNo = Detail(lnCntr).getSourceNo();
+                String lnDetailCacheourceCd = Detail(lnCntr).getSourceCode();
+
+                if (sourceItemCashPayableNo.equals(lnDetailCacheSourceNo) && DisbursementStatic.SourceCode.CASH_PAYABLE.equals(lnDetailCacheourceCd)) {
+                    double detailAmount = Detail(lnCntr).getAmount();
+                    double taxRate = Detail(lnCntr).getTaxRates();
+                    lnTotalCacheWithholdingTax += detailAmount * (taxRate / 100);
+                }
+            }
+
+            double lnCacheMasterWithholdingTax = loCachePayable.Master().getTaxAmount();
+
+            if (Math.abs(lnTotalCacheWithholdingTax - lnCacheMasterWithholdingTax) > 0.01) { // Allow small rounding differences
+                poJSON.put("result", "error");
+                poJSON.put("message", "Withholding Tax does not match Cache Payable Tax Amount. Reference No.: " + sourceItemCashPayableNo);
+                return poJSON;
+            }
+        }
+
+        for (String sourceItemPayablesNo : uniqueAccountsPayableNos) {
+            poJSON = loApPayments.OpenTransaction(sourceItemPayablesNo);
+            if (!"success".equals(poJSON.get("result"))) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No records found for SOA Tagging reference no.: " + sourceItemPayablesNo);
+                return poJSON;
+            }
+
+            double lnTotalSOAWithholdingTax = 0.00;
+
+            // Sum withholding tax for this SOA Tagging reference
+            for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+                String lsDetailSOASourceNo = Detail(lnCntr).getSourceNo();
+                String lsDetailSOASourceCd = Detail(lnCntr).getSourceCode();
+
+                if (sourceItemPayablesNo.equals(lsDetailSOASourceNo) && DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(lsDetailSOASourceCd)) {
+                    double lnDetailSOAAmount = Detail(lnCntr).getAmount();
+                    double lnTaxSOARate = Detail(lnCntr).getTaxRates();
+                    lnTotalSOAWithholdingTax += lnDetailSOAAmount * (lnTaxSOARate / 100);
+                }
+            }
+
+            double lnSOAMasterWithholdingTax = loApPayments.Master().getTaxAmount().doubleValue();
+
+            if (Math.abs(lnTotalSOAWithholdingTax - lnSOAMasterWithholdingTax) > 0.01) { // Allow small rounding differences
+                poJSON.put("result", "error");
+                poJSON.put("message", "Withholding Tax does not match SOA Tagging Tax Amount. Reference No.: " + sourceItemPayablesNo);
                 return poJSON;
             }
         }
@@ -1250,9 +1354,8 @@ public class Disbursement extends Transaction {
     public JSONObject addUnifiedPaymentToDisbursement(String transactionNo, String paymentType)
             throws CloneNotSupportedException, SQLException, GuanzonException {
 
-        JSONObject poJSON = new JSONObject();
+        poJSON = new JSONObject();
         int insertedCount = 0;
-
         int detailCount = 0;
         String referNo, sourceCode, particular, invType = "";
         double amount;
@@ -1260,30 +1363,30 @@ public class Disbursement extends Transaction {
 
         switch (paymentType) {
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST: {
-                PaymentRequest poPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
+                PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
 
-                poJSON = poPaymentRequest.InitTransaction();
+                poJSON = loPaymentRequest.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poPaymentRequest.OpenTransaction(transactionNo);
+                poJSON = loPaymentRequest.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poPaymentRequest.getDetailCount();
+                detailCount = loPaymentRequest.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poPaymentRequest.Detail(i).getTransactionNo();
+                    referNo = loPaymentRequest.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
-                    particular = poPaymentRequest.Detail(i).getParticularID();
-                    amount = poPaymentRequest.Detail(i).getAmount();
+                    particular = loPaymentRequest.Detail(i).getParticularID();
+                    amount = loPaymentRequest.Detail(i).getAmount();
                     invType = "";
-                    isVatable = poPaymentRequest.Detail(i).getVatable().equals("1");
+                    isVatable = loPaymentRequest.Detail(i).getVatable().equals("1");
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1303,7 +1406,7 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setParticularID(particular);
                         Detail(newIndex).setAmount(amount);
                         Detail(newIndex).isWithVat(isVatable);
-                        Detail(newIndex).setAccountCode(poPaymentRequest.Detail(i).Particular().getAccountCode());
+                        Detail(newIndex).setAccountCode(loPaymentRequest.Detail(i).Particular().getAccountCode());
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
                     }
@@ -1312,35 +1415,35 @@ public class Disbursement extends Transaction {
             }
 
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: {
-                SOATagging poApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
+                SOATagging loApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
 
-                poJSON = poApPayments.InitTransaction();
+                poJSON = loApPayments.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poApPayments.OpenTransaction(transactionNo);
+                poJSON = loApPayments.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poApPayments.getDetailCount();
+                detailCount = loApPayments.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poApPayments.Detail(i).getSourceNo();
+                    referNo = loApPayments.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = "";
-                    amount = poApPayments.Detail(i).getAppliedAmount().doubleValue();
+                    amount = loApPayments.Detail(i).getAppliedAmount().doubleValue();
 
-                    CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
-                    poJSON = poCachePayable.InitTransaction();
-                    poJSON = poCachePayable.OpenTransaction(referNo);
+                    CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                    poJSON = loCachePayable.InitTransaction();
+                    poJSON = loCachePayable.OpenTransaction(referNo);
 
-                    for (int c = 0; c < poCachePayable.getDetailCount(); c++) {
-                        invType = poCachePayable.Detail(c).InvType().getDescription();
+                    for (int c = 0; c < loCachePayable.getDetailCount(); c++) {
+                        invType = loCachePayable.Detail(c).InvType().getDescription();
                     }
 
                     boolean found = false;
@@ -1351,7 +1454,6 @@ public class Disbursement extends Transaction {
                             break;
                         }
                     }
-
                     if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
@@ -1367,29 +1469,29 @@ public class Disbursement extends Transaction {
             }
 
             case DisbursementStatic.SourceCode.CASH_PAYABLE: {
-                CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
 
-                poJSON = poCachePayable.InitTransaction();
+                poJSON = loCachePayable.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poCachePayable.OpenTransaction(transactionNo);
+                poJSON = loCachePayable.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poCachePayable.getDetailCount();
+                detailCount = loCachePayable.getDetailCount();
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poCachePayable.Detail(i).getTransactionNo();
+                    referNo = loCachePayable.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = "";
-                    amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getPayables()));
-                    invType = poCachePayable.Detail(i).InvType().getDescription();
+                    amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
+                    invType = loCachePayable.Detail(i).InvType().getDescription();
 
                     boolean found = false;
                     for (int j = 0; j < getDetailCount(); j++) {
@@ -1680,6 +1782,9 @@ public class Disbursement extends Transaction {
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             double detailAmount = Detail(lnCntr).getAmount();
             double detailTaxRate = Detail(lnCntr).getTaxRates();
+
+            Detail(lnCntr).setTaxRates(Detail(lnCntr).getTaxRates());
+            Detail(lnCntr).setTaxAmount(detailAmount * Detail(lnCntr).getTaxRates() / 100);
 
             lnTotalPurchaseAmount += detailAmount;
 
