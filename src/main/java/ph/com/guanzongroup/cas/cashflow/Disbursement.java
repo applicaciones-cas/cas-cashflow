@@ -1256,6 +1256,7 @@ public class Disbursement extends Transaction {
                     + " AND (a.nTranTotl - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + " AND a.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " AND a.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
             );
             hasCondition = true;
         }
@@ -1277,7 +1278,8 @@ public class Disbursement extends Transaction {
                     + " WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"                    
+                    + " AND b.sPayeeIDx LIKE '" + (Master().getPayeeID() == null || Master().getPayeeID().isEmpty() ? "%" : Master().getPayeeID()) + "'"
             );
             hasCondition = true;
         }
@@ -1300,6 +1302,7 @@ public class Disbursement extends Transaction {
                     + " AND (c.nGrossAmt - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
                     + " AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + " AND c.sCompnyID = '" + Master().getCompanyID() + "'"
+                   + " AND c.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
             );
             hasCondition = true;
         }
@@ -1447,15 +1450,15 @@ public class Disbursement extends Transaction {
                         invType = loCachePayable.Detail(c).InvType().getDescription();
                     }
 
-                    boolean found = false;
-                    for (int j = 0; j < getDetailCount(); j++) {
-                        if (Detail(j).getSourceNo().equals(referNo)
-                                && Detail(j).getSourceCode().equals(sourceCode)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
+//                    boolean found = false;
+//                    for (int j = 0; j < getDetailCount(); j++) {
+//                        if (Detail(j).getSourceNo().equals(referNo)
+//                                && Detail(j).getSourceCode().equals(sourceCode)) {
+//                            found = true;
+//                            break;
+//                        }
+//                    }
+//                    if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
                         Detail(newIndex).setSourceNo(referNo);
@@ -1464,7 +1467,7 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setAmount(amount);
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
-                    }
+//                    }
                 }
                 break;
             }
@@ -1494,16 +1497,16 @@ public class Disbursement extends Transaction {
                     amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
                     invType = loCachePayable.Detail(i).InvType().getDescription();
 
-                    boolean found = false;
-                    for (int j = 0; j < getDetailCount(); j++) {
-                        if (Detail(j).getSourceNo().equals(referNo)
-                                && Detail(j).getSourceCode().equals(sourceCode)) {
-                            found = true;
-                            break;
-                        }
-                    }
+//                    boolean found = false;
+//                    for (int j = 0; j < getDetailCount(); j++) {
+//                        if (Detail(j).getSourceNo().equals(referNo)
+//                                && Detail(j).getSourceCode().equals(sourceCode)) {
+//                            found = true;
+//                            break;
+//                        }
+//                    }
 
-                    if (!found) {
+//                    if (!found) {
                         AddDetail();
                         int newIndex = getDetailCount() - 1;
                         Detail(newIndex).setSourceNo(referNo);
@@ -1512,7 +1515,7 @@ public class Disbursement extends Transaction {
                         Detail(newIndex).setAmount(amount);
                         Detail(newIndex).setInvType(invType);
                         insertedCount++;
-                    }
+//                    }
                 }
                 break;
             }
@@ -1902,9 +1905,13 @@ public class Disbursement extends Transaction {
         Master().setCompanyID(psCompanyId);
     }
 
-    public void resetJournal() throws SQLException, GuanzonException {
-        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-
+    public void resetJournal() {
+        try {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public Journal Journal() throws SQLException, GuanzonException {

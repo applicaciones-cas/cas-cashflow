@@ -34,11 +34,7 @@ public class Model_Document_Mapping_Detail extends Model {
 
             //assign default values
             poEntity.updateObject("nEntryNox", 0);
-            poEntity.updateObject("nAmountxx", 0.0000);
-            poEntity.updateObject("nDiscount", 0.0000);
-            poEntity.updateObject("nAddDiscx", 0.0000);
-            poEntity.updateObject("nTWithHld", 0.0000);
-            poEntity.updateObject("cVATaxabl", "0");
+            
 
             //end - assign default values
             poEntity.insertRow();
@@ -46,7 +42,7 @@ public class Model_Document_Mapping_Detail extends Model {
 
             poEntity.absolute(1);
 
-            ID = "sTransNox";
+            ID = "sDocCodex";
             ID2 = "nEntryNox";
 
             CashflowModels cashFlow = new CashflowModels(poGRider);

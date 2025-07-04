@@ -14,6 +14,7 @@ import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
+import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
@@ -263,6 +264,23 @@ public class CashflowControllers {
         return poCheckPrinting;        
     }
 
+    
+    public DocumentMapping DocumentMapping() throws SQLException, GuanzonException{
+        if (poGRider == null){
+            poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
+            return null;
+        }
+        
+        if (poDocummentMapping != null) return poDocummentMapping;
+        
+        poDocummentMapping = new DocumentMapping();
+        poDocummentMapping.setApplicationDriver(poGRider);
+        poDocummentMapping.setBranchCode(poGRider.getBranchCode());
+        poDocummentMapping.setLogWrapper(poLogWrapper);
+        poDocummentMapping.setVerifyEntryNo(true);
+        poDocummentMapping.setWithParent(false);
+        return poDocummentMapping;        
+    }
        
     @Override
     protected void finalize() throws Throwable {
@@ -282,7 +300,7 @@ public class CashflowControllers {
             poCheckPrintingRequest = null;
             poAccountChart = null;
             poCheckPrinting = null;
-            
+            poDocummentMapping = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -307,4 +325,5 @@ public class CashflowControllers {
     private AccountChart poAccountChart;
     private Journal poJournal;
     private CheckPrinting poCheckPrinting;
+    private DocumentMapping poDocummentMapping;
 }

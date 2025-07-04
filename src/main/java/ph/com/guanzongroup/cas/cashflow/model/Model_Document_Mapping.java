@@ -38,7 +38,7 @@ public class Model_Document_Mapping extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateObject("cTranStat", PaymentRequestStatus.OPEN);
+            poEntity.updateObject("cRecdStat", PaymentRequestStatus.OPEN);
             //end - assign default values
 
             poEntity.insertRow();
@@ -46,7 +46,7 @@ public class Model_Document_Mapping extends Model {
 
             poEntity.absolute(1);
 
-            ID = "sTransNox";
+            ID = "sDocCodex";
 
 //            //initialize reference objects
 //            ParamModels model = new ParamModels(poGRider);
@@ -88,11 +88,11 @@ public class Model_Document_Mapping extends Model {
     }
 
     public JSONObject setTransactionStatus(String transactionStatus) {
-        return setValue("cTranStat", transactionStatus);
+        return setValue("cRecdStat", transactionStatus);
     }
 
     public String getTransactionStatus() {
-        return (String) getValue("cTranStat");
+        return (String) getValue("cRecdStat");
     }
 
     public JSONObject setModifyingId(String modifyingId) {

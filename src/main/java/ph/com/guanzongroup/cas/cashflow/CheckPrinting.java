@@ -35,6 +35,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.HashMap;
 import java.util.List;
@@ -81,7 +82,8 @@ import org.guanzon.cas.parameter.Banks;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class CheckPrinting extends Transaction {
-
+    private DocumentMapping poDocumentMapping;
+  
     List<Model_Disbursement_Master> poDisbursementMaster;
     private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
@@ -102,7 +104,7 @@ public class CheckPrinting extends Transaction {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
-
+        poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
@@ -861,6 +863,7 @@ public class CheckPrinting extends Transaction {
             String checkDate = "";
             String amountNumeric = "";
             String amountWords = "";
+            String bankCode = "";
             transSize = fsTransactionNos.size();
             switch (bank) {
                 case "BDO":
@@ -874,7 +877,11 @@ public class CheckPrinting extends Transaction {
                     checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
                     amountNumeric = String.valueOf(Master().CheckPayments().getAmount());
                     amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
-
+//                    bankCode = checkPayments.getModel().Banks().getBankCode();
+                   bankCode = "MBTDSChk";
+                    
+                    
+                    
                     System.out.println("===============================================");
                     System.out.println("No : " + (i + 1));
                     System.out.println("transactionNo No : " + fsTransactionNos.get(i));
@@ -884,7 +891,7 @@ public class CheckPrinting extends Transaction {
                     System.out.println("amountWords : " + amountWords);
                     System.out.println("===============================================");
                     // Store transaction for printing
-                    transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
+                    transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric,bankCode, new BigDecimal(amountNumeric)));
 
                     // Now print the voucher using PrinterJob
                     if (showPrintPreview(transactions.get(i))) {
@@ -900,7 +907,7 @@ public class CheckPrinting extends Transaction {
         return poJSON;
     }
 
-    private void printVoucher(Transaction tx) {
+    private void printVoucher(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
         Printer printer = Printer.getDefaultPrinter();
         if (printer == null) {
             System.err.println("No default printer.");
@@ -938,7 +945,7 @@ public class CheckPrinting extends Transaction {
         }
     }
 
-    private boolean showPrintPreview(Transaction tx) {
+    private boolean showPrintPreview(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
         Printer printer = Printer.getDefaultPrinter();
         PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
                 PageOrientation.PORTRAIT,
@@ -988,15 +995,26 @@ public class CheckPrinting extends Transaction {
  */
 private Node buildVoucherNode(Transaction tx,
                               double widthPts,
-                              double heightPts) {
+                              double heightPts) throws SQLException, GuanzonException, CloneNotSupportedException {
+    Pane root = new Pane();
 
+    
+  
+    poDocumentMapping.InitTransaction();
+    poDocumentMapping.OpenTransaction(tx.bankCode);
+    for (int i = 0; i < poDocumentMapping.getDetailCount()- 1; i++) {
+        String fontName = poDocumentMapping.Detail(i).getFontName();
+        double fontsize= poDocumentMapping.Detail(i).getFontSize();
+    
+                    
+    
     /* layout constants */
     final double TOP_MARGIN  = 21;
     final double LINE_HEIGHT = 18;
     final double CHAR_WIDTH  = 7;
-    final Font   FONT_MONO_11 = Font.font("Arial Narrow", 11);
-
-    Pane root = new Pane();
+    final Font   FONT_MONO_11 = Font.font(fontName, fontsize);
+    
+    
     root.setPrefSize(widthPts, heightPts);
 
     /* helper that drops a piece of text at (row, col) — now accepts doubles */
@@ -1007,23 +1025,32 @@ private Node buildVoucherNode(Transaction tx,
         t.setFont(FONT_MONO_11);
         root.getChildren().add(t);
     };
+    double rawCount = 3.0;        //replace value from object  use column space as basis
+    int spaceCount  = (int) Math.round(rawCount);
 
+    if (spaceCount < 0) {
+        throw new IllegalArgumentException("spaceCount must be non‑negative");
+    }
+//    int spaceCount   = 3;  
+      String gap = String.join("", Collections.nCopies(spaceCount, " "));
     // Format check date: "07032025" => "07 03 2025" => " 0 7   0 3   2 0 2 5"
     String rawDate = tx.checkDate.replace("-", "");  // e.g., "07032025"
     String formattedDate = rawDate
-            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")  // "07 03 2025"
-            .replaceAll("", "   ")                           // adds space between every char
-            .trim();
+            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")  // 07 03 2025
+            .replaceAll("", gap)                           // add gap between every char
+            .trim();  
 
     /* place each field */
     add.accept(0.75, 61.1, formattedDate);  // Row 1, Column 60
     add.accept(2.25, 15.0, tx.payeeName.toUpperCase());
     add.accept(2.10, 60.0,
         CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
-    add.accept(3.25, 10.0,
+    add.accept(3.45, 10.0,
         NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)));
-
+    
+    }
     return root;
+    
 }
 
 
@@ -1065,14 +1092,15 @@ private Node buildVoucherNode(Transaction tx,
 // Transaction data class for holding the transaction info
     private static class Transaction {
 
-        final String transactionNo, payeeName, checkDate, amountNumeric;
+        final String transactionNo, payeeName, checkDate, amountNumeric,bankCode;
         final BigDecimal amountNumericValue;
 
-        Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric, BigDecimal amountNumericValue) {
+        Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric,String bankCode, BigDecimal amountNumericValue) {
             this.transactionNo = transactionNo;
             this.payeeName = payeeName;
             this.checkDate = checkDate;
             this.amountNumeric = amountNumeric;
+            this.bankCode = bankCode;
             this.amountNumericValue = amountNumericValue;
         }
     }
