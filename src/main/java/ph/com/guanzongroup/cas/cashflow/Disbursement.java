@@ -1780,6 +1780,8 @@ public class Disbursement extends Transaction {
         double lnLessWithHoldingTax = 0.0000;    // Withholding Tax
         double lnTotalVatExemptSales = 0.0000;   // VAT EXEMPT
 
+        boolean hasVat = false; // 👉 Flag to check if at least one detail has VAT
+
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             double detailAmount = Detail(lnCntr).getAmount();
             double detailTaxRate = Detail(lnCntr).getTaxRates();
@@ -1793,16 +1795,23 @@ public class Disbursement extends Transaction {
             lnLessWithHoldingTax += detailAmount * (detailTaxRate / 100);
 
             if (Detail(lnCntr).isWithVat()) {
+                hasVat = true; // 👉 At least one VAT item found
+
                 double lnVatableSales = detailAmount / (1 + VAT_RATE);
                 double lnVatAmount = detailAmount - lnVatableSales;
-
-                Master().setVATRates(VAT_RATE * 100);
 
                 lnTotalVatSales += lnVatableSales;
                 lnTotalVatAmount += lnVatAmount;
             } else {
                 lnTotalVatExemptSales += detailAmount;
             }
+        }
+
+        // ✅ Set VAT rate based on whether VAT exists
+        if (hasVat) {
+            Master().setVATRates(VAT_RATE * 100);
+        } else {
+            Master().setVATRates(0.00);
         }
 
         double lnNetAmountDue = lnTotalPurchaseAmount - lnLessWithHoldingTax;
