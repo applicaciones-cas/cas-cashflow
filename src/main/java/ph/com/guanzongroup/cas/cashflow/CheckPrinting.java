@@ -859,49 +859,40 @@ public class CheckPrinting extends Transaction {
             }
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = "";
-            String payeeName = "";
-            String checkDate = "";
-            String amountNumeric = "";
-            String amountWords = "";
+            String sPayeeNme = "";
+            String dCheckDte = "";
+            String nAmountxx = "";
+            String xAmountWords = "";
             String bankCode = "";
             transSize = fsTransactionNos.size();
-            switch (bank) {
-                case "BDO":
+            
                     if (fsTransactionNos.isEmpty()) {
                         poJSON.put("error", "No transactions selected.");
                         return poJSON;
                     }
 
                     transactionno = fsTransactionNos.get(i);
-                    payeeName = checkPayments.getModel().Payee().getPayeeName();
-                    checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
-                    amountNumeric = String.valueOf(Master().CheckPayments().getAmount());
-                    amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
-//                    bankCode = checkPayments.getModel().Banks().getBankCode();
+                    sPayeeNme = checkPayments.getModel().Payee().getPayeeName();
+                    dCheckDte = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
+                    nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
+                    xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
+//                  bankCode = checkPayments.getModel().Banks().getBankCode();
                    bankCode = "MBTDSChk";
-                    
-                    
-                    
                     System.out.println("===============================================");
                     System.out.println("No : " + (i + 1));
                     System.out.println("transactionNo No : " + fsTransactionNos.get(i));
-                    System.out.println("payeeName : " + payeeName);
-                    System.out.println("checkDate : " + checkDate);
-                    System.out.println("amountNumeric : " + amountNumeric);
-                    System.out.println("amountWords : " + amountWords);
+                    System.out.println("payeeName : " + sPayeeNme);
+                    System.out.println("checkDate : " + dCheckDte);
+                    System.out.println("amountNumeric : " + nAmountxx);
+                    System.out.println("amountWords : " + xAmountWords);
                     System.out.println("===============================================");
                     // Store transaction for printing
-                    transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric,bankCode, new BigDecimal(amountNumeric)));
+                    transactions.add(new Transaction(transactionno, sPayeeNme, dCheckDte, nAmountxx,bankCode, new BigDecimal(nAmountxx)));
 
                     // Now print the voucher using PrinterJob
                     if (showPrintPreview(transactions.get(i))) {
                         printVoucher(transactions.get(i));
                     }
-
-                    break;
-                default:
-                    throw new AssertionError();
-            }
             this.SaveTransaction();
         }
         return poJSON;
@@ -937,8 +928,8 @@ public class CheckPrinting extends Transaction {
             job.endJob();
 
             System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo
-                    + " for " + tx.payeeName
-                    + " | Amount: ₱" + tx.amountNumeric);
+                    + " for " + tx.sPayeeNme
+                    + " | Amount: ₱" + tx.nAmountxx);
         } else {
             job.cancelJob();
             System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
@@ -993,67 +984,94 @@ public class CheckPrinting extends Transaction {
  *   row = line number   (0‑based)            →  Y = TOP + row * LINE_HEIGHT
  *   col = character column (0‑based)         →  X = col * CHAR_WIDTH
  */
+    
+    
+    
 private Node buildVoucherNode(Transaction tx,
                               double widthPts,
-                              double heightPts) throws SQLException, GuanzonException, CloneNotSupportedException {
-    Pane root = new Pane();
+                              double heightPts)
+        throws SQLException, GuanzonException, CloneNotSupportedException {
 
-    
-  
-    poDocumentMapping.InitTransaction();
-    poDocumentMapping.OpenTransaction(tx.bankCode);
-    for (int i = 0; i < poDocumentMapping.getDetailCount()- 1; i++) {
-        String fontName = poDocumentMapping.Detail(i).getFontName();
-        double fontsize= poDocumentMapping.Detail(i).getFontSize();
-    
-                    
-    
-    /* layout constants */
-    final double TOP_MARGIN  = 21;
-    final double LINE_HEIGHT = 18;
-    final double CHAR_WIDTH  = 7;
-    final Font   FONT_MONO_11 = Font.font(fontName, fontsize);
-    
-    
+    // Root container for all voucher text nodes
+    Pane root = new Pane();
     root.setPrefSize(widthPts, heightPts);
 
-    /* helper that drops a piece of text at (row, col) — now accepts doubles */
-    TriConsumer<Double, Double, String> add = (row, col, value) -> {
-        double x = col * CHAR_WIDTH;
-        double y = TOP_MARGIN + row * LINE_HEIGHT;
-        Text t = new Text(x, y, value == null ? "" : value);
-        t.setFont(FONT_MONO_11);
-        root.getChildren().add(t);
-    };
-    double rawCount = 3.0;        //replace value from object  use column space as basis
-    int spaceCount  = (int) Math.round(rawCount);
 
-    if (spaceCount < 0) {
-        throw new IllegalArgumentException("spaceCount must be non‑negative");
-    }
-//    int spaceCount   = 3;  
-      String gap = String.join("", Collections.nCopies(spaceCount, " "));
-    // Format check date: "07032025" => "07 03 2025" => " 0 7   0 3   2 0 2 5"
-    String rawDate = tx.checkDate.replace("-", "");  // e.g., "07032025"
-    String formattedDate = rawDate
-            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")  // 07 03 2025
-            .replaceAll("", gap)                           // add gap between every char
-            .trim();  
+    final double TOP_MARGIN  = 21;   // distance from top edge to “row 0”
+    final double LINE_HEIGHT = 18;   // row‑to‑row spacing
+    final double CHAR_WIDTH  = 7;    // col‑to‑col spacing
 
-    /* place each field */
-    add.accept(0.75, 61.1, formattedDate);  // Row 1, Column 60
-    add.accept(2.25, 15.0, tx.payeeName.toUpperCase());
-    add.accept(2.10, 60.0,
-        CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
-    add.accept(3.45, 10.0,
-        NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)));
-    
+
+    poDocumentMapping.InitTransaction();
+    poDocumentMapping.OpenTransaction(tx.bankCode);
+
+    for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+        String  fieldName = poDocumentMapping.Detail(i).getFieldCode();
+        String  fontName  = poDocumentMapping.Detail(i).getFontName();
+        double  fontSize  = poDocumentMapping.Detail(i).getFontSize();
+        double  topRow    = poDocumentMapping.Detail(i).getTopRow();
+        double  leftCol   = poDocumentMapping.Detail(i).getLeftColumn();
+        double  colSpace  = poDocumentMapping.Detail(i).getColumnSpace();
+
+        // Determine font per field
+        Font fieldFont;
+        switch (fieldName) {
+            case "sPayeeNme":
+                fieldFont = Font.font(fontName, fontSize);
+                break;
+            case "nAmountxx":
+                fieldFont = Font.font(fontName, fontSize);
+                break;
+            case "dCheckDte":
+                fieldFont = Font.font(fontName, fontSize);
+                break;
+            case "xAmountW":
+                fieldFont = Font.font(fontName, fontSize);
+                break;
+            default:
+                fieldFont = Font.font(fontName, fontSize);
+        }
+
+        // Compute text value for each field
+        String textValue;
+        switch (fieldName) {
+            case "sPayeeNme":
+                textValue = tx.sPayeeNme == null ? "" : tx.sPayeeNme.toUpperCase();
+                break;
+            case "nAmountxx":
+                textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxx, false);
+                break;
+            case "dCheckDte":
+                int spaceCount = (int) Math.round(colSpace);
+                if (spaceCount < 0)
+                    throw new IllegalArgumentException("spaceCount must be non-negative");
+                String gap = String.join("", Collections.nCopies(spaceCount, " "));
+                String rawDate = tx.dCheckDte == null ? "" : tx.dCheckDte.replace("-", "");
+                textValue = rawDate
+                        .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")
+                        .replaceAll("", gap)
+                        .trim();
+                break;
+            case "xAmountW":
+                textValue = NumberToWords.convertToWords(new BigDecimal(tx.nAmountxx));
+                break;
+            default:
+                throw new AssertionError("Unhandled field: " + fieldName);
+        }
+        
+
+        // Calculate position
+        double x = leftCol * CHAR_WIDTH;
+        double y = TOP_MARGIN + topRow * LINE_HEIGHT;
+
+        // Create and style Text node
+        Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+        textNode.setFont(fieldFont);
+        root.getChildren().add(textNode);
     }
+
     return root;
-    
 }
-
-
 
 //    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
 //        Pane root = new Pane();
@@ -1092,16 +1110,17 @@ private Node buildVoucherNode(Transaction tx,
 // Transaction data class for holding the transaction info
     private static class Transaction {
 
-        final String transactionNo, payeeName, checkDate, amountNumeric,bankCode;
-        final BigDecimal amountNumericValue;
 
-        Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric,String bankCode, BigDecimal amountNumericValue) {
+        final String transactionNo, sPayeeNme, dCheckDte, nAmountxx,bankCode;
+        final BigDecimal nAmountxxValue;
+
+        Transaction(String transactionNo, String sPayeeNme, String dCheckDte, String nAmountxx,String bankCode, BigDecimal nAmountxxValue) {
             this.transactionNo = transactionNo;
-            this.payeeName = payeeName;
-            this.checkDate = checkDate;
-            this.amountNumeric = amountNumeric;
+            this.sPayeeNme = sPayeeNme;
+            this.dCheckDte = dCheckDte;
+            this.nAmountxx = nAmountxx;
             this.bankCode = bankCode;
-            this.amountNumericValue = amountNumericValue;
+            this.nAmountxxValue = nAmountxxValue;
         }
     }
 
