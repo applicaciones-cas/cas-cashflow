@@ -81,6 +81,101 @@ public class Disbursement extends Transaction {
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         return saveTransaction();
     }
+    private boolean hasRightToSave() {
+    return true;
+  }
+    @Override
+    protected JSONObject saveTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+    this.poJSON = new JSONObject();
+    if (!this.pbInitTran) {
+      this.poJSON.put("result", "error");
+      this.poJSON.put("message", "Object is not initialized.");
+      return this.poJSON;
+    } 
+    if (this.pnEditMode == 1) {
+      this.poJSON.put("result", "error");
+      this.poJSON.put("message", "Saving of unmodified transaction is not allowed.");
+      return this.poJSON;
+    } 
+    if (!hasRightToSave()) {
+      this.poJSON.put("result", "error");
+      this.poJSON.put("message", "User has no right to save.");
+      return this.poJSON;
+    } 
+    this.poJSON = willSave();
+    if ("error".equals(this.poJSON.get("result")))
+      return this.poJSON; 
+    if (getEditMode() == 0) {
+      this.pdModified = this.poGRider.getServerDate();
+      this.poMaster.setValue("sModified", this.poGRider.Encrypt(this.poGRider.getUserID()));
+    } 
+    this.poJSON = save();
+    if (!this.pbWthParent)
+      this.poGRider.beginTrans((String)this.poEvent.get("event"), this.poMaster
+          .getTable(), this.SOURCE_CODE, 
+          
+          String.valueOf(this.poMaster.getValue(1))); 
+    if ("success".equals(this.poJSON.get("result"))) {
+      if (this.pbVerifyEntryNo)
+        this.poMaster.setValue("nEntryNox", Integer.valueOf(this.paDetail.size())); 
+      if (this.pnEditMode == 0 || this.pnEditMode == 2) {
+        this.poMaster.setValue("dModified", this.pdModified);
+        this.poJSON = this.poMaster.saveRecord();
+        if ("error".equals(this.poJSON.get("result"))) {
+          if (!this.pbWthParent)
+            this.poGRider.rollbackTrans(); 
+          return this.poJSON;
+        } 
+        for (int lnCtr = 0; lnCtr <= this.paDetail.size() - 1; lnCtr++) {
+          ((Model)this.paDetail.get(lnCtr)).setValue("dModified", this.pdModified);
+          this.poJSON = ((Model)this.paDetail.get(lnCtr)).saveRecord();
+          if ("error".equals(this.poJSON.get("result"))) {
+            if (!this.pbWthParent)
+              this.poGRider.rollbackTrans(); 
+            return this.poJSON;
+          } 
+        } 
+        if (this.pnEditMode == 2) {
+          String lsSQL = "SELECT * FROM " + this.poDetail.getTable() + " WHERE sTransNox = " + SQLUtil.toSQL(this.poMaster.getValue("sTransNox")) + " AND nEntryNox > " + this.paDetail.size();
+          ResultSet loRS = this.poGRider.executeQuery(lsSQL);
+          if (loRS.next()) {
+            lsSQL = "DELETE FROM " + this.poDetail.getTable() + " WHERE sTransNox = " + SQLUtil.toSQL(this.poMaster.getValue("sTransNox")) + " AND nEntryNox > " + this.paDetail.size();
+            if (this.poGRider.executeQuery(lsSQL, this.poDetail.getTable(), this.psBranchCode, this.psDestination, "") <= 0L) {
+              if (!this.pbWthParent)
+                this.poGRider.rollbackTrans(); 
+              this.poJSON.put("result", "error");
+              this.poJSON.put("message", "Unable to remove old records.");
+              return this.poJSON;
+            } 
+          } 
+        } 
+      } else {
+        this.poJSON.put("result", "error");
+        this.poJSON.put("message", "Edit mode is not allowed to save transaction.");
+        return this.poJSON;
+      } 
+    } else {
+      if (!this.pbWthParent)
+        this.poGRider.rollbackTrans(); 
+      return this.poJSON;
+    } 
+    this.poJSON = saveOthers();
+    if ("error".equals(this.poJSON.get("result"))) {
+      if (!this.pbWthParent)
+        this.poGRider.rollbackTrans(); 
+      return this.poJSON;
+    } 
+    if (!this.pbWthParent)
+      this.poGRider.commitTrans(); 
+    saveComplete();
+    this.pnEditMode = -1;
+    this.pbRecordExist = true;
+    this.poJSON = new JSONObject();
+    this.poJSON.put("result", "success");
+    this.poJSON.put("message", "Transaction saved successfully.");
+    return this.poJSON;
+  }
+            
 
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         resetMaster();
@@ -998,14 +1093,18 @@ public class Disbursement extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
 //            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
-        if (poJournal != null) {
-            if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
-                poJSON = validateJournal();
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
+        
+        if(Master().getEditMode() == EditMode.UPDATE){
+            if (poJournal != null) {
+                if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                    poJSON = validateJournal();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                 }
             }
         }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -1178,13 +1277,15 @@ public class Disbursement extends Transaction {
                     return poJSON;
                 }
             }
-            if (poJournal != null) {
-                if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
-                    poJournal.setWithParent(true);
-                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                    poJSON = poJournal.SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
+            if(getEditMode() == EditMode.UPDATE){
+                if (poJournal != null) {
+                    if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
+                        poJournal.setWithParent(true);
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                 }
             }
@@ -2067,7 +2168,7 @@ public class Disbursement extends Transaction {
 //    }
     public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        if (getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
+        if (Master().getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
             poJSON.put("result", "error");
             poJSON.put("message", "No record to load");
             return poJSON;
@@ -2080,25 +2181,25 @@ public class Disbursement extends Transaction {
 
         String lsJournal = existJournal();
         if (lsJournal != null && !"".equals(lsJournal)) {
-            if (getEditMode() == EditMode.READY) {
+            if (Master().getEditMode() == EditMode.READY) {
                 poJSON = poJournal.OpenTransaction(lsJournal);
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
             }
 
-            if (getEditMode() == EditMode.UPDATE) {
+            if (Master().getEditMode() == EditMode.UPDATE) {
                 if (poJournal.getEditMode() == EditMode.READY) {
+                    poJSON = poJournal.OpenTransaction(lsJournal);
                     poJournal.UpdateTransaction();
                 }
             }
         } else {
-            if (getEditMode() == EditMode.UPDATE && poJournal.getEditMode() != EditMode.ADDNEW) {
+            if (Master().getEditMode() == EditMode.UPDATE && poJournal.getEditMode() != EditMode.ADDNEW) {
                 poJSON = poJournal.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
-                System.out.println("MASTER");
                 //retreiving using column index
                 JSONObject jsonmaster = new JSONObject();
                 for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++) {
@@ -2109,10 +2210,8 @@ public class Disbursement extends Transaction {
                 JSONArray jsondetails = new JSONArray();
                 JSONObject jsondetail = new JSONObject();
 
-                System.out.println("DETAIL");
                 for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++) {
                     jsondetail = new JSONObject();
-                    System.out.println("DETAIL ROW : " + lnCtr);
                     for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++) {
                         System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
                         jsondetail.put(Detail(lnCtr).getColumn(lnCol), Detail(lnCtr).getValue(lnCol));
@@ -2132,9 +2231,6 @@ public class Disbursement extends Transaction {
                 if (jsonmaster.get("result").toString().equalsIgnoreCase("success")) {
                     List<TBJEntry> xlist = tbj.getJournalEntries();
                     for (TBJEntry xlist1 : xlist) {
-                        System.out.println("Account:" + xlist1.getAccount());
-                        System.out.println("Debit:" + xlist1.getDebit());
-                        System.out.println("Credit:" + xlist1.getCredit());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setAccountCode(xlist1.getAccount());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setCreditAmount(xlist1.getCredit());
@@ -2207,11 +2303,10 @@ public class Disbursement extends Transaction {
     }
 
     public void resetOthers() throws SQLException, GuanzonException {
-
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poPaymentRequest = new ArrayList<>();
-        poApPayments = new ArrayList<>();
-
+        poApPayments = new ArrayList<>();        
+        poCachePayable = new ArrayList<>();
     }
 
     @Override

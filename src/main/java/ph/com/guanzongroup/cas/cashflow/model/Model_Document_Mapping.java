@@ -8,17 +8,9 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
-import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.cas.parameter.model.Model_Branch;
-import org.guanzon.cas.parameter.model.Model_Company;
-import org.guanzon.cas.parameter.model.Model_Department;
-import org.guanzon.cas.parameter.model.Model_Industry;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 /**
@@ -86,7 +78,15 @@ public class Model_Document_Mapping extends Model {
     public String getDesciption() {
         return (String) getValue("sDescript");
     }
+    
+    public JSONObject setEntryNo(int entryNo) {
+        return setValue("nEntryNox", entryNo);
+    }
 
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
+    }
+    
     public JSONObject setTransactionStatus(String transactionStatus) {
         return setValue("cRecdStat", transactionStatus);
     }

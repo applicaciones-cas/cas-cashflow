@@ -59,7 +59,7 @@ public class testDocumentMappingOpenTransaction {
                     System.out.println("DETAIL------------------- " + (lnCtr + 1));
                     System.out.println("document code : " + poDocumentMapping.DocumentMapping().Detail(lnCtr).getDocumentCode());
                     System.out.println("font: " + poDocumentMapping.DocumentMapping().Detail(lnCtr).getFontName());
-                    System.out.println("PARTICULAR ID : " + poDocumentMapping.DocumentMapping().Detail(lnCtr).getFontSize());
+                    System.out.println("PARTICULAR ID : " + String.valueOf(poDocumentMapping.DocumentMapping().Detail(lnCtr).getFontSize()));
                     System.out.println("");
                  }
             }
