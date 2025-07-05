@@ -1883,8 +1883,8 @@ public class Disbursement extends Transaction {
                 " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
                 " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
-                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo),
-                " g.cTranStat IN ('1', '5')");
+                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo));
+//                " g.cTranStat IN ('1', '5')");
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
