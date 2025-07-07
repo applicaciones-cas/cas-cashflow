@@ -13,6 +13,7 @@ import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
+import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
@@ -21,293 +22,341 @@ import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.SOATagging;
 
-
 public class CashflowControllers {
-    public CashflowControllers(GRiderCAS applicationDriver, LogWrapper logWrapper){
+
+    public CashflowControllers(GRiderCAS applicationDriver, LogWrapper logWrapper) {
         poGRider = applicationDriver;
         poLogWrapper = logWrapper;
     }
-        
-    public CachePayable CachePayable() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public CachePayable CachePayable() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.CachePayable: Application driver is not set.");
             return null;
         }
-        
-        if (poCachePayable != null) return poCachePayable;
-        
+
+        if (poCachePayable != null) {
+            return poCachePayable;
+        }
+
         poCachePayable = new CachePayable();
         poCachePayable.setApplicationDriver(poGRider);
         poCachePayable.setBranchCode(poGRider.getBranchCode());
         poCachePayable.setVerifyEntryNo(true);
         poCachePayable.setWithParent(false);
         poCachePayable.setLogWrapper(poLogWrapper);
-        return poCachePayable;        
+        return poCachePayable;
     }
-    
-    public BankAccountMaster BankAccountMaster() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public BankAccountMaster BankAccountMaster() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.BankAccountMaster: Application driver is not set.");
             return null;
         }
-        
-        if (poBankAccountMaster != null) return poBankAccountMaster;
-        
+
+        if (poBankAccountMaster != null) {
+            return poBankAccountMaster;
+        }
+
         poBankAccountMaster = new BankAccountMaster();
         poBankAccountMaster.setApplicationDriver(poGRider);
         poBankAccountMaster.setWithParentClass(false);
         poBankAccountMaster.setLogWrapper(poLogWrapper);
         poBankAccountMaster.initialize();
         poBankAccountMaster.newRecord();
-        return poBankAccountMaster;        
+        return poBankAccountMaster;
     }
-    
-    public RecurringIssuance RecurringIssuance() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public RecurringIssuance RecurringIssuance() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.RecurringIssuance: Application driver is not set.");
             return null;
         }
-        
-        if (poRecurringIssuance != null) return poRecurringIssuance;
-        
+
+        if (poRecurringIssuance != null) {
+            return poRecurringIssuance;
+        }
+
         poRecurringIssuance = new RecurringIssuance();
         poRecurringIssuance.setApplicationDriver(poGRider);
         poRecurringIssuance.setWithParentClass(false);
         poRecurringIssuance.setLogWrapper(poLogWrapper);
         poRecurringIssuance.initialize();
         poRecurringIssuance.newRecord();
-        return poRecurringIssuance;        
+        return poRecurringIssuance;
     }
-    
-    public Payee Payee() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public Payee Payee() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.Payee: Application driver is not set.");
             return null;
         }
-        
-        if (poPayee != null) return poPayee;
-        
+
+        if (poPayee != null) {
+            return poPayee;
+        }
+
         poPayee = new Payee();
         poPayee.setApplicationDriver(poGRider);
         poPayee.setWithParentClass(false);
         poPayee.setLogWrapper(poLogWrapper);
         poPayee.initialize();
         poPayee.newRecord();
-        return poPayee;        
+        return poPayee;
     }
-    
-    public Particular Particular() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public Particular Particular() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.Particular: Application driver is not set.");
             return null;
         }
-        
-        if (poParticular != null) return poParticular;
-        
+
+        if (poParticular != null) {
+            return poParticular;
+        }
+
         poParticular = new Particular();
         poParticular.setApplicationDriver(poGRider);
         poParticular.setWithParentClass(false);
         poParticular.setLogWrapper(poLogWrapper);
         poParticular.initialize();
         poParticular.newRecord();
-        return poParticular;        
+        return poParticular;
     }
-    
-    public PaymentRequest PaymentRequest() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public PaymentRequest PaymentRequest() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.PaymentRequest: Application driver is not set.");
             return null;
         }
-        
-        if (poPaymentRequest != null) return poPaymentRequest;
-        
+
+        if (poPaymentRequest != null) {
+            return poPaymentRequest;
+        }
+
         poPaymentRequest = new PaymentRequest();
         poPaymentRequest.setApplicationDriver(poGRider);
         poPaymentRequest.setBranchCode(poGRider.getBranchCode());
         poPaymentRequest.setLogWrapper(poLogWrapper);
         poPaymentRequest.setVerifyEntryNo(true);
         poPaymentRequest.setWithParent(false);
-        return poPaymentRequest;        
+        return poPaymentRequest;
     }
 
-    public Disbursement Disbursement() throws SQLException, GuanzonException{
-        if (poGRider == null){
+    public Disbursement Disbursement() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.Disbursement: Application driver is not set.");
             return null;
         }
-        
-        if (poDisbursement != null) return poDisbursement;
-        
+
+        if (poDisbursement != null) {
+            return poDisbursement;
+        }
+
         poDisbursement = new Disbursement();
         poDisbursement.setApplicationDriver(poGRider);
         poDisbursement.setBranchCode(poGRider.getBranchCode());
         poDisbursement.setLogWrapper(poLogWrapper);
         poDisbursement.setVerifyEntryNo(true);
         poDisbursement.setWithParent(false);
-        return poDisbursement;        
+        return poDisbursement;
     }
-    
-    public CheckPayments CheckPayments() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public CheckPayments CheckPayments() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.CheckPayments: Application driver is not set.");
             return null;
         }
-        
-        if (poCheckPayments != null) return poCheckPayments;
-        
-       
+
+        if (poCheckPayments != null) {
+            return poCheckPayments;
+        }
+
         poCheckPayments = new CheckPayments();
         poCheckPayments.setApplicationDriver(poGRider);
         poCheckPayments.setWithParentClass(true);
         poCheckPayments.setLogWrapper(poLogWrapper);
         poCheckPayments.initialize();
-        return poCheckPayments;         
+        return poCheckPayments;
     }
-    
-    public SOATagging SOATagging(){
-        if (poGRider == null){
+
+    public SOATagging SOATagging() {
+        if (poGRider == null) {
             poLogWrapper.severe("GLControllers.SOATagging: Application driver is not set.");
             return null;
         }
-        
-        if (poSOATagging != null) return poSOATagging;
-        
+
+        if (poSOATagging != null) {
+            return poSOATagging;
+        }
+
         poSOATagging = new SOATagging();
         poSOATagging.setApplicationDriver(poGRider);
         poSOATagging.setBranchCode(poGRider.getBranchCode());
         poSOATagging.setVerifyEntryNo(true);
         poSOATagging.setWithParent(false);
         poSOATagging.setLogWrapper(poLogWrapper);
-        return poSOATagging;        
+        return poSOATagging;
     }
-    
-    public CheckPrintingRequest CheckPrintingRequest(){
-        if (poGRider == null){
+
+    public CheckPrintingRequest CheckPrintingRequest() {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowController.CheckPrintingRequest: Application driver is not set.");
             return null;
         }
-        
-        if (poCheckPrintingRequest != null) return poCheckPrintingRequest;
-        
+
+        if (poCheckPrintingRequest != null) {
+            return poCheckPrintingRequest;
+        }
+
         poCheckPrintingRequest = new CheckPrintingRequest();
         poCheckPrintingRequest.setApplicationDriver(poGRider);
         poCheckPrintingRequest.setBranchCode(poGRider.getBranchCode());
         poCheckPrintingRequest.setLogWrapper(poLogWrapper);
         poCheckPrintingRequest.setVerifyEntryNo(true);
         poCheckPrintingRequest.setWithParent(false);
-        return poCheckPrintingRequest;        
+        return poCheckPrintingRequest;
     }
-    
-    public APPaymentAdjustment APPaymentAdjustment(){
-        if (poGRider == null){
+
+    public APPaymentAdjustment APPaymentAdjustment() {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.APPaymentAdjustment: Application driver is not set.");
             return null;
         }
-        
-        if (poAPPaymentAdjustment != null) return poAPPaymentAdjustment;
-        
+
+        if (poAPPaymentAdjustment != null) {
+            return poAPPaymentAdjustment;
+        }
+
         poAPPaymentAdjustment = new APPaymentAdjustment();
         poAPPaymentAdjustment.setApplicationDriver(poGRider);
         poAPPaymentAdjustment.setWithParentClass(false);
         poAPPaymentAdjustment.setLogWrapper(poLogWrapper);
         poAPPaymentAdjustment.initialize();
-        return poAPPaymentAdjustment;        
+        return poAPPaymentAdjustment;
     }
-    
-    public AccountChart AccountChart() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public AccountChart AccountChart() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.AccountChart: Application driver is not set.");
             return null;
         }
-        
-        if (poAccountChart != null) return poAccountChart;
-        
+
+        if (poAccountChart != null) {
+            return poAccountChart;
+        }
+
         poAccountChart = new AccountChart();
         poAccountChart.setApplicationDriver(poGRider);
         poAccountChart.setWithParentClass(true);
         poAccountChart.setLogWrapper(poLogWrapper);
         poAccountChart.initialize();
         poAccountChart.newRecord();
-        return poAccountChart;        
+        return poAccountChart;
     }
-    
-    public Journal Journal() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public Journal Journal() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.Journal: Application driver is not set.");
             return null;
         }
-        
-        if (poJournal != null) return poJournal;
-        
+
+        if (poJournal != null) {
+            return poJournal;
+        }
+
         poJournal = new Journal();
         poJournal.setApplicationDriver(poGRider);
         poJournal.setBranchCode(poGRider.getBranchCode());
         poJournal.setLogWrapper(poLogWrapper);
         poJournal.setWithParent(true);
-        return poJournal;        
+        return poJournal;
     }
-    
-    public CheckPrinting CheckPrinting() throws SQLException, GuanzonException{
-        if (poGRider == null){
+
+    public CheckPrinting CheckPrinting() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
             return null;
         }
-        
-        if (poCheckPrinting != null) return poCheckPrinting;
-        
+
+        if (poCheckPrinting != null) {
+            return poCheckPrinting;
+        }
+
         poCheckPrinting = new CheckPrinting();
         poCheckPrinting.setApplicationDriver(poGRider);
         poCheckPrinting.setBranchCode(poGRider.getBranchCode());
         poCheckPrinting.setLogWrapper(poLogWrapper);
         poCheckPrinting.setVerifyEntryNo(true);
         poCheckPrinting.setWithParent(false);
-        return poCheckPrinting;        
+        return poCheckPrinting;
     }
 
-    
-    public DocumentMapping DocumentMapping() throws SQLException, GuanzonException{
-        if (poGRider == null){
+    public DocumentMapping DocumentMapping() throws SQLException, GuanzonException {
+        if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
             return null;
         }
-        
-        if (poDocummentMapping != null) return poDocummentMapping;
-        
+
+        if (poDocummentMapping != null) {
+            return poDocummentMapping;
+        }
+
         poDocummentMapping = new DocumentMapping();
         poDocummentMapping.setApplicationDriver(poGRider);
         poDocummentMapping.setBranchCode(poGRider.getBranchCode());
         poDocummentMapping.setLogWrapper(poLogWrapper);
         poDocummentMapping.setVerifyEntryNo(true);
         poDocummentMapping.setWithParent(false);
-        return poDocummentMapping;        
+        return poDocummentMapping;
     }
-       
+
+    public CheckStatusUpdate CheckStatusUpdate() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckStatusUpdate != null) {
+            return poCheckStatusUpdate;
+        }
+
+        poCheckStatusUpdate = new CheckStatusUpdate();
+        poCheckStatusUpdate.setApplicationDriver(poGRider);
+        poCheckStatusUpdate.setBranchCode(poGRider.getBranchCode());
+        poCheckStatusUpdate.setLogWrapper(poLogWrapper);
+        poCheckStatusUpdate.setVerifyEntryNo(true);
+        poCheckStatusUpdate.setWithParent(false);
+        return poCheckStatusUpdate;
+    }
+
     @Override
     protected void finalize() throws Throwable {
-        try {                    
+        try {
             poCachePayable = null;
             poBankAccountMaster = null;
             poRecurringIssuance = null;
-            
+
             poParticular = null;
             poPayee = null;
             poRecurringIssuance = null;
             poCachePayable = null;
             poBankAccountMaster = null;
             poDisbursement = null;
-            poCheckPayments = null;            
+            poCheckPayments = null;
             poPaymentRequest = null;
             poCheckPrintingRequest = null;
             poAccountChart = null;
             poCheckPrinting = null;
             poDocummentMapping = null;
+            poCheckStatusUpdate = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
             super.finalize();
         }
     }
-    
+
     private GRiderCAS poGRider;
     private LogWrapper poLogWrapper;
 
@@ -326,4 +375,5 @@ public class CashflowControllers {
     private Journal poJournal;
     private CheckPrinting poCheckPrinting;
     private DocumentMapping poDocummentMapping;
+    private CheckStatusUpdate poCheckStatusUpdate;
 }
