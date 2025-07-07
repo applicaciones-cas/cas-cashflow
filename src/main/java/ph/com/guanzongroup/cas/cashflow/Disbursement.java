@@ -422,6 +422,48 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
+    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = DisbursementStatic.RETURNED;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(DisbursementStatic.RETURNED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
+
+        if (lbConfirm) {
+            poJSON.put("message", "Transactions returned successfully.");
+        } else {
+            poJSON.put("message", "Transactions returning request submitted successfully.");
+        }
+
+        return poJSON;
+    }
+
     public JSONObject DisapprovedTransaction(String remarks, ArrayList<SelectedITems> items)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
@@ -585,7 +627,8 @@ public class Disbursement extends Transaction {
 
         initSQL();
         String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()));
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                "a.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
 //                " a.sSupplier LIKE " + SQLUtil.toSQL("%" + fsSupplierID),
 //                " f.sCategrCd LIKE " + SQLUtil.toSQL("%" + Master().getCategoryCode()),
 //                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferID));
@@ -603,7 +646,7 @@ public class Disbursement extends Transaction {
                 "Transaction No»Transaction Date»Branch»Supplier",
                 "a.sTransNox»a.dTransact»c.sBranchNm»supplier",
                 "a.sTransNox»a.dTransact»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
-                1);
+                0);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
@@ -1234,7 +1277,9 @@ public class Disbursement extends Transaction {
 
         if (Math.abs(totalTaxDetail - masterTaxAmount) > 0.01) { // Allow minimal rounding difference
             poJSON.put("result", "error");
-            poJSON.put("message", "Withholding Tax does not match for reference no.: " + sourceNo);
+            poJSON.put("message", "On Disbursement Voucher No: " + Master().getTransactionNo() + "\n"
+                    + "There is an issue with the disbursement details: the withholding tax does not match for reference no.: " + sourceNo + ". \n"
+                    + "Please fix this before saving.");
             return false;
         }
 
@@ -1323,7 +1368,9 @@ public class Disbursement extends Transaction {
                         }
                     }
                 }
+
             }
+
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -1345,7 +1392,7 @@ public class Disbursement extends Transaction {
                 + " c.sBranchNm,"
                 + " d.sPayeeNme,"
                 + " e.sCompnyNm AS supplier,"
-                + " f.sDescript,"
+                //                + " f.sDescript,"
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp "
                 + " FROM Disbursement_Master a "
@@ -1353,7 +1400,7 @@ public class Disbursement extends Transaction {
                 + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
                 + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
                 + " JOIN client_master e ON d.sClientID = e.sClientID "
-                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
+                //                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN other_payments h ON a.sTransNox = h.sSourceNo"
                 + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
@@ -1527,7 +1574,7 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
                     particular = loPaymentRequest.Detail(i).getParticularID();
                     amount = loPaymentRequest.Detail(i).getAmount();
-                    invType = "PRF";
+                    invType = "0009";
                     isVatable = loPaymentRequest.Detail(i).getVatable().equals("1");
 
                     // Validate Payee ID Consistency
@@ -1588,7 +1635,7 @@ public class Disbursement extends Transaction {
                     poJSON = loCachePayable.OpenTransaction(referNo);
 
                     for (int c = 0; c < loCachePayable.getDetailCount(); c++) {
-                        invType = loCachePayable.Detail(c).InvType().getDescription();
+                        invType = loCachePayable.Detail(c).InvType().getInventoryTypeId();
                     }
 
                     // Validation: Check for existing details with different Payee ID
@@ -1644,7 +1691,7 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = "";
                     amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
-                    invType = loCachePayable.Detail(i).InvType().getDescription();
+                    invType = loCachePayable.Detail(i).InvType().getInventoryTypeId();
 
 //                    // Validation: Check for existing details with different Payee ID
 //                    for (int j = 0; j < getDetailCount(); j++) {

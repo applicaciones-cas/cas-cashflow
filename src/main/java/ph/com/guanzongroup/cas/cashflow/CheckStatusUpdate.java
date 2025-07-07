@@ -28,11 +28,13 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.guanzon.cas.parameter.Banks;
+import org.json.simple.parser.ParseException;
 
 public class CheckStatusUpdate extends Transaction {
 
     List<Model_Disbursement_Master> poDisbursementMaster;
     private Model_Check_Payments poCheckPayments;
+    private Disbursement disbursement;
     private CheckPayments checkPayments;
     private BankAccountMaster bankAccount;
 
@@ -45,6 +47,7 @@ public class CheckStatusUpdate extends Transaction {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+        disbursement = new CashflowControllers(poGRider, logwrapr).Disbursement();
         paDetail = new ArrayList<>();
 
         return initialize();
@@ -80,6 +83,10 @@ public class CheckStatusUpdate extends Transaction {
 
     public BankAccountMaster BankAccountMaster() {
         return (BankAccountMaster) bankAccount;
+    }
+
+    public Disbursement Disbursement() {
+        return (Disbursement) disbursement;
     }
 
     private Model_Disbursement_Master DisbursementMasterList() {
@@ -333,7 +340,6 @@ public class CheckStatusUpdate extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-
             if (bankAccount != null) {
                 if (bankAccount.getEditMode() == EditMode.ADDNEW || bankAccount.getEditMode() == EditMode.UPDATE) {
                     poJSON = saveBankAccountMaster();
@@ -344,6 +350,19 @@ public class CheckStatusUpdate extends Transaction {
                 }
             }
 
+//            switch (CheckPayments().getModel().getTransactionStatus()) {
+//                case CheckStatus.CANCELLED:
+//                case CheckStatus.STALED:
+//                case CheckStatus.BOUNCED:
+//                    poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "Returned", "7", false);
+//                    if (!"success".equals((String) poJSON.get("result"))) {
+//                        poGRider.rollbackTrans();
+//                        return poJSON;
+//                    }
+//                    break;
+//                case CheckStatus.POSTED: // CLEARED
+//                    break;
+//            }
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckStatusUpdate.class.getName()).log(Level.SEVERE, null, ex);
         }
