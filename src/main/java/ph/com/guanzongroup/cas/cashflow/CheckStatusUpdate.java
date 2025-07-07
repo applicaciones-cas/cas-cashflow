@@ -335,6 +335,20 @@ public class CheckStatusUpdate extends Transaction {
         try {
             /*Only modify this if there are other tables to modify except the master and detail tables*/
             poJSON = new JSONObject();
+
+            switch (CheckPayments().getModel().getTransactionStatus()) {
+                case CheckStatus.CANCELLED:
+                case CheckStatus.STALED:
+                case CheckStatus.BOUNCED:
+                    poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "Returned", "7", false);
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                    break;
+                case CheckStatus.POSTED: // CLEARED
+                    break;
+            }
             poJSON = saveCheckPayments();
             if ("error".equals(poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -365,6 +379,9 @@ public class CheckStatusUpdate extends Transaction {
 //            }
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckStatusUpdate.class.getName()).log(Level.SEVERE, null, ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", ex.toString());
+            return poJSON;
         }
         poJSON.put("result", "success");
         return poJSON;

@@ -57,8 +57,10 @@ public class testCheckStatusUpdate {
                 Assert.fail();
             }
             poCheckStatusUpdate.setCheckpayment();
-//            poCheckStatusUpdate.CheckPayments().getModel().setTransactionStatus("3");
-//            poCheckStatusUpdate.CheckPayments().getModel().setModifiedDate(poApp.getServerDate());
+            poCheckStatusUpdate.CheckPayments().getModel().setTransactionStatus("3");
+
+            poCheckStatusUpdate.Master().setModifiedDate(poApp.getServerDate());
+            poCheckStatusUpdate.CheckPayments().getModel().setModifiedDate(poApp.getServerDate());
 
             loJSON = poCheckStatusUpdate.SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
