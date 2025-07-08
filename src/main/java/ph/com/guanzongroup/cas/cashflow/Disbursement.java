@@ -447,20 +447,13 @@ public class Disbursement extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         poJSON.put("result", "success");
-
-        if (lbConfirm) {
-            poJSON.put("message", "Transactions returned successfully.");
-        } else {
-            poJSON.put("message", "Transactions returning request submitted successfully.");
-        }
-
         return poJSON;
     }
 
@@ -1368,7 +1361,6 @@ public class Disbursement extends Transaction {
                         }
                     }
                 }
-
             }
 
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
