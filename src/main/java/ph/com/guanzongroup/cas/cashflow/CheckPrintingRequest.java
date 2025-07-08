@@ -445,10 +445,7 @@ public class CheckPrintingRequest extends Transaction {
         poCheckPayments.get(poCheckPayments.size() - 1).initialize();
         poCheckPayments.get(poCheckPayments.size() - 1).openRecord(checkTrans);
         poCheckPayments.get(poCheckPayments.size() - 1).updateRecord();
-        
-        
 
-        
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifyingId(poGRider.getUserID());
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifiedDate(poGRider.getServerDate());

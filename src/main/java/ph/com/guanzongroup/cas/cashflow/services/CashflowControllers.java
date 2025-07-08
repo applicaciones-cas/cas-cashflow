@@ -4,12 +4,12 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
-import org.guanzon.cas.parameter.TaxCode;
 import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
 import ph.com.guanzongroup.cas.cashflow.AccountChart;
 import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
@@ -329,6 +329,26 @@ public class CashflowControllers {
         poCheckStatusUpdate.setWithParent(false);
         return poCheckStatusUpdate;
     }
+    
+        public CheckImporting CheckImporting() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckImporting != null) {
+            return poCheckImporting;
+        }
+
+        poCheckImporting = new CheckImporting();
+        poCheckImporting.setApplicationDriver(poGRider);
+        poCheckImporting.setBranchCode(poGRider.getBranchCode());
+        poCheckImporting.setLogWrapper(poLogWrapper);
+        poCheckImporting.setWithParent(false);
+        return poCheckImporting;
+    }
+        
+    
 
     @Override
     protected void finalize() throws Throwable {
@@ -350,6 +370,7 @@ public class CashflowControllers {
             poCheckPrinting = null;
             poDocummentMapping = null;
             poCheckStatusUpdate = null;
+            poCheckImporting = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -376,4 +397,5 @@ public class CashflowControllers {
     private CheckPrinting poCheckPrinting;
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
+    private CheckImporting poCheckImporting;
 }
