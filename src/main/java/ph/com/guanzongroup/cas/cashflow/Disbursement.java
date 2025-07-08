@@ -1084,102 +1084,6 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-//    private JSONObject validateTaxAmountIfSOAAndCachePayable() throws CloneNotSupportedException, SQLException, GuanzonException {
-//        poJSON = new JSONObject();
-//        CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
-//        poJSON = loCachePayable.InitTransaction();
-//        if (!"success".equals(poJSON.get("result"))) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "No records found for Cache Payable.");
-//            return poJSON;
-//        }
-//
-//        SOATagging loApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
-//        poJSON = loApPayments.InitTransaction();
-//        if (!"success".equals(poJSON.get("result"))) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "No records found for SOA Tagging.");
-//            return poJSON;
-//        }
-//        Set<String> uniqueCashPayableNos = new HashSet<>();
-//        Set<String> uniqueAccountsPayableNos = new HashSet<>();
-//
-//        for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-//            String lsDetailSourceCd = Detail(lnCntr).getSourceCode();
-//            String lsDetailSourceNo = Detail(lnCntr).getSourceNo();
-//
-//            if (DisbursementStatic.SourceCode.CASH_PAYABLE.equals(lsDetailSourceCd)) {
-//                uniqueCashPayableNos.add(lsDetailSourceNo);
-//            } else if (DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(lsDetailSourceCd)) {
-//                uniqueAccountsPayableNos.add(lsDetailSourceNo);
-//            }
-//        }
-//
-//        for (String sourceItemCashPayableNo : uniqueCashPayableNos) {
-//            poJSON = loCachePayable.OpenTransaction(sourceItemCashPayableNo);
-//            if (!"success".equals(poJSON.get("result"))) {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "No records found for Cache Payable reference no.: " + sourceItemCashPayableNo);
-//                return poJSON;
-//            }
-//
-//            double lnTotalCacheWithholdingTax = 0.00;
-//
-//            // Sum withholding tax for this Cache Payable reference
-//            for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-//                String lnDetailCacheSourceNo = Detail(lnCntr).getSourceNo();
-//                String lnDetailCacheourceCd = Detail(lnCntr).getSourceCode();
-//
-//                if (sourceItemCashPayableNo.equals(lnDetailCacheSourceNo) && DisbursementStatic.SourceCode.CASH_PAYABLE.equals(lnDetailCacheourceCd)) {
-//                    double detailAmount = Detail(lnCntr).getAmount();
-//                    double taxRate = Detail(lnCntr).getTaxRates();
-//                    lnTotalCacheWithholdingTax += detailAmount * (taxRate / 100);
-//                }
-//            }
-//
-//            double lnCacheMasterWithholdingTax = loCachePayable.Master().getTaxAmount();
-//
-//            if (Math.abs(lnTotalCacheWithholdingTax - lnCacheMasterWithholdingTax) > 0.01) { // Allow small rounding differences
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Withholding Tax does not match Cache Payable Tax Amount. Reference No.: " + sourceItemCashPayableNo);
-//                return poJSON;
-//            }
-//        }
-//
-//        for (String sourceItemPayablesNo : uniqueAccountsPayableNos) {
-//            poJSON = loApPayments.OpenTransaction(sourceItemPayablesNo);
-//            if (!"success".equals(poJSON.get("result"))) {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "No records found for SOA Tagging reference no.: " + sourceItemPayablesNo);
-//                return poJSON;
-//            }
-//
-//            double lnTotalSOAWithholdingTax = 0.00;
-//
-//            // Sum withholding tax for this SOA Tagging reference
-//            for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-//                String lsDetailSOASourceNo = Detail(lnCntr).getSourceNo();
-//                String lsDetailSOASourceCd = Detail(lnCntr).getSourceCode();
-//
-//                if (sourceItemPayablesNo.equals(lsDetailSOASourceNo) && DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(lsDetailSOASourceCd)) {
-//                    double lnDetailSOAAmount = Detail(lnCntr).getAmount();
-//                    double lnTaxSOARate = Detail(lnCntr).getTaxRates();
-//                    lnTotalSOAWithholdingTax += lnDetailSOAAmount * (lnTaxSOARate / 100);
-//                }
-//            }
-//
-//            double lnSOAMasterWithholdingTax = loApPayments.Master().getTaxAmount().doubleValue();
-//
-//            if (Math.abs(lnTotalSOAWithholdingTax - lnSOAMasterWithholdingTax) > 0.01) { // Allow small rounding differences
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Withholding Tax does not match SOA Tagging Tax Amount. Reference No.: " + sourceItemPayablesNo);
-//                return poJSON;
-//            }
-//        }
-//
-//        poJSON.put("result", "success");
-//        return poJSON;
-//    }
     private JSONObject validateTaxAmountIfSOAAndCachePayable() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
 
@@ -1351,7 +1255,7 @@ public class Disbursement extends Transaction {
             }
             if (getEditMode() == EditMode.UPDATE) {
                 if (poJournal != null) {
-                    if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
+                    if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
                         poJournal.setWithParent(true);
                         poJournal.Master().setModifiedDate(poGRider.getServerDate());
                         poJSON = poJournal.SaveTransaction();
