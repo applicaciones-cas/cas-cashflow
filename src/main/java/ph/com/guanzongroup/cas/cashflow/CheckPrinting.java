@@ -904,7 +904,7 @@ public class CheckPrinting extends Transaction {
             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
             boolean isDVPrinted = "1".equals(Master().getPrint());
             if (!isDVPrinted) {
-                poJSON.put("message", "Cheque printing requires the Disbursement to be printed first.");
+                poJSON.put("message", "Check printing requires the Disbursement to be printed first.");
                 poJSON.put("result", "error");
                 return poJSON;
             }
@@ -1216,7 +1216,9 @@ public class CheckPrinting extends Transaction {
 
                 /* 2.2 parameters … (same as before) */
                 Map<String, Object> params = new HashMap<>();
-                params.put("sVoucherNo", Master().getVoucherNo());
+                System.out.println("voucher No : " + Master().getVoucherNo());
+                System.out.println("transaction No : " + Master().getTransactionNo());
+                params.put("voucherNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
                 params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
