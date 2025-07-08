@@ -27,8 +27,17 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import javax.script.ScriptException;
+import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
+import org.guanzon.cas.tbjhandler.TBJEntry;
+import org.guanzon.cas.tbjhandler.TBJTransaction;
+import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class CheckStatusUpdate extends Transaction {
 
@@ -37,20 +46,39 @@ public class CheckStatusUpdate extends Transaction {
     private Disbursement disbursement;
     private CheckPayments checkPayments;
     private BankAccountMaster bankAccount;
-
+    private Journal poJournal;
+    private Model_Journal_Master poJournalMaster;
+    private Model_Journal_Detail poJEDetail;
     private String psIndustryId = "";
     private String psCompanyId = "";
 
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "ChK";
+        SOURCE_CODE = "DISB";
 
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
+        poJournalMaster = new CashflowModels(poGRider).Journal_Master();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         disbursement = new CashflowControllers(poGRider, logwrapr).Disbursement();
         paDetail = new ArrayList<>();
 
         return initialize();
+    }
+
+    public Model_Journal_Master JournalMaster() {
+        return poJournalMaster;
+    }
+
+    public Model_Journal_Detail JournalDetail() {
+        return poJEDetail;
+    }
+
+    public Journal Journal() throws SQLException, GuanzonException {
+        if (poJournal == null) {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        }
+        return poJournal;
     }
 
     public void setIndustryID(String industryID) {
@@ -294,8 +322,9 @@ public class CheckStatusUpdate extends Transaction {
 
     public JSONObject saveCheckPayments() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-
         checkPayments.setWithParentClass(true);
+        checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+        checkPayments.getModel().setModifyingId(poGRider.getUserID());
         poJSON = checkPayments.saveRecord();
         if ("error".equals(poJSON.get("result"))) {
             return poJSON;
@@ -327,28 +356,65 @@ public class CheckStatusUpdate extends Transaction {
     @Override
     public JSONObject save() {
         /*Put saving business rules here*/
-        return isEntryOkay(CheckStatus.FLOAT);
+        return isEntryOkay(DisbursementStatic.OPEN);
     }
 
-    @Override
-    public JSONObject saveOthers() {
-        try {
-            /*Only modify this if there are other tables to modify except the master and detail tables*/
-            poJSON = new JSONObject();
+    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = DisbursementStatic.RETURNED;
+        boolean lbReturn = true;
 
-            switch (CheckPayments().getModel().getTransactionStatus()) {
-                case CheckStatus.CANCELLED:
-                case CheckStatus.STALED:
-                case CheckStatus.BOUNCED:
-                    poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "Returned", "7", false);
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                    break;
-                case CheckStatus.POSTED: // CLEARED
-                    break;
-            }
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already returned.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(DisbursementStatic.RETURNED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbReturn, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poJSON = saveUpdateOthers();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+        poJSON = populateJournal();
+
+        poJournal.setWithParent(true);
+        poJSON = poJournal.CancelTransaction("Cancelled");
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction saved successfully.");
+        return poJSON;
+    }
+
+    private JSONObject setValueToOthers() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject saveUpdateOthers() throws CloneNotSupportedException {
+        poJSON = new JSONObject();
+        try {
             poJSON = saveCheckPayments();
             if ("error".equals(poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -363,26 +429,71 @@ public class CheckStatusUpdate extends Transaction {
                     }
                 }
             }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(CheckStatusUpdate.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
 
-//            switch (CheckPayments().getModel().getTransactionStatus()) {
-//                case CheckStatus.CANCELLED:
-//                case CheckStatus.STALED:
-//                case CheckStatus.BOUNCED:
-//                    poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "Returned", "7", false);
-//                    if (!"success".equals((String) poJSON.get("result"))) {
-//                        poGRider.rollbackTrans();
-//                        return poJSON;
-//                    }
-//                    break;
-//                case CheckStatus.POSTED: // CLEARED
-//                    break;
-//            }
+    @Override
+    public JSONObject saveOthers() {
+        poJSON = new JSONObject();
+        try {
+            switch (CheckPayments().getModel().getTransactionStatus()) {
+                case CheckStatus.POSTED:
+                    break;
+                default:
+                    break;
+            }
+            poJSON = saveCheckPayments();
+            if ("error".equals(poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckStatusUpdate.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        if (Master().getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
             poJSON.put("result", "error");
-            poJSON.put("message", ex.toString());
+            poJSON.put("message", "No record to load");
             return poJSON;
         }
+
+        if (poJournal == null || getEditMode() == EditMode.READY) {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        }
+
+        String lsJournal = existJournal();
+        if (lsJournal != null && !"".equals(lsJournal)) {
+            if (Master().getEditMode() == EditMode.READY) {
+                poJSON = poJournal.OpenTransaction(lsJournal);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+
+            if (getEditMode() == EditMode.UPDATE) {
+                if (poJournal.getEditMode() == EditMode.READY) {
+                    poJSON = poJournal.OpenTransaction(lsJournal);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    poJSON = poJournal.UpdateTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        }
+
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -413,6 +524,26 @@ public class CheckStatusUpdate extends Transaction {
                 + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx = i.sBankIDxx"
                 + " LEFT JOIN bank_account_master j ON g.sBnkActID = j.sBnkActID";
+    }
+
+    private String existJournal() throws SQLException {
+        Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
+        String lsSQL = MiscUtil.makeSelect(loMaster);
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+        );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        poJSON = new JSONObject();
+        if (MiscUtil.RecordCount(loRS) > 0) {
+            while (loRS.next()) {
+                if (loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))) {
+                    return loRS.getString("sTransNox");
+                }
+            }
+        }
+        MiscUtil.close(loRS);
+        return "";
     }
 
     @Override
