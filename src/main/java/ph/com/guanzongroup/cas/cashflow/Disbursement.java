@@ -2457,7 +2457,7 @@ public class Disbursement extends Transaction {
                 if (sSeries != null && !sSeries.trim().isEmpty()) {
                     long voucherNumber = Long.parseLong(sSeries);
                     voucherNumber += 1;
-                    branchVoucherNo = String.format("%06d", voucherNumber); // format to 6 digits
+                    branchVoucherNo = String.format("%08d", voucherNumber); // format to 6 digits
                 }
 
             }
