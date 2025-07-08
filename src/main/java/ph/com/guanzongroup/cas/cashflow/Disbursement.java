@@ -994,19 +994,6 @@ public class Disbursement extends Transaction {
             paDetailRemoved = new ArrayList<>();
         }
 
-        Iterator<Model> detail = Detail().iterator();
-        while (detail.hasNext()) {
-            Model item = detail.next(); // Store the item before checking conditions
-            sourceNo = (String) item.getValue("sSourceNo");
-            Number amount = (Number) item.getValue("nAmountxx");
-
-            if (amount.doubleValue() <= 0 || "".equals(sourceNo)) {
-                detail.remove(); // Correctly remove the item
-                if (Master().getEditMode() == EditMode.UPDATE) {
-                    paDetailRemoved.add(item);
-                }
-            }
-        }
         if (DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())) {
             Disbursement loRecord = new CashflowControllers(poGRider, null).Disbursement();
             loRecord.InitTransaction();
@@ -1042,7 +1029,19 @@ public class Disbursement extends Transaction {
                 return poJSON;
             }
         }
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next(); // Store the item before checking conditions
+            sourceNo = (String) item.getValue("sSourceNo");
+            double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
 
+            if (amount <= 0.0000 || "".equals(sourceNo)) {
+                detail.remove(); // Correctly remove the item
+                if (Master().getEditMode() == EditMode.UPDATE) {
+                    paDetailRemoved.add(item);
+                }
+            }
+        }
         if (getDetailCount() == 1) {
             //do not allow a single item detail with no quantity order
             if (Detail(0).getAmount() == 0.0000) {
