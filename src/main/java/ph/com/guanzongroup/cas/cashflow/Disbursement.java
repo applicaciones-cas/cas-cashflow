@@ -1006,6 +1006,12 @@ public class Disbursement extends Transaction {
             if (lbUpdated) {
                 lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
             }
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getNetTotal() == Master().getNetTotal();
+            }
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
+            }
 
             if (lbUpdated) {
                 for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
@@ -1016,7 +1022,6 @@ public class Disbursement extends Transaction {
                     if (lbUpdated) {
                         lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
                     }
-
                     if (!lbUpdated) {
                         break;
                     }
@@ -1028,6 +1033,7 @@ public class Disbursement extends Transaction {
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
             }
+
             Master().setTransactionStatus(DisbursementStatic.OPEN);
             CheckPayments().getModel().setTransactionStatus(CheckStatus.FLOAT);
         }
