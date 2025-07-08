@@ -83,9 +83,7 @@ public class CheckPrinting extends Transaction {
     private DocumentMapping poDocumentMapping;
 
     List<Model_Disbursement_Master> poDisbursementMaster;
-//    private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
-//    private Disbursement dvMaster;
     private BankAccountMaster bankAccount;
     List<PaymentRequest> poPaymentRequest;
     List<SOATagging> poApPayments;
