@@ -1028,6 +1028,8 @@ public class Disbursement extends Transaction {
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
             }
+            Master().setTransactionStatus(DisbursementStatic.OPEN);
+            CheckPayments().getModel().setTransactionStatus(CheckStatus.FLOAT);
         }
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
