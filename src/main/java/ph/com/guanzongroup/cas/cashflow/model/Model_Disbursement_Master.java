@@ -32,6 +32,7 @@ public class Model_Disbursement_Master extends Model {
     Model_Industry poIndustry;
     Model_Check_Payments poCheckPayments;
     private String oldDisbursementType = DisbursementStatic.DisbursementType.CHECK;
+    private String supplierClientID = "";
 
     @Override
     public void initialize() {
@@ -321,6 +322,14 @@ public class Model_Disbursement_Master extends Model {
 
     public String getOldDisbursementType() {
         return this.oldDisbursementType;
+    }
+    
+    public void setSupplierClientID(String SupplierClientID) {
+        this.supplierClientID = SupplierClientID;
+    }
+
+    public String getSupplierClientID() {
+        return this.supplierClientID;
     }
 
     public Model_Payee Payee() throws GuanzonException, SQLException {

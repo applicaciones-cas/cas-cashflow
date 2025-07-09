@@ -563,16 +563,15 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject SearchSupplier(String value, boolean byCode) throws SQLException, GuanzonException {
-        Client object = new ClientControllers(poGRider, logwrapr).Client();
-        object.Master().setRecordStatus(RecordStatus.ACTIVE);
-        object.Master().setClientType("1");
-        poJSON = object.Master().searchRecord(value, byCode);
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecordbyCompany(value, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-
-//            Master().setSupplierID(object.Master().getModel().getClientId());
-//            Master().setAddressID(object.ClientAddress().getModel().getAddressId());
-//            Master().setContactID(object.ClientInstitutionContact().getModel().getClientId());
+            Master().setPayeeID(object.getModel().getPayeeID());
+            CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
+             Master().setSupplierClientID(object.getModel().getClientID());
         }
 
         return poJSON;
@@ -582,7 +581,7 @@ public class Disbursement extends Transaction {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecordbyClientID(value, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setPayeeID(object.getModel().getPayeeID());
@@ -1442,7 +1441,7 @@ public class Disbursement extends Transaction {
         String referNo, sourceCode, particular, invType = "";
         double amount;
         boolean isVatable = false;
-
+        Payee poPayee= new CashflowControllers(poGRider, logwrapr).Payee();
         switch (paymentType) {
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                 PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
@@ -1462,7 +1461,7 @@ public class Disbursement extends Transaction {
                 }
 
                 detailCount = loPaymentRequest.getDetailCount();
-//                String currentPayeeID = loPaymentRequest.Master().getPayeeID();
+                String currentPayeeID = loPaymentRequest.Master().getPayeeID();
 
                 for (int i = 0; i < detailCount; i++) {
                     referNo = loPaymentRequest.Detail(i).getTransactionNo();
@@ -1486,7 +1485,7 @@ public class Disbursement extends Transaction {
 //                            }
 //                        }
 //                    }
-//                    Master().setPayeeID(currentPayeeID);
+                    Master().setPayeeID(currentPayeeID);
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
                     Detail(newIndex).setSourceNo(referNo);
@@ -1517,7 +1516,7 @@ public class Disbursement extends Transaction {
                 }
 
                 detailCount = loApPayments.getDetailCount();
-//                String currentPayeeID2 = loApPayments.Master().Payee().getClientID();
+                String currentPayeeID2 = loApPayments.Master().Payee().getClientID();
 
                 for (int i = 0; i < detailCount; i++) {
                     referNo = loApPayments.Detail(i).getTransactionNo();
@@ -1546,9 +1545,9 @@ public class Disbursement extends Transaction {
 //                            }
 //                        }
 //                    }
-//                    Payees = new CashflowControllers(poGRider, logwrapr).Payee();
-//                    poJSON = Payees.openRecord(currentPayeeID2);
-//                    Master().setPayeeID(currentPayeeID2);
+                   
+                    poJSON = poPayee.openRecord(currentPayeeID2);
+                    Master().setPayeeID(currentPayeeID2);
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
                     Detail(newIndex).setSourceNo(referNo);
@@ -1579,7 +1578,7 @@ public class Disbursement extends Transaction {
                 }
 
                 detailCount = loCachePayable.getDetailCount();
-//                String currentPayeeID3 = loCachePayable.Master().getClientId();
+                String currentPayeeID3 = loCachePayable.Master().getClientId();
 
                 for (int i = 0; i < detailCount; i++) {
                     referNo = loCachePayable.Detail(i).getTransactionNo();
@@ -1602,6 +1601,8 @@ public class Disbursement extends Transaction {
 //                        }
 //                    }
 //
+                    poJSON = poPayee.getModel().openRecordByReference(currentPayeeID3);
+                    Master().setPayeeID(poPayee.getModel().getPayeeID());
 //                    Master().Payee().setClientID(currentPayeeID3);
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
