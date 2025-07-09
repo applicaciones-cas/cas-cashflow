@@ -571,7 +571,7 @@ public class Disbursement extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setPayeeID(object.getModel().getPayeeID());
             CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
-             Master().setSupplierClientID(object.getModel().getClientID());
+            Master().setSupplierClientID(object.getModel().getClientID());
         }
 
         return poJSON;
@@ -1449,7 +1449,7 @@ public class Disbursement extends Transaction {
         String referNo, sourceCode, particular, invType = "";
         double amount;
         boolean isVatable = false;
-        Payee poPayee= new CashflowControllers(poGRider, logwrapr).Payee();
+        Payee poPayee = new CashflowControllers(poGRider, logwrapr).Payee();
         switch (paymentType) {
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                 PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
@@ -1476,24 +1476,26 @@ public class Disbursement extends Transaction {
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
                     particular = loPaymentRequest.Detail(i).getParticularID();
                     amount = loPaymentRequest.Detail(i).getAmount();
-                    invType = "0009";
+                    invType = "";
                     isVatable = loPaymentRequest.Detail(i).getVatable().equals("1");
 
                     // Validate Payee ID Consistency
-//                    for (int j = 0; j < getDetailCount(); j++) {
-//                        if (Detail(j).getSourceNo().equals(referNo)
-//                                && Detail(j).getSourceCode().equals(sourceCode)
-//                                && Detail(j).getParticularID().equals(particular)) {
-//
-//                            // If Payee ID mismatched
-//                            if (!Master().Payee().equals(currentPayeeID)) {
-//                                poJSON.put("result", "error");
-//                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
-//                                return poJSON;
-//                            }
-//                        }
-//                    }
+                    for (int j = 0; j < getDetailCount(); j++) {
+                        if (Detail(j).getSourceNo().equals(referNo)
+                                && Detail(j).getSourceCode().equals(sourceCode)
+                                && Detail(j).getParticularID().equals(particular)) {
+
+                            // If Payee ID mismatched
+                            if (!Master().getPayeeID().equals(currentPayeeID)) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
+                        }
+                    }
                     Master().setPayeeID(currentPayeeID);
+                    Master().setSupplierClientID(loPaymentRequest.Master().Payee().getClientID());
+                    CheckPayments().getModel().setPayeeID(currentPayeeID);
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
                     Detail(newIndex).setSourceNo(referNo);
@@ -1502,7 +1504,6 @@ public class Disbursement extends Transaction {
                     Detail(newIndex).setAmount(amount);
                     Detail(newIndex).isWithVat(isVatable);
                     Detail(newIndex).setAccountCode(loPaymentRequest.Detail(i).Particular().getAccountCode());
-                    Detail(newIndex).setInvType(invType);
                     insertedCount++;
                 }
                 break;
@@ -1540,29 +1541,29 @@ public class Disbursement extends Transaction {
                         invType = loCachePayable.Detail(c).InvType().getInventoryTypeId();
                     }
 
-                    // Validation: Check for existing details with different Payee ID
-//                    for (int j = 0; j < getDetailCount(); j++) {
-//                        if (Detail(j).getSourceNo().equals(referNo)
-//                                && Detail(j).getSourceCode().equals(sourceCode)) {
-//
-//                            // Check if Payee ID is different
-//                            if (!Master().Payee().getClientID().equals(currentPayeeID2)) {
-//                                poJSON.put("result", "error");
-//                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
-//                                return poJSON;
-//                            }
-//                        }
-//                    }
-                   
                     poJSON = poPayee.openRecord(currentPayeeID2);
-                    Master().setPayeeID(currentPayeeID2);
+                    // Validation: Check for existing details with different Payee ID
+                    for (int j = 0; j < getDetailCount(); j++) {
+                        if (Detail(j).getSourceNo().equals(referNo)
+                                && Detail(j).getSourceCode().equals(sourceCode)) {
+
+                            // Check if Payee ID is different
+                            if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
+                        }
+                    }
+                    Master().setPayeeID(poPayee.getModel().getPayeeID());
+                    Master().setSupplierClientID(currentPayeeID2);
+                    CheckPayments().getModel().setPayeeID(poPayee.getModel().getPayeeID());
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
                     Detail(newIndex).setSourceNo(referNo);
                     Detail(newIndex).setSourceCode(sourceCode);
                     Detail(newIndex).setParticularID(particular);
                     Detail(newIndex).setAmount(amount);
-                    Detail(newIndex).setInvType(invType);
                     insertedCount++;
                 }
                 break;
@@ -1595,30 +1596,30 @@ public class Disbursement extends Transaction {
                     amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
                     invType = loCachePayable.Detail(i).InvType().getInventoryTypeId();
 
-//                    // Validation: Check for existing details with different Payee ID
-//                    for (int j = 0; j < getDetailCount(); j++) {
-//                        if (Detail(j).getSourceNo().equals(referNo)
-//                                && Detail(j).getSourceCode().equals(sourceCode)) {
-//
-//                            // Check if Payee ID is different
-//                            if (!Master().Payee().getClientID().equals(currentPayeeID3)) {
-//                                poJSON.put("result", "error");
-//                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
-//                                return poJSON;
-//                            }
-//                        }
-//                    }
-//
                     poJSON = poPayee.getModel().openRecordByReference(currentPayeeID3);
+//                    // Validation: Check for existing details with different Payee ID
+                    for (int j = 0; j < getDetailCount(); j++) {
+                        if (Detail(j).getSourceNo().equals(referNo)
+                                && Detail(j).getSourceCode().equals(sourceCode)) {
+
+                            // Check if Payee ID is different
+                            if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
+                        }
+                    }
+//
                     Master().setPayeeID(poPayee.getModel().getPayeeID());
-//                    Master().Payee().setClientID(currentPayeeID3);
+                    Master().setSupplierClientID(currentPayeeID3);
+                    CheckPayments().getModel().setPayeeID(poPayee.getModel().getPayeeID());
                     AddDetail();
                     int newIndex = getDetailCount() - 1;
                     Detail(newIndex).setSourceNo(referNo);
                     Detail(newIndex).setSourceCode(sourceCode);
                     Detail(newIndex).setParticularID(particular);
                     Detail(newIndex).setAmount(amount);
-                    Detail(newIndex).setInvType(invType);
                     insertedCount++;
                 }
                 break;
