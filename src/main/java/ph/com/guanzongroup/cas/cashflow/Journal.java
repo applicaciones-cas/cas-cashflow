@@ -122,6 +122,11 @@ public class Journal extends Transaction {
         String lsStatus = JournalStatus.CANCELLED;
         boolean lbConfirm = true;
 
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already confirmed.");
@@ -145,6 +150,61 @@ public class Journal extends Transaction {
         poGRider.commitTrans();
         poJSON = new JSONObject();
         poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction cancelled successfully.");
+        } else {
+            poJSON.put("message", "Transaction cancellation request submitted successfully.");
+        }
+        return poJSON;
+    }
+
+    public JSONObject VoidTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = JournalStatus.VOID;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already confirmed.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(JournalStatus.VOID);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction voided successfully.");
+        } else {
+            poJSON.put("message", "Transaction voiding request submitted successfully.");
+        }
+
         return poJSON;
     }
 

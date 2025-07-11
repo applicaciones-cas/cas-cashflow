@@ -391,14 +391,7 @@ public class CheckStatusUpdate extends Transaction {
         }
 
         poGRider.commitTrans();
-        poJSON = populateJournal();
 
-        poJournal.setWithParent(true);
-        poJSON = poJournal.CancelTransaction("Cancelled");
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction saved successfully.");

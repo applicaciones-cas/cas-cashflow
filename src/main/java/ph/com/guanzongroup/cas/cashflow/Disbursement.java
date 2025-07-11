@@ -235,7 +235,7 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.VOID;
@@ -258,17 +258,31 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+        populateJournal();
+        poJSON = poJournal.VoidTransaction("VOIDED");
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-
         if (lbConfirm) {
             poJSON.put("message", "Transaction voided successfully.");
         } else {
@@ -582,10 +596,10 @@ public class Disbursement extends Transaction {
         object.setRecordStatus("1");
 
         poJSON = object.searchRecordbyClientID(value, byCode);
-
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setPayeeID(object.getModel().getPayeeID());
             CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
+            Master().setSupplierClientID(object.getModel().getClientID());
         }
 
         return poJSON;
@@ -1294,15 +1308,15 @@ public class Disbursement extends Transaction {
                 + " c.sBranchNm,"
                 + " d.sPayeeNme,"
                 + " e.sCompnyNm AS supplier,"
-                //                + " f.sDescript,"
+                + " f.sDescript,"
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp "
                 + " FROM Disbursement_Master a "
-                + " JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
-                + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
-                + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " JOIN client_master e ON d.sClientID = e.sClientID "
-                //                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
+                + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
+                + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
+                + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
+                + " LEFT JOIN client_master e ON d.sClientID = e.sClientID "
+                + " LEFT JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN other_payments h ON a.sTransNox = h.sSourceNo"
                 + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
@@ -2291,7 +2305,7 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    private String existJournal() throws SQLException {
+    public String existJournal() throws SQLException {
         Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         lsSQL = MiscUtil.addCondition(lsSQL,
