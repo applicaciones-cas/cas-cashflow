@@ -910,7 +910,7 @@ public class CheckPrinting extends Transaction {
             }
             
             if(Master().CheckPayments().getCheckNo().isEmpty()  || Master().CheckPayments().getCheckNo().equals(null)){
-                poJSON.put("message", "Printting Check requires to assign check no before printing");
+                poJSON.put("message", "Check printing requires to assign Check No before printing");
                 poJSON.put("result", "error");
                 return poJSON;
             }
