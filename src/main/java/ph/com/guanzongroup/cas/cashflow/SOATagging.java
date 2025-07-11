@@ -1128,6 +1128,15 @@ public class SOATagging extends Transaction {
             CloneNotSupportedException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
+        
+        if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+        }
 
         if (paDetailRemoved == null) {
             paDetailRemoved = new ArrayList<>();
