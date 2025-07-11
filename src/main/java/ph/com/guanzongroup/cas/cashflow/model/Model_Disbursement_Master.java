@@ -32,6 +32,7 @@ public class Model_Disbursement_Master extends Model {
     Model_Industry poIndustry;
     Model_Check_Payments poCheckPayments;
     private String oldDisbursementType = DisbursementStatic.DisbursementType.CHECK;
+    private String supplierClientID = "";
 
     @Override
     public void initialize() {
@@ -193,13 +194,14 @@ public class Model_Disbursement_Master extends Model {
         return setValue("nNonVATSl", nonVATSale);
     }
 
-//    public double getNonVATSale(){
-//        return (double) getValue("nNonVATSl");
-//    }
-//
-//    public JSONObject setVATSale(double VATSale){
-//        return setValue("nVATSales", VATSale);
-//    }
+    public double getNonVATSale() {
+        return Double.parseDouble(String.valueOf(getValue("nNonVATSl")));
+    }
+
+    public JSONObject setVATSale(double VATSale) {
+        return setValue("nVATSales", VATSale);
+    }
+
     public double getVATSale() {
         return Double.parseDouble(String.valueOf(getValue("nVATSales")));
     }
@@ -209,7 +211,7 @@ public class Model_Disbursement_Master extends Model {
     }
 
     public double getVATRates() {
-        return Double.parseDouble(String.valueOf( getValue("nVATRatex")));
+        return Double.parseDouble(String.valueOf(getValue("nVATRatex")));
     }
 
     public JSONObject setVATAmount(double vatAmount) {
@@ -320,6 +322,14 @@ public class Model_Disbursement_Master extends Model {
 
     public String getOldDisbursementType() {
         return this.oldDisbursementType;
+    }
+    
+    public void setSupplierClientID(String SupplierClientID) {
+        this.supplierClientID = SupplierClientID;
+    }
+
+    public String getSupplierClientID() {
+        return this.supplierClientID;
     }
 
     public Model_Payee Payee() throws GuanzonException, SQLException {

@@ -32,5 +32,5 @@ public class DisbursementStatic {
         public static final  String LOAD_ALL = "ALL";
     }
      
-     public static final String DEFAULT_VOUCHER_NO = "000001";
+     public static final String DEFAULT_VOUCHER_NO = "00000001";
 }				

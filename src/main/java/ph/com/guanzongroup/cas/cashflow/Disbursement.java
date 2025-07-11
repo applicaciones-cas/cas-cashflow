@@ -8,8 +8,10 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.script.ScriptException;
@@ -22,6 +24,7 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.Client;
 import org.guanzon.cas.client.services.ClientControllers;
@@ -51,6 +54,7 @@ public class Disbursement extends Transaction {
     List<Model_Disbursement_Master> poDisbursementMaster;
     private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
+    private Payee Payees;
     private Journal poJournal;
     List<PaymentRequest> poPaymentRequest;
     List<SOATagging> poApPayments;
@@ -64,6 +68,7 @@ public class Disbursement extends Transaction {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+        Payees = new CashflowControllers(poGRider, logwrapr).Payee();
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
@@ -115,7 +120,12 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
 
@@ -200,7 +210,12 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
 
@@ -220,7 +235,7 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.VOID;
@@ -243,17 +258,31 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+        populateJournal();
+        poJSON = poJournal.VoidTransaction("VOIDED");
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-
         if (lbConfirm) {
             poJSON.put("message", "Transaction voided successfully.");
         } else {
@@ -282,7 +311,12 @@ public class Disbursement extends Transaction {
             poJSON.put("message", "Transaction was already processed.");
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //validator
         poJSON = isEntryOkay(DisbursementStatic.CERTIFIED);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -331,7 +365,12 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         poJSON = setSelectedItems(remarks, lbConfirm, lsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -374,7 +413,12 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         poJSON = setSelectedItems(remarks, lbConfirm, lsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -389,6 +433,41 @@ public class Disbursement extends Transaction {
             poJSON.put("message", "Transactions returning request submitted successfully.");
         }
 
+        return poJSON;
+    }
+
+    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = DisbursementStatic.RETURNED;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(DisbursementStatic.RETURNED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
         return poJSON;
     }
 
@@ -417,7 +496,12 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         poJSON = setSelectedItems(remarks, lbConfirm, lsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -493,16 +577,15 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject SearchSupplier(String value, boolean byCode) throws SQLException, GuanzonException {
-        Client object = new ClientControllers(poGRider, logwrapr).Client();
-        object.Master().setRecordStatus(RecordStatus.ACTIVE);
-        object.Master().setClientType("1");
-        poJSON = object.Master().searchRecord(value, byCode);
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecordbyCompany(value, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-
-//            Master().setSupplierID(object.Master().getModel().getClientId());
-//            Master().setAddressID(object.ClientAddress().getModel().getAddressId());
-//            Master().setContactID(object.ClientInstitutionContact().getModel().getClientId());
+            Master().setPayeeID(object.getModel().getPayeeID());
+            CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
+            Master().setSupplierClientID(object.getModel().getClientID());
         }
 
         return poJSON;
@@ -512,11 +595,11 @@ public class Disbursement extends Transaction {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecord(value, byCode);
-
+        poJSON = object.searchRecordbyClientID(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setPayeeID(object.getModel().getPayeeID());
             CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
+            Master().setSupplierClientID(object.getModel().getClientID());
         }
 
         return poJSON;
@@ -530,7 +613,7 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting()));
+            Master().setBankPrint(object.getModel().isBankPrinting() == true ? "1" : "0");
         }
 
         return poJSON;
@@ -550,7 +633,8 @@ public class Disbursement extends Transaction {
 
         initSQL();
         String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()));
+                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+                "a.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
 //                " a.sSupplier LIKE " + SQLUtil.toSQL("%" + fsSupplierID),
 //                " f.sCategrCd LIKE " + SQLUtil.toSQL("%" + Master().getCategoryCode()),
 //                " a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferID));
@@ -568,7 +652,7 @@ public class Disbursement extends Transaction {
                 "Transaction No»Transaction Date»Branch»Supplier",
                 "a.sTransNox»a.dTransact»c.sBranchNm»supplier",
                 "a.sTransNox»a.dTransact»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
-                1);
+                0);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
@@ -634,8 +718,6 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankID(object.getModel().getBankID());
-            System.out.println("search result == " + CheckPayments().getModel().getBankID());
-            System.out.println("search result == " + CheckPayments().getModel().Banks().getBankName());
         }
 
         return poJSON;
@@ -659,6 +741,10 @@ public class Disbursement extends Transaction {
 
     public CheckPayments CheckPayments() {
         return (CheckPayments) checkPayments;
+    }
+
+    public Payee Payee() {
+        return (Payee) Payees;
     }
 
     public JSONObject setSelectedItems(String remarks, boolean lbConfirm, String lsStatus) throws GuanzonException, SQLException, CloneNotSupportedException {
@@ -921,19 +1007,6 @@ public class Disbursement extends Transaction {
             paDetailRemoved = new ArrayList<>();
         }
 
-        Iterator<Model> detail = Detail().iterator();
-        while (detail.hasNext()) {
-            Model item = detail.next(); // Store the item before checking conditions
-            sourceNo = (String) item.getValue("sSourceNo");
-            Number amount = (Number) item.getValue("nAmountxx");
-
-            if (amount.doubleValue() <= 0 || "".equals(sourceNo)) {
-                detail.remove(); // Correctly remove the item
-                if (Master().getEditMode() == EditMode.UPDATE) {
-                    paDetailRemoved.add(item);
-                }
-            }
-        }
         if (DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())) {
             Disbursement loRecord = new CashflowControllers(poGRider, null).Disbursement();
             loRecord.InitTransaction();
@@ -946,6 +1019,12 @@ public class Disbursement extends Transaction {
             if (lbUpdated) {
                 lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
             }
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getNetTotal() == Master().getNetTotal();
+            }
+            if (lbUpdated) {
+                lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
+            }
 
             if (lbUpdated) {
                 for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
@@ -956,7 +1035,6 @@ public class Disbursement extends Transaction {
                     if (lbUpdated) {
                         lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
                     }
-
                     if (!lbUpdated) {
                         break;
                     }
@@ -968,8 +1046,23 @@ public class Disbursement extends Transaction {
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
             }
-        }
 
+            Master().setTransactionStatus(DisbursementStatic.OPEN);
+            CheckPayments().getModel().setTransactionStatus(CheckStatus.FLOAT);
+        }
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next(); // Store the item before checking conditions
+            sourceNo = (String) item.getValue("sSourceNo");
+            double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
+
+            if (amount <= 0.0000 || "".equals(sourceNo)) {
+                detail.remove(); // Correctly remove the item
+                if (Master().getEditMode() == EditMode.UPDATE) {
+                    paDetailRemoved.add(item);
+                }
+            }
+        }
         if (getDetailCount() == 1) {
             //do not allow a single item detail with no quantity order
             if (Detail(0).getAmount() == 0.0000) {
@@ -986,20 +1079,128 @@ public class Disbursement extends Transaction {
             }
         }
 
+        poJSON = validateTaxAmountIfSOAAndCachePayable();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
 //            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
-        if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
-            poJSON = validateJournal();
-            if ("error".equals((String) poJSON.get("result"))) {
+
+        if (Master().getEditMode() == EditMode.UPDATE) {
+            if (poJournal != null) {
+                if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                    poJSON = validateJournal();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validateTaxAmountIfSOAAndCachePayable() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+
+        // Initialize Cache Payable
+        CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+        poJSON = loCachePayable.InitTransaction();
+        if (!"success".equals(poJSON.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No records found for Cache Payable.");
+            return poJSON;
+        }
+
+        // Initialize SOA Tagging
+        SOATagging loApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
+        poJSON = loApPayments.InitTransaction();
+        if (!"success".equals(poJSON.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No records found for SOA Tagging.");
+            return poJSON;
+        }
+
+        // Group Source Numbers by Source Codes
+        Set<String> uniqueCashPayableNos = new HashSet<>();
+        Set<String> uniqueAccountsPayableNos = new HashSet<>();
+
+        for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++) {
+            String sourceCode = Detail(lnCntr).getSourceCode();
+            String sourceNo = Detail(lnCntr).getSourceNo();
+
+            if (DisbursementStatic.SourceCode.CASH_PAYABLE.equals(sourceCode)) {
+                uniqueCashPayableNos.add(sourceNo);
+            } else if (DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(sourceCode)) {
+                uniqueAccountsPayableNos.add(sourceNo);
+            }
+        }
+
+        // Validate Cache Payable
+        for (String cachePayableNo : uniqueCashPayableNos) {
+            if (!validateTaxAmountForSource(cachePayableNo, loCachePayable, DisbursementStatic.SourceCode.CASH_PAYABLE)) {
+                return poJSON;
+            }
+        }
+
+        // Validate Accounts Payable
+        for (String accountsPayableNo : uniqueAccountsPayableNos) {
+            if (!validateTaxAmountForSource(accountsPayableNo, loApPayments, DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)) {
                 return poJSON;
             }
         }
 
         poJSON.put("result", "success");
         return poJSON;
+    }
+
+    /**
+     * This method scans the details, sums the tax amounts for the matching
+     * source, and validates against the master tax amount.
+     */
+    private boolean validateTaxAmountForSource(String sourceNo, Object controller, String sourceCode) throws SQLException, CloneNotSupportedException, GuanzonException {
+        JSONObject loResult = new JSONObject();
+
+        if (controller instanceof CachePayable) {
+            loResult = ((CachePayable) controller).OpenTransaction(sourceNo);
+        } else if (controller instanceof SOATagging) {
+            loResult = ((SOATagging) controller).OpenTransaction(sourceNo);
+        }
+
+        if (!"success".equals(loResult.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No records found for " + (sourceCode.equals(DisbursementStatic.SourceCode.CASH_PAYABLE) ? "Cache Payable" : "SOA Tagging") + " reference no.: " + sourceNo);
+            return false;
+        }
+
+        double totalTaxDetail = 0.00;
+
+        for (int lnCntr = 0; lnCntr < getDetailCount(); lnCntr++) {
+            if (sourceNo.equals(Detail(lnCntr).getSourceNo()) && sourceCode.equals(Detail(lnCntr).getSourceCode())) {
+                double amount = Detail(lnCntr).getAmount();
+                double taxRate = Detail(lnCntr).getTaxRates();
+                totalTaxDetail += amount * (taxRate / 100);
+            }
+        }
+
+        double masterTaxAmount = (controller instanceof CachePayable)
+                ? ((CachePayable) controller).Master().getTaxAmount()
+                : ((SOATagging) controller).Master().getTaxAmount().doubleValue();
+
+        if (Math.abs(totalTaxDetail - masterTaxAmount) > 0.01) { // Allow minimal rounding difference
+            poJSON.put("result", "error");
+            poJSON.put("message", "On Disbursement Voucher No: " + Master().getTransactionNo() + "\n"
+                    + "There is an issue with the disbursement details: the withholding tax does not match for reference no.: " + sourceNo + ". \n"
+                    + "Please fix this before saving.");
+            return false;
+        }
+
+        return true;
     }
 
     public int getDetailRemovedCount() {
@@ -1073,16 +1274,19 @@ public class Disbursement extends Transaction {
                     return poJSON;
                 }
             }
-            if (poJournal != null) {
-                if (getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE) {
-                    poJournal.setWithParent(true);
-                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                    poJSON = poJournal.SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
+            if (getEditMode() == EditMode.UPDATE) {
+                if (poJournal != null) {
+                    if (poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE) {
+                        poJournal.setWithParent(true);
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                 }
             }
+
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -1108,11 +1312,11 @@ public class Disbursement extends Transaction {
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp "
                 + " FROM Disbursement_Master a "
-                + " JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
-                + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
-                + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " JOIN client_master e ON d.sClientID = e.sClientID "
-                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
+                + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
+                + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
+                + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
+                + " LEFT JOIN client_master e ON d.sClientID = e.sClientID "
+                + " LEFT JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN other_payments h ON a.sTransNox = h.sSourceNo"
                 + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
@@ -1151,6 +1355,7 @@ public class Disbursement extends Transaction {
                     + " AND (a.nTranTotl - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + " AND a.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " AND a.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
             );
             hasCondition = true;
         }
@@ -1173,6 +1378,7 @@ public class Disbursement extends Transaction {
                     + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " AND b.sPayeeIDx LIKE '" + (Master().getPayeeID() == null || Master().getPayeeID().isEmpty() ? "%" : Master().getPayeeID()) + "'"
             );
             hasCondition = true;
         }
@@ -1195,6 +1401,7 @@ public class Disbursement extends Transaction {
                     + " AND (c.nGrossAmt - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
                     + " AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
                     + " AND c.sCompnyID = '" + Master().getCompanyID() + "'"
+                    + " AND c.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
             );
             hasCondition = true;
         }
@@ -1250,167 +1457,187 @@ public class Disbursement extends Transaction {
     public JSONObject addUnifiedPaymentToDisbursement(String transactionNo, String paymentType)
             throws CloneNotSupportedException, SQLException, GuanzonException {
 
-        JSONObject poJSON = new JSONObject();
+        poJSON = new JSONObject();
         int insertedCount = 0;
-
         int detailCount = 0;
         String referNo, sourceCode, particular, invType = "";
         double amount;
-
+        boolean isVatable = false;
+        Payee poPayee = new CashflowControllers(poGRider, logwrapr).Payee();
         switch (paymentType) {
-            case DisbursementStatic.SourceCode.PAYMENT_REQUEST: {
-                PaymentRequest poPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
+            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
 
-                poJSON = poPaymentRequest.InitTransaction();
+                poJSON = loPaymentRequest.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poPaymentRequest.OpenTransaction(transactionNo);
+                poJSON = loPaymentRequest.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poPaymentRequest.getDetailCount();
+                detailCount = loPaymentRequest.getDetailCount();
+                String currentPayeeID = loPaymentRequest.Master().getPayeeID();
+
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poPaymentRequest.Detail(i).getTransactionNo();
+                    referNo = loPaymentRequest.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.PAYMENT_REQUEST;
-                    particular = poPaymentRequest.Detail(i).getParticularID();
-                    amount = poPaymentRequest.Detail(i).getAmount();
+                    particular = loPaymentRequest.Detail(i).getParticularID();
+                    amount = loPaymentRequest.Detail(i).getAmount();
                     invType = "";
+                    isVatable = loPaymentRequest.Detail(i).getVatable().equals("1");
 
-                    boolean found = false;
+                    // Validate Payee ID Consistency
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
                                 && Detail(j).getParticularID().equals(particular)) {
-                            found = true;
-                            break;
+
+                            // If Payee ID mismatched
+                            if (!Master().getPayeeID().equals(currentPayeeID)) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
                         }
                     }
-
-                    if (!found) {
-                        AddDetail();
-                        int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(referNo);
-                        Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticularID(particular);
-                        Detail(newIndex).setAmount(amount);
-                        Detail(newIndex).setAccountCode(poPaymentRequest.Detail(i).Particular().getAccountCode());
-                        Detail(newIndex).setInvType(invType);
-                        insertedCount++;
-                    }
+                    Master().setPayeeID(currentPayeeID);
+                    Master().setSupplierClientID(loPaymentRequest.Master().Payee().getClientID());
+                    CheckPayments().getModel().setPayeeID(currentPayeeID);
+                    AddDetail();
+                    int newIndex = getDetailCount() - 1;
+                    Detail(newIndex).setSourceNo(referNo);
+                    Detail(newIndex).setSourceCode(sourceCode);
+                    Detail(newIndex).setParticularID(particular);
+                    Detail(newIndex).setAmount(amount);
+                    Detail(newIndex).isWithVat(isVatable);
+                    Detail(newIndex).setAccountCode(loPaymentRequest.Detail(i).Particular().getAccountCode());
+                    insertedCount++;
                 }
                 break;
-            }
-
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: {
-                SOATagging poApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
+                SOATagging loApPayments = new CashflowControllers(poGRider, logwrapr).SOATagging();
 
-                poJSON = poApPayments.InitTransaction();
+                poJSON = loApPayments.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poApPayments.OpenTransaction(transactionNo);
+                poJSON = loApPayments.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poApPayments.getDetailCount();
+                detailCount = loApPayments.getDetailCount();
+                String currentPayeeID2 = loApPayments.Master().Payee().getClientID();
+
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poApPayments.Detail(i).getSourceNo();
+                    referNo = loApPayments.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE;
                     particular = "";
-                    amount = poApPayments.Detail(i).getAppliedAmount().doubleValue();
+                    amount = loApPayments.Detail(i).getAppliedAmount().doubleValue();
 
-                    CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
-                    poJSON = poCachePayable.InitTransaction();
-                    poJSON = poCachePayable.OpenTransaction(referNo);
+                    CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                    poJSON = loCachePayable.InitTransaction();
+                    poJSON = loCachePayable.OpenTransaction(referNo);
 
-                    for (int c = 0; c < poCachePayable.getDetailCount(); c++) {
-                        invType = poCachePayable.Detail(c).InvType().getDescription();
+                    for (int c = 0; c < loCachePayable.getDetailCount(); c++) {
+                        invType = loCachePayable.Detail(c).InvType().getInventoryTypeId();
                     }
 
-                    boolean found = false;
+                    poJSON = poPayee.openRecord(currentPayeeID2);
+                    // Validation: Check for existing details with different Payee ID
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)) {
-                            found = true;
-                            break;
+
+                            // Check if Payee ID is different
+                            if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
                         }
                     }
-
-                    if (!found) {
-                        AddDetail();
-                        int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(referNo);
-                        Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticularID(particular);
-                        Detail(newIndex).setAmount(amount);
-                        Detail(newIndex).setInvType(invType);
-                        insertedCount++;
-                    }
+                    Master().setPayeeID(poPayee.getModel().getPayeeID());
+                    Master().setSupplierClientID(currentPayeeID2);
+                    CheckPayments().getModel().setPayeeID(poPayee.getModel().getPayeeID());
+                    AddDetail();
+                    int newIndex = getDetailCount() - 1;
+                    Detail(newIndex).setSourceNo(referNo);
+                    Detail(newIndex).setSourceCode(sourceCode);
+                    Detail(newIndex).setParticularID(particular);
+                    Detail(newIndex).setAmount(amount);
+                    insertedCount++;
                 }
                 break;
             }
 
             case DisbursementStatic.SourceCode.CASH_PAYABLE: {
-                CachePayable poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
 
-                poJSON = poCachePayable.InitTransaction();
+                poJSON = loCachePayable.InitTransaction();
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                poJSON = poCachePayable.OpenTransaction(transactionNo);
+                poJSON = loCachePayable.OpenTransaction(transactionNo);
                 if (!"success".equals(poJSON.get("result"))) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "No records found.");
                     return poJSON;
                 }
 
-                detailCount = poCachePayable.getDetailCount();
+                detailCount = loCachePayable.getDetailCount();
+                String currentPayeeID3 = loCachePayable.Master().getClientId();
+
                 for (int i = 0; i < detailCount; i++) {
-                    referNo = poCachePayable.Detail(i).getTransactionNo();
+                    referNo = loCachePayable.Detail(i).getTransactionNo();
                     sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
                     particular = "";
-                    amount = Double.parseDouble(String.valueOf(poCachePayable.Detail(i).getPayables()));
-                    invType = poCachePayable.Detail(i).InvType().getDescription();
+                    amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
+                    invType = loCachePayable.Detail(i).InvType().getInventoryTypeId();
 
-                    boolean found = false;
+                    poJSON = poPayee.getModel().openRecordByReference(currentPayeeID3);
+//                    // Validation: Check for existing details with different Payee ID
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)) {
-                            found = true;
-                            break;
+
+                            // Check if Payee ID is different
+                            if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Detail Payee ID does not match with the current transaction.");
+                                return poJSON;
+                            }
                         }
                     }
-
-                    if (!found) {
-                        AddDetail();
-                        int newIndex = getDetailCount() - 1;
-                        Detail(newIndex).setSourceNo(referNo);
-                        Detail(newIndex).setSourceCode(sourceCode);
-                        Detail(newIndex).setParticularID(particular);
-                        Detail(newIndex).setAmount(amount);
-                        Detail(newIndex).setInvType(invType);
-                        insertedCount++;
-                    }
+//
+                    Master().setPayeeID(poPayee.getModel().getPayeeID());
+                    Master().setSupplierClientID(currentPayeeID3);
+                    CheckPayments().getModel().setPayeeID(poPayee.getModel().getPayeeID());
+                    AddDetail();
+                    int newIndex = getDetailCount() - 1;
+                    Detail(newIndex).setSourceNo(referNo);
+                    Detail(newIndex).setSourceCode(sourceCode);
+                    Detail(newIndex).setParticularID(particular);
+                    Detail(newIndex).setAmount(amount);
+                    insertedCount++;
                 }
                 break;
             }
-
             default:
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid payment type.");
@@ -1622,8 +1849,8 @@ public class Disbursement extends Transaction {
                 " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
                 " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
-                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo),
-                " g.cTranStat IN ('1', '5')");
+                " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo));
+//                " g.cTranStat IN ('1', '5')");
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -1666,29 +1893,69 @@ public class Disbursement extends Transaction {
 
     public JSONObject computeFields() {
         poJSON = new JSONObject();
-        double lnTotalVatSales = 0.0000;
-        double lnTotalVatRates = 0.00;
-        double lnTotalVatAmount = 0.0000;
-        double lnTotalVatZeroRatedSales = 0.0000;
-        double lnTotalVatExemptSales = 0.0000;
-        double lnTotalPurchaseAmount = 0.0000;
-        double lnLessWithHoldingTax = 0.0000;
+
+        double lnTotalVatSales = 0.0000;         // Vatable Sales
+        double VAT_RATE = 0.12;                  // 12% VAT
+        double lnTotalVatAmount = 0.0000;        // VAT Amount
+        double lnTotalPurchaseAmount = 0.0000;   // Gross Purchased Amount
+        double lnLessWithHoldingTax = 0.0000;    // Withholding Tax
+        double lnTotalVatExemptSales = 0.0000;   // VAT EXEMPT
+
+        boolean hasVat = false; // 👉 Flag to check if at least one detail has VAT
+
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-            lnTotalPurchaseAmount += Detail(lnCntr).getAmount();
-            lnTotalVatAmount += (Detail(lnCntr).getAmount() * (Detail(lnCntr).getTaxRates() / 100));
+            double detailAmount = Detail(lnCntr).getAmount();
+            double detailTaxRate = Detail(lnCntr).getTaxRates();
+
+            Detail(lnCntr).setTaxRates(Detail(lnCntr).getTaxRates());
+            Detail(lnCntr).setTaxAmount(detailAmount * Detail(lnCntr).getTaxRates() / 100);
+
+            lnTotalPurchaseAmount += detailAmount;
+
+            // Withholding Tax Computation
+            lnLessWithHoldingTax += detailAmount * (detailTaxRate / 100);
+
+            if (Detail(lnCntr).isWithVat()) {
+                hasVat = true; // 👉 At least one VAT item found
+
+                double lnVatableSales = detailAmount / (1 + VAT_RATE);
+                double lnVatAmount = detailAmount - lnVatableSales;
+
+                lnTotalVatSales += lnVatableSales;
+                lnTotalVatAmount += lnVatAmount;
+            } else {
+                lnTotalVatExemptSales += detailAmount;
+            }
         }
-        if (lnTotalPurchaseAmount - lnTotalVatAmount < 0.0000) {
+
+        // ✅ Set VAT rate based on whether VAT exists
+        if (hasVat) {
+            Master().setVATRates(VAT_RATE * 100);
+        } else {
+            Master().setVATRates(0.00);
+        }
+
+        double lnNetAmountDue = lnTotalPurchaseAmount - lnLessWithHoldingTax;
+
+        if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Net Total Amount.");
             return poJSON;
         }
 
+        // Save Computed Values
         Master().setTransactionTotal(lnTotalPurchaseAmount);
-        Master().setWithTaxTotal(lnTotalVatAmount);
-        Master().setNetTotal(lnTotalPurchaseAmount - lnTotalVatAmount);
+        Master().setVATSale(lnTotalVatSales);
+        Master().setVATAmount(lnTotalVatAmount);
+        Master().setVATExmpt(lnTotalVatExemptSales);
+        Master().setZeroVATSales(0.00);
+        Master().setWithTaxTotal(lnLessWithHoldingTax);
+        Master().setNetTotal(lnNetAmountDue);
+
         if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
             checkPayments.getModel().setAmount(Master().getNetTotal());
         }
+
         poJSON.put("result", "success");
         poJSON.put("message", "computed successfully");
         return poJSON;
@@ -1756,9 +2023,13 @@ public class Disbursement extends Transaction {
         Master().setCompanyID(psCompanyId);
     }
 
-    public void resetJournal() throws SQLException, GuanzonException {
-        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-
+    public void resetJournal() {
+        try {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     public Journal Journal() throws SQLException, GuanzonException {
@@ -1769,68 +2040,207 @@ public class Disbursement extends Transaction {
         return poJournal;
     }
 
+//    public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+//        poJSON = new JSONObject();
+//        if (poJournal == null || getEditMode() == EditMode.READY) {
+//            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+//            poJournal.InitTransaction();
+//        }
+//        String lsJournal = existJournal();
+//        switch (getEditMode()) {
+//            case EditMode.UNKNOWN:
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            case EditMode.ADDNEW:
+//                if (poJournal.Master() != null && poJournal.Master().getTransactionNo() != null) {
+//                    // Transaction already exists, just skip creating new one
+//                    break;
+//                }
+//                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+//                poJournal.InitTransaction();
+//                poJSON = poJournal.NewTransaction();
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                }
+//
+////                double ldblNetTotal = 0.0000;
+////                double ldblDiscount = Master().getDiscount().doubleValue();
+////                double ldblDiscountRate = Master().getDiscountRate().doubleValue();
+////                if (ldblDiscountRate > 0) {
+////                    ldblDiscountRate = Master().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
+////                }
+////                ldblDiscount = ldblDiscount + ldblDiscountRate;
+////                //Net Total = Vat Amount - Tax Amount
+////                if (Master().isVatTaxable()) {
+////                    //Net VAT Amount : VAT Sales - VAT Amount
+////                    //Net Total : VAT Sales - Withholding Tax
+////                    ldblNetTotal = Master().getVatSales().doubleValue() - Master().getWithHoldingTax().doubleValue();
+////                } else {
+////                    //Net VAT Amount : VAT Sales + VAT Amount
+////                    //Net Total : Net VAT Amount - Withholding Tax
+////                    ldblNetTotal = (Master().getVatSales().doubleValue()
+////                            + Master().getVatAmount().doubleValue())
+////                            - Master().getWithHoldingTax().doubleValue();
+////
+////                }
+////                JSONObject jsonmaster = new JSONObject();
+////                jsonmaster.put("nWTaxTotl", Master().getWithTaxTotal());
+////                jsonmaster.put("nDiscTotl", Master().getDiscountTotal());
+////                jsonmaster.put("nNetTotal", Master().getNetTotal());
+////                jsonmaster.put("cPaymType", "0");
+////
+////                JSONArray jsondetails = new JSONArray();
+////
+////                JSONObject jsondetail = new JSONObject();
+////                jsondetail.put("sAcctCode", "2101010");
+////                jsondetail.put("nAmtAppld", Master().getNetTotal());
+////
+////                jsondetails.add(jsondetail);
+////
+////                jsondetail = new JSONObject();
+////                jsondetail.put("sAcctCode", "5201000");
+////                jsondetail.put("nAmtAppld", Master().getNetTotal());
+////                jsondetails.add(jsondetail);
+////
+////                jsondetail = new JSONObject();
+////                jsondetail.put("Disbursement_Master", jsonmaster);
+////                jsondetail.put("Disbursement_Detail", jsondetails);
+//                System.out.println("MASTER");
+//                //retreiving using column index
+//                JSONObject jsonmaster = new JSONObject();
+//                for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++) {
+//                    System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
+//                    jsonmaster.put(Master().getColumn(lnCtr), Master().getValue(lnCtr));
+//                }
+//
+//                JSONArray jsondetails = new JSONArray();
+//                JSONObject jsondetail = new JSONObject();
+//
+//                System.out.println("DETAIL");
+//                for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++) {
+//                    jsondetail = new JSONObject();
+//                    System.out.println("DETAIL ROW : " + lnCtr);
+//                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++) {
+//                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
+//                        jsondetail.put(Detail(lnCtr).getColumn(lnCol), Detail(lnCtr).getValue(lnCol));
+//                    }
+//                    jsondetails.add(jsondetail);
+//                }
+//                jsondetail = new JSONObject();
+//                jsondetail.put("Disbursement_Master", jsonmaster);
+//                jsondetail.put("Disbursement_Detail", jsondetails);
+//
+//                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE, Master().getIndustryID(), "");
+//                tbj.setGRiderCAS(poGRider);
+//                tbj.setData(jsondetail);
+//                jsonmaster = tbj.processRequest();
+//
+//                if (jsonmaster.get("result").toString().equalsIgnoreCase("success")) {
+//                    List<TBJEntry> xlist = tbj.getJournalEntries();
+//                    for (TBJEntry xlist1 : xlist) {
+//                        System.out.println("Account:" + xlist1.getAccount());
+//                        System.out.println("Debit:" + xlist1.getDebit());
+//                        System.out.println("Credit:" + xlist1.getCredit());
+//                        poJournal.Detail(poJournal.getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//                        poJournal.Detail(poJournal.getDetailCount() - 1).setAccountCode(xlist1.getAccount());
+//                        poJournal.Detail(poJournal.getDetailCount() - 1).setCreditAmount(xlist1.getCredit());
+//                        poJournal.Detail(poJournal.getDetailCount() - 1).setDebitAmount(xlist1.getDebit());
+//                        poJournal.AddDetail();
+//                    }
+//                } else {
+//                    System.out.println(jsonmaster.toJSONString());
+//                }
+//                // Build Master
+//                poJournal.Master().setAccountPerId("dummy");
+//                poJournal.Master().setIndustryCode(Master().getIndustryID());
+//                poJournal.Master().setBranchCode(Master().getBranchCode());
+//                poJournal.Master().setDepartmentId(poGRider.getDepartment());
+//                poJournal.Master().setTransactionDate(poGRider.getServerDate());
+//                poJournal.Master().setCompanyId(Master().getCompanyID());
+//                poJournal.Master().setSourceCode(getSourceCode());
+//                poJournal.Master().setSourceNo(Master().getTransactionNo());
+//                break;
+//            case EditMode.UPDATE:
+//                if (lsJournal != null && !"".equals(lsJournal)) {
+//                    Journal().UpdateTransaction();
+//                }
+//                break;
+//            case EditMode.READY:
+//                if (lsJournal != null && !"".equals(lsJournal)) {
+//                    poJSON = poJournal.OpenTransaction(lsJournal);
+//                    System.out.println(poJSON.clone());
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        return poJSON;
+//                    }
+//                }
+//                break;
+//            default:
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//        }
+//        poJSON.put("result", "success");
+//        return poJSON;
+//    }
     public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
+        if (Master().getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record to load");
+            return poJSON;
+        }
+
         if (poJournal == null || getEditMode() == EditMode.READY) {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
             poJournal.InitTransaction();
         }
+
         String lsJournal = existJournal();
-        switch (getEditMode()) {
-            case EditMode.UNKNOWN:
-                poJSON.put("result", "error");
-                poJSON.put("message", "No record to load");
-                return poJSON;
-            case EditMode.ADDNEW:
-                if (poJournal.Master() != null && poJournal.Master().getTransactionNo() != null) {
-                    // Transaction already exists, just skip creating new one
-                    break;
+        if (lsJournal != null && !"".equals(lsJournal)) {
+            if (Master().getEditMode() == EditMode.READY) {
+                poJSON = poJournal.OpenTransaction(lsJournal);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
                 }
-                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-                poJournal.InitTransaction();
+            }
+
+            if (Master().getEditMode() == EditMode.UPDATE) {
+                if (poJournal.getEditMode() == EditMode.READY) {
+                    poJSON = poJournal.OpenTransaction(lsJournal);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    poJSON = poJournal.UpdateTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        } else {
+            if (Master().getEditMode() == EditMode.UPDATE && poJournal.getEditMode() != EditMode.ADDNEW) {
                 poJSON = poJournal.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
-
-//                double ldblNetTotal = 0.0000;
-//                double ldblDiscount = Master().getDiscount().doubleValue();
-//                double ldblDiscountRate = Master().getDiscountRate().doubleValue();
-//                if (ldblDiscountRate > 0) {
-//                    ldblDiscountRate = Master().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
-//                }
-//                ldblDiscount = ldblDiscount + ldblDiscountRate;
-//                //Net Total = Vat Amount - Tax Amount
-//                if (Master().isVatTaxable()) {
-//                    //Net VAT Amount : VAT Sales - VAT Amount
-//                    //Net Total : VAT Sales - Withholding Tax
-//                    ldblNetTotal = Master().getVatSales().doubleValue() - Master().getWithHoldingTax().doubleValue();
-//                } else {
-//                    //Net VAT Amount : VAT Sales + VAT Amount
-//                    //Net Total : Net VAT Amount - Withholding Tax
-//                    ldblNetTotal = (Master().getVatSales().doubleValue()
-//                            + Master().getVatAmount().doubleValue())
-//                            - Master().getWithHoldingTax().doubleValue();
-//
-//                }
+                //retreiving using column index
                 JSONObject jsonmaster = new JSONObject();
-                jsonmaster.put("nWTaxTotl", Master().getWithTaxTotal());
-                jsonmaster.put("nDiscTotl", Master().getDiscountTotal());
-                jsonmaster.put("nNetTotal", Master().getNetTotal());
-                jsonmaster.put("cPaymType", "0");
+                for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++) {
+                    System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
+                    jsonmaster.put(Master().getColumn(lnCtr), Master().getValue(lnCtr));
+                }
 
                 JSONArray jsondetails = new JSONArray();
-
                 JSONObject jsondetail = new JSONObject();
-                jsondetail.put("sAcctCode", "2101010");
-                jsondetail.put("nAmtAppld", Master().getNetTotal());
 
-                jsondetails.add(jsondetail);
-
-                jsondetail = new JSONObject();
-                jsondetail.put("sAcctCode", "5201000");
-                jsondetail.put("nAmtAppld", Master().getNetTotal());
-                jsondetails.add(jsondetail);
+                for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++) {
+                    jsondetail = new JSONObject();
+                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++) {
+                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
+                        jsondetail.put(Detail(lnCtr).getColumn(lnCol), Detail(lnCtr).getValue(lnCol));
+                    }
+                    jsondetails.add(jsondetail);
+                }
 
                 jsondetail = new JSONObject();
                 jsondetail.put("Disbursement_Master", jsonmaster);
@@ -1844,9 +2254,6 @@ public class Disbursement extends Transaction {
                 if (jsonmaster.get("result").toString().equalsIgnoreCase("success")) {
                     List<TBJEntry> xlist = tbj.getJournalEntries();
                     for (TBJEntry xlist1 : xlist) {
-                        System.out.println("Account:" + xlist1.getAccount());
-                        System.out.println("Debit:" + xlist1.getDebit());
-                        System.out.println("Credit:" + xlist1.getCredit());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setAccountCode(xlist1.getAccount());
                         poJournal.Detail(poJournal.getDetailCount() - 1).setCreditAmount(xlist1.getCredit());
@@ -1856,7 +2263,8 @@ public class Disbursement extends Transaction {
                 } else {
                     System.out.println(jsonmaster.toJSONString());
                 }
-                // Build Master
+
+                //Journa Entry Master
                 poJournal.Master().setAccountPerId("dummy");
                 poJournal.Master().setIndustryCode(Master().getIndustryID());
                 poJournal.Master().setBranchCode(Master().getBranchCode());
@@ -1865,28 +2273,17 @@ public class Disbursement extends Transaction {
                 poJournal.Master().setCompanyId(Master().getCompanyID());
                 poJournal.Master().setSourceCode(getSourceCode());
                 poJournal.Master().setSourceNo(Master().getTransactionNo());
-
-                poJournal.Detail(poJournal.getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-                break;
-            case EditMode.UPDATE:
-                if (lsJournal != null && !"".equals(lsJournal)) {
-                    Journal().UpdateTransaction();
-                }
-                break;
-            case EditMode.READY:
-                if (lsJournal != null && !"".equals(lsJournal)) {
-                    poJSON = poJournal.OpenTransaction(lsJournal);
-                    System.out.println(poJSON.clone());
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                }
-                break;
-            default:
+            } else if (getEditMode() == EditMode.UPDATE && poJournal.getEditMode() == EditMode.ADDNEW) {
+                poJSON.put("result", "success");
+                return poJSON;
+            } else {
                 poJSON.put("result", "error");
                 poJSON.put("message", "No record to load");
                 return poJSON;
+            }
+
         }
+
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -1908,7 +2305,7 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
-    private String existJournal() throws SQLException {
+    public String existJournal() throws SQLException {
         Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         lsSQL = MiscUtil.addCondition(lsSQL,
@@ -1929,11 +2326,11 @@ public class Disbursement extends Transaction {
     }
 
     public void resetOthers() throws SQLException, GuanzonException {
-
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+        Payees = new CashflowControllers(poGRider, logwrapr).Payee();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
-
+        poCachePayable = new ArrayList<>();
     }
 
     @Override
@@ -1988,7 +2385,7 @@ public class Disbursement extends Transaction {
                 if (sSeries != null && !sSeries.trim().isEmpty()) {
                     long voucherNumber = Long.parseLong(sSeries);
                     voucherNumber += 1;
-                    branchVoucherNo = String.format("%06d", voucherNumber); // format to 6 digits
+                    branchVoucherNo = String.format("%08d", voucherNumber); // format to 6 digits
                 }
 
             }
@@ -2034,13 +2431,6 @@ public class Disbursement extends Transaction {
             poJSON.put("message", "Debit should be equal to credit amount.");
             return poJSON;
         }
-
-        if (ldblDebitAmt < Master().getTransactionTotal() || ldblDebitAmt > Master().getTransactionTotal()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
-            return poJSON;
-        }
-
         return poJSON;
     }
 

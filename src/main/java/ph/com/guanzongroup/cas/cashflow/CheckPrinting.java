@@ -5,7 +5,6 @@ import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Iterator;
@@ -35,6 +34,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.concurrent.CountDownLatch;
 import java.util.HashMap;
 import java.util.List;
@@ -80,10 +80,10 @@ import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class CheckPrinting extends Transaction {
 
+    private DocumentMapping poDocumentMapping;
+
     List<Model_Disbursement_Master> poDisbursementMaster;
-    private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
-//    private Disbursement dvMaster;
     private BankAccountMaster bankAccount;
     List<PaymentRequest> poPaymentRequest;
     List<SOATagging> poApPayments;
@@ -100,7 +100,7 @@ public class CheckPrinting extends Transaction {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
-
+        poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
         paDetail = new ArrayList<>();
         poPaymentRequest = new ArrayList<>();
         poApPayments = new ArrayList<>();
@@ -119,8 +119,10 @@ public class CheckPrinting extends Transaction {
     }
 
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
+
         return openTransaction(transactionNo);
     }
+
 
     public JSONObject UpdateTransaction() {
         return updateTransaction();
@@ -406,14 +408,6 @@ public class CheckPrinting extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
 
-//        if (getDetailCount() == 1) {
-//            //do not allow a single item detail with no quantity order
-//            if (Detail(0).getQuantity().doubleValue() == 0.00) {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Your order has zero quantity.");
-//                return poJSON;
-//            }
-//        }
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -432,16 +426,26 @@ public class CheckPrinting extends Transaction {
     }
 
     public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
-        System.out.println("EDIT MODE Ng bankAccount  : " + bankAccount.getEditMode());
 
         bankAccount.setWithParentClass(true);
         if ("error".equals(bankAccount.saveRecord().get("result"))) {
-            poJSON.put("result", "error");
+
             return poJSON;
         }
         poJSON.put("result", "success");
         return poJSON;
     }
+
+//    public JSONObject saveBankAccountLedger() throws SQLException, GuanzonException, CloneNotSupportedException {
+//
+//        bankAccountledger.setWithParentClass(true);
+//        if ("error".equals(bankAccountledger.saveRecord().get("result"))) {
+//
+//            return poJSON;
+//        }
+//        poJSON.put("result", "success");
+//        return poJSON;
+//    }
 
     @Override
     public JSONObject initFields() {
@@ -493,6 +497,22 @@ public class CheckPrinting extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
+            
+            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+                        
+                        poJSON = poBankAccountTrans.InitTransaction();
+                        poJSON = poBankAccountTrans.CheckDisbursement(
+                            checkPayments.getModel().getBankAcountID(),
+                                checkPayments.getModel().getSourceCode(),
+                           checkPayments.getModel().getCheckDate(),
+                                 checkPayments.getModel().getAmount(),
+                                 checkPayments.getModel().getCheckNo(),
+                                Master().getVoucherNo(),
+                              EditMode.ADDNEW);
+                        if ("error".equals(poJSON.get("result"))) {
+                            poGRider.rollbackTrans();
+                            return poJSON;
+                        }
 
             if (bankAccount != null) {
                 if (bankAccount.getEditMode() == EditMode.ADDNEW || bankAccount.getEditMode() == EditMode.UPDATE) {
@@ -537,24 +557,6 @@ public class CheckPrinting extends Transaction {
                 + "  JOIN client_master e ON d.sClientID = e.sClientID "
                 + "  JOIN particular f ON b.sPrtclrID = f.sPrtclrID "
                 + "  LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo ";
-
-//
-//        SQL_BROWSE = "SELECT "
-//                + " a.sTransNox,"
-//                + " a.dTransact,"
-//                + " c.sBranchNm,"
-//                + " d.sPayeeNme,"
-//                + " e.sCompnyNm AS supplier,"
-//                + " f.sDescript,"
-//                + " a.nNetTotal, "
-//                + " a.cDisbrsTp, "
-//                + " a.cBankPrnt "
-//                + " FROM Disbursement_Master a "
-//                + " JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
-//                + " JOIN Branch c ON a.sBranchCd = c.sBranchCd "
-//                + " JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-//                + " JOIN client_master e ON d.sClientID = e.sClientID "
-//                + " JOIN particular f ON b.sPrtclrID = f.sPrtclrID";
     }
 
     @Override
@@ -679,6 +681,8 @@ public class CheckPrinting extends Transaction {
         return (BankAccountMaster) bankAccount;
     }
 
+
+
     private Model_Disbursement_Master DisbursementMasterList() {
         return new CashflowModels(poGRider).DisbursementMaster();
     }
@@ -728,10 +732,13 @@ public class CheckPrinting extends Transaction {
                         checkPaymentTransactionNo = checkPayments.getTransactionNoOfCheckPayment(transactionNo, Master().CheckPayments().getSourceCode());
                         checkPayments.openRecord(checkPaymentTransactionNo);
                         checkPayments.updateRecord();
+                        checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                        checkPayments.getModel().setModifyingId(poGRider.getUserID());
                         System.out.println("SETCHECK EDIT MODE : " + checkPayments.getEditMode());
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
                             if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+                                
                                 checkPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
@@ -741,7 +748,8 @@ public class CheckPrinting extends Transaction {
                                 checkPayments.getModel().setModifiedDate(poGRider.getServerDate());
                                 checkPayments.getModel().setModifyingId(poGRider.getUserID());
                             }
-                        }
+                        } 
+                        
                     } else {
                         boolean disbursementTypeChanged = !Master().getDisbursementType().equals(Master().getOldDisbursementType());
                         if (disbursementTypeChanged) {
@@ -780,15 +788,85 @@ public class CheckPrinting extends Transaction {
                 bankAccountID = Master().CheckPayments().getBankAcountID();
                 bankAccount.openRecord(bankAccountID);
                 bankAccount.updateRecord();
-
-//              a
+                bankAccount.getModel().setLastTransactionDate(poGRider.getServerDate());
                 bankAccount.getModel().setModifiedDate(poGRider.getServerDate());
                 bankAccount.getModel().setModifyingId(poGRider.getUserID());
+                
+                
             }
         }
         poJSON.put("result", "success");
         return poJSON;
     }
+
+//    public JSONObject setBankAccountLedger() throws GuanzonException, SQLException {
+//        if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
+//                || Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
+//            // Only initialize if null, or you want to force recreate each time
+//            int editMode = Master().getEditMode();
+//            String transactionNo = Master().getTransactionNo();
+//
+//            String bankAccountID = "";
+////            if (bankAccountledger == null) {
+////                bankAccountledger = new CashflowControllers(poGRider, logwrapr).BankAccountLedger();
+////                bankAccountledger.setWithParentClass(true);
+////            }
+//            System.out.println("current : " + Master().CheckPayments().getCheckNo());
+//            switch (editMode) {
+//                case EditMode.UPDATE:
+//                    bankAccountledger = new CashflowControllers(poGRider, logwrapr).BankAccountLedger();
+//                    bankAccountledger.initialize();
+//                    bankAccountledger.setWithParentClass(true);
+//                    bankAccountledger.newRecord();
+//                    System.out.println("set bank ledger edit mode : " + bankAccountledger.getEditMode());
+//                    String lsSQL = "SELECT nLedgerNo FROM bank_account_ledger ORDER BY nLedgerNo DESC LIMIT 1";
+//                    int nextLedgerNo = 1;
+//
+//                    try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
+//                        if (loRS != null && loRS.next()) {
+//                            nextLedgerNo = Integer.parseInt(String.valueOf(loRS.getLong("nLedgerNo") )+ 1);
+//                        }
+//
+//                        poJSON.put("result", "success");
+//                        poJSON.put("nextLedgerNo", nextLedgerNo);
+//                    }
+//
+//                    bankAccountledger.getModel().setBankAccountId(Master().CheckPayments().getBankAcountID());
+//                    bankAccountledger.getModel().setLedgerNo(Integer.parseInt(String.valueOf(nextLedgerNo)));
+//                    bankAccountledger.getModel().setTransactionDate(Master().CheckPayments().getCheckDate());
+//                    bankAccountledger.getModel().setPaymentForm(Master().getDisbursementType());
+//                    bankAccountledger.getModel().setPaymentForm(Master().getDisbursementType());
+//                    bankAccountledger.getModel().setSourceCode(Master().CheckPayments().getSourceCode());
+//                    bankAccountledger.getModel().setSourceNo(checkPayments.getModel().getCheckNo());
+//                    bankAccountledger.getModel().setAmountIn(CheckStatus.DefaultValues.default_value_double);
+//                    bankAccountledger.getModel().setAmountOut(Double.parseDouble(String.valueOf(Master().CheckPayments().getAmount())));
+//                    bankAccountledger.getModel().setModifiedDate(poGRider.getServerDate());
+//
+//                    break;
+//
+//                case EditMode.READY:
+//                    if (bankAccountledger.getEditMode() != EditMode.READY) {
+////                         = checkPayments.getTransactionNoOfCheckPayment(transactionNo, Master().CheckPayments().getSourceCode());
+////                        bankAccountledger.openRecord(checkPaymentTransactionNo);
+//                    }
+//                    break;
+//                default:
+//                    throw new AssertionError();
+//            }
+//
+////            if (bankAccountledger.getEditMode() != EditMode.UPDATE) {
+////                bankAccountID = Master().CheckPayments().getBankAcountID();
+////                bankAccountledger.openRecord(bankAccountID);
+////                bankAccountledger.updateRecord();
+////                bankAccountledger.getModel().setModifiedDate(poGRider.getServerDate());
+//////                bankAccountledger.getModel().setModifyingId(poGRider.getUserID());
+////            }
+//        }
+//        poJSON.put("result", "success");
+//        return poJSON;
+//    }
+    
+    
 
     public JSONObject checkNoExists(String checkNo) throws SQLException {
         poJSON = new JSONObject();
@@ -826,7 +904,13 @@ public class CheckPrinting extends Transaction {
             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
             boolean isDVPrinted = "1".equals(Master().getPrint());
             if (!isDVPrinted) {
-                poJSON.put("message", "Cheque printing requires the Disbursement to be printed first.");
+                poJSON.put("message", "Check printing requires the Disbursement to be printed first.");
+                poJSON.put("result", "error");
+                return poJSON;
+            }
+            
+            if(Master().CheckPayments().getCheckNo().isEmpty()  || Master().CheckPayments().getCheckNo().equals(null)){
+                poJSON.put("message", "Check printing requires to assign Check No before printing");
                 poJSON.put("result", "error");
                 return poJSON;
             }
@@ -853,50 +937,46 @@ public class CheckPrinting extends Transaction {
             }
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = "";
-            String payeeName = "";
-            String checkDate = "";
-            String amountNumeric = "";
-            String amountWords = "";
+            String sPayeeNme = "";
+            String dCheckDte = "";
+            String nAmountxx = "";
+            String xAmountWords = "";
+            String bankCode = "";
             transSize = fsTransactionNos.size();
-            switch (bank) {
-                case "BDO":
-                    if (fsTransactionNos.isEmpty()) {
-                        poJSON.put("error", "No transactions selected.");
-                        return poJSON;
-                    }
 
-                    transactionno = fsTransactionNos.get(i);
-                    payeeName = checkPayments.getModel().Payee().getPayeeName();
-                    checkDate = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
-                    amountNumeric = String.valueOf(Master().CheckPayments().getAmount());
-                    amountWords = NumberToWords.convertToWords(new BigDecimal(amountNumeric));
+            if (fsTransactionNos.isEmpty()) {
+                poJSON.put("error", "No transactions selected.");
+                return poJSON;
+            }
 
-                    System.out.println("===============================================");
-                    System.out.println("No : " + (i + 1));
-                    System.out.println("transactionNo No : " + fsTransactionNos.get(i));
-                    System.out.println("payeeName : " + payeeName);
-                    System.out.println("checkDate : " + checkDate);
-                    System.out.println("amountNumeric : " + amountNumeric);
-                    System.out.println("amountWords : " + amountWords);
-                    System.out.println("===============================================");
-                    // Store transaction for printing
-                    transactions.add(new Transaction(transactionno, payeeName, checkDate, amountNumeric, new BigDecimal(amountNumeric)));
+            transactionno = fsTransactionNos.get(i);
+            sPayeeNme = checkPayments.getModel().Payee().getPayeeName();
+            dCheckDte = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
+            nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
+            xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
+//                  bankCode = checkPayments.getModel().Banks().getBankCode();
+            bankCode = "MBTDSChk";
+            System.out.println("===============================================");
+            System.out.println("No : " + (i + 1));
+            System.out.println("transactionNo No : " + fsTransactionNos.get(i));
+            System.out.println("payeeName : " + sPayeeNme);
+            System.out.println("checkDate : " + dCheckDte);
+            System.out.println("amountNumeric : " + nAmountxx);
+            System.out.println("amountWords : " + xAmountWords);
+            System.out.println("===============================================");
+            // Store transaction for printing
+            transactions.add(new Transaction(transactionno, sPayeeNme, dCheckDte, nAmountxx, bankCode, new BigDecimal(nAmountxx)));
 
-                    // Now print the voucher using PrinterJob
-                    if (showPrintPreview(transactions.get(i))) {
-                        printVoucher(transactions.get(i));
-                    }
-
-                    break;
-                default:
-                    throw new AssertionError();
+            // Now print the voucher using PrinterJob
+            if (showPrintPreview(transactions.get(i))) {
+                printVoucher(transactions.get(i));
             }
             this.SaveTransaction();
         }
         return poJSON;
     }
 
-    private void printVoucher(Transaction tx) {
+    private void printVoucher(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
         Printer printer = Printer.getDefaultPrinter();
         if (printer == null) {
             System.err.println("No default printer.");
@@ -926,15 +1006,15 @@ public class CheckPrinting extends Transaction {
             job.endJob();
 
             System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo
-                    + " for " + tx.payeeName
-                    + " | Amount: ₱" + tx.amountNumeric);
+                    + " for " + tx.sPayeeNme
+                    + " | Amount: ₱" + tx.nAmountxx);
         } else {
             job.cancelJob();
             System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
         }
     }
 
-    private boolean showPrintPreview(Transaction tx) {
+    private boolean showPrintPreview(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
         Printer printer = Printer.getDefaultPrinter();
         PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
                 PageOrientation.PORTRAIT,
@@ -976,52 +1056,141 @@ public class CheckPrinting extends Transaction {
      * Builds a voucher as a vector node hierarchy – no Canvas, no signature
      * box.
      */
-    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
+    /**
+     * Builds the voucher layout. Each text node is placed by (row, col) where
+     * row = line number (0‑based) → Y = TOP + row * LINE_HEIGHT col = character
+     * column (0‑based) → X = col * CHAR_WIDTH
+     */
+    private Node buildVoucherNode(Transaction tx,
+            double widthPts,
+            double heightPts)
+            throws SQLException, GuanzonException, CloneNotSupportedException {
+
+        // Root container for all voucher text nodes
         Pane root = new Pane();
         root.setPrefSize(widthPts, heightPts);
 
-        // Font and spacing setup
-        Font mono12 = Font.font("Arial Narrow", 11);
-        double y = 20;
-        double lh = 18;
-        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+        final double TOP_MARGIN = 21;   // distance from top edge to “row 0”
+        final double LINE_HEIGHT = 18;   // row‑to‑row spacing
+        final double CHAR_WIDTH = 7;    // col‑to‑col spacing
 
-        // Function to calculate X based on character column
-        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+        poDocumentMapping.InitTransaction();
+        poDocumentMapping.OpenTransaction(tx.bankCode);
 
-        // --- Row 1: checkdate aligned at column 40
-        Text checkDate = new Text(col.apply(70), y, tx.checkDate);
-        checkDate.setFont(mono12);
-        y += lh * 2;
+        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+            String fontName = poDocumentMapping.Detail(i).getFontName();
+            double fontSize = poDocumentMapping.Detail(i).getFontSize();
+            double topRow = poDocumentMapping.Detail(i).getTopRow();
+            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
+            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
 
-        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
-        Text payeeName = new Text(col.apply(20), y, "*** " + tx.payeeName.toUpperCase() + " ***");
-        payeeName.setFont(mono12);
+            // Determine font per field
+            Font fieldFont;
+            switch (fieldName) {
+                case "sPayeeNme":
+                    fieldFont = Font.font(fontName, fontSize);
+                    break;
+                case "nAmountxx":
+                    fieldFont = Font.font(fontName, fontSize);
+                    break;
+                case "dCheckDte":
+                    fieldFont = Font.font(fontName, fontSize);
+                    break;
+                case "xAmountW":
+                    fieldFont = Font.font(fontName, fontSize);
+                    break;
+                default:
+                    fieldFont = Font.font(fontName, fontSize);
+            }
 
-        Text checkAmt = new Text(col.apply(70), y, "₱" + CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
-        checkAmt.setFont(mono12);
-        y += lh;
+            // Compute text value for each field
+            String textValue;
+            switch (fieldName) {
+                case "sPayeeNme":
+                    textValue = tx.sPayeeNme == null ? "" : tx.sPayeeNme.toUpperCase();
+                    break;
+                case "nAmountxx":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxx, false);
+                    break;
+                case "dCheckDte":
+                    int spaceCount = (int) Math.round(colSpace);
+                    if (spaceCount < 0) {
+                        throw new IllegalArgumentException("spaceCount must be non-negative");
+                    }
+                    String gap = String.join("", Collections.nCopies(spaceCount, " "));
+                    String rawDate = tx.dCheckDte == null ? "" : tx.dCheckDte.replace("-", "");
+                    textValue = rawDate
+                            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")
+                            .replaceAll("", gap)
+                            .trim();
+                    break;
+                case "xAmountW":
+                    textValue = NumberToWords.convertToWords(new BigDecimal(tx.nAmountxx));
+                    break;
+                default:
+                    throw new AssertionError("Unhandled field: " + fieldName);
+            }
 
-        // --- Row 3: amount in words centered at column 8
-        Text amtWords = new Text(col.apply(8), y, "=== " + NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) + " ==="); // e.g., "ONE MILLION PESOS"
-        amtWords.setFont(mono12);
+            // Calculate position
+            double x = leftCol * CHAR_WIDTH;
+            double y = TOP_MARGIN + topRow * LINE_HEIGHT;
 
-        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
+            // Create and style Text node
+            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+            textNode.setFont(fieldFont);
+            root.getChildren().add(textNode);
+        }
+
         return root;
     }
 
+//    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
+//        Pane root = new Pane();
+//        root.setPrefSize(widthPts, heightPts);
+//
+//        // Font and spacing setup
+//        Font mono12 = Font.font("Arial Narrow", 11);
+//        double y = 20;
+//        double lh = 18;
+//        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
+//
+//        // Function to calculate X based on character column
+//        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
+//
+//        // --- Row 1: checkdate aligned at column 40
+//        Text checkDate = new Text(col.apply(60), y, tx.checkDate);
+//        checkDate.setFont(mono12);
+//        y += lh * 2;
+//
+//        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
+//        Text payeeName = new Text(col.apply(10), y,  tx.payeeName.toUpperCase() );
+//        payeeName.setFont(mono12);
+//
+//        Text checkAmt = new Text(col.apply(60), y,  CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
+//        checkAmt.setFont(mono12);
+//        y += lh;
+//
+//        // --- Row 3: amount in words centered at column 8
+//        Text amtWords = new Text(col.apply(10), y,  NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) ); // e.g., "ONE MILLION PESOS"
+//        amtWords.setFont(mono12);
+//
+//        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
+//        return root;
+//    }
 // Transaction data class for holding the transaction info
     private static class Transaction {
 
-        final String transactionNo, payeeName, checkDate, amountNumeric;
-        final BigDecimal amountNumericValue;
+        final String transactionNo, sPayeeNme, dCheckDte, nAmountxx, bankCode;
+        final BigDecimal nAmountxxValue;
 
-        Transaction(String transactionNo, String payeeName, String checkDate, String amountNumeric, BigDecimal amountNumericValue) {
+        Transaction(String transactionNo, String sPayeeNme, String dCheckDte, String nAmountxx, String bankCode, BigDecimal nAmountxxValue) {
             this.transactionNo = transactionNo;
-            this.payeeName = payeeName;
-            this.checkDate = checkDate;
-            this.amountNumeric = amountNumeric;
-            this.amountNumericValue = amountNumericValue;
+            this.sPayeeNme = sPayeeNme;
+            this.dCheckDte = dCheckDte;
+            this.nAmountxx = nAmountxx;
+            this.bankCode = bankCode;
+            this.nAmountxxValue = nAmountxxValue;
         }
     }
 
@@ -1053,7 +1222,9 @@ public class CheckPrinting extends Transaction {
 
                 /* 2.2 parameters … (same as before) */
                 Map<String, Object> params = new HashMap<>();
-                params.put("sVoucherNo", Master().getVoucherNo());
+                System.out.println("voucher No : " + Master().getVoucherNo());
+                System.out.println("transaction No : " + Master().getTransactionNo());
+                params.put("voucherNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
                 params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
@@ -1331,5 +1502,6 @@ public class CheckPrinting extends Transaction {
             return null;
         }
     }
+    
 
 }

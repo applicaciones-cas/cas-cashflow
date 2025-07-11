@@ -8,17 +8,9 @@ import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
-import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.cas.parameter.model.Model_Branch;
-import org.guanzon.cas.parameter.model.Model_Company;
-import org.guanzon.cas.parameter.model.Model_Department;
-import org.guanzon.cas.parameter.model.Model_Industry;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 /**
@@ -38,7 +30,7 @@ public class Model_Document_Mapping extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateObject("cTranStat", PaymentRequestStatus.OPEN);
+            poEntity.updateObject("cRecdStat", PaymentRequestStatus.OPEN);
             //end - assign default values
 
             poEntity.insertRow();
@@ -46,7 +38,7 @@ public class Model_Document_Mapping extends Model {
 
             poEntity.absolute(1);
 
-            ID = "sTransNox";
+            ID = "sDocCodex";
 
 //            //initialize reference objects
 //            ParamModels model = new ParamModels(poGRider);
@@ -86,13 +78,21 @@ public class Model_Document_Mapping extends Model {
     public String getDesciption() {
         return (String) getValue("sDescript");
     }
+    
+    public JSONObject setEntryNo(int entryNo) {
+        return setValue("nEntryNox", entryNo);
+    }
 
+    public int getEntryNo() {
+        return (int) getValue("nEntryNox");
+    }
+    
     public JSONObject setTransactionStatus(String transactionStatus) {
-        return setValue("cTranStat", transactionStatus);
+        return setValue("cRecdStat", transactionStatus);
     }
 
     public String getTransactionStatus() {
-        return (String) getValue("cTranStat");
+        return (String) getValue("cRecdStat");
     }
 
     public JSONObject setModifyingId(String modifyingId) {
