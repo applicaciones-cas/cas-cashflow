@@ -898,7 +898,7 @@ public class CheckPrintingRequest extends Transaction {
     Master().setModifyingId(poGRider.getUserID());
     /* ── 0.  Guard bank code ─────────────────────────────────────── */
     String bankCode = Master().Banks().getBankCode();
-    if (!"BDO".equals(bankCode)) {
+    if (!"MBT".equals(bankCode)) {
         throw new AssertionError("Unsupported bank code: " + bankCode);
     }
 

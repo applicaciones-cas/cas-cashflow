@@ -908,6 +908,12 @@ public class CheckPrinting extends Transaction {
                 poJSON.put("result", "error");
                 return poJSON;
             }
+            
+            if(Master().CheckPayments().getCheckNo().isEmpty()  || Master().CheckPayments().getCheckNo().equals(null)){
+                poJSON.put("message", "Printting Check requires to assign check no before printing");
+                poJSON.put("result", "error");
+                return poJSON;
+            }
 
             boolean isChequePrinted = CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint());
             if (isChequePrinted) {
