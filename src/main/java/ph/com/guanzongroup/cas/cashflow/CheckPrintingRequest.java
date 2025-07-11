@@ -882,9 +882,9 @@ public class CheckPrintingRequest extends Transaction {
         Master().setModifyingId(poGRider.getUserID());
         /* ── 0.  Guard bank code ─────────────────────────────────────── */
         String bankCode = Master().Banks().getBankCode();
-        if (!"MBT".equals(bankCode)) {
-            throw new AssertionError("Unsupported bank code: " + bankCode);
-        }
+//        if (!"MBT".equals(bankCode)) {
+//            throw new AssertionError("Unsupported bank code: " + bankCode);
+//        }
 
         /* ── 1.  Resolve / prepare export directory D:/ggcExports ───── */
         File exportDir = new File("D:/ggcExports");
