@@ -807,6 +807,7 @@ public class SOATagging extends Transaction {
                     + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                     + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                     + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                    + " AND a.cProcessd = '0' "
             );
 
             if (lsTransStat != null && !"".equals(lsTransStat)) {
