@@ -43,6 +43,7 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 
 /**
  *
@@ -1638,7 +1639,7 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 //                + " AND a.cProcessd = '0' " 
-//                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED) //TODO
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) //TODO
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
