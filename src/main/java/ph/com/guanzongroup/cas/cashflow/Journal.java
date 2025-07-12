@@ -390,11 +390,11 @@ public class Journal extends Transaction {
             return poJSON;
         }
 
-        if (Master().getAccountPerId().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Account per ID must not be empty.");
-            return poJSON;
-        }
+//        if (Master().getAccountPerId().isEmpty()) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Account per ID must not be empty.");
+//            return poJSON;
+//        }
 
         if (Master().getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
