@@ -43,7 +43,7 @@ public class PaymentRequest extends Transaction {
     private boolean pbApproval = false;
 
     public JSONObject InitTransaction() {
-        SOURCE_CODE = "PRF";
+        SOURCE_CODE = "PRFx";
 
         poMaster = new CashflowModels(poGRider).PaymentRequestMaster();
         poDetail = new CashflowModels(poGRider).PaymentRequestDetail();
@@ -147,7 +147,7 @@ public class PaymentRequest extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already Paid.");
+            poJSON.put("message", "Transaction was already paid.");
             return poJSON;
         }
 
@@ -280,7 +280,7 @@ public class PaymentRequest extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
+            poJSON.put("message", "Transaction was already posted.");
             return poJSON;
         }
 
@@ -563,7 +563,7 @@ public class PaymentRequest extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-           double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
+            double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
 
             if (amount <= 0) {
                 detail.remove(); // Correctly remove the item

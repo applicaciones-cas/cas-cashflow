@@ -28,16 +28,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.script.ScriptException;
-import org.guanzon.appdriver.agent.ShowDialogFX;
-import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
-import org.guanzon.cas.tbjhandler.TBJEntry;
-import org.guanzon.cas.tbjhandler.TBJTransaction;
-import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
-import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class CheckStatusUpdate extends Transaction {
 
@@ -53,7 +47,7 @@ public class CheckStatusUpdate extends Transaction {
     private String psCompanyId = "";
 
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "DISB";
+        SOURCE_CODE = "DISb";
 
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
