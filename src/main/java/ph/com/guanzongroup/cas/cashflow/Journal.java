@@ -129,7 +129,7 @@ public class Journal extends Transaction {
         }
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
+            poJSON.put("message", "Transaction was already cancelled.");
             return poJSON;
         }
 
@@ -176,7 +176,7 @@ public class Journal extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
+            poJSON.put("message", "Transaction was already voided.");
             return poJSON;
         }
 
@@ -203,6 +203,56 @@ public class Journal extends Transaction {
             poJSON.put("message", "Transaction voided successfully.");
         } else {
             poJSON.put("message", "Transaction voiding request submitted successfully.");
+        }
+
+        return poJSON;
+    }
+
+    public JSONObject ReopenTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = JournalStatus.OPEN;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already reopened.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(JournalStatus.OPEN);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ReopenTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction reopened successfully.");
+        } else {
+            poJSON.put("message", "Transaction reopening request submitted successfully.");
         }
 
         return poJSON;
@@ -395,7 +445,6 @@ public class Journal extends Transaction {
 //            poJSON.put("message", "Account per ID must not be empty.");
 //            return poJSON;
 //        }
-
         if (Master().getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Branch must not be empty.");

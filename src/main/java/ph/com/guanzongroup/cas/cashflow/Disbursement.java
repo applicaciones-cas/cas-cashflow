@@ -23,11 +23,8 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
-import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.cas.client.Client;
-import org.guanzon.cas.client.services.ClientControllers;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.TaxCode;
@@ -63,7 +60,7 @@ public class Disbursement extends Transaction {
     List<SelectedITems> poToCertify;
 
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "DISB";
+        SOURCE_CODE = "DISb";
 
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
@@ -111,7 +108,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already Verified.");
+            poJSON.put("message", "Transaction was already verified.");
             return poJSON;
         }
 
@@ -137,57 +134,15 @@ public class Disbursement extends Transaction {
         poJSON.put("result", "success");
 
         if (lbConfirm) {
-            poJSON.put("message", "Transaction Verified successfully.");
+            poJSON.put("message", "Transaction verified successfully.");
         } else {
-            poJSON.put("message", "Transaction Verified request submitted successfully.");
+            poJSON.put("message", "Transaction verified request submitted successfully.");
         }
 
         return poJSON;
     }
 
-//    public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
-//        poJSON = new JSONObject();
-//
-//        String lsStatus = DisbursementStatic.AUTHORIZED;
-//        boolean lbConfirm = true;
-//
-//        if (getEditMode() != EditMode.READY) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "No transacton was loaded.");
-//            return poJSON;
-//        }
-//
-//        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Transaction was already processed.");
-//            return poJSON;
-//        }
-//
-//        //validator
-//        poJSON = isEntryOkay(DisbursementStatic.POSTED);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        //change status
-//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-//
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = new JSONObject();
-//        poJSON.put("result", "success");
-//
-//        if (lbConfirm) {
-//            poJSON.put("message", "Transaction posted successfully.");
-//        } else {
-//            poJSON.put("message", "Transaction posting request submitted successfully.");
-//        }
-//
-//        return poJSON;
-//    }
-    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.CANCELLED;
@@ -216,10 +171,22 @@ public class Disbursement extends Transaction {
                 return poJSON;
             }
         }
-        //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
 
+        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        populateJournal();
+        poJSON = poJournal.CancelTransaction("Cancelled");
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
@@ -275,7 +242,7 @@ public class Disbursement extends Transaction {
 
         poGRider.commitTrans();
         populateJournal();
-        poJSON = poJournal.VoidTransaction("VOIDED");
+        poJSON = poJournal.VoidTransaction("Voided");
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -293,7 +260,7 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject CertifyTransaction(String remarks, ArrayList<SelectedITems> items)
-            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.CERTIFIED;
@@ -308,7 +275,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
+            poJSON.put("message", "Transaction was already certified.");
             return poJSON;
         }
         if (poGRider.getUserLevel() == UserRight.ENCODER) {
@@ -341,7 +308,7 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject AuthorizeTransaction(String remarks, ArrayList<SelectedITems> items)
-            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.AUTHORIZED;
@@ -356,7 +323,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
+            poJSON.put("message", "Transaction was already authorized.");
             return poJSON;
         }
 
@@ -389,7 +356,7 @@ public class Disbursement extends Transaction {
     }
 
     public JSONObject ReturnTransaction(String remarks, ArrayList<SelectedITems> items)
-            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.RETURNED;
@@ -404,7 +371,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
+            poJSON.put("message", "Transaction was already returned.");
             return poJSON;
         }
 
@@ -450,7 +417,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already voided.");
+            poJSON.put("message", "Transaction was already returned.");
             return poJSON;
         }
 
@@ -460,19 +427,29 @@ public class Disbursement extends Transaction {
             return poJSON;
         }
 
+        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
+        poGRider.commitTrans();
+        poJSON = new JSONObject();
         poJSON.put("result", "success");
+
+        if (lbConfirm) {
+            poJSON.put("message", "Transactions returned successfully.");
+        } else {
+            poJSON.put("message", "Transactions returning request submitted successfully.");
+        }
+
         return poJSON;
     }
 
     public JSONObject DisapprovedTransaction(String remarks, ArrayList<SelectedITems> items)
-            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.DISAPPROVED;
@@ -487,7 +464,7 @@ public class Disbursement extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
+            poJSON.put("message", "Transaction was already dissapproved.");
             return poJSON;
         }
 
@@ -747,8 +724,7 @@ public class Disbursement extends Transaction {
         return (Payee) Payees;
     }
 
-    public JSONObject setSelectedItems(String remarks, boolean lbConfirm, String lsStatus) throws GuanzonException, SQLException, CloneNotSupportedException {
-
+    public JSONObject setSelectedItems(String remarks, boolean lbConfirm, String lsStatus) throws GuanzonException, SQLException, CloneNotSupportedException, ScriptException, ParseException {
         for (SelectedITems item : poToCertify) {
             String transNo = item.getTransNo();
             poJSON = OpenTransaction(transNo);
@@ -765,7 +741,32 @@ public class Disbursement extends Transaction {
             }
             // Commit the transaction
             poGRider.commitTrans();
-
+            switch (lsStatus) {
+                case DisbursementStatic.DISAPPROVED:
+                    populateJournal();
+                    poJSON = poJournal.VoidTransaction("Voided");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.RETURNED:
+                    populateJournal();
+                    poJSON = poJournal.ReopenTransaction("Reopen");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.CERTIFIED:
+                    populateJournal();
+                    poJSON = poJournal.ConfirmTransaction("Confirmed");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                    break;
+            }
         }
         poJSON.put("result", "success");
         return poJSON;
@@ -1046,9 +1047,16 @@ public class Disbursement extends Transaction {
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
             }
-
             Master().setTransactionStatus(DisbursementStatic.OPEN);
             CheckPayments().getModel().setTransactionStatus(CheckStatus.FLOAT);
+            poGRider.beginTrans("UPDATE STATUS", "ReopenTransaction", SOURCE_CODE, Master().getTransactionNo());
+            //change status
+            poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "Reopen", DisbursementStatic.OPEN, false, true);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+            poGRider.commitTrans();
         }
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -2246,7 +2254,7 @@ public class Disbursement extends Transaction {
                 jsondetail.put("Disbursement_Master", jsonmaster);
                 jsondetail.put("Disbursement_Detail", jsondetails);
 
-                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE, Master().getIndustryID(), "");
+                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE, "", "");
                 tbj.setGRiderCAS(poGRider);
                 tbj.setData(jsondetail);
                 jsonmaster = tbj.processRequest();
@@ -2358,6 +2366,7 @@ public class Disbursement extends Transaction {
     }
     private String psIndustryId = "";
     private String psCompanyId = "";
+    private String psCategoryCd = "";
 
     public void setIndustryID(String industryID) {
         psIndustryId = industryID;
@@ -2365,6 +2374,10 @@ public class Disbursement extends Transaction {
 
     public void setCompanyID(String companyID) {
         psCompanyId = companyID;
+    }
+
+    public void setCategoryCd(String categoryCD) {
+        psCategoryCd = categoryCD;
     }
 
     public String getVoucherNo() throws SQLException {
