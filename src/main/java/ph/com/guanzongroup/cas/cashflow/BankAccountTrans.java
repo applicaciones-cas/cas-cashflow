@@ -49,7 +49,7 @@ public class BankAccountTrans {
             return poJSON;
         }
                 
-        if (psBranchCd.isEmpty()) psBranchCd = poGRider.getBranchCode();
+        if (psBranchCd == null || psBranchCd.isEmpty()) psBranchCd = poGRider.getBranchCode();
         
         pbInitTran = true;
         

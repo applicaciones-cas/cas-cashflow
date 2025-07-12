@@ -42,6 +42,11 @@ public class Model_Bank_Account_Ledger extends Model {
             System.exit(1);
         }
     }
+    
+//     @Override
+//    public String getNextCode() {
+//        return MiscUtil.getNextCode(this.getTable(), ID2, false, poGRider.getGConnection().getConnection(), null);
+//    }
 
     public JSONObject setBankAccountId(String bankAccountId) {
         return setValue("sBnkActID", bankAccountId);

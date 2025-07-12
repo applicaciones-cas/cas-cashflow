@@ -89,6 +89,27 @@ public class Payee extends Parameter {
             return poJSON;
         }
     }
+    
+    public JSONObject searchRecordbyClientID(String value, boolean byCode) throws SQLException, GuanzonException {
+        String lsSQL = getSQ_Browse();
+
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Name»Particular»AP Client",
+                "sClientID»sPayeeNme»xPrtclrNm»xClientNm",
+                "a.sClientID»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
 
     @Override
     public String getSQ_Browse() {
@@ -117,27 +138,50 @@ public class Payee extends Parameter {
                 + ", IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm) xClientNm"
                 + " FROM Payee a"
                 + " LEFT JOIN Particular b ON a.sPrtclrID = b.sPrtclrID"
-                + " LEFT JOIN Client_Master c ON a.sAPClntID = c.sClientID";
+                + " LEFT JOIN Client_Master c ON a.sClientID = c.sClientID";
+
+        return MiscUtil.addCondition(lsSQL, lsCondition);
+    }
+    public String getSQ_Browsex() {
+        String lsCondition = "";
+
+        if (psRecdStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psRecdStat.length() - 1; lnCtr++) {
+                lsCondition += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
+            }
+
+            lsCondition = "a.cRecdStat IN (" + lsCondition.substring(2) + ")";
+        } else {
+            lsCondition = "a.cRecdStat = " + SQLUtil.toSQL(psRecdStat);
+        }
+
+        String lsSQL = "SELECT"
+                + "  a.sPayeeIDx"
+                + ", a.sPayeeNme"
+                + ", a.sPrtclrID"
+                + ", a.sAPClntID"
+                + ", a.sClientID"
+                + ", a.cRecdStat"
+                + ", a.sModified"
+                + ", a.dModified"
+                + ", IFNULL(b.sDescript, '') xPrtclrNm"
+                + ", IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm) xClientNm"
+                + " FROM Payee a"
+                + " LEFT JOIN Particular b ON a.sPrtclrID = b.sPrtclrID"
+                + " LEFT JOIN Client_Master c ON a.sClientID = c.sClientID";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
 
-    public JSONObject searchRecordbyClient(String value, String ParticularID, boolean byCode) throws SQLException, GuanzonException {
+    public JSONObject searchRecordbyCompany(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
-        String lsCondition = "";
-
-        if (ParticularID != null && !ParticularID.isEmpty()) {
-            lsCondition = "a.sPrtclrID = " + SQLUtil.toSQL(ParticularID);
-        }
-
-        lsSQL = MiscUtil.addCondition(getSQ_Browse(), lsCondition);
 
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ClientID»ID»Name»Particular»AP Client",
-                "sClientID»sPayeeIDx»sPayeeNme»xPrtclrNm»xClientNm",
-                "a.sClientID»a.sPayeeIDx»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                "ID»Suplier Name»Contact Person",
+                "sPayeeIDx»xClientNm»sPayeeNme",
+                "a.sPayeeIDx»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)»a.sPayeeNme",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {

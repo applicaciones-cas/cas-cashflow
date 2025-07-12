@@ -220,24 +220,24 @@ public class Model_Disbursement_Detail extends Model {
         }
     }
 
-//    public Model_Inv_Type InvType() throws SQLException, GuanzonException {
-//        if (!"".equals((String) getValue("sTaxCodex"))) {
-//            if (poInvType.getEditMode() == EditMode.READY
-//                    && poInvType.getInventoryTypeId().equals((String) getValue("sTaxCodex"))) {
-//                return poInvType;
-//            } else {
-//                poJSON = poInvType.openRecord((String) getValue("sTaxCodex"));
-//
-//                if ("success".equals((String) poJSON.get("result"))) {
-//                    return poInvType;
-//                } else {
-//                    poInvType.initialize();
-//                    return poInvType;
-//                }
-//            }
-//        } else {
-//            poInvType.initialize();
-//            return poInvType;
-//        }
-//    }
+    public Model_Inv_Type InvType() throws SQLException, GuanzonException {
+        if (!"".equals(InvType)) {
+            if (poInvType.getEditMode() == EditMode.READY
+                    && poInvType.getInventoryTypeId().equals(InvType)) {
+                return poInvType;
+            } else {
+                poJSON = poInvType.openRecord(InvType);
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poInvType;
+                } else {
+                    poInvType.initialize();
+                    return poInvType;
+                }
+            }
+        } else {
+            poInvType.initialize();
+            return poInvType;
+        }
+    }
 }
