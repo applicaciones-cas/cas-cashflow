@@ -1715,6 +1715,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
+                + " , a.sReferNox "
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
@@ -1728,7 +1729,7 @@ public class SOATagging extends Transaction {
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND a.sSourceNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
                 + " UNION  "
                 + " SELECT "
                 + "   a.sTransNox "
@@ -1736,6 +1737,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
+                + " , a.sSeriesNo "
                 + " , a.nTranTotl AS nPayblAmt    "
                 + " , b.sPayeeNme AS sPayablNm    "
                 + " , c.sCompnyNm AS sCompnyNm  "
@@ -1771,7 +1773,7 @@ public class SOATagging extends Transaction {
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND a.sSourceNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
+                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo);
     }
     
     public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
