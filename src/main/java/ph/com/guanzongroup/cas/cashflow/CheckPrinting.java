@@ -1214,11 +1214,17 @@ public class CheckPrinting extends Transaction {
 
                 /* 2.1 domain‑level work … (same as before) */
                 this.OpenTransaction(txnNo);
+                
+                if(Master().CheckPayments().getCheckNo().isEmpty() ||Master().CheckPayments().getCheckNo().equals(null)){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Check number must be assigned before printing the disbursement.");
+                    return poJSON;
+                }
+                
                 this.UpdateTransaction();
                 this.setCheckpayment();
                 checkPayments.getEditMode();
-                Master().setPrint(DisbursementStatic.VERIFIED);
-                Master().setDatePrint(poGRider.getServerDate());
+                
 
                 /* 2.2 parameters … (same as before) */
                 Map<String, Object> params = new HashMap<>();
