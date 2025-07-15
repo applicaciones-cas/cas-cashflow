@@ -28,10 +28,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import javax.script.ScriptException;
+import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.SelectedITems;
+import ph.com.guanzongroup.cas.cashflow.status.CheckPrintRequestStatus;
 
 public class CheckStatusUpdate extends Transaction {
 
@@ -45,6 +49,7 @@ public class CheckStatusUpdate extends Transaction {
     private Model_Journal_Detail poJEDetail;
     private String psIndustryId = "";
     private String psCompanyId = "";
+    List<SelectedITems> poToAdjustStatus;
 
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
@@ -551,6 +556,9 @@ public class CheckStatusUpdate extends Transaction {
                 " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
                 " g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo),
+                "g.sCheckNox IS NOT NULL",
+                "g.sCheckNox <> ''",
+                "g.cProcessd = '1'",
                 " g.cTranStat IN ('1', '5')");
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
         System.out.println("Executing SQL: " + lsSQL);
@@ -650,6 +658,45 @@ public class CheckStatusUpdate extends Transaction {
             }
         }
         poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    public JSONObject getDisbursement(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        initSQL();
+        String lsFilterCondition = String.join(" AND ",
+                " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
+                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
+                "g.sCheckNox IS NOT NULL",
+                "g.sCheckNox <> ''",
+                "g.cProcessd = '1'",
+                " g.cTranStat IN ('1', '5')");
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+
+        if (MiscUtil.RecordCount(loRS)
+                >= 0) {
+            poDisbursementMaster = new ArrayList<>();
+            while (loRS.next()) {
+                poDisbursementMaster.add(DisbursementMasterList());
+                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            poJSON.put("result", "success");
+            poJSON.put("message", "Record loaded successfully.");
+        } else {
+            poDisbursementMaster = new ArrayList<>();
+            poDisbursementMaster.add(DisbursementMasterList());
+            poJSON.put("result", "error");
+            poJSON.put("continue", true);
+            poJSON.put("message", "No record found .");
+        }
+
+        MiscUtil.close(loRS);
         return poJSON;
     }
 }

@@ -971,6 +971,7 @@ public class CheckPrinting extends Transaction {
             if (showPrintPreview(transactions.get(i))) {
                 printVoucher(transactions.get(i));
             }
+            checkPayments.getModel().setProcessed(CheckStatus.OPEN);
             this.SaveTransaction();
         }
         return poJSON;
@@ -1104,7 +1105,6 @@ public class CheckPrinting extends Transaction {
                     fieldFont = Font.font(fontName, fontSize);
             }
 
-            // Compute text value for each field
             String textValue;
             switch (fieldName) {
                 case "sPayeeNme":
@@ -1132,11 +1132,9 @@ public class CheckPrinting extends Transaction {
                     throw new AssertionError("Unhandled field: " + fieldName);
             }
 
-            // Calculate position
             double x = leftCol * CHAR_WIDTH;
             double y = TOP_MARGIN + topRow * LINE_HEIGHT;
-
-            // Create and style Text node
+            
             Text textNode = new Text(x, y, textValue == null ? "" : textValue);
             textNode.setFont(fieldFont);
             root.getChildren().add(textNode);
@@ -1144,41 +1142,7 @@ public class CheckPrinting extends Transaction {
 
         return root;
     }
-
-//    private Node buildVoucherNode(Transaction tx, double widthPts, double heightPts) {
-//        Pane root = new Pane();
-//        root.setPrefSize(widthPts, heightPts);
-//
-//        // Font and spacing setup
-//        Font mono12 = Font.font("Arial Narrow", 11);
-//        double y = 20;
-//        double lh = 18;
-//        double charWidth = 7; // Approx. width per char in Courier New, adjust as needed
-//
-//        // Function to calculate X based on character column
-//        java.util.function.IntFunction<Double> col = (chars) -> chars * charWidth;
-//
-//        // --- Row 1: checkdate aligned at column 40
-//        Text checkDate = new Text(col.apply(60), y, tx.checkDate);
-//        checkDate.setFont(mono12);
-//        y += lh * 2;
-//
-//        // --- Row 2: payee name centered at column 8, amount right-aligned at column 45
-//        Text payeeName = new Text(col.apply(10), y,  tx.payeeName.toUpperCase() );
-//        payeeName.setFont(mono12);
-//
-//        Text checkAmt = new Text(col.apply(60), y,  CustomCommonUtil.setIntegerValueToDecimalFormat(tx.amountNumeric, false));
-//        checkAmt.setFont(mono12);
-//        y += lh;
-//
-//        // --- Row 3: amount in words centered at column 8
-//        Text amtWords = new Text(col.apply(10), y,  NumberToWords.convertToWords(new BigDecimal(tx.amountNumeric)) ); // e.g., "ONE MILLION PESOS"
-//        amtWords.setFont(mono12);
-//
-//        root.getChildren().addAll(checkDate, payeeName, checkAmt, amtWords);
-//        return root;
-//    }
-// Transaction data class for holding the transaction info
+    
     private static class Transaction {
 
         final String transactionNo, sPayeeNme, dCheckDte, nAmountxx, bankCode;
@@ -1194,33 +1158,31 @@ public class CheckPrinting extends Transaction {
         }
     }
 
-    /* ==============================================================
- *  Main method : single preview window for all transactions
- * ============================================================ */
     public JSONObject printTransaction(List<String> fsTransactionNos)
             throws CloneNotSupportedException, SQLException, GuanzonException {
 
         JSONObject poJSON = new JSONObject();
-        JasperPrint masterPrint = null;       // grows page‑by‑page
-        JasperReport jasperReport = null;       // compiled once
-        String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; //set draft as default
+        JasperPrint masterPrint = null;       
+        JasperReport jasperReport = null;       
+        String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
         try {
-            /* --- 1. compile report design only once -------------------- */
             String jrxmlPath = "D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
-            /* --- 2. iterate over every voucher ------------------------- */
             for (String txnNo : fsTransactionNos) {
 
-                /* 2.1 domain‑level work … (same as before) */
                 this.OpenTransaction(txnNo);
+                
+                if(Master().CheckPayments().getCheckNo().isEmpty() ||Master().CheckPayments().getCheckNo().equals(null)){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Check number must be assigned before printing the disbursement.");
+                    return poJSON;
+                }
+                
                 this.UpdateTransaction();
                 this.setCheckpayment();
                 checkPayments.getEditMode();
-                Master().setPrint(DisbursementStatic.VERIFIED);
-                Master().setDatePrint(poGRider.getServerDate());
-
-                /* 2.2 parameters … (same as before) */
+                
                 Map<String, Object> params = new HashMap<>();
                 System.out.println("voucher No : " + Master().getVoucherNo());
                 System.out.println("transaction No : " + Master().getTransactionNo());
@@ -1242,7 +1204,6 @@ public class CheckPrinting extends Transaction {
                 }
                 params.put("watermarkImagePath", watermarkPath);
 
-                /* 2.3 details … (same as before) */
                 List<OrderDetail> orderDetails = new ArrayList<>();
                 for (int i = 0; i < getDetailCount(); i++) {
                     orderDetails.add(new OrderDetail(
@@ -1252,28 +1213,18 @@ public class CheckPrinting extends Transaction {
                             Detail(i).getAmount()
                     ));
                 }
-
-                /* 2.4 fill voucher */
                 JasperPrint currentPrint = JasperFillManager.fillReport(
                         jasperReport,
                         params,
                         new JRBeanCollectionDataSource(orderDetails)
                 );
-
-                /* 2.5 show viewer — either merge (single) or block‑until‑close (multi) */
                 if (fsTransactionNos.size() == 1) {
-                    // keep old single‑voucher behaviour
                     masterPrint = currentPrint;
                 } else {
-                    showViewerAndWait(currentPrint);   // ⬅️ new helper (see below)
+                    showViewerAndWait(currentPrint);
                 }
-
-
-                /* 2.6 persist status … (unchanged) */
-                // this.SaveTransaction();
             }
 
-            /* --- 3. one viewer window for everything ------------------- */
             if (masterPrint != null) {
                 CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
                 viewer.setVisible(true);
@@ -1312,10 +1263,6 @@ public class CheckPrinting extends Transaction {
         }
     }
 
-    /* 4️⃣  after the loop — unchanged for single‑voucher case */
- /* ==============================================================
- *  DTO for the detail band
- * ============================================================ */
     public static class OrderDetail {
 
         private final Integer nRowNo;
@@ -1347,9 +1294,6 @@ public class CheckPrinting extends Transaction {
         }
     }
 
-    /* ==============================================================
- *  Viewer that re‑wires the Print button (Java‑8‑only code)
- * ============================================================ */
     public class CustomJasperViewer extends JasperViewer {
 
         public CustomJasperViewer(final JasperPrint jasperPrint) {
@@ -1449,7 +1393,7 @@ public class CheckPrinting extends Transaction {
             }
         }
 
-        /* ---- save printed status & messaging ------------------------- */
+
         private void PrintTransaction(boolean fbIsPrinted)
                 throws SQLException, CloneNotSupportedException, GuanzonException {
             final String msg = fbIsPrinted
@@ -1485,7 +1429,6 @@ public class CheckPrinting extends Transaction {
             });
         }
 
-        /* ---- recursive search for JRViewer --------------------------- */
         private JRViewer findJRViewer(Component parent) {
             if (parent instanceof JRViewer) {
                 return (JRViewer) parent;
@@ -1502,6 +1445,4 @@ public class CheckPrinting extends Transaction {
             return null;
         }
     }
-    
-
 }

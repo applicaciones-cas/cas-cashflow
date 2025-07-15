@@ -193,5 +193,32 @@ public class Payee extends Parameter {
             return poJSON;
         }
     }
+        public JSONObject searchRecordbyClient(String value, String ParticularID, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = getSQ_Browse();
+        String lsCondition = "";
+
+        if (ParticularID != null && !ParticularID.isEmpty()) {
+            lsCondition = "a.sPrtclrID = " + SQLUtil.toSQL(ParticularID);
+        }
+
+         lsSQL = MiscUtil.addCondition(getSQ_Browse(), lsCondition);
+        
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ClientID»ID»Name»Particular»AP Client",
+                "sClientID»sPayeeIDx»sPayeeNme»xPrtclrNm»xClientNm",
+                "a.sClientID»a.sPayeeIDx»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    } 
 
 }

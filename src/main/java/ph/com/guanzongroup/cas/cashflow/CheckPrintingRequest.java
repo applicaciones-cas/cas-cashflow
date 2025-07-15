@@ -417,7 +417,6 @@ public class CheckPrintingRequest extends Transaction {
             poCheckPayments.get(lnCtr).setWithParentClass(true);
             poJSON = poCheckPayments.get(lnCtr).saveRecord();
             if ("error".equals((String) poJSON.get("result"))) {
-                System.out.println("Stock Request Saving " + (String) poJSON.get("message"));
                 return poJSON;
             }
         }
