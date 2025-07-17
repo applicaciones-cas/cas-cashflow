@@ -117,9 +117,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -165,9 +170,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -225,9 +235,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -278,9 +293,14 @@ public class Disbursement extends Transaction {
             poJSON.put("message", "Transaction was already certified.");
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -288,6 +308,17 @@ public class Disbursement extends Transaction {
         poJSON = isEntryOkay(DisbursementStatic.CERTIFIED);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
         }
 
         poJSON = setSelectedItems(remarks, lbConfirm, lsStatus);
@@ -332,9 +363,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -380,9 +416,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }
@@ -425,6 +466,17 @@ public class Disbursement extends Transaction {
         poJSON = isEntryOkay(DisbursementStatic.RETURNED);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
         }
 
         poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -473,9 +525,14 @@ public class Disbursement extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
         }

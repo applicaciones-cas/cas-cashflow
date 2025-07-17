@@ -151,6 +151,17 @@ public class CheckPrinting extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
 
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
@@ -193,6 +204,17 @@ public class CheckPrinting extends Transaction {
         poJSON = isEntryOkay(CheckStatus.POSTED);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
         }
 
         //change status
@@ -281,6 +303,17 @@ public class CheckPrinting extends Transaction {
             return poJSON;
         }
 
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+               return poJSON; 
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
 
