@@ -137,10 +137,16 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
         
-        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
+            } else {
+                if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer.");
+                    return poJSON;
+                }
             }
         }
         
@@ -206,10 +212,16 @@ public class SOATagging extends Transaction {
         }
 
         if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
 
@@ -386,10 +398,16 @@ public class SOATagging extends Transaction {
         }
 
         if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
         }
@@ -457,10 +475,16 @@ public class SOATagging extends Transaction {
         }
 
         if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
         }
@@ -971,6 +995,81 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
 
+    public JSONObject loadPayables(String supplier, String company, String payee, String referenceNo, String payableType) {
+        try {
+            paPayablesList = new ArrayList<>();
+            paPayablesType = new ArrayList<>();
+
+            if (company == null) {
+                company = "";
+            }
+            if (supplier == null) {
+                supplier = "";
+            }
+            if (referenceNo == null) {
+                referenceNo = "";
+            }
+
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+            switch(payableType){
+                case SOATaggingStatic.CachePayable:
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    break;
+                case SOATaggingStatic.PaymentRequest:
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    break;
+            }
+            System.out.println("Executing SQL: " + lsSQL);
+            System.out.println("Payment Request List");
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+            int lnctr = 0;
+            if (MiscUtil.RecordCount(loRS) >= 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                    System.out.println("sPayablNm: " + loRS.getString("sPayablNm"));
+                    System.out.println("sPayablTp: " + loRS.getString("sPayablTp"));
+                    System.out.println("------------------------------------------------------------------------------");
+
+                    switch (loRS.getString("sPayablTp")) {
+                        case SOATaggingStatic.PaymentRequest:
+                            paPayablesList.add(PaymentRequestMaster());
+                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+                            paPayablesType.add(SOATaggingStatic.PaymentRequest);
+                            break;
+                        case SOATaggingStatic.CachePayable:
+                            paPayablesList.add(CachePayableMaster());
+                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+                            paPayablesType.add(SOATaggingStatic.CachePayable);
+                            break;
+                    }
+                    lnctr++;
+                }
+
+                System.out.println("Records found: " + lnctr);
+                poJSON.put("result", "success");
+                poJSON.put("message", "Record loaded successfully.");
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("continue", true);
+                poJSON.put("message", "No record found.");
+            }
+
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        } catch (GuanzonException ex) {
+            Logger.getLogger(SOATagging.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+        }
+        return poJSON;
+    }
+
+    
     public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
             throws CloneNotSupportedException,
             SQLException,
@@ -1130,10 +1229,16 @@ public class SOATagging extends Transaction {
         poJSON = new JSONObject();
         
         if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
         }
@@ -1640,6 +1745,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
+                + " , a.sReferNox "
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
@@ -1653,9 +1759,55 @@ public class SOATagging extends Transaction {
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND a.sSourceNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
                 + " UNION  "
                 + " SELECT "
+                + "   a.sTransNox "
+                + " , a.dTransact "
+                + " , a.sIndstCdx "
+                + " , a.cTranStat "
+                + " , a.nAmtPaidx "
+                + " , a.sSeriesNo "
+                + " , a.nTranTotl AS nPayblAmt    "
+                + " , b.sPayeeNme AS sPayablNm    "
+                + " , c.sCompnyNm AS sCompnyNm  "
+                + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
+                + " FROM payment_request_master a "
+                + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
+                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                //                + " AND a.cProcessd = '0' " 
+                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+                + " AND a.nAmtPaidx < a.nTranTotl "
+                + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
+                + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
+    }
+    
+    public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo) {
+        return " SELECT        "
+                + "   a.sTransNox "
+                + " , a.dTransact "
+                + " , a.sIndstCdx "
+                + " , a.cTranStat "
+                + " , a.nAmtPaidx "
+                + " , a.nNetTotal AS nPayblAmt  "
+                + " , b.sCompnyNm AS sPayablNm  "
+                + " , c.sCompnyNm AS sCompnyNm  "
+                + " ,  " + SQLUtil.toSQL(SOATaggingStatic.CachePayable) + " AS sPayablTp  "
+                + " FROM cache_payable_master a "
+                + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
+                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                //                + " AND a.cProcessd = '0' " 
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) //TODO
+                + " AND a.nAmtPaidx < a.nNetTotal "
+                + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
+                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo);
+    }
+    
+    public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
+        return " SELECT        "
                 + "   a.sTransNox "
                 + " , a.dTransact "
                 + " , a.sIndstCdx "

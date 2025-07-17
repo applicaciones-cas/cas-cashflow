@@ -82,10 +82,16 @@ public class APPaymentAdjustment extends Parameter {
         
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
             if(!pbWithParent){
-                if (poGRider.getUserLevel() == UserRight.ENCODER) {
+                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                     poJSON = ShowDialogFX.getUserApproval(poGRider);
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
+                    } else {
+                        if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "User is not an authorized approving officer.");
+                            return poJSON;
+                        }
                     }
                 }
             }
@@ -153,7 +159,7 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
 
-//        if (poGRider.getUserLevel() == UserRight.ENCODER) {
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
 //            poJSON = ShowDialogFX.getUserApproval(poGRider);
 //            if (!"success".equals((String) poJSON.get("result"))) {
 //                return poJSON;
@@ -333,7 +339,7 @@ public class APPaymentAdjustment extends Parameter {
         }
 
 //        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-//            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
 //                poJSON = ShowDialogFX.getUserApproval(poGRider);
 //                if (!"success".equals((String) poJSON.get("result"))) {
 //                    return poJSON;
@@ -489,10 +495,16 @@ public class APPaymentAdjustment extends Parameter {
         }
 
         if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
         }
@@ -564,10 +576,16 @@ public class APPaymentAdjustment extends Parameter {
         }
 
         if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-            if (poGRider.getUserLevel() == UserRight.ENCODER) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if (!"success".equals((String) poJSON.get("result"))) {
                     return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
                 }
             }
         }
