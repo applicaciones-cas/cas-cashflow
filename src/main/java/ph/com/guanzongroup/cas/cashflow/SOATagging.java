@@ -1175,6 +1175,13 @@ public class SOATagging extends Transaction {
 
         if (Master().getCompanyId() == null || "".equals(Master().getCompanyId())) {
             Master().setCompanyId(lsCompanyId);
+        } else {
+            if(lsCompanyId != null && !"".equals(lsCompanyId) && !lsCompanyId.equals(Master().getCompanyId())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Selected Company of payables is not equal to transaction company.");
+                poJSON.put("row", lnCtr);
+                return poJSON;
+            }
         }
 
         if (Master().getClientId() == null || "".equals(Master().getClientId())) {
