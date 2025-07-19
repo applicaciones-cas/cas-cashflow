@@ -1086,11 +1086,11 @@ public class SOATagging extends Transaction {
         Number ldblDebitAmt = 0.0000;
         Number ldblCreditAmt = 0.0000;
 
-        //Check if transaction already exist in the list
+        //Check if transaction already exists in the list
         for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if (transactionNo.equals(Detail(lnCtr).getSourceNo())) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Selected transaction no " + transactionNo + " already exist in SOA detail.");
+                poJSON.put("message", "Selected transaction no " + transactionNo + " already exists in SOA detail.");
                 poJSON.put("row", lnCtr);
                 return poJSON;
             }
