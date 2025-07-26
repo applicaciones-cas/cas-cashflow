@@ -167,6 +167,7 @@ public class SOATagging extends Transaction {
         
         poJSON = saveUpdateOthers(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
