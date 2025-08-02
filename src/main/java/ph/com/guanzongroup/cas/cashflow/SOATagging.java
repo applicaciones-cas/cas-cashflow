@@ -1637,6 +1637,7 @@ public class SOATagging extends Transaction {
             //Save Update Payment Request
             for (lnCtr = 0; lnCtr <= paPaymentRequest.size() - 1; lnCtr++) {
                 paPaymentRequest.get(lnCtr).setWithParent(true);
+                paPaymentRequest.get(lnCtr).Master().setAmountPaid(getPayment(paPaymentRequest.get(lnCtr).Master().getTransactionNo()));
                 paPaymentRequest.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paPaymentRequest.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paPaymentRequest.get(lnCtr).SaveTransaction();
@@ -1649,6 +1650,7 @@ public class SOATagging extends Transaction {
             //Save Update Cache Payable
             for (lnCtr = 0; lnCtr <= paCachePayable.size() - 1; lnCtr++) {
                 paCachePayable.get(lnCtr).setWithParent(true);
+                paCachePayable.get(lnCtr).Master().setAmountPaid(getPayment(paCachePayable.get(lnCtr).Master().getTransactionNo()));
                 paCachePayable.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paCachePayable.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paCachePayable.get(lnCtr).SaveTransaction();
