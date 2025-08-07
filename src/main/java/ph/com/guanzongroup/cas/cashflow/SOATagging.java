@@ -44,6 +44,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
  *
@@ -51,7 +52,6 @@ import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
  */
 public class SOATagging extends Transaction {
 
-    private boolean pbIsPrint = false;
     private String psIndustryId = "";
     private String psCompanyId = "";
     private String psCategorCd = "";
@@ -167,6 +167,7 @@ public class SOATagging extends Transaction {
         
         poJSON = saveUpdateOthers(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
@@ -361,9 +362,9 @@ public class SOATagging extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         if (lbPosted) {
-            poJSON.put("message", "Transaction posted successfully.");
+            poJSON.put("message", "Transaction processed successfully.");
         } else {
-            poJSON.put("message", "Transaction posting request submitted successfully.");
+            poJSON.put("message", "Transaction processing request submitted successfully.");
         }
 
         return poJSON;
@@ -642,6 +643,9 @@ public class SOATagging extends Transaction {
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next();
+            if (item.getEditMode() == EditMode.UPDATE) {
+                paDetailRemoved.add(item);
+            }
             detail.remove();
         }
 
@@ -1369,7 +1373,7 @@ public class SOATagging extends Transaction {
             case SOATaggingStatic.PaymentRequest:
                 ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal()
                         - (Detail(row).getAppliedAmount().doubleValue()
-                        + getPayment(Detail(row).getSourceNo()));
+                        + getPayment(Detail(row).getSourceNo(), true));
                 if (ldblBalance < 0) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
@@ -1380,7 +1384,7 @@ public class SOATagging extends Transaction {
             case SOATaggingStatic.CachePayable:
                 ldblBalance = Detail(row).CachePayableMaster().getNetTotal()
                         - (Detail(row).getAppliedAmount().doubleValue()
-                        + getPayment(Detail(row).getSourceNo()));
+                        + getPayment(Detail(row).getSourceNo(), true));
                 if (ldblBalance < 0) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
@@ -1408,15 +1412,28 @@ public class SOATagging extends Transaction {
         return fbIs4Decimal ? "0.0000" : "0.00";
     }
 
-    private double getPayment(String sourceNo) {
+    private double getPayment(String sourceNo, boolean validate) {
+        String lsSQL = "";
         double ldPayment = 0.0000;
         try {
-            String lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
+            if(validate){
+                lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.VOID)
-            );
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.RETURNED)
+                );
+            
+            } else {
+                lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
+                    " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
+                    + " AND ( a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.PROCESSED)
+                    + " OR a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.CONFIRMED)
+                    + " OR a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.PAID)
+                    + " ) "
+                );
+            }
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             poJSON = new JSONObject();
@@ -1433,8 +1450,10 @@ public class SOATagging extends Transaction {
 
             lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.VOID)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
             );
             System.out.println("Executing SQL: " + lsSQL);
             loRS = poGRider.executeQuery(lsSQL);
@@ -1482,8 +1501,10 @@ public class SOATagging extends Transaction {
 
             lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.VOID)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
             );
             System.out.println("Executing SQL: " + lsSQL);
             loRS = poGRider.executeQuery(lsSQL);
@@ -1636,6 +1657,7 @@ public class SOATagging extends Transaction {
             //Save Update Payment Request
             for (lnCtr = 0; lnCtr <= paPaymentRequest.size() - 1; lnCtr++) {
                 paPaymentRequest.get(lnCtr).setWithParent(true);
+                paPaymentRequest.get(lnCtr).Master().setAmountPaid(getPayment(paPaymentRequest.get(lnCtr).Master().getTransactionNo(), false));
                 paPaymentRequest.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paPaymentRequest.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paPaymentRequest.get(lnCtr).SaveTransaction();
@@ -1648,6 +1670,7 @@ public class SOATagging extends Transaction {
             //Save Update Cache Payable
             for (lnCtr = 0; lnCtr <= paCachePayable.size() - 1; lnCtr++) {
                 paCachePayable.get(lnCtr).setWithParent(true);
+                paCachePayable.get(lnCtr).Master().setAmountPaid(getPayment(paCachePayable.get(lnCtr).Master().getTransactionNo(), false));
                 paCachePayable.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paCachePayable.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paCachePayable.get(lnCtr).SaveTransaction();
