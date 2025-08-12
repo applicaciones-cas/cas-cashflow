@@ -80,6 +80,11 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
         
+        if(getModel().getEditMode() == EditMode.ADDNEW){
+            System.out.println("Will Save : " + getModel().getNextCode());
+            getModel().setTransactionNo(getModel().getNextCode());
+        }
+        
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
             if(!pbWithParent){
                 if (poGRider.getUserLevel() <= UserRight.ENCODER) {
