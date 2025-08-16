@@ -647,7 +647,8 @@ public class Disbursement extends Transaction {
 
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-            Master().setBankPrint(object.getModel().isBankPrinting() == true ? "1" : "0");
+            
+            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
         }
 
         return poJSON;
@@ -1257,13 +1258,13 @@ public class Disbursement extends Transaction {
                 ? ((CachePayable) controller).Master().getTaxAmount()
                 : ((SOATagging) controller).Master().getTaxAmount().doubleValue();
 
-        if (Math.abs(totalTaxDetail - masterTaxAmount) > 0.01) { // Allow minimal rounding difference
-            poJSON.put("result", "error");
-            poJSON.put("message", "On Disbursement Voucher No: " + Master().getTransactionNo() + "\n"
-                    + "There is an issue with the disbursement details: the withholding tax does not match for reference no.: " + sourceNo + ". \n"
-                    + "Please fix this before saving.");
-            return false;
-        }
+//        if (Math.abs(totalTaxDetail - masterTaxAmount) > 0.00) { // Allow minimal rounding difference
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "On Disbursement Voucher No: " + Master().getTransactionNo() + "\n"
+//                    + "There is an issue with the disbursement details: the withholding tax does not match for reference no.: " + sourceNo + ". \n"
+//                    + "Please fix this before saving.");
+//            return false;
+//        }
 
         return true;
     }
@@ -1563,7 +1564,12 @@ public class Disbursement extends Transaction {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)
                                 && Detail(j).getParticularID().equals(particular)) {
-
+                            
+                            if( Detail(j).getSourceNo().equals(referNo) && Detail(j).getParticularID().equals(particular)){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Payment Request already exists in Disbursement details.");
+                                return poJSON;
+                            }
                             // If Payee ID mismatched
                             if (!Master().getPayeeID().equals(currentPayeeID)) {
                                 poJSON.put("result", "error");
@@ -1626,6 +1632,12 @@ public class Disbursement extends Transaction {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)) {
 
+                            if( Detail(j).getSourceNo().equals(referNo) && Detail(j).getParticularID().equals(particular)){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Payment Request already exists in Disbursement details.");
+                                return poJSON;
+                            }
+                            
                             // Check if Payee ID is different
                             if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
                                 poJSON.put("result", "error");
@@ -1680,7 +1692,12 @@ public class Disbursement extends Transaction {
                     for (int j = 0; j < getDetailCount(); j++) {
                         if (Detail(j).getSourceNo().equals(referNo)
                                 && Detail(j).getSourceCode().equals(sourceCode)) {
-
+                            
+                            if( Detail(j).getSourceNo().equals(referNo) && Detail(j).getParticularID().equals(particular)){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Payment Request already exists in Disbursement details.");
+                                return poJSON;
+                            }
                             // Check if Payee ID is different
                             if (!Master().getPayeeID().equals(poPayee.getModel().getPayeeID())) {
                                 poJSON.put("result", "error");
@@ -2288,13 +2305,11 @@ public class Disbursement extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
-                //retreiving using column index
                 JSONObject jsonmaster = new JSONObject();
                 for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++) {
                     System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
                     jsonmaster.put(Master().getColumn(lnCtr), Master().getValue(lnCtr));
                 }
-
                 JSONArray jsondetails = new JSONArray();
                 JSONObject jsondetail = new JSONObject();
 
@@ -2328,8 +2343,6 @@ public class Disbursement extends Transaction {
                 } else {
                     System.out.println(jsonmaster.toJSONString());
                 }
-
-                //Journa Entry Master
                 poJournal.Master().setAccountPerId("dummy");
                 poJournal.Master().setIndustryCode(Master().getIndustryID());
                 poJournal.Master().setBranchCode(Master().getBranchCode());
@@ -2403,7 +2416,6 @@ public class Disbursement extends Transaction {
         //Put initial model values here/
         poJSON = new JSONObject();
         try {
-            //Put initial model values here/
             poJSON = new JSONObject();
             Master().setBranchCode(poGRider.getBranchCode());
             Master().setIndustryID(psIndustryId);
@@ -2457,7 +2469,6 @@ public class Disbursement extends Transaction {
                     voucherNumber += 1;
                     branchVoucherNo = String.format("%08d", voucherNumber); // format to 6 digits
                 }
-
             }
         } finally {
             MiscUtil.close(loRS);  // Always close the ResultSet

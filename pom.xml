@@ -74,6 +74,12 @@
             <version>23</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>org.guanzon</groupId>
+            <artifactId>cas-inv</artifactId>
+            <version>0.2-SNAPSHOT</version>
+            <type>jar</type>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
