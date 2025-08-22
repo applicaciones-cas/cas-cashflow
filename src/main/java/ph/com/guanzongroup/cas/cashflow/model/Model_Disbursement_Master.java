@@ -420,7 +420,7 @@ public class Model_Disbursement_Master extends Model {
                     && poCheckPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
                 return poCheckPayments;
             } else {
-                poJSON = poCheckPayments.openRecord((String) getValue("sTransNox"));
+                poJSON = poCheckPayments.openRecordbySourceNo((String) getValue("sTransNox"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poCheckPayments;
