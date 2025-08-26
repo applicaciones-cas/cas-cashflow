@@ -55,6 +55,7 @@ public class SOATagging extends Transaction {
     private String psIndustryId = "";
     private String psCompanyId = "";
     private String psCategorCd = "";
+    private boolean pbValidatePayment = false;
 
     List<Model_AP_Payment_Master> paMasterList;
     List<PaymentRequest> paPaymentRequest;
@@ -1308,9 +1309,11 @@ public class SOATagging extends Transaction {
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            poJSON = validatePayableAmt(lnCtr);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+            if(pbValidatePayment){
+                poJSON = validatePayableAmt(lnCtr);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
 
             //Set value to por detail
@@ -1369,6 +1372,10 @@ public class SOATagging extends Transaction {
     
     private APPaymentAdjustment APPaymentAdjustment() throws SQLException, GuanzonException {
         return new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();
+    }
+    
+    public void validatePayment(boolean validatePayment) {
+        pbValidatePayment = validatePayment;
     }
 
     private JSONObject validatePayableAmt(int row) throws SQLException, GuanzonException {
