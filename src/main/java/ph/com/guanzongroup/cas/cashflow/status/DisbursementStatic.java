@@ -31,6 +31,9 @@ public class DisbursementStatic {
         public static final  String CASH_PAYABLE = "Cche";        
         public static final  String LOAD_ALL = "ALL";
     }
-     
+    
+    public static class CASH_PAYABLE_Source  {
+        public static final String PO_Receiving = "PORc";
+    } 
      public static final String DEFAULT_VOUCHER_NO = "00000001";
 }				

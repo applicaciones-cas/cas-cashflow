@@ -33,6 +33,7 @@ public class CachePayable extends Transaction{
         return super.saveTransaction();
     }
     
+    
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException{        
         return openTransaction(transactionNo);
     }
