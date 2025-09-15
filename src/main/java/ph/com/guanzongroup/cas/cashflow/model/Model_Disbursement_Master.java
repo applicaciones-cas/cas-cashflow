@@ -51,7 +51,6 @@ public class Model_Disbursement_Master extends Model {
             poEntity.updateObject("nDiscTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nWTaxTotl", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nVATSales", DisbursementStatic.DefaultValues.default_value_double_0000);
-            poEntity.updateObject("nVATRatex", DisbursementStatic.DefaultValues.default_value_double);
             poEntity.updateObject("nVATAmtxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nZroVATSl", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nVatExmpt", DisbursementStatic.DefaultValues.default_value_double_0000);
@@ -205,15 +204,7 @@ public class Model_Disbursement_Master extends Model {
     public double getVATSale() {
         return Double.parseDouble(String.valueOf(getValue("nVATSales")));
     }
-
-    public JSONObject setVATRates(double vatRates) {
-        return setValue("nVATRatex", vatRates);
-    }
-
-    public double getVATRates() {
-        return Double.parseDouble(String.valueOf(getValue("nVATRatex")));
-    }
-
+    
     public JSONObject setVATAmount(double vatAmount) {
         return setValue("nVATAmtxx", vatAmount);
     }

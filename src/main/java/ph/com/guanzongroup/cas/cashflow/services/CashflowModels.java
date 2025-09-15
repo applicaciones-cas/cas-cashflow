@@ -18,6 +18,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
@@ -420,6 +421,23 @@ public class CashflowModels {
         return poDocumentMappingDetail;
     }
     
+    public Model_Other_Payments OtherPayments(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.OtherPayments: Application driver is not set.");
+            return null;
+        }
+        
+        if (poOtherPayments == null){
+            poOtherPayments = new Model_Other_Payments();
+            poOtherPayments.setApplicationDriver(poGRider);
+            poOtherPayments.setXML("Model_Other_Payments");
+            poOtherPayments.setTableName("Other_Payments");
+            poOtherPayments.initialize();
+        }
+
+        return poOtherPayments;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -436,6 +454,7 @@ public class CashflowModels {
             poCheckPrintingDetail = null;
             poDocumentMappingMaster = null;
             poDocumentMappingDetail = null;
+            poOtherPayments= null;
 
             poGRider = null;
         } finally {
@@ -468,4 +487,5 @@ public class CashflowModels {
     private Model_Check_Printing_Request_Detail poCheckPrintingDetail;
     private Model_Document_Mapping poDocumentMappingMaster;    
     private Model_Document_Mapping_Detail poDocumentMappingDetail;
+    private Model_Other_Payments poOtherPayments;
 }
