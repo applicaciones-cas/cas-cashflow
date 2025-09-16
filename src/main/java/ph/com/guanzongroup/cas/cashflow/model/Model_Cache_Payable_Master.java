@@ -42,6 +42,8 @@ public class Model_Cache_Payable_Master extends Model {
             poEntity.updateObject("nDiscAmnt", 0.00);
             poEntity.updateObject("nVATAmtxx", 0.00);
             poEntity.updateObject("nVatExmpt", 0.00);
+            poEntity.updateObject("nVATSales", 0.00);
+            poEntity.updateObject("nVATRatex", 0.00);
             poEntity.updateObject("nZeroRted", 0.00);
             poEntity.updateObject("nTaxAmntx", 0.00);
             poEntity.updateObject("nNetTotal", 0.00);
@@ -225,6 +227,22 @@ public class Model_Cache_Payable_Master extends Model {
 
     public double getVATExempt() {
         return Double.parseDouble(String.valueOf(getValue("nVatExmpt")));
+    }
+    
+    public JSONObject setVATSales(double vatSales){
+        return setValue("nVATSales", vatSales);
+    }
+
+    public double getVATSales() {
+        return Double.parseDouble(String.valueOf(getValue("nVATSales")));
+    }
+    
+    public JSONObject setVATRates(double vatRates){
+        return setValue("nVATRatex", vatRates);
+    }
+
+    public double getVATRates() {
+        return Double.parseDouble(String.valueOf(getValue("nVATRatex")));
     }
     
     public JSONObject setZeroRated(double amount){
