@@ -52,7 +52,8 @@ public class Disbursement_CachePayable extends Disbursement {
                 String referNo = loCachePayable.Master().getSourceNo();
                 String sourceCode = loCachePayable.Master().getSourceCode();
                 String particular = ""; // always blank?
-                double amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()));
+                double amount = Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getPayables()))
+                        - Double.parseDouble(String.valueOf(loCachePayable.Detail(i).getAmountPaid()));
                 String invType = loCachePayable.Detail(i).InvType().getInventoryTypeId();
                 boolean isVatable = loCachePayable.Master().getVATAmount() > 0.00;
 
@@ -85,7 +86,8 @@ public class Disbursement_CachePayable extends Disbursement {
                 Detail(newIndex).setSourceNo(referNo);
                 Detail(newIndex).setSourceCode(sourceCode);
                 Detail(newIndex).setParticularID(particular);
-                Detail(newIndex).setAmount(amount);
+                Detail(newIndex).setAmount(amount);                
+                Detail(newIndex).setAmountApplied(amount);
                 Detail(newIndex).isWithVat(isVatable);
                 
                  Detail(newIndex).setDetailNo(0);  

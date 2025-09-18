@@ -1780,6 +1780,7 @@ public class Disbursement extends Transaction {
         JSONObject result = new JSONObject();
         double vatAmount;
         double vatPercentage;
+        double vatableSales;
 
         if (useRate) {
             vatPercentage = vatInput;
@@ -1793,6 +1794,15 @@ public class Disbursement extends Transaction {
             vatAmount = vatInput;
             vatPercentage = (vatAmount / rowTotal) * 100.0;
             Detail(rowIndex).setDetailVatRates(vatPercentage);
+        }
+        if (Detail(rowIndex).isWithVat()){
+            vatableSales = rowTotal -  vatAmount;
+            Detail(rowIndex).setDetailVatSales(vatableSales);
+            Detail(rowIndex).setDetailVatExempt(DisbursementStatic.DefaultValues.default_value_double_0000);
+        }else{
+            vatableSales = rowTotal + vatAmount; 
+            Detail(rowIndex).setDetailVatSales(DisbursementStatic.DefaultValues.default_value_double_0000);
+            Detail(rowIndex).setDetailVatExempt(rowTotal);
         }
 
         result.put("vatAmount", vatAmount);
