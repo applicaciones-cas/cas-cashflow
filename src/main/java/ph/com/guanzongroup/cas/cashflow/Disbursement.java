@@ -1771,6 +1771,7 @@ public class Disbursement extends Transaction {
     public JSONObject computeVat(int rowIndex,
             double rowTotal,
             double vatInput,
+            double totalPartialPay,
             boolean useRate) {
 
         if (rowTotal < 0 || vatInput < 0) {
@@ -1804,6 +1805,8 @@ public class Disbursement extends Transaction {
             Detail(rowIndex).setDetailVatSales(DisbursementStatic.DefaultValues.default_value_double_0000);
             Detail(rowIndex).setDetailVatExempt(rowTotal);
         }
+       
+        
 
         result.put("vatAmount", vatAmount);
         result.put("vatPercentage", vatPercentage);
@@ -1829,7 +1832,7 @@ public class Disbursement extends Transaction {
             Detail(lnCntr).setTaxRates(Detail(lnCntr).getTaxRates());
             Detail(lnCntr).setTaxAmount(Detail(lnCntr).getAmount() * Detail(lnCntr).getTaxRates() / 100);
 
-            TransactionTotal += Detail(lnCntr).getAmount();
+            TransactionTotal += Detail(lnCntr).getAmountApplied();
 
             // Withholding Tax Computation
             lnLessWithHoldingTax += TransactionTotal * (Detail(lnCntr).getTaxRates() / 100);
@@ -2273,4 +2276,41 @@ public class Disbursement extends Transaction {
         String date = sdf.format(fdValue);
         return date;
     }
+    
+    public JSONObject validateDetailVATAndTAX(String sourceCode, String sourceNo) throws SQLException {
+    String lsSQL = "SELECT COUNT(*) AS rows, "
+               + "SUM(nAmountxx) AS totalAmount, "
+               + "SUM(nAmtAppld) AS totalApplied, "
+               + "SUM(nDetVatSl) AS totalVatSl, "
+               + "SUM(nDetVatRa) AS totalVatRa, "
+               + "SUM(nDetVatAm) AS totalVatAm, "
+               + "SUM(nDetZroVa) AS totalZroVa, "
+               + "SUM(nDetVatEx) AS totalVatEx, "
+               + "SUM(nTaxRatex) AS totalTaxRate, "
+               + "SUM(nTaxAmtxx) AS totalTaxAmt "
+               + "FROM disbursement_detail";
+    lsSQL = MiscUtil.addCondition(lsSQL,
+            " sSourceNo = " + SQLUtil.toSQL(sourceNo) +
+            " AND sSourceCd = " + SQLUtil.toSQL(sourceCode));
+    System.out.println("\nEXECUTING QUERY : " + lsSQL + "\n");
+
+    JSONObject result = new JSONObject();
+    try (ResultSet rs = poGRider.executeQuery(lsSQL)) {
+        if (rs != null && rs.next()) {
+            result.put("rows",          rs.getInt("rows"));
+            result.put("totalAmount",   rs.getDouble("totalAmount"));
+            result.put("totalApplied",  rs.getDouble("totalApplied"));
+            result.put("totalVatSl",    rs.getDouble("totalVatSl"));
+            result.put("totalVatRa",    rs.getDouble("totalVatRa"));
+            result.put("totalVatAm",    rs.getDouble("totalVatAm"));
+            result.put("totalZroVa",    rs.getDouble("totalZroVa"));
+            result.put("totalVatEx",    rs.getDouble("totalVatEx"));
+            result.put("totalTaxRate",  rs.getDouble("totalTaxRate"));
+            result.put("totalTaxAmt",   rs.getDouble("totalTaxAmt"));
+        }
+    }
+    return result;
+}
+
+    
 }

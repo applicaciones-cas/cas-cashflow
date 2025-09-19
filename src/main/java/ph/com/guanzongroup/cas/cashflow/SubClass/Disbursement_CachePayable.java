@@ -92,12 +92,13 @@ public class Disbursement_CachePayable extends Disbursement {
                 
                  Detail(newIndex).setDetailNo(0);  
                  Detail(newIndex).setDetailSource(null);  
-                
+                 
                 Detail(newIndex).setDetailVatSales( 0.00);                
-                Detail(newIndex).setDetailVatAmount(loCachePayable.Master().getVATAmount());
-                Detail(newIndex).setDetailZeroVat(loCachePayable.Master().getZeroRated());                
-                Detail(newIndex).setDetailVatExempt( loCachePayable.Master().getVATExempt());         
-                Detail(newIndex).setDetailVatRates(0.00);
+                Detail(newIndex).setDetailVatAmount(0.00);
+                Detail(newIndex).setDetailZeroVat(0.00);                
+                Detail(newIndex).setDetailVatExempt( 0.00);         
+                Detail(newIndex).setDetailVatRates(loCachePayable.Master().getVATRates());
+                computeVat(newIndex, amount, loCachePayable.Master().getVATRates(), 0, isVatable);
 
                 insertedCount++;
             }
