@@ -2282,7 +2282,7 @@ public class Disbursement extends Transaction {
                + "SUM(nAmountxx) AS totalAmount, "
                + "SUM(nAmtAppld) AS totalApplied, "
                + "SUM(nDetVatSl) AS totalVatSl, "
-               + "SUM(nDetVatRa) AS totalVatRa, "
+               + "nDetVatRa AS totalVatRa, "
                + "SUM(nDetVatAm) AS totalVatAm, "
                + "SUM(nDetZroVa) AS totalZroVa, "
                + "SUM(nDetVatEx) AS totalVatEx, "
@@ -2309,8 +2309,46 @@ public class Disbursement extends Transaction {
             result.put("totalTaxAmt",   rs.getDouble("totalTaxAmt"));
         }
     }
+    
+    
     return result;
 }
 
-    
+        public JSONObject callapproval() {
+        JSONObject loJSON = new JSONObject();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            loJSON = ShowDialogFX.getUserApproval(poGRider);
+
+            if (!"success".equalsIgnoreCase((String) loJSON.get("result"))) {
+                return loJSON; // Already contains result/message
+            }
+
+            int approvingUserLevel = Integer.parseInt(loJSON.get("nUserLevl").toString());
+            if (approvingUserLevel <= UserRight.ENCODER) {
+                loJSON.put("result", "error");
+                loJSON.put("message", "User is not an authorized approving officer.");
+                return loJSON;
+            }
+        }
+        loJSON.put("result", "success");
+        return loJSON;
+    }
+        
+    public JSONObject validateTAXandVat() {
+        JSONObject loJSON = new JSONObject();
+            for (int x = 0; x < getDetailCount() - 1; x++) {
+                boolean withVat = Detail(x).isWithVat();
+                String taxCode = Detail(x).getTaxCode();
+
+                if ((!withVat && taxCode != null && !taxCode.isEmpty())
+                        || (withVat && (taxCode == null || taxCode.isEmpty()))) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Detail no. " + (x + 1) + " : Has VAT but missing Tax Code, or has Tax Code without VAT.");
+                    poJSON.put("pnDetailDV" , x);
+                    return poJSON;
+                }
+            }
+        loJSON.put("result", "success");
+        return loJSON;
+    }
 }
