@@ -705,7 +705,6 @@ public class CheckPrinting extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
-
     public CheckPayments CheckPayments() {
         return (CheckPayments) checkPayments;
     }
@@ -932,6 +931,7 @@ public class CheckPrinting extends Transaction {
             this.setCheckpayment();
             checkPayments.getEditMode();
             checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+            checkPayments.getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
             checkPayments.getModel().setDatePrint(poGRider.getServerDate());
             System.out.println("CHECK TRansaction : " + checkPayments.getModel().getTransactionNo());
             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());

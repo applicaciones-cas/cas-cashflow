@@ -129,7 +129,7 @@ public class Model_Disbursement_Detail extends Model {
     }
 
     public JSONObject setParticularID(String particular) {
-        return setValue("sDetlSrce", particular);
+        return setValue("sPrtclrID", particular);
     }
 
     public String getParticularID() {
