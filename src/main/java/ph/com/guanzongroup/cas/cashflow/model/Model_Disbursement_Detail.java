@@ -41,9 +41,16 @@ public class Model_Disbursement_Detail extends Model {
             //assign default values
             poEntity.updateObject("nEntryNox", DisbursementStatic.DefaultValues.default_value_integer);
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
+            poEntity.updateObject("nDetVatSl", DisbursementStatic.DefaultValues.default_value_double_0000);
+            poEntity.updateObject("nDetVatRa", DisbursementStatic.DefaultValues.default_value_double);
+            poEntity.updateObject("nDetVatAm", DisbursementStatic.DefaultValues.default_value_double_0000);
+            poEntity.updateObject("nDetZroVa", DisbursementStatic.DefaultValues.default_value_double_0000);            
+            poEntity.updateObject("nDetVatEx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nAmtAppld", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nTaxRatex", DisbursementStatic.DefaultValues.default_value_double);
             poEntity.updateObject("nTaxAmtxx", DisbursementStatic.DefaultValues.default_value_double_0000);
+            
+            poEntity.updateObject("nDetailNo", DisbursementStatic.DefaultValues.default_value_integer);
 
             //end - assign default values
             poEntity.insertRow();
@@ -105,12 +112,20 @@ public class Model_Disbursement_Detail extends Model {
         return (String) getValue("sSourceNo");
     }
 
-    public JSONObject setAccountCode(String accountCode) {
-        return setValue("sAcctCode", accountCode);
+    public JSONObject setDetailNo(int detailNo) {
+        return setValue("nDetailNo", detailNo);
     }
 
-    public String getAccountCode() {
-        return (String) getValue("sAcctCode");
+    public int getDetailNo() {
+        return (int) getValue("nDetailNo");
+    }
+
+    public JSONObject setDetailSource(String detailSource) {
+        return setValue("sDetlSrce", detailSource);
+    }
+
+    public String getDetailSource() {
+        return (String) getValue("sDetlSrce");
     }
 
     public JSONObject setParticularID(String particular) {
@@ -144,6 +159,46 @@ public class Model_Disbursement_Detail extends Model {
     public boolean isWithVat() {
         Object value = getValue("cWithVATx");
         return "1".equals(String.valueOf(value));
+    }
+
+    public JSONObject setDetailVatSales(double detailVatSales) {
+        return setValue("nDetVatSl", detailVatSales);
+    }
+
+    public double getDetailVatSales() {
+        return Double.parseDouble(String.valueOf(getValue("nDetVatSl")));
+    }
+
+    public JSONObject setDetailVatRates(double detailVatRates) {
+        return setValue("nDetVatRa", detailVatRates);
+    }
+
+    public double getDetailVatRates() {
+        return Double.parseDouble(String.valueOf(getValue("nDetVatRa")));
+    }
+
+    public JSONObject setDetailVatAmount(double detailVatAmount) {
+        return setValue("nDetVatAm", detailVatAmount);
+    }
+
+    public double getDetailVatAmount() {
+        return Double.parseDouble(String.valueOf(getValue("nDetVatAm")));
+    }
+
+    public JSONObject setDetailZeroVat(double detailZeroVat) {
+        return setValue("nDetZroVa", detailZeroVat);
+    }
+
+    public double getDetailZeroVat() {
+        return Double.parseDouble(String.valueOf(getValue("nDetZroVa")));
+    }
+
+    public JSONObject setDetailVatExempt(double detailVatExempt) {
+        return setValue("nDetVatEx", detailVatExempt);
+    }
+
+    public double getDetailVatExempt() {
+        return Double.parseDouble(String.valueOf(getValue("nDetVatEx")));
     }
 
     public JSONObject setTaxCode(String taxCode) {

@@ -15,12 +15,15 @@ import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
+import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
+import ph.com.guanzongroup.cas.cashflow.OtherPayments;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.SOATagging;
+import ph.com.guanzongroup.cas.cashflow.SubClass.Disbursement_PRF;
 
 public class CashflowControllers {
 
@@ -31,7 +34,7 @@ public class CashflowControllers {
 
     public CachePayable CachePayable() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.CachePayable: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.CachePayable: Application driver is not set.");
             return null;
         }
 
@@ -50,7 +53,7 @@ public class CashflowControllers {
 
     public BankAccountMaster BankAccountMaster() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.BankAccountMaster: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.BankAccountMaster: Application driver is not set.");
             return null;
         }
 
@@ -69,7 +72,7 @@ public class CashflowControllers {
 
     public RecurringIssuance RecurringIssuance() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.RecurringIssuance: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.RecurringIssuance: Application driver is not set.");
             return null;
         }
 
@@ -88,7 +91,7 @@ public class CashflowControllers {
 
     public Payee Payee() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.Payee: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.Payee: Application driver is not set.");
             return null;
         }
 
@@ -107,7 +110,7 @@ public class CashflowControllers {
 
     public Particular Particular() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.Particular: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.Particular: Application driver is not set.");
             return null;
         }
 
@@ -126,7 +129,7 @@ public class CashflowControllers {
 
     public PaymentRequest PaymentRequest() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.PaymentRequest: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.PaymentRequest: Application driver is not set.");
             return null;
         }
 
@@ -142,10 +145,29 @@ public class CashflowControllers {
         poPaymentRequest.setWithParent(false);
         return poPaymentRequest;
     }
+    public Disbursement DisbursementBase() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.DisbursementBase: Application driver is not set.");
+            return null;
+        }
+
+        if (poDisbursementBase != null) {
+            return poDisbursementBase;
+        }
+
+        poDisbursementBase = new Disbursement();
+        poDisbursementBase.setApplicationDriver(poGRider);
+        poDisbursementBase.setBranchCode(poGRider.getBranchCode());
+        poDisbursementBase.setLogWrapper(poLogWrapper);
+        poDisbursementBase.setVerifyEntryNo(true);
+        poDisbursementBase.setWithParent(false);
+        return poDisbursementBase;
+    }
+
 
     public Disbursement Disbursement() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.Disbursement: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.Disbursement: Application driver is not set.");
             return null;
         }
 
@@ -164,7 +186,7 @@ public class CashflowControllers {
 
     public CheckPayments CheckPayments() throws SQLException, GuanzonException {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.CheckPayments: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.CheckPayments: Application driver is not set.");
             return null;
         }
 
@@ -182,7 +204,7 @@ public class CashflowControllers {
 
     public SOATagging SOATagging() {
         if (poGRider == null) {
-            poLogWrapper.severe("GLControllers.SOATagging: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.SOATagging: Application driver is not set.");
             return null;
         }
 
@@ -347,7 +369,24 @@ public class CashflowControllers {
         poCheckImporting.setWithParent(false);
         return poCheckImporting;
     }
-        
+    
+    public OtherPayments OtherPayments() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.OtherPayments: Application driver is not set.");
+            return null;
+        }
+
+        if (poOtherPayments != null) {
+            return poOtherPayments;
+        }
+
+        poOtherPayments = new OtherPayments();
+        poOtherPayments.setApplicationDriver(poGRider);
+        poOtherPayments.setWithParentClass(true);
+        poOtherPayments.setLogWrapper(poLogWrapper);
+        poOtherPayments.initialize();
+        return poOtherPayments;
+    }
     
 
     @Override
@@ -363,6 +402,8 @@ public class CashflowControllers {
             poCachePayable = null;
             poBankAccountMaster = null;
             poDisbursement = null;
+            poDisbursementBase = null;
+            poDisbursement_PRF = null;
             poCheckPayments = null;
             poPaymentRequest = null;
             poCheckPrintingRequest = null;
@@ -388,6 +429,8 @@ public class CashflowControllers {
     private Payee poPayee;
     private PaymentRequest poPaymentRequest;
     private Disbursement poDisbursement;
+    private Disbursement poDisbursementBase;
+    private Disbursement_PRF poDisbursement_PRF;
     private CheckPayments poCheckPayments;
     private SOATagging poSOATagging;
     private APPaymentAdjustment poAPPaymentAdjustment;
@@ -398,4 +441,5 @@ public class CashflowControllers {
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;
+    private OtherPayments poOtherPayments;
 }

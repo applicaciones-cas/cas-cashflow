@@ -15,7 +15,7 @@ import org.junit.runners.MethodSorters;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
-public class testAddtoDisbursementDetail {
+public class testAddDisbursementNewClass {
 
     static GRiderCAS poApp;
     static CashflowControllers poDisbursement;
@@ -38,30 +38,30 @@ public class testAddtoDisbursementDetail {
         String TransactionType = "PRF";
 
         try {
-            loJSON = poDisbursement.Disbursement().InitTransaction();
+            loJSON = poDisbursement.DisbursementBase().InitTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poDisbursement.Disbursement().NewTransaction();
+            loJSON = poDisbursement.DisbursementBase().NewTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            loJSON = poDisbursement.Disbursement().addUnifiedPaymentToDisbursement(transactionNo, TransactionType);
+            loJSON = poDisbursement.DisbursementBase().addUnifiedPaymentToDisbursement(transactionNo, TransactionType);
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
             
-            for (int i = 0; i < poDisbursement.Disbursement().getDetailCount(); i++) {
+            for (int i = 0; i < poDisbursement.DisbursementBase().getDetailCount(); i++) {
                 System.out.println("Detail #" + (i + 1));
-                System.out.println("  Source No   : " + poDisbursement.Disbursement().Detail(i).getSourceNo());
-                System.out.println("  Source Code : " + poDisbursement.Disbursement().Detail(i).getSourceCode());
-                System.out.println("  particular : " + poDisbursement.Disbursement().Detail(i).getParticularID());
-                System.out.println("  Amount      : " + poDisbursement.Disbursement().Detail(i).getAmount());
-                System.out.println("  InvType      : " + poDisbursement.Disbursement().Detail(i).getInvType());
+                System.out.println("  Source No   : " + poDisbursement.DisbursementBase().Detail(i).getSourceNo());
+                System.out.println("  Source Code : " + poDisbursement.DisbursementBase().Detail(i).getSourceCode());
+                System.out.println("  particular : " + poDisbursement.DisbursementBase().Detail(i).getParticularID());
+                System.out.println("  Amount      : " + poDisbursement.DisbursementBase().Detail(i).getAmount());
+                System.out.println("  InvType      : " + poDisbursement.DisbursementBase().Detail(i).getInvType());
                 System.out.println("------------------------------------");
             }
             
