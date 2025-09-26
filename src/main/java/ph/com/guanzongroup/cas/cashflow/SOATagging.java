@@ -1042,14 +1042,14 @@ public class SOATagging extends Transaction {
                 referenceNo = "";
             }
 
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
             switch(payableType){
-                case SOATaggingStatic.APPaymentAdjustment://TODO
+                case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
                     break;
             }
             System.out.println("Executing SQL: " + lsSQL);
@@ -1883,11 +1883,6 @@ public class SOATagging extends Transaction {
 
                     break;
                 case SOATaggingStatic.POReceiving:
-                    paPOReceiving.add(PurchaseOrderReceiving());
-                    paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
-                    paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
-                    paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
-                    
                     //Populate cache payable
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
@@ -1895,7 +1890,7 @@ public class SOATagging extends Transaction {
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
                     
-                    //TODO
+                    
                     switch (status) {
                         case SOATaggingStatus.VOID:
                         case SOATaggingStatus.CANCELLED:
@@ -1904,18 +1899,19 @@ public class SOATagging extends Transaction {
                             paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
                             break;
                         case SOATaggingStatus.CONFIRMED:
+                            //Update PO Receiving
+                            paPOReceiving.add(PurchaseOrderReceiving());
+                            paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
+                            paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+                            paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
+                            paPOReceiving.get(paPOReceiving.size() - 1).Master().isProcessed(true);
+                            
                             paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
                             break;
                     }
                     break;
                 
                 case SOATaggingStatic.APPaymentAdjustment:
-                    paAPAdjustment.add(APPaymentAdjustment());
-                    paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
-                    paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
-                    paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
-                    paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(true);
-                    
                     //Populate cache payable
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
@@ -1923,7 +1919,6 @@ public class SOATagging extends Transaction {
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
                     
-                    //TODO
                     switch (status) {
                         case SOATaggingStatus.VOID:
                         case SOATaggingStatus.CANCELLED:
@@ -1933,6 +1928,13 @@ public class SOATagging extends Transaction {
                             paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
                             break;
                         case SOATaggingStatus.CONFIRMED:
+                            //Update AP Payment Adjustment
+                            paAPAdjustment.add(APPaymentAdjustment());
+                            paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
+                            paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
+                            paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
+                            paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(true);
+                            
                             paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
                             break;
                     }
@@ -1960,16 +1962,16 @@ public class SOATagging extends Transaction {
                     }
                     break;
                 case SOATaggingStatic.POReceiving:
-                    paPOReceiving.add(PurchaseOrderReceiving());
-                    paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
-                    paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
-                    paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
-                    
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
                     paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
-                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()));
+                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo()));
+                    
+                    paPOReceiving.add(PurchaseOrderReceiving());
+                    paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
+                    paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
+                    paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
                         
                     break;
                 case SOATaggingStatic.APPaymentAdjustment:
@@ -2023,7 +2025,7 @@ public class SOATagging extends Transaction {
             //Save Update Payment Request
             for (lnCtr = 0; lnCtr <= paPaymentRequest.size() - 1; lnCtr++) {
                 paPaymentRequest.get(lnCtr).setWithParent(true);
-                paPaymentRequest.get(lnCtr).Master().setAmountPaid(getPayment(paPaymentRequest.get(lnCtr).Master().getTransactionNo(), false));
+//                paPaymentRequest.get(lnCtr).Master().setAmountPaid(getPayment(paPaymentRequest.get(lnCtr).Master().getTransactionNo(), false));  //Sa DV mag a update ng amount paid
                 paPaymentRequest.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paPaymentRequest.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paPaymentRequest.get(lnCtr).SaveTransaction();
@@ -2036,12 +2038,25 @@ public class SOATagging extends Transaction {
             //Save Update Cache Payable
             for (lnCtr = 0; lnCtr <= paCachePayable.size() - 1; lnCtr++) {
                 paCachePayable.get(lnCtr).setWithParent(true);
-                paCachePayable.get(lnCtr).Master().setAmountPaid(getPayment(paCachePayable.get(lnCtr).Master().getTransactionNo(), false));
+//                paCachePayable.get(lnCtr).Master().setAmountPaid(getPayment(paCachePayable.get(lnCtr).Master().getTransactionNo(), false));  //Sa DV mag a update ng amount paid
                 paCachePayable.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 paCachePayable.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
                 poJSON = paCachePayable.get(lnCtr).SaveTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
                     System.out.println("Save Cache Payable " + (String) poJSON.get("message"));
+                    return poJSON;
+                }
+            }
+
+            //Save Update PO Receiving
+            for (lnCtr = 0; lnCtr <= paPOReceiving.size() - 1; lnCtr++) {
+                paPOReceiving.get(lnCtr).setWithParent(true);
+//                paPOReceiving.get(lnCtr).Master().setAmountPaid(getPayment(paPOReceiving.get(lnCtr).Master().getTransactionNo(), false)); //Sa DV mag a update ng amount paid
+                paPOReceiving.get(lnCtr).Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                paPOReceiving.get(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                poJSON = paPOReceiving.get(lnCtr).SaveTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    System.out.println("Save PO Receiving " + (String) poJSON.get("message"));
                     return poJSON;
                 }
             }
