@@ -5,6 +5,8 @@ import java.util.Iterator;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Company;
@@ -123,6 +125,10 @@ public class CachePayable extends Transaction{
     public JSONObject willSave() throws SQLException, GuanzonException{
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
+        
+        if(getEditMode() == EditMode.ADDNEW){
+            Master().setTransactionNo(Master().getNextCode());
+        }
         
         //remove items with no stockid or quantity order       
         Iterator<Model> detail = Detail().iterator();
