@@ -56,6 +56,7 @@ public class Model_AP_Payment_Detail extends Model {
             poEntity.updateObject("nCredtAmt", 0.0000);
             poEntity.updateObject("nTranTotl", 0.0000);
             poEntity.updateObject("nAppliedx", 0.0000);
+            poEntity.updateObject("cReversex", "+");
             //end - assign default values
 
             poEntity.insertRow();
@@ -164,6 +165,14 @@ public class Model_AP_Payment_Detail extends Model {
             return 0.0000;
         }
         return (Number) getValue("nAppliedx");
+    }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
 
     public JSONObject setModifiedDate(Date modifiedDate) {
