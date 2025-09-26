@@ -1060,6 +1060,7 @@ public class SOATagging extends Transaction {
             if (MiscUtil.RecordCount(loRS) >= 0) {
                 while (loRS.next()) {
                     // Print the result set
+                    System.out.println("sPayblNox: " + loRS.getString("sPayblNox"));
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("dTransact: " + loRS.getDate("dTransact"));
                     System.out.println("sPayablNm: " + loRS.getString("sPayablNm"));
@@ -1073,15 +1074,21 @@ public class SOATagging extends Transaction {
                             paPayablesType.add(SOATaggingStatic.PaymentRequest);
                             break;
                         case SOATaggingStatic.POReceiving:
-                            paPayablesList.add(POReceivingMaster());
-                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.POReceiving);
-                            break;
                         case SOATaggingStatic.APPaymentAdjustment:
-                            paPayablesList.add(APPaymentAdjustmentMaster());
+                            paPayablesList.add(CachePayableMaster());
                             paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.APPaymentAdjustment);
+                            paPayablesType.add(loRS.getString("sPayablTp"));
                             break;
+//                        case SOATaggingStatic.POReceiving:
+//                            paPayablesList.add(POReceivingMaster());
+//                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sPayblNox"));
+//                            paPayablesType.add(SOATaggingStatic.POReceiving);
+//                            break;
+//                        case SOATaggingStatic.APPaymentAdjustment:
+//                            paPayablesList.add(APPaymentAdjustmentMaster());
+//                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sPayblNox"));
+//                            paPayablesType.add(SOATaggingStatic.APPaymentAdjustment);
+//                            break;
                     }
                     lnctr++;
                 }
@@ -2152,6 +2159,7 @@ public class SOATagging extends Transaction {
     public String getPayableSQL(String supplier, String company, String payee, String referenceNo) {
         return " SELECT        "
                 + "   a.sTransNox "
+                + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
@@ -2173,6 +2181,7 @@ public class SOATagging extends Transaction {
                 + " UNION  "
                 + " SELECT "
                 + "   a.sTransNox "
+                + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
@@ -2195,6 +2204,7 @@ public class SOATagging extends Transaction {
     public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo) {
         return " SELECT        "
                 + "   a.sTransNox "
+                + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
@@ -2217,6 +2227,7 @@ public class SOATagging extends Transaction {
     public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
         return " SELECT        "
                 + "   a.sTransNox "
+                + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
