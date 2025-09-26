@@ -13,7 +13,12 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -27,8 +32,12 @@ public class Model_AP_Payment_Detail extends Model {
     //reference objects
     Model_Payment_Request_Master poPaymentRequest;
     Model_Cache_Payable_Master poCachePayable;
+    Model_POR_Master poPOReceiving;
+    Model_AP_Payment_Adjustment poAPAdjustment;
     
     CachePayable poCachePayableTrans;
+    PurchaseOrderReceiving poPOReceivingTrans;
+    APPaymentAdjustment poAPAdjustmentTrans;
 
     @Override
     public void initialize() {
@@ -60,9 +69,16 @@ public class Model_AP_Payment_Detail extends Model {
             CashflowModels gl = new CashflowModels(poGRider);
             poPaymentRequest = gl.PaymentRequestMaster();
             poCachePayable = gl.Cache_Payable_Master();
+            poAPAdjustment = gl.APPaymentAdjustment();
             
             CashflowControllers glController = new CashflowControllers(poGRider, logwrapr);
             poCachePayableTrans = glController.CachePayable();
+            poAPAdjustmentTrans = glController.APPaymentAdjustment();
+            
+            PurchaseOrderReceivingModels POR = new PurchaseOrderReceivingModels(poGRider);
+            poPOReceiving = POR.PurchaseOrderReceivingMaster();
+            PurchaseOrderReceivingControllers PORController = new PurchaseOrderReceivingControllers(poGRider, logwrapr);
+            poPOReceivingTrans = PORController.PurchaseOrderReceiving();
             //end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -184,45 +200,130 @@ public class Model_AP_Payment_Detail extends Model {
             return poPaymentRequest;
         }
     }
-    public Model_Cache_Payable_Master CachePayableMaster() throws SQLException, GuanzonException {
+    
+//    public Model_Cache_Payable_Master CachePayableMaster() throws SQLException, GuanzonException {
+//        if (!"".equals((String) getValue("sSourceNo"))) {
+//            if (poCachePayable.getEditMode() == EditMode.READY
+//                    && poCachePayable.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+//                return poCachePayable;
+//            } else {
+//                poJSON = poCachePayable.openRecord((String) getValue("sSourceNo"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poCachePayable;
+//                } else {
+//                    poCachePayable.initialize();
+//                    return poCachePayable;
+//                }
+//            }
+//        } else {
+//            poCachePayable.initialize();
+//            return poCachePayable;
+//        }
+//    }
+//    
+//    public CachePayable CachePayable() throws SQLException, GuanzonException, CloneNotSupportedException {
+//        if (!"".equals((String) getValue("sSourceNo"))) {
+//            if (poCachePayableTrans.getEditMode() == EditMode.READY
+//                    && poCachePayableTrans.Master().getTransactionNo().equals((String) getValue("sSourceNo"))) {
+//                return poCachePayableTrans;
+//            } else {
+//                poJSON = poCachePayableTrans.OpenTransaction((String) getValue("sSourceNo"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poCachePayableTrans;
+//                } else {
+//                    poCachePayableTrans.InitTransaction();
+//                    return poCachePayableTrans;
+//                }
+//            }
+//        } else {
+//            poCachePayableTrans.InitTransaction();
+//            return poCachePayableTrans;
+//        }
+//    }
+    
+    public Model_AP_Payment_Adjustment APPaymentAdjustmentMaster() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sSourceNo"))) {
-            if (poCachePayable.getEditMode() == EditMode.READY
-                    && poCachePayable.getTransactionNo().equals((String) getValue("sSourceNo"))) {
-                return poCachePayable;
+            if (poAPAdjustment.getEditMode() == EditMode.READY
+                    && poAPAdjustment.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poAPAdjustment;
             } else {
-                poJSON = poCachePayable.openRecord((String) getValue("sSourceNo"));
+                poJSON = poAPAdjustment.openRecord((String) getValue("sSourceNo"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
-                    return poCachePayable;
+                    return poAPAdjustment;
                 } else {
-                    poCachePayable.initialize();
-                    return poCachePayable;
+                    poAPAdjustment.initialize();
+                    return poAPAdjustment;
                 }
             }
         } else {
-            poCachePayable.initialize();
-            return poCachePayable;
+            poAPAdjustment.initialize();
+            return poAPAdjustment;
         }
     }
     
-    public CachePayable CachePayable() throws SQLException, GuanzonException, CloneNotSupportedException {
+    public APPaymentAdjustment APPaymentAdjustment() throws SQLException, GuanzonException, CloneNotSupportedException {
         if (!"".equals((String) getValue("sSourceNo"))) {
-            if (poCachePayableTrans.getEditMode() == EditMode.READY
-                    && poCachePayableTrans.Master().getTransactionNo().equals((String) getValue("sSourceNo"))) {
-                return poCachePayableTrans;
+            if (poAPAdjustmentTrans.getEditMode() == EditMode.READY
+                    && poAPAdjustmentTrans.getModel().getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poAPAdjustmentTrans;
             } else {
-                poJSON = poCachePayableTrans.OpenTransaction((String) getValue("sSourceNo"));
+                poJSON = poAPAdjustmentTrans.OpenTransaction((String) getValue("sSourceNo"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
-                    return poCachePayableTrans;
+                    return poAPAdjustmentTrans;
                 } else {
-                    poCachePayableTrans.InitTransaction();
-                    return poCachePayableTrans;
+                    poAPAdjustmentTrans.initialize();
+                    return poAPAdjustmentTrans;
                 }
             }
         } else {
-            poCachePayableTrans.InitTransaction();
-            return poCachePayableTrans;
+            poAPAdjustmentTrans.initialize();
+            return poAPAdjustmentTrans;
+        }
+    }
+    
+    public Model_POR_Master PurchasOrderReceivingMaster() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poPOReceiving.getEditMode() == EditMode.READY
+                    && poPOReceiving.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPOReceiving;
+            } else {
+                poJSON = poPOReceiving.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOReceiving;
+                } else {
+                    poPOReceiving.initialize();
+                    return poPOReceiving;
+                }
+            }
+        } else {
+            poPOReceiving.initialize();
+            return poPOReceiving;
+        }
+    }
+    
+    public PurchaseOrderReceiving PurchaseOrderReceiving() throws SQLException, GuanzonException, CloneNotSupportedException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poPOReceivingTrans.getEditMode() == EditMode.READY
+                    && poPOReceivingTrans.Master().getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPOReceivingTrans;
+            } else {
+                poJSON = poPOReceivingTrans.OpenTransaction((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOReceivingTrans;
+                } else {
+                    poPOReceivingTrans.InitTransaction();
+                    return poPOReceivingTrans;
+                }
+            }
+        } else {
+            poPOReceivingTrans.InitTransaction();
+            return poPOReceivingTrans;
         }
     }
     //end reference object models

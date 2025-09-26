@@ -40,8 +40,13 @@ import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.APPaymentValidator;
 import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Adjustment;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -60,6 +65,7 @@ public class SOATagging extends Transaction {
     List<Model_AP_Payment_Master> paMasterList;
     List<PaymentRequest> paPaymentRequest;
     List<CachePayable> paCachePayable; 
+    List<PurchaseOrderReceiving> paPOReceiving; 
     List<APPaymentAdjustment> paAPAdjustment; 
     List<Model> paPayablesList;
     List<String> paPayablesType;
@@ -756,11 +762,11 @@ public class SOATagging extends Transaction {
             switch (Detail(lnCtr).getSourceCode()) {
                 case SOATaggingStatic.PaymentRequest:
                     break;
-                case SOATaggingStatic.CachePayable:
-                    ldblFreight = ldblFreight + Detail(lnCtr).CachePayableMaster().getFreight();
-                    ldblVatAmt = ldblVatAmt + Detail(lnCtr).CachePayableMaster().getVATAmount();
-                    ldblVatExemptAmt = ldblVatExemptAmt + Detail(lnCtr).CachePayableMaster().getVATExempt();
-                    ldblZeroRtedAmt = ldblZeroRtedAmt + Detail(lnCtr).CachePayableMaster().getZeroRated();
+                case SOATaggingStatic.POReceiving:
+                    ldblFreight = ldblFreight + Detail(lnCtr).PurchasOrderReceivingMaster().getFreight().doubleValue();
+                    ldblVatAmt = ldblVatAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatAmount().doubleValue();
+                    ldblVatExemptAmt = ldblVatExemptAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatExemptSales().doubleValue();
+                    ldblZeroRtedAmt = ldblZeroRtedAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getZeroVatSales().doubleValue();
                     break;
             }
 
@@ -922,6 +928,22 @@ public class SOATagging extends Transaction {
     public Model_Cache_Payable_Master CachePayableList(int row) {
         return (Model_Cache_Payable_Master) paPayablesList.get(row);
     }
+    
+    private Model_POR_Master POReceivingMaster() {
+        return new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+    }
+
+    public Model_POR_Master POReceivingList(int row) {
+        return (Model_POR_Master) paPayablesList.get(row);
+    }
+    
+    private Model_AP_Payment_Adjustment APPaymentAdjustmentMaster() {
+        return new CashflowModels(poGRider).APPaymentAdjustment();
+    }
+
+    public Model_AP_Payment_Adjustment APPaymentAdjustmentList(int row) {
+        return (Model_AP_Payment_Adjustment) paPayablesList.get(row);
+    }
 
     public int getPayablesCount() {
         if (paPayablesList == null) {
@@ -934,71 +956,76 @@ public class SOATagging extends Transaction {
         return paPayablesList.size();
     }
 
-    public JSONObject loadPayables(String supplier, String company, String payee, String referenceNo) {
-        try {
-            paPayablesList = new ArrayList<>();
-            paPayablesType = new ArrayList<>();
-
-            if (company == null) {
-                company = "";
-            }
-            if (supplier == null) {
-                supplier = "";
-            }
-            if (referenceNo == null) {
-                referenceNo = "";
-            }
-
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
-            System.out.println("Executing SQL: " + lsSQL);
-            System.out.println("Payment Request List");
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            poJSON = new JSONObject();
-            int lnctr = 0;
-            if (MiscUtil.RecordCount(loRS) >= 0) {
-                while (loRS.next()) {
-                    // Print the result set
-                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                    System.out.println("dTransact: " + loRS.getDate("dTransact"));
-                    System.out.println("sPayablNm: " + loRS.getString("sPayablNm"));
-                    System.out.println("sPayablTp: " + loRS.getString("sPayablTp"));
-                    System.out.println("------------------------------------------------------------------------------");
-
-                    switch (loRS.getString("sPayablTp")) {
-                        case SOATaggingStatic.PaymentRequest:
-                            paPayablesList.add(PaymentRequestMaster());
-                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.PaymentRequest);
-                            break;
-                        case SOATaggingStatic.CachePayable:
-                            paPayablesList.add(CachePayableMaster());
-                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.CachePayable);
-                            break;
-                    }
-                    lnctr++;
-                }
-
-                System.out.println("Records found: " + lnctr);
-                poJSON.put("result", "success");
-                poJSON.put("message", "Record loaded successfully.");
-            } else {
-                poJSON.put("result", "error");
-                poJSON.put("continue", true);
-                poJSON.put("message", "No record found.");
-            }
-
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            poJSON.put("result", "error");
-            poJSON.put("message", e.getMessage());
-        } catch (GuanzonException ex) {
-            Logger.getLogger(SOATagging.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            poJSON.put("result", "error");
-            poJSON.put("message", MiscUtil.getException(ex));
-        }
-        return poJSON;
-    }
+//    public JSONObject loadPayables(String supplier, String company, String payee, String referenceNo) {
+//        try {
+//            paPayablesList = new ArrayList<>();
+//            paPayablesType = new ArrayList<>();
+//
+//            if (company == null) {
+//                company = "";
+//            }
+//            if (supplier == null) {
+//                supplier = "";
+//            }
+//            if (referenceNo == null) {
+//                referenceNo = "";
+//            }
+//
+//            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+//            System.out.println("Executing SQL: " + lsSQL);
+//            System.out.println("Payment Request List");
+//            ResultSet loRS = poGRider.executeQuery(lsSQL);
+//            poJSON = new JSONObject();
+//            int lnctr = 0;
+//            if (MiscUtil.RecordCount(loRS) >= 0) {
+//                while (loRS.next()) {
+//                    // Print the result set
+//                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+//                    System.out.println("dTransact: " + loRS.getDate("dTransact"));
+//                    System.out.println("sPayablNm: " + loRS.getString("sPayablNm"));
+//                    System.out.println("sPayablTp: " + loRS.getString("sPayablTp"));
+//                    System.out.println("------------------------------------------------------------------------------");
+//
+//                    switch (loRS.getString("sPayablTp")) {
+//                        case SOATaggingStatic.PaymentRequest:
+//                            paPayablesList.add(PaymentRequestMaster());
+//                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+//                            paPayablesType.add(SOATaggingStatic.PaymentRequest);
+//                            break;
+//                        case SOATaggingStatic.POReceiving:
+//                            paPayablesList.add(POReceivingMaster());
+//                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+//                            paPayablesType.add(SOATaggingStatic.POReceiving);
+//                            break;
+//                        case SOATaggingStatic.APPaymentAdjustment:
+//                            paPayablesList.add(APPaymentAdjustmentMaster());
+//                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+//                            paPayablesType.add(SOATaggingStatic.POReceiving);
+//                            break;
+//                    }
+//                    lnctr++;
+//                }
+//
+//                System.out.println("Records found: " + lnctr);
+//                poJSON.put("result", "success");
+//                poJSON.put("message", "Record loaded successfully.");
+//            } else {
+//                poJSON.put("result", "error");
+//                poJSON.put("continue", true);
+//                poJSON.put("message", "No record found.");
+//            }
+//
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", e.getMessage());
+//        } catch (GuanzonException ex) {
+//            Logger.getLogger(SOATagging.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//            poJSON.put("result", "error");
+//            poJSON.put("message", MiscUtil.getException(ex));
+//        }
+//        return poJSON;
+//    }
 
     public JSONObject loadPayables(String supplier, String company, String payee, String referenceNo, String payableType) {
         try {
@@ -1015,13 +1042,14 @@ public class SOATagging extends Transaction {
                 referenceNo = "";
             }
 
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
             switch(payableType){
-                case SOATaggingStatic.CachePayable:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                case SOATaggingStatic.APPaymentAdjustment://TODO
+                case SOATaggingStatic.POReceiving:
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY a.dTransact DESC ";
                     break;
             }
             System.out.println("Executing SQL: " + lsSQL);
@@ -1044,10 +1072,15 @@ public class SOATagging extends Transaction {
                             paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
                             paPayablesType.add(SOATaggingStatic.PaymentRequest);
                             break;
-                        case SOATaggingStatic.CachePayable:
-                            paPayablesList.add(CachePayableMaster());
+                        case SOATaggingStatic.POReceiving:
+                            paPayablesList.add(POReceivingMaster());
                             paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.CachePayable);
+                            paPayablesType.add(SOATaggingStatic.POReceiving);
+                            break;
+                        case SOATaggingStatic.APPaymentAdjustment:
+                            paPayablesList.add(APPaymentAdjustmentMaster());
+                            paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
+                            paPayablesType.add(SOATaggingStatic.POReceiving);
                             break;
                     }
                     lnctr++;
@@ -1074,7 +1107,6 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
 
-    
     public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
             throws CloneNotSupportedException,
             SQLException,
@@ -1149,7 +1181,8 @@ public class SOATagging extends Transaction {
                     }
                 }
                 break;
-            case SOATaggingStatic.CachePayable:
+            case SOATaggingStatic.APPaymentAdjustment:
+            case SOATaggingStatic.POReceiving:
                 CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
                 loCachePayable.InitTransaction();
                 poJSON = loCachePayable.OpenTransaction(transactionNo);
@@ -1158,8 +1191,8 @@ public class SOATagging extends Transaction {
                 }
                 lsCompanyId = loCachePayable.Master().getCompanyId();
                 lsClientId = loCachePayable.Master().getClientId();
-                lsTransNo = loCachePayable.Master().getTransactionNo();
-                lsSourceCd = loCachePayable.getSourceCode();
+                lsTransNo = loCachePayable.Master().getSourceNo();
+                lsSourceCd = loCachePayable.Master().getSourceCode();
                 ldblTranTotal = loCachePayable.Master().getNetTotal();
                 ldblDebitAmt = loCachePayable.Master().getPayables();
                 ldblCreditAmt = loCachePayable.Master().getReceivables();
@@ -1204,6 +1237,137 @@ public class SOATagging extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+
+     
+//    public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
+//            throws CloneNotSupportedException,
+//            SQLException,
+//            GuanzonException {
+//        poJSON = new JSONObject();
+//        poJSON.put("row", 0);
+//        int lnCtr = 0;
+//        String lsCompanyId = "";
+//        String lsClientId = "";
+//        String lsIssuedTo = "";
+//        String lsTransNo = "";
+//        String lsSourceCd = "";
+//        Number ldblTranTotal = 0.0000;
+//        Number ldblDebitAmt = 0.0000;
+//        Number ldblCreditAmt = 0.0000;
+//
+//        //Check if transaction already exists in the list
+//        for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+//            if (transactionNo.equals(Detail(lnCtr).getSourceNo())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Selected transaction no " + transactionNo + " already exists in SOA detail.");
+//                poJSON.put("row", lnCtr);
+//                return poJSON;
+//            }
+//        }
+//
+//        switch (payableType) {
+//            case SOATaggingStatic.PaymentRequest:
+//                PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
+//                loPaymentRequest.setWithParent(true);
+//                loPaymentRequest.InitTransaction();
+//                poJSON = loPaymentRequest.OpenTransaction(transactionNo);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("row", 0);
+//                    return poJSON;
+//                }
+//
+//                lsCompanyId = loPaymentRequest.Master().getCompanyID();
+//                lsIssuedTo = loPaymentRequest.Master().getPayeeID();
+//                lsTransNo = loPaymentRequest.Master().getTransactionNo();
+//                lsSourceCd = loPaymentRequest.getSourceCode();
+//                ldblTranTotal = loPaymentRequest.Master().getTranTotal();
+//                ldblDebitAmt = loPaymentRequest.Master().getTranTotal();
+//                lsClientId = loPaymentRequest.Master().Payee().getClientID();
+//                
+//                if ((lsCompanyId == null || lsCompanyId.isEmpty()) && (Master().getCompanyId() == null || "".equals(Master().getCompanyId()))){
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "The selected PRF does not have an associated company. Please select a company before choosing a PRF transaction.");
+//                    poJSON.put("row", lnCtr);
+//                    return poJSON;
+//                }
+//                
+//                if(Master().getClientId() == null || "".equals(Master().getClientId())){
+//                    Master().setClientId(lsClientId);
+//                } else {
+//                    if (!Master().getClientId().equals(lsClientId)) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
+//                        poJSON.put("row", lnCtr);
+//                        return poJSON;
+//                    }
+//                }
+//
+//                if (Master().getIssuedTo() == null || "".equals(Master().getIssuedTo())) {
+//                    Master().setIssuedTo(lsIssuedTo);
+//                } else {
+//                    if (!Master().getIssuedTo().equals(lsIssuedTo)) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+//                        poJSON.put("row", lnCtr);
+//                        return poJSON;
+//                    }
+//                }
+//                break;
+//            case SOATaggingStatic.POReceiving:
+//                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+//                loCachePayable.InitTransaction();
+//                poJSON = loCachePayable.OpenTransaction(transactionNo);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                }
+//                lsCompanyId = loCachePayable.Master().getCompanyId();
+//                lsClientId = loCachePayable.Master().getClientId();
+//                lsTransNo = loCachePayable.Master().getTransactionNo();
+//                lsSourceCd = loCachePayable.getSourceCode();
+//                ldblTranTotal = loCachePayable.Master().getNetTotal();
+//                ldblDebitAmt = loCachePayable.Master().getPayables();
+//                ldblCreditAmt = loCachePayable.Master().getReceivables();
+//                
+//                if(Master().getClientId() == null || "".equals(Master().getClientId())){
+//                    Master().setClientId(lsClientId);
+//                } else {
+//                    if (!Master().getClientId().equals(lsClientId)) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
+//                        poJSON.put("row", lnCtr);
+//                        return poJSON;
+//                    }
+//                }
+//
+//                break;
+//        }
+//
+//        if (Master().getCompanyId() == null || "".equals(Master().getCompanyId())) {
+//            Master().setCompanyId(lsCompanyId);
+//        } else {
+//            if(lsCompanyId != null && !"".equals(lsCompanyId) && !lsCompanyId.equals(Master().getCompanyId())){
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Selected Company of payables is not equal to transaction company.");
+//                poJSON.put("row", lnCtr);
+//                return poJSON;
+//            }
+//        }
+//
+//        if (Master().getClientId() == null || "".equals(Master().getClientId())) {
+//            Master().setClientId(lsClientId);
+//        }
+//
+//        Detail(getDetailCount() - 1).setSourceNo(lsTransNo);
+//        Detail(getDetailCount() - 1).setSourceCode(lsSourceCd);
+//        Detail(getDetailCount() - 1).setTransactionTotal(ldblTranTotal);
+//        Detail(getDetailCount() - 1).setDebitAmount(ldblDebitAmt);
+//        Detail(getDetailCount() - 1).setCreditAmount(ldblCreditAmt);
+//        AddDetail();
+//
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
 
     public void resetOthers() {
 //        paOthers = new ArrayList<>();
@@ -1370,6 +1534,10 @@ public class SOATagging extends Transaction {
         return new CashflowControllers(poGRider, logwrapr).CachePayable();
     }
     
+    private PurchaseOrderReceiving PurchaseOrderReceiving() throws SQLException, GuanzonException {
+        return new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
+    }
+    
     private APPaymentAdjustment APPaymentAdjustment() throws SQLException, GuanzonException {
         return new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();
     }
@@ -1393,8 +1561,19 @@ public class SOATagging extends Transaction {
                     return poJSON;
                 }
                 break;
-            case SOATaggingStatic.CachePayable:
-                ldblBalance = Detail(row).CachePayableMaster().getNetTotal()
+            case SOATaggingStatic.POReceiving:
+                ldblBalance = Detail(row).PurchasOrderReceivingMaster().getNetTotal()
+                        - (Detail(row).getAppliedAmount().doubleValue()
+                        + getPayment(Detail(row).getSourceNo(), true));
+                if (ldblBalance < 0) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
+                    poJSON.put("row", row);
+                    return poJSON;
+                }
+                break;
+            case SOATaggingStatic.APPaymentAdjustment:
+                ldblBalance = Detail(row).APPaymentAdjustmentMaster().getNetTotal().doubleValue()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(), true));
                 if (ldblBalance < 0) {
@@ -1540,6 +1719,125 @@ public class SOATagging extends Transaction {
         return false;
     } 
 
+//    private JSONObject setValueToOthers(String status)
+//            throws CloneNotSupportedException,
+//            SQLException,
+//            GuanzonException {
+//        poJSON = new JSONObject();
+//        paPaymentRequest = new ArrayList<>();
+//        paCachePayable = new ArrayList<>();
+//        paAPAdjustment = new ArrayList<>();
+//        int lnCtr;
+//
+//        //Update Purchase Order exist in PO Receiving Detail
+//        for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+//            System.out.println("----------------------SOA Detail---------------------- ");
+//            System.out.println("Source No : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceNo());
+//            System.out.println("Source Code : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceCode());
+//            System.out.println("------------------------------------------------------------------ ");
+//
+//            switch (Detail(lnCtr).getSourceCode()) {
+//                case SOATaggingStatic.PaymentRequest:
+//                    paPaymentRequest.add(PaymentRequest());
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).InitTransaction();
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).UpdateTransaction();
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("1");
+//
+//                    switch (status) {
+//                        case SOATaggingStatus.VOID:
+//                        case SOATaggingStatus.CANCELLED:
+//                        case SOATaggingStatus.RETURNED:
+//                            if(getLinkedPayment(paPaymentRequest.get(paPaymentRequest.size() - 1).Master().getTransactionNo()) ){
+//                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+//                            } else {
+//                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
+//                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0");
+//                            }
+//                            break;
+//                        case SOATaggingStatus.CONFIRMED:
+//                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("1");
+//                            break;
+//                    }
+//
+//                    break;
+//                case SOATaggingStatic.CachePayable:
+//                    paCachePayable.add(CachePayable());
+//                    paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
+//                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+//                    paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
+//                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
+//                    
+//                    if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
+//                        paAPAdjustment.add(APPaymentAdjustment());
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(true);
+//                    }
+//                    
+//                    switch (status) {
+//                        case SOATaggingStatus.VOID:
+//                        case SOATaggingStatus.CANCELLED:
+//                        case SOATaggingStatus.RETURNED:
+//                            paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()) );
+//                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
+//                            if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
+//                                paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
+//                            }
+//                            break;
+//                        case SOATaggingStatus.CONFIRMED:
+//                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
+//                            break;
+//                    }
+//                    break;
+//            }
+//
+//        }
+//
+//        //Update purchase order removed in purchase order receiving
+//        for (lnCtr = 0; lnCtr <= getDetailRemovedCount() - 1; lnCtr++) {
+//
+//            System.out.println("----------------------Removed SOA Detail---------------------- ");
+//            System.out.println("Source No : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceNo());
+//            System.out.println("Source Code : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceCode());
+//            System.out.println("------------------------------------------------------------------ ");
+//
+//            switch (Detail(lnCtr).getSourceCode()) {
+//                case SOATaggingStatic.PaymentRequest:
+//                    paPaymentRequest.add(PaymentRequest());
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).InitTransaction();
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+//                    paPaymentRequest.get(paPaymentRequest.size() - 1).UpdateTransaction();
+//                    if(!getLinkedPayment(paPaymentRequest.get(paPaymentRequest.size() - 1).Master().getTransactionNo())){
+//                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
+//                    }
+//                    break;
+//                case SOATaggingStatic.CachePayable:
+//                    paCachePayable.add(CachePayable());
+//                    paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
+//                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+//                    paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
+//                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()));
+//                        
+//                    if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
+//                        paAPAdjustment.add(APPaymentAdjustment());
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
+//                        paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
+//                        if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
+//                            paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
+//                        }
+//                    }
+//                    break;
+//            }
+//        }
+//
+//        poJSON.put("result", "success");
+//        return poJSON;
+//    }
+    
     private JSONObject setValueToOthers(String status)
             throws CloneNotSupportedException,
             SQLException,
@@ -1547,6 +1845,7 @@ public class SOATagging extends Transaction {
         poJSON = new JSONObject();
         paPaymentRequest = new ArrayList<>();
         paCachePayable = new ArrayList<>();
+        paPOReceiving = new ArrayList<>();
         paAPAdjustment = new ArrayList<>();
         int lnCtr;
 
@@ -1583,30 +1882,55 @@ public class SOATagging extends Transaction {
                     }
 
                     break;
-                case SOATaggingStatic.CachePayable:
+                case SOATaggingStatic.POReceiving:
+                    paPOReceiving.add(PurchaseOrderReceiving());
+                    paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
+                    paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+                    paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
+                    
+                    //Populate cache payable
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo()));
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
                     
-                    if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
-                        paAPAdjustment.add(APPaymentAdjustment());
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(true);
-                    }
-                    
+                    //TODO
                     switch (status) {
                         case SOATaggingStatus.VOID:
                         case SOATaggingStatus.CANCELLED:
                         case SOATaggingStatus.RETURNED:
                             paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()) );
                             paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
-                            if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
-                                paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
-                            }
+                            break;
+                        case SOATaggingStatus.CONFIRMED:
+                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
+                            break;
+                    }
+                    break;
+                
+                case SOATaggingStatic.APPaymentAdjustment:
+                    paAPAdjustment.add(APPaymentAdjustment());
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(true);
+                    
+                    //Populate cache payable
+                    paCachePayable.add(CachePayable());
+                    paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo()));
+                    paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
+                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
+                    
+                    //TODO
+                    switch (status) {
+                        case SOATaggingStatus.VOID:
+                        case SOATaggingStatus.CANCELLED:
+                        case SOATaggingStatus.RETURNED:
+                            paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()) );
+                            paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
+                            paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
                             break;
                         case SOATaggingStatus.CONFIRMED:
                             paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(true);
@@ -1617,15 +1941,15 @@ public class SOATagging extends Transaction {
 
         }
 
-        //Update purchase order removed in purchase order receiving
+        //Update payable removed
         for (lnCtr = 0; lnCtr <= getDetailRemovedCount() - 1; lnCtr++) {
 
             System.out.println("----------------------Removed SOA Detail---------------------- ");
-            System.out.println("Source No : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceNo());
-            System.out.println("Source Code : " + (lnCtr + 1) + " : " + Detail(lnCtr).getSourceCode());
+            System.out.println("Source No : " + (lnCtr + 1) + " : " + DetailRemove(lnCtr).getSourceNo());
+            System.out.println("Source Code : " + (lnCtr + 1) + " : " + DetailRemove(lnCtr).getSourceCode());
             System.out.println("------------------------------------------------------------------ ");
 
-            switch (Detail(lnCtr).getSourceCode()) {
+            switch (DetailRemove(lnCtr).getSourceCode()) {
                 case SOATaggingStatic.PaymentRequest:
                     paPaymentRequest.add(PaymentRequest());
                     paPaymentRequest.get(paPaymentRequest.size() - 1).InitTransaction();
@@ -1635,28 +1959,58 @@ public class SOATagging extends Transaction {
                         paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
                     }
                     break;
-                case SOATaggingStatic.CachePayable:
+                case SOATaggingStatic.POReceiving:
+                    paPOReceiving.add(PurchaseOrderReceiving());
+                    paPOReceiving.get(paPOReceiving.size() - 1).InitTransaction();
+                    paPOReceiving.get(paPOReceiving.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
+                    paPOReceiving.get(paPOReceiving.size() - 1).UpdateTransaction();
+                    
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(Detail(lnCtr).getSourceNo());
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()));
                         
-                    if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
-                        paAPAdjustment.add(APPaymentAdjustment());
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceNo());
-                        paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
-                        if(SOATaggingStatic.APPaymentAdjustment.equals(paCachePayable.get(paCachePayable.size() - 1).Master().getSourceCode())){
-                            paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
-                        }
-                    }
+                    break;
+                case SOATaggingStatic.APPaymentAdjustment:
+                    paCachePayable.add(CachePayable());
+                    paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
+                    paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
+                    paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(getLinkedPayment(paCachePayable.get(paCachePayable.size() - 1).Master().getTransactionNo()));
+                       
+                    paAPAdjustment.add(APPaymentAdjustment());
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).initialize();
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).OpenTransaction(DetailRemove(lnCtr).getSourceNo());
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).UpdateTransaction();
+                    paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(paCachePayable.get(paCachePayable.size() - 1).Master().isProcessed());
                     break;
             }
         }
 
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+    private String getCachePayable(String fsTransactionNo){
+        String lsTransactionNo = "";
+        try {
+            Model_Cache_Payable_Master object = new CashflowModels(poGRider).Cache_Payable_Master();
+            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(object),
+                    " sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
+                   + " AND sClientID = " + SQLUtil.toSQL(Master().getClientId())); 
+            
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            if (loRS.next()) {
+                lsTransactionNo = loRS.getString("sTransNox");
+                MiscUtil.close(loRS);
+            } 
+        } catch (SQLException e) {
+            return lsTransactionNo;
+        } 
+            
+        return lsTransactionNo;
     }
 
     private JSONObject saveUpdateOthers(String status)
@@ -1791,13 +2145,12 @@ public class SOATagging extends Transaction {
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
-                + " ,  " + SQLUtil.toSQL(SOATaggingStatic.CachePayable) + " AS sPayablTp  "
+                + " , a.sSourceCd AS sPayablTp  "
                 + " FROM cache_payable_master a "
                 + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                //                + " AND a.cProcessd = '0' " 
-                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) //TODO
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -1818,7 +2171,6 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                //                + " AND a.cProcessd = '0' " 
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
@@ -1835,13 +2187,12 @@ public class SOATagging extends Transaction {
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
-                + " ,  " + SQLUtil.toSQL(SOATaggingStatic.CachePayable) + " AS sPayablTp  "
+                + " , a.sSourceCd AS sPayablTp  "
                 + " FROM cache_payable_master a "
                 + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                //                + " AND a.cProcessd = '0' " 
-                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) //TODO
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -1863,7 +2214,6 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                //                + " AND a.cProcessd = '0' " 
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
