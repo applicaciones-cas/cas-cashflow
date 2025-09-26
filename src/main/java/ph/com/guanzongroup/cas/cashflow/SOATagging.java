@@ -1080,7 +1080,7 @@ public class SOATagging extends Transaction {
                         case SOATaggingStatic.APPaymentAdjustment:
                             paPayablesList.add(APPaymentAdjustmentMaster());
                             paPayablesList.get(paPayablesList.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            paPayablesType.add(SOATaggingStatic.POReceiving);
+                            paPayablesType.add(SOATaggingStatic.APPaymentAdjustment);
                             break;
                     }
                     lnctr++;
