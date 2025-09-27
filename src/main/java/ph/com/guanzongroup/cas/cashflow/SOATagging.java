@@ -1126,6 +1126,7 @@ public class SOATagging extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("row", 0);
         int lnCtr = 0;
+        int lnRow = getDetailCount() - 1;
         String lsCompanyId = "";
         String lsClientId = "";
         String lsIssuedTo = "";
@@ -1135,18 +1136,23 @@ public class SOATagging extends Transaction {
         Number ldblDebitAmt = 0.0000;
         Number ldblCreditAmt = 0.0000;
 
-        //Check if transaction already exists in the list
-        for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            if (transactionNo.equals(Detail(lnCtr).getSourceNo())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Selected transaction no " + transactionNo + " already exists in SOA detail.");
-                poJSON.put("row", lnCtr);
-                return poJSON;
-            }
-        }
-
         switch (payableType) {
             case SOATaggingStatic.PaymentRequest:
+                //Check if transaction already exists in the list
+                for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+                    if (transactionNo.equals(Detail(lnCtr).getSourceNo())) {
+                        if(Detail(lnCtr).isReverse()) {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Selected transaction no " + transactionNo + " already exists in SOA detail.");
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        } else {
+                            lnRow = lnCtr;
+                            break;
+                        }
+                    }
+                }
+                
                 PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
                 loPaymentRequest.setWithParent(true);
                 loPaymentRequest.InitTransaction();
@@ -1201,6 +1207,23 @@ public class SOATagging extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                
+                //Check if transaction already exists in the list
+                for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+                    if (loCachePayable.Master().getSourceNo().equals(Detail(lnCtr).getSourceNo())
+                        && loCachePayable.Master().getClientId().equals(Master().getClientId())) {
+                        if(Detail(lnCtr).isReverse()) {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Selected transaction no " + loCachePayable.Master().getSourceNo() + " already exists in SOA detail.");
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        } else {
+                            lnRow = lnCtr;
+                            break;
+                        }
+                    }
+                }
+                
                 lsCompanyId = loCachePayable.Master().getCompanyId();
                 lsClientId = loCachePayable.Master().getClientId();
                 lsTransNo = loCachePayable.Master().getSourceNo();
@@ -1238,18 +1261,41 @@ public class SOATagging extends Transaction {
             Master().setClientId(lsClientId);
         }
 
-        Detail(getDetailCount() - 1).setSourceNo(lsTransNo);
-        Detail(getDetailCount() - 1).setSourceCode(lsSourceCd);
-        Detail(getDetailCount() - 1).setTransactionTotal(ldblTranTotal);
-        Detail(getDetailCount() - 1).setDebitAmount(ldblDebitAmt);
-        Detail(getDetailCount() - 1).setCreditAmount(ldblCreditAmt);
+        Detail(lnRow).setSourceNo(lsTransNo);
+        Detail(lnRow).setSourceCode(lsSourceCd);
+        Detail(lnRow).setTransactionTotal(ldblTranTotal);
+        Detail(lnRow).setDebitAmount(ldblDebitAmt);
+        Detail(lnRow).setCreditAmount(ldblCreditAmt);
         AddDetail();
 
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
     }
+   
+    public void ReloadDetail() throws CloneNotSupportedException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getSourceNo() == null || "".equals(Detail(lnCtr).getSourceNo())) {
+                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    deleteDetail(lnCtr); 
+                }
+            }
+                
+            lnCtr--;
+        }
 
+          if ((getDetailCount() - 1) >= 0) {
+            if (Detail(getDetailCount() - 1).getSourceNo() != null
+                    && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
+                AddDetail();
+            }
+        }
+
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+        }
+    }
      
 //    public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
 //            throws CloneNotSupportedException,
