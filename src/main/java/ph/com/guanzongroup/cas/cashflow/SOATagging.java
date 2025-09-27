@@ -769,7 +769,8 @@ public class SOATagging extends Transaction {
                     if(Detail(lnCtr).PurchasOrderReceivingMaster().getAmountPaid().doubleValue() <= 0.0000){
                         if(Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Master().getClientId())){
                             if(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId() == null
-                                    || "".equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())){
+                                    || "".equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())
+                                    || Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())){
                                 ldblFreight = ldblFreight + Detail(lnCtr).PurchasOrderReceivingMaster().getFreight().doubleValue();
                             }
                             ldblVatAmt = ldblVatAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatAmount().doubleValue();
