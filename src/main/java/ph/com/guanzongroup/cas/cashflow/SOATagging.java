@@ -1148,22 +1148,15 @@ public class SOATagging extends Transaction {
                     lsCriteria = "a.dTransact»a.sSeriesNo»b.sPayeeNme»c.sCompnyNm";
                     break;
                 default:
-                    System.out.println("Executing SQL: " + lsSQL);
-                    poJSON = ShowDialogFX.Browse(poGRider,
-                            lsSQL,
-                            "",
-                            "Transaction Date»Reference No»Payable»Company",
-                            "dTransact»sReferenc»sPayablNm»sCompnyNm", 
-                            lsCriteria,
-                            1);
+                    lsCriteria = "a.dTransact";
             }
             System.out.println("Executing SQL: " + lsSQL);
             poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     "",
-                    "Transaction Date»Reference No»Payable»Company»Payable Type",
-                    "dTransact»sReferenc»sPayablNm»sCompnyNm»sPayablTp", 
-                    "a.dTransact»sPayablNm»sCompnyNm»sPayablTp", 
+                    "Transaction Date»Reference No»Payable»Company",
+                    "dTransact»sReferenc»sPayablNm»sCompnyNm", 
+                    lsCriteria,
                     1);
             if (poJSON != null) {
                 addPayablesToSOADetail((String) poJSON.get("sPayblNox"), (String) poJSON.get("sPayablTp"));
