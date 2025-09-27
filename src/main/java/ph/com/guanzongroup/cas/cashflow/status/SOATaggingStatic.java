@@ -17,4 +17,9 @@ public class SOATaggingStatic {
 //    public static final String CachePayable = "CcPy";
     public static final String APPaymentAdjustment = "APAd";
     public static final String POReceiving = "PORc";
+    
+    public static class Reverse  {
+        public static final  String INCLUDE = "+"; 
+        public static final  String EXCLUDE = "-"; 
+    }
 }

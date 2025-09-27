@@ -1051,7 +1051,7 @@ public class SOATagging extends Transaction {
             switch(payableType){
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dTransact DESC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
                     lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
@@ -1279,7 +1279,7 @@ public class SOATagging extends Transaction {
             if (Detail(lnCtr).getSourceNo() == null || "".equals(Detail(lnCtr).getSourceNo())) {
                 if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
                     deleteDetail(lnCtr); 
-                }
+                } 
             }
                 
             lnCtr--;
@@ -1503,22 +1503,45 @@ public class SOATagging extends Transaction {
                 return poJSON;
             }
         }
+        
+        //Check detail
+        boolean lbWillDelete = true;
+        for(int lnCtr = 0; lnCtr <= getDetailCount()-1; lnCtr++){
+            if ((Detail(lnCtr).getAppliedAmount().doubleValue() > 0.00) && Detail(lnCtr).isReverse() ) {
+                lbWillDelete = false;
+            }
+        }
+        
+        if(lbWillDelete){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction applied amount to be save.");
+            return poJSON;
+        }
+        
 
         Iterator<Model> detail = Detail().iterator();
         String lsAppliedAmount = "0.0000";
         while (detail.hasNext()) {
             Model item = detail.next();
+            if (item.getEditMode() == EditMode.UPDATE) {
+                if (item.getValue("cReversex").equals(SOATaggingStatic.Reverse.EXCLUDE)) {
+                    paDetailRemoved.add(item);
+                    continue;
+                }
+            }
+            
             if (item.getValue("nAppliedx") != null && !"".equals(item.getValue("nAppliedx"))) {
                 lsAppliedAmount = item.getValue("nAppliedx").toString();
             }
             if (Double.valueOf(lsAppliedAmount) <= 0.0000) {
-                detail.remove();
-
-                if (item.getEditMode() == EditMode.UPDATE) {
+                if (item.getEditMode() == EditMode.ADDNEW) {
+                    detail.remove();
+                } else if (item.getEditMode() == EditMode.UPDATE) {
                     paDetailRemoved.add(item);
+                    item.setValue("cReversex", SOATaggingStatic.Reverse.EXCLUDE);
                 }
-
             }
+            
             lsAppliedAmount = "0.0000";
         }
 
@@ -2252,7 +2275,7 @@ public class SOATagging extends Transaction {
                 + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
     }
     
-    public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo) {
+    public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo, String payableType) {
         return " SELECT        "
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
@@ -2272,7 +2295,8 @@ public class SOATagging extends Transaction {
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo);
+                + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.sSourceCd = " + SQLUtil.toSQL(payableType);
     }
     
     public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
