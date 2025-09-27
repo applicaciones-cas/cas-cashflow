@@ -761,27 +761,29 @@ public class SOATagging extends Transaction {
 
         //Compute Transaction Total
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            switch (Detail(lnCtr).getSourceCode()) {
-                case SOATaggingStatic.PaymentRequest:
-                    break;
-                case SOATaggingStatic.POReceiving:
-                    //Do not get the vat amount if there's already amount paid value
-                    if(Detail(lnCtr).PurchasOrderReceivingMaster().getAmountPaid().doubleValue() <= 0.0000){
-                        if(Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Master().getClientId())){
-                            if(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId() == null
-                                    || "".equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())
-                                    || Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())){
-                                ldblFreight = ldblFreight + Detail(lnCtr).PurchasOrderReceivingMaster().getFreight().doubleValue();
+            if(Detail(lnCtr).isReverse()){
+                switch (Detail(lnCtr).getSourceCode()) {
+                    case SOATaggingStatic.PaymentRequest:
+                        break;
+                    case SOATaggingStatic.POReceiving:
+                        //Do not get the vat amount if there's already amount paid value
+                        if(Detail(lnCtr).PurchasOrderReceivingMaster().getAmountPaid().doubleValue() <= 0.0000){
+                            if(Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Master().getClientId())){
+                                if(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId() == null
+                                        || "".equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())
+                                        || Detail(lnCtr).PurchasOrderReceivingMaster().getSupplierId().equals(Detail(lnCtr).PurchasOrderReceivingMaster().getTruckingId())){
+                                    ldblFreight = ldblFreight + Detail(lnCtr).PurchasOrderReceivingMaster().getFreight().doubleValue();
+                                }
+                                ldblVatAmt = ldblVatAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatAmount().doubleValue();
+                                ldblVatExemptAmt = ldblVatExemptAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatExemptSales().doubleValue();
+                                ldblZeroRtedAmt = ldblZeroRtedAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getZeroVatSales().doubleValue();
                             }
-                            ldblVatAmt = ldblVatAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatAmount().doubleValue();
-                            ldblVatExemptAmt = ldblVatExemptAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getVatExemptSales().doubleValue();
-                            ldblZeroRtedAmt = ldblZeroRtedAmt + Detail(lnCtr).PurchasOrderReceivingMaster().getZeroVatSales().doubleValue();
                         }
-                    }
-                    break;
-            }
+                        break;
+                }
 
-            ldblTransactionTotal = ldblTransactionTotal + Detail(lnCtr).getAppliedAmount().doubleValue();
+                ldblTransactionTotal = ldblTransactionTotal + Detail(lnCtr).getAppliedAmount().doubleValue();
+            }
         }
 
         Master().setTransactionTotal(ldblTransactionTotal);
@@ -1125,6 +1127,45 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
 
+    public JSONObject searchPayables(String sourceNo) {
+        try {
+            paPayablesList = new ArrayList<>();
+            paPayablesType = new ArrayList<>();
+
+            if (sourceNo == null) {
+                sourceNo = "";
+            }
+
+            String lsSQL = getPayableSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo) + " ORDER BY dTransact DESC ";
+            
+            System.out.println("Executing SQL: " + lsSQL);
+            poJSON = ShowDialogFX.Browse(poGRider,
+                    lsSQL,
+                    "",
+                    "Transaction Date»Reference No»Payable»Company»Payable Type",
+                    "dTransact»sReferenc»sPayablNm»sCompnyNm»sPayablTp", 
+                    "a.dTransact»a.sTransNox»c.sCompnyNm»c.sCompnyNm»h.sDeptName", 
+                    1);
+
+            if (poJSON != null) {
+                addPayablesToSOADetail((String) poJSON.get("sPayblNox"), (String) poJSON.get("sPayablTp"));
+            } else {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "No record loaded.");
+                return poJSON;
+            }
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        } catch (GuanzonException | CloneNotSupportedException ex) {
+            Logger.getLogger(SOATagging.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+        }
+        return poJSON;
+    }
+    
     public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
             throws CloneNotSupportedException,
             SQLException,
@@ -2301,7 +2342,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
-                + " , a.sReferNox "
+                + " , a.sReferNox AS sReferenc  "
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
@@ -2323,7 +2364,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
-                + " , a.sSeriesNo "
+                + " , a.sSeriesNo AS sReferenc  "
                 + " , a.nTranTotl AS nPayblAmt    "
                 + " , b.sPayeeNme AS sPayablNm    "
                 + " , c.sCompnyNm AS sCompnyNm  "
