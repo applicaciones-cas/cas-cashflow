@@ -1127,26 +1127,44 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
 
-    public JSONObject searchPayables(String sourceNo) {
+    public JSONObject searchPayables(String sourceNo, String payableType) {
         try {
             paPayablesList = new ArrayList<>();
             paPayablesType = new ArrayList<>();
-
+            String lsCriteria = "";
             if (sourceNo == null) {
                 sourceNo = "";
             }
 
             String lsSQL = getPayableSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo) + " ORDER BY dTransact DESC ";
-            
+            switch(payableType){
+                case SOATaggingStatic.APPaymentAdjustment:
+                case SOATaggingStatic.POReceiving:
+                    lsSQL = getCachePayableSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo, payableType) + " ORDER BY dTransact DESC ";
+                    lsCriteria = "a.dTransact»a.sReferNox»b.sCompnyNm»c.sCompnyNm";
+                    break;
+                case SOATaggingStatic.PaymentRequest:
+                    lsSQL = getPRFSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo) + " ORDER BY dTransact DESC ";
+                    lsCriteria = "a.dTransact»a.sSeriesNo»b.sPayeeNme»c.sCompnyNm";
+                    break;
+                default:
+                    System.out.println("Executing SQL: " + lsSQL);
+                    poJSON = ShowDialogFX.Browse(poGRider,
+                            lsSQL,
+                            "",
+                            "Transaction Date»Reference No»Payable»Company",
+                            "dTransact»sReferenc»sPayablNm»sCompnyNm", 
+                            lsCriteria,
+                            1);
+            }
             System.out.println("Executing SQL: " + lsSQL);
             poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     "",
                     "Transaction Date»Reference No»Payable»Company»Payable Type",
                     "dTransact»sReferenc»sPayablNm»sCompnyNm»sPayablTp", 
-                    "a.dTransact»a.sTransNox»c.sCompnyNm»c.sCompnyNm»h.sDeptName", 
+                    "a.dTransact»sPayablNm»sCompnyNm»sPayablTp", 
                     1);
-
             if (poJSON != null) {
                 addPayablesToSOADetail((String) poJSON.get("sPayblNox"), (String) poJSON.get("sPayablTp"));
             } else {
