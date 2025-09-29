@@ -1150,11 +1150,11 @@ public class SOATagging extends Transaction {
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
                     lsSQL = getCachePayableSQL(Master().Supplier().getCompanyName(), Master().Company().getCompanyName(), Master().Payee().getClientID(), sourceNo, payableType) ;
-                    lsCriteria = "a.dTransact»a.sReferNox»b.sCompnyNm»c.sCompnyNm";
+                    lsCriteria = "a.dTransact»a.sSourceNo»a.sReferNox»b.sCompnyNm»c.sCompnyNm";
                     break;
                 case SOATaggingStatic.PaymentRequest:
                     lsSQL = getPRFSQL(Master().Supplier().getCompanyName(), Master().Company().getCompanyName(), Master().Payee().getClientID(), sourceNo) ;
-                    lsCriteria = "a.dTransact»a.sSeriesNo»b.sPayeeNme»c.sCompnyNm";
+                    lsCriteria = "a.dTransact»a.sTransNox»a.sSeriesNo»b.sPayeeNme»c.sCompnyNm";
                     break;
                 default:
                     lsCriteria = "a.dTransact";
@@ -1163,8 +1163,8 @@ public class SOATagging extends Transaction {
             poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     "",
-                    "Transaction Date»Reference No»Payable»Company",
-                    "dTransact»sReferenc»sPayablNm»sCompnyNm", 
+                    "Transaction Date»Transaction No»Reference No»Payable»Company",
+                    "dTransact»sPayblNox»sReferenc»sPayablNm»sCompnyNm", 
                     lsCriteria,
                     1);
             if (poJSON != null) {
@@ -1594,8 +1594,10 @@ public class SOATagging extends Transaction {
         //Check detail
         boolean lbWillDelete = true;
         for(int lnCtr = 0; lnCtr <= getDetailCount()-1; lnCtr++){
-            if ((Detail(lnCtr).getAppliedAmount().doubleValue() > 0.00) && Detail(lnCtr).isReverse() ) {
-                lbWillDelete = false;
+            if(Detail(lnCtr).isReverse()){
+                if ((Detail(lnCtr).getAppliedAmount().doubleValue() > 0.00) && Detail(lnCtr).isReverse() ) {
+                    lbWillDelete = false;
+                }
             }
         }
         
@@ -1645,10 +1647,12 @@ public class SOATagging extends Transaction {
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            if(pbValidatePayment){
-                poJSON = validatePayableAmt(lnCtr);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
+            if(Detail(lnCtr).isReverse()){
+                if(pbValidatePayment){
+                    poJSON = validatePayableAmt(lnCtr);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                 }
             }
 
