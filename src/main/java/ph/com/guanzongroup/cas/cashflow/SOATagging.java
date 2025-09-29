@@ -1127,24 +1127,33 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
 
-    public JSONObject searchPayables(String sourceNo, String payableType) {
+    public JSONObject searchPayables(String sourceNo, String payableType, int row) {
         try {
+            poJSON = new JSONObject();
+            poJSON.put("row", row);
             paPayablesList = new ArrayList<>();
             paPayablesType = new ArrayList<>();
             String lsCriteria = "";
             if (sourceNo == null) {
                 sourceNo = "";
             }
+            
+            if(payableType == null || "".equals(payableType)){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Source Code cannot be empty.");
+                poJSON.put("row", row);
+                return poJSON;
+            }
 
-            String lsSQL = getPayableSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo) + " ORDER BY dTransact DESC ";
+            String lsSQL = getPayableSQL(Master().Supplier().getCompanyName(), Master().Company().getCompanyName(), Master().Payee().getClientID(), sourceNo);
             switch(payableType){
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo, payableType) + " ORDER BY dTransact DESC ";
+                    lsSQL = getCachePayableSQL(Master().Supplier().getCompanyName(), Master().Company().getCompanyName(), Master().Payee().getClientID(), sourceNo, payableType) ;
                     lsCriteria = "a.dTransact»a.sReferNox»b.sCompnyNm»c.sCompnyNm";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(Master().getClientId(), Master().getCompanyId(), Master().getIssuedTo(), sourceNo) + " ORDER BY dTransact DESC ";
+                    lsSQL = getPRFSQL(Master().Supplier().getCompanyName(), Master().Company().getCompanyName(), Master().Payee().getClientID(), sourceNo) ;
                     lsCriteria = "a.dTransact»a.sSeriesNo»b.sPayeeNme»c.sCompnyNm";
                     break;
                 default:
@@ -1159,21 +1168,28 @@ public class SOATagging extends Transaction {
                     lsCriteria,
                     1);
             if (poJSON != null) {
-                addPayablesToSOADetail((String) poJSON.get("sPayblNox"), (String) poJSON.get("sPayablTp"));
+                poJSON = addPayablesToSOADetail((String) poJSON.get("sTransNox"), (String) poJSON.get("sPayablTp"));
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             } else {
                 poJSON = new JSONObject();
                 poJSON.put("result", "error");
                 poJSON.put("message", "No record loaded.");
+                poJSON.put("row", row);
                 return poJSON;
             }
         } catch (SQLException e) {
             poJSON.put("result", "error");
             poJSON.put("message", e.getMessage());
+            poJSON.put("row", row);
         } catch (GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(SOATagging.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
             poJSON.put("message", MiscUtil.getException(ex));
+            poJSON.put("row", row);
         }
+        poJSON.put("row", row);
         return poJSON;
     }
     
@@ -1265,6 +1281,7 @@ public class SOATagging extends Transaction {
                 loCachePayable.InitTransaction();
                 poJSON = loCachePayable.OpenTransaction(transactionNo);
                 if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON.put("row", 0);
                     return poJSON;
                 }
                 
@@ -2398,6 +2415,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
+                + " , a.sReferNox AS sReferenc  "
                 + " , a.nNetTotal AS nPayblAmt  "
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
@@ -2422,6 +2440,7 @@ public class SOATagging extends Transaction {
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
+                + " , a.sSeriesNo AS sReferenc  "
                 + " , a.nTranTotl AS nPayblAmt    "
                 + " , b.sPayeeNme AS sPayablNm    "
                 + " , c.sCompnyNm AS sCompnyNm  "
