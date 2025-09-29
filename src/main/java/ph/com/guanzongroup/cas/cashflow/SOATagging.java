@@ -1739,7 +1739,12 @@ public class SOATagging extends Transaction {
                 break;
             case SOATaggingStatic.POReceiving:
                 if(Detail(row).PurchasOrderReceivingMaster().getSupplierId().equals(Master().getClientId())){
-                    ldblBalance = Detail(row).PurchasOrderReceivingMaster().getNetTotal();
+                    if(Detail(row).PurchasOrderReceivingMaster().getTruckingId() != null && !"".equals(Detail(row).PurchasOrderReceivingMaster().getTruckingId())
+                        && !Detail(row).PurchasOrderReceivingMaster().getSupplierId().equals(Detail(row).PurchasOrderReceivingMaster().getTruckingId())){
+                        ldblBalance = Detail(row).PurchasOrderReceivingMaster().getNetTotal() - Detail(row).PurchasOrderReceivingMaster().getFreight().doubleValue();
+                    } else {
+                        ldblBalance = Detail(row).PurchasOrderReceivingMaster().getNetTotal();
+                    }
                 } else {
                     if(Detail(row).PurchasOrderReceivingMaster().getTruckingId().equals(Master().getClientId())){
                         ldblBalance = Detail(row).PurchasOrderReceivingMaster().getFreight().doubleValue();
@@ -1912,6 +1917,38 @@ public class SOATagging extends Transaction {
         }
         return false;
     } 
+    
+    private boolean isWithSOA(String sourceNo){
+        try {
+            String lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
+                    " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
+                    + " AND a.sClientID = " + SQLUtil.toSQL(Master().getClientId())
+                    + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE)
+                    + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.CONFIRMED)
+            );
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------AP PAYMENT WITH SOA--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        return true;
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+    
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+        return false;
+    } 
 
 //    private JSONObject setValueToOthers(String status)
 //            throws CloneNotSupportedException,
@@ -2069,7 +2106,9 @@ public class SOATagging extends Transaction {
                                     paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
                                 } else {
                                     paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
-                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0"); //todo
+                                    if(!isWithSOA(Detail(lnCtr).getSourceNo())){
+                                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0"); 
+                                    }
                                 }
                                 break;
                             case SOATaggingStatus.CONFIRMED:
@@ -2102,7 +2141,9 @@ public class SOATagging extends Transaction {
                                 lbIsLinked = getLinkedPayment(Detail(lnCtr).getSourceNo()) ;
                                 paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(lbIsLinked);
                                 if(!lbIsLinked){
-                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false); //todo
+                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false); 
+                                } else {
+                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(isWithSOA(Detail(lnCtr).getSourceNo())); 
                                 }
                                 break;
                             case SOATaggingStatus.CONFIRMED:
@@ -2133,7 +2174,9 @@ public class SOATagging extends Transaction {
                                 paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(lbIsLinked);
                                 paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(lbIsLinked);
                                 if(!lbIsLinked){
-                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false); //todo
+                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false); 
+                                } else {
+                                    paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(isWithSOA(Detail(lnCtr).getSourceNo())); 
                                 }
                                 break;
                             case SOATaggingStatus.CONFIRMED:
@@ -2164,6 +2207,10 @@ public class SOATagging extends Transaction {
                     if(!lbIsLinked){
                         paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
                         paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0");
+                    } else {
+                        if(!isWithSOA(Detail(lnCtr).getSourceNo())){
+                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0"); 
+                        }
                     }
                     
                     break;
@@ -2177,6 +2224,8 @@ public class SOATagging extends Transaction {
                     paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(lbIsLinked);
                     if(!lbIsLinked){
                         paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
+                    } else {
+                        paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(isWithSOA(DetailRemove(lnCtr).getSourceNo())); 
                     }
                     //Nothing to update in PO Receiving
 //                    paPOReceiving.add(PurchaseOrderReceiving());
@@ -2201,6 +2250,8 @@ public class SOATagging extends Transaction {
                     paAPAdjustment.get(paAPAdjustment.size() - 1).getModel().isProcessed(lbIsLinked);
                     if(!lbIsLinked){
                         paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(false);
+                    } else {
+                        paCachePayable.get(paCachePayable.size() - 1).Master().setWithSoa(isWithSOA(DetailRemove(lnCtr).getSourceNo())); 
                     }
                     
                     break;
