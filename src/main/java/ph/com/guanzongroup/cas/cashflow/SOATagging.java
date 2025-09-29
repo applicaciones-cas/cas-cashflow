@@ -1548,33 +1548,10 @@ public class SOATagging extends Transaction {
             CloneNotSupportedException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
-        
-        if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                } else {
-                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "User is not an authorized approving officer.");
-                        return poJSON;
-                    }
-                }
-            }
-        }
 
         if (paDetailRemoved == null) {
             paDetailRemoved = new ArrayList<>();
         }
-        
-        if(Master().getEditMode() == EditMode.ADDNEW){
-            System.out.println("Will Save : " + Master().getNextCode());
-            Master().setTransactionNo(Master().getNextCode());
-        }
-
-        Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-        Master().setModifiedDate(poGRider.getServerDate());
 
         if (Master().getTransactionTotal().doubleValue() <= 0.0000) {
             poJSON.put("result", "error");
@@ -1607,7 +1584,29 @@ public class SOATagging extends Transaction {
             return poJSON;
         }
         
+        if (SOATaggingStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
+        if(Master().getEditMode() == EditMode.ADDNEW){
+            System.out.println("Will Save : " + Master().getNextCode());
+            Master().setTransactionNo(Master().getNextCode());
+        }
 
+        Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+        Master().setModifiedDate(poGRider.getServerDate());
+        
         Iterator<Model> detail = Detail().iterator();
         String lsAppliedAmount = "0.0000";
         while (detail.hasNext()) {
