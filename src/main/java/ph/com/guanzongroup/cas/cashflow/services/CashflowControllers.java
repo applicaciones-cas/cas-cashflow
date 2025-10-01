@@ -10,6 +10,7 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
+import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
@@ -200,6 +201,23 @@ public class CashflowControllers {
         poCheckPayments.setLogWrapper(poLogWrapper);
         poCheckPayments.initialize();
         return poCheckPayments;
+    }
+    public CheckPaymentImporting CheckPaymentImporting() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckPaymentImporting: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckPaymentImports != null) {
+            return poCheckPaymentImports;
+        }
+
+        poCheckPaymentImports = new CheckPaymentImporting();
+        poCheckPaymentImports.setApplicationDriver(poGRider);
+        poCheckPaymentImports.setWithParentClass(true);
+        poCheckPaymentImports.setLogWrapper(poLogWrapper);
+        poCheckPaymentImports.initialize();
+        return poCheckPaymentImports;
     }
 
     public SOATagging SOATagging() {
@@ -405,6 +423,7 @@ public class CashflowControllers {
             poDisbursementBase = null;
             poDisbursement_PRF = null;
             poCheckPayments = null;
+            poCheckPaymentImports = null;
             poPaymentRequest = null;
             poCheckPrintingRequest = null;
             poAccountChart = null;
@@ -441,5 +460,6 @@ public class CashflowControllers {
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;
-    private OtherPayments poOtherPayments;
+    private OtherPayments poOtherPayments;    
+    private CheckPaymentImporting poCheckPaymentImports;
 }

@@ -56,16 +56,10 @@ public class CheckImporting extends Transaction {
     private DocumentMapping poDocumentMapping;
   
     List<Model_Disbursement_Master> poDisbursementMaster;
-//    private Model_Check_Payments poCheckPayments;
     private CheckPayments checkPayments;
     List<Model_Check_Payments> paCheckPayment;
-//    private Disbursement dvMaster;
     private BankAccountMaster bankAccount;
-    List<PaymentRequest> poPaymentRequest;
-    List<SOATagging> poApPayments;
-    List<CachePayable> poCachePayable;
     List<Model> paDetailRemoved;
-    List<SelectedITems> poToCertify;
 
     private final List<Transaction> transactions = new ArrayList<>();
     int transSize = 0;
@@ -78,10 +72,6 @@ public class CheckImporting extends Transaction {
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
         paDetail = new ArrayList<>();
-        poPaymentRequest = new ArrayList<>();
-        poApPayments = new ArrayList<>();
-        poCachePayable = new ArrayList<>();
-        poToCertify = new ArrayList<>();
 
         return initialize();
     }
@@ -515,6 +505,7 @@ public class CheckImporting extends Transaction {
     /** Inner POJO that represents one record in the workbook. */
     public static class CheckRequest {
         private String      voucherNo;
+        private String      checkNo;
         private String      checkDate;
         private BigDecimal  amount;
         private String      payeeName;
@@ -530,10 +521,13 @@ public class CheckImporting extends Transaction {
 
         public String getPayeeName()            { return payeeName; }
         public void   setPayeeName(String n)    { this.payeeName = n; }
+        
+        public String getCheckNo()            { return checkNo; }
+        public void   setCheckNo(String v)    { this.checkNo = v; }
 
         @Override public String toString() {
-            return String.format("CheckRequest[voucherNo=%s, date=%s, amount=%s, payee=%s]",
-                                 voucherNo, checkDate, amount, payeeName);
+            return String.format("CheckRequest[voucherNo=%s,checkNo=%s date=%s, amount=%s, payee=%s]",
+                                 voucherNo,checkNo, checkDate, amount, payeeName);
         }
     }
     public static List<CheckRequest> importToList(Path xlsx)
@@ -552,6 +546,7 @@ public class CheckImporting extends Transaction {
                 CheckRequest bean = new CheckRequest();
                 bean.setVoucherNo(fmt.formatCellValue(row.getCell(2)));
                 bean.setCheckDate(fmt.formatCellValue(row.getCell(3)));
+                bean.setCheckNo(fmt.formatCellValue(row.getCell(18)));
 
                 String amt = fmt.formatCellValue(row.getCell(4));
                 bean.setAmount(amt.isEmpty() ? BigDecimal.ZERO : new BigDecimal(amt));
@@ -563,10 +558,10 @@ public class CheckImporting extends Transaction {
         return list;
     }
     
-    public JSONObject getDVwithAuthorizeCheckPayment(List<String>VoucherNo) throws SQLException, GuanzonException {
-        String formattedVoucherList = VoucherNo.stream()
-        .map(v -> "'" + v + "'")
-        .collect(Collectors.joining(", "));
+    public JSONObject getDVwithAuthorizeCheckPayment( String VoucherNo) throws SQLException, GuanzonException {
+//        String formattedVoucherList = VoucherNo.stream()
+//        .map(v -> "'" + v + "'")
+//        .collect(Collectors.joining(", "));
         
         JSONObject loJSON = new JSONObject();
         String lsSQL = "SELECT "
@@ -599,7 +594,7 @@ public class CheckImporting extends Transaction {
                 " d.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
-                " d.sVouchrNo IN (" + formattedVoucherList  + " )");
+                " d.sVouchrNo = " + VoucherNo );
                 
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
@@ -643,5 +638,6 @@ public class CheckImporting extends Transaction {
         }
         return paCheckPayment.size();
     }
+    
 
 }
