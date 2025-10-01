@@ -2106,6 +2106,9 @@ public class Disbursement extends Transaction {
             } else if (getEditMode() == EditMode.UPDATE && poJournal.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
+            } else if (getEditMode() == EditMode.ADDNEW && poJournal.getEditMode() == EditMode.ADDNEW) {
+                poJSON.put("result", "success");
+                return poJSON;
             } else {
                 poJSON.put("result", "error");
                 poJSON.put("message", "No record to load");
