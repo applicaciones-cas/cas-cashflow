@@ -8,6 +8,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
@@ -15,11 +16,12 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 
 public class Model_Bank_Account_Master extends Model {
+
     Model_Industry poIndustry;
     Model_Branch poBranch;
     Model_Company poCompany;
-    
-    
+    Model_Banks poBanks;
+
     @Override
     public void initialize() {
         try {
@@ -60,7 +62,8 @@ public class Model_Bank_Account_Master extends Model {
             poIndustry = param.Industry();
             poBranch = param.Branch();
             poCompany = param.Company();
-            
+            poBanks = param.Banks();
+
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
@@ -83,7 +86,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getIndustryCode() {
         return (String) getValue("sIndstCdx");
     }
-    
+
     public JSONObject setBranchCode(String branchCode) {
         return setValue("sBranchCd", branchCode);
     }
@@ -91,7 +94,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getBranchCode() {
         return (String) getValue("sBranchCd");
     }
-            
+
     public JSONObject setCompanyId(String companyId) {
         return setValue("sCompnyID", companyId);
     }
@@ -99,7 +102,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getCompanyId() {
         return (String) getValue("sCompnyID");
     }
-    
+
     public JSONObject setEntryNumber(int entryNumber) {
         return setValue("nEntryNox", entryNumber);
     }
@@ -107,72 +110,71 @@ public class Model_Bank_Account_Master extends Model {
     public String getEntryNumber() {
         return (String) getValue("nEntryNox");
     }
-    
-    public JSONObject setBankId(String bankId){
+
+    public JSONObject setBankId(String bankId) {
         return setValue("sBankIDxx", bankId);
     }
-    
+
     public String getBankId() {
         return (String) getValue("sBankIDxx");
     }
-    
-    
-    public JSONObject setAccountNo(String accountNo){
+
+    public JSONObject setAccountNo(String accountNo) {
         return setValue("sActNumbr", accountNo);
     }
-    
+
     public String getAccountNo() {
         return (String) getValue("sActNumbr");
     }
-    
-    public JSONObject setAccountName(String accountName){
+
+    public JSONObject setAccountName(String accountName) {
         return setValue("sActNamex", accountName);
     }
-    
+
     public String getAccountName() {
         return (String) getValue("sActNamex");
     }
-    
-    public JSONObject setAccountCode(String code){
+
+    public JSONObject setAccountCode(String code) {
         return setValue("sAcctCode", code);
     }
 
     public String getAccountCode() {
         return (String) getValue("sAcctCode");
     }
-    
-    public JSONObject setAccountType(String type){
+
+    public JSONObject setAccountType(String type) {
         return setValue("cAcctType", type);
     }
 
     public String getAccountType() {
         return (String) getValue("cAcctType");
     }
-    
-    public JSONObject setPartnerAccount(String parent){
+
+    public JSONObject setPartnerAccount(String parent) {
         return setValue("sPartnrAc", parent);
     }
 
     public String getPartnerAccountNo() {
         return (String) getValue("sPartnrAc");
     }
-    
-    public JSONObject setRemarks(String remarks){
+
+    public JSONObject setRemarks(String remarks) {
         return setValue("sRemarksx", remarks);
     }
 
     public String getRemarks() {
         return (String) getValue("sRemarksx");
     }
-    
-    public JSONObject setCheckNo(String remarks){
+
+    public JSONObject setCheckNo(String remarks) {
         return setValue("sCheckNox", remarks);
     }
 
     public String getCheckNo() {
         return (String) getValue("sCheckNox");
     }
-    
+
     public JSONObject setBeginningBalanceDate(Date date) {
         return setValue("dBegBalxx", date);
     }
@@ -180,39 +182,39 @@ public class Model_Bank_Account_Master extends Model {
     public Date getBeginningBalanceDate() {
         return (Date) getValue("dBegBalxx");
     }
-    
-    public JSONObject setOutstandingBeginningBalance(double amount){
+
+    public JSONObject setOutstandingBeginningBalance(double amount) {
         return setValue("nOBegBalx", amount);
     }
 
     public double getOutstandingBeginningBalance() {
         return Double.parseDouble(String.valueOf(getValue("nOBegBalx")));
     }
-    
-    public JSONObject setAccountBeginningBalance(double amount){
+
+    public JSONObject setAccountBeginningBalance(double amount) {
         return setValue("nABegBalx", amount);
     }
 
     public double getAccountBeginningBalance() {
         return Double.parseDouble(String.valueOf(getValue("nABegBalx")));
     }
-    
-    public JSONObject setOutstandingBalance(double amount){
+
+    public JSONObject setOutstandingBalance(double amount) {
         return setValue("nOBalance", amount);
     }
 
     public double getOutstandingBalance() {
         return Double.parseDouble(String.valueOf(getValue("nOBalance")));
     }
-    
-    public JSONObject setAccountBalance(double amount){
+
+    public JSONObject setAccountBalance(double amount) {
         return setValue("nABalance", amount);
     }
 
     public double getAccountBalance() {
         return Double.parseDouble(String.valueOf(getValue("nABalance")));
     }
-    
+
     public JSONObject setDueDate(Date date) {
         return setValue("dDueDatex", date);
     }
@@ -220,7 +222,7 @@ public class Model_Bank_Account_Master extends Model {
     public Date getDueDate() {
         return (Date) getValue("dDueDatex");
     }
-        
+
     public JSONObject setBankPrinting(boolean value) {
         return setValue("cBankPrnt", value ? "1" : "0");
     }
@@ -228,7 +230,7 @@ public class Model_Bank_Account_Master extends Model {
     public boolean isBankPrinting() {
         return ((String) getValue("cBankPrnt")).equals("1");
     }
-    
+
     public JSONObject setMonitor(boolean value) {
         return setValue("cMonitorx", value ? "1" : "0");
     }
@@ -236,7 +238,7 @@ public class Model_Bank_Account_Master extends Model {
     public boolean isMonitor() {
         return ((String) getValue("cMonitorx")).equals("1");
     }
-    
+
     public JSONObject setDefault(boolean value) {
         return setValue("cDefaultx", value ? "1" : "0");
     }
@@ -244,23 +246,23 @@ public class Model_Bank_Account_Master extends Model {
     public boolean isDefault() {
         return ((String) getValue("cDefaultx")).equals("1");
     }
-    
-    public JSONObject setClearingDays(int days){
+
+    public JSONObject setClearingDays(int days) {
         return setValue("nClearDay", days);
     }
 
     public int getClearingDays() {
         return (int) getValue("nClearDay");
     }
-    
-    public JSONObject setSignatoryCount(int count){
+
+    public JSONObject setSignatoryCount(int count) {
         return setValue("nSgnatory", count);
     }
 
     public int getSignatoryCount() {
         return (int) getValue("nSgnatory");
     }
-    
+
     public JSONObject setLastTransactionDate(Date date) {
         return setValue("dLastTran", date);
     }
@@ -268,7 +270,7 @@ public class Model_Bank_Account_Master extends Model {
     public Date getLastTransactionDate() {
         return (Date) getValue("dLastTran");
     }
-    
+
     public JSONObject setLastPostingDate(Date date) {
         return setValue("dLastPost", date);
     }
@@ -276,7 +278,7 @@ public class Model_Bank_Account_Master extends Model {
     public Date getLastPostingDate() {
         return (Date) getValue("dLastPost");
     }
-    
+
     public JSONObject setBranch(String branch) {
         return setValue("sBranchxx", branch);
     }
@@ -284,7 +286,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getBranch() {
         return (String) getValue("sBranchxx");
     }
-    
+
     public JSONObject setSerialNo(String serial) {
         return setValue("sSerialNo", serial);
     }
@@ -292,7 +294,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getSerialNo() {
         return (String) getValue("sSerialNo");
     }
-    
+
     public JSONObject setSlipType(String type) {
         return setValue("sSlipType", type);
     }
@@ -300,7 +302,7 @@ public class Model_Bank_Account_Master extends Model {
     public String getSlipType() {
         return (String) getValue("sSlipType");
     }
-    
+
     public JSONObject setRecordStatus(String status) {
         return setValue("cRecdStat", status);
     }
@@ -324,18 +326,18 @@ public class Model_Bank_Account_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-    
-    public Model_Industry Industry() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sIndstCdx"))){
-            if (poIndustry.getEditMode() == EditMode.READY && 
-                poIndustry.getIndustryId().equals((String) getValue("sIndstCdx")))
+
+    public Model_Industry Industry() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCdx"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
                 return poIndustry;
-            else{
+            } else {
                 poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poIndustry;
-                else {
+                } else {
                     poIndustry.initialize();
                     return poIndustry;
                 }
@@ -345,18 +347,39 @@ public class Model_Bank_Account_Master extends Model {
             return poIndustry;
         }
     }
-    
-    public Model_Branch Branch() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sBranchCd"))){
-            if (poBranch.getEditMode() == EditMode.READY && 
-                poBranch.getBranchCode().equals((String) getValue("sBranchCd")))
+
+    public Model_Banks Banks() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sBankIDxx"))) {
+            if (poBanks.getEditMode() == EditMode.READY
+                    && poBanks.getBankID().equals((String) getValue("sBankIDxx"))) {
+                return poBanks;
+            } else {
+                poJSON = poBanks.openRecord((String) getValue("sBankIDxx"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBanks;
+                } else {
+                    poBanks.initialize();
+                    return poBanks;
+                }
+            }
+        } else {
+            poBanks.initialize();
+            return poBanks;
+        }
+    }
+
+    public Model_Branch Branch() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sBranchCd"))) {
+            if (poBranch.getEditMode() == EditMode.READY
+                    && poBranch.getBranchCode().equals((String) getValue("sBranchCd"))) {
                 return poBranch;
-            else{
+            } else {
                 poJSON = poBranch.openRecord((String) getValue("sBranchCd"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poBranch;
-                else {
+                } else {
                     poBranch.initialize();
                     return poBranch;
                 }
@@ -366,18 +389,18 @@ public class Model_Bank_Account_Master extends Model {
             return poBranch;
         }
     }
-    
-    public Model_Company Company() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sCompnyID"))){
-            if (poCompany.getEditMode() == EditMode.READY && 
-                poCompany.getCompanyId().equals((String) getValue("sCompnyID")))
+
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sCompnyID"))) {
+            if (poCompany.getEditMode() == EditMode.READY
+                    && poCompany.getCompanyId().equals((String) getValue("sCompnyID"))) {
                 return poCompany;
-            else{
+            } else {
                 poJSON = poCompany.openRecord((String) getValue("sCompnyID"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poCompany;
-                else {
+                } else {
                     poCompany.initialize();
                     return poCompany;
                 }
@@ -387,9 +410,9 @@ public class Model_Bank_Account_Master extends Model {
             return poCompany;
         }
     }
-    
+
     @Override
-    public String getNextCode(){
-        return MiscUtil.getNextCode(getTable(), "sBnkActID", true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode()); 
+    public String getNextCode() {
+        return MiscUtil.getNextCode(getTable(), "sBnkActID", true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
 }
