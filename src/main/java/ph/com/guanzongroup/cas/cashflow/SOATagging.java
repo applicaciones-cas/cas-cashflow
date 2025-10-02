@@ -1729,7 +1729,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(),Detail(row).getSourceCode(), true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
@@ -1753,7 +1753,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = ldblBalance
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(),Detail(row).getSourceCode(),  true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
@@ -1764,7 +1764,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = Detail(row).APPaymentAdjustmentMaster().getNetTotal().doubleValue()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(), Detail(row).getSourceCode(), true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
