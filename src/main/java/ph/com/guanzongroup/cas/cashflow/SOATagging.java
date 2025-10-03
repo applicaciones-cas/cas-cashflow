@@ -1215,7 +1215,8 @@ public class SOATagging extends Transaction {
             case SOATaggingStatic.PaymentRequest:
                 //Check if transaction already exists in the list
                 for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-                    if (transactionNo.equals(Detail(lnCtr).getSourceNo())) {
+                    if (transactionNo.equals(Detail(lnCtr).getSourceNo())
+                        && payableType.equals(Detail(lnCtr).getSourceCode())) {
                         if(Detail(lnCtr).isReverse()) {
                             poJSON.put("result", "error");
                             poJSON.put("message", "Selected transaction no " + transactionNo + " already exists in SOA detail.");
@@ -1288,7 +1289,8 @@ public class SOATagging extends Transaction {
                 //Check if transaction already exists in the list
                 for (lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
                     if (loCachePayable.Master().getSourceNo().equals(Detail(lnCtr).getSourceNo())
-                        && loCachePayable.Master().getClientId().equals(Master().getClientId())) {
+                        && loCachePayable.Master().getClientId().equals(Master().getClientId())
+                        && payableType.equals(Detail(lnCtr).getSourceCode())) {
                         if(Detail(lnCtr).isReverse()) {
                             poJSON.put("result", "error");
                             poJSON.put("message", "Selected transaction no " + loCachePayable.Master().getSourceNo() + " already exists in SOA detail.");
@@ -1729,7 +1731,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = Detail(row).PaymentRequestMaster().getTranTotal()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(),Detail(row).getSourceCode(), true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
@@ -1753,7 +1755,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = ldblBalance
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(),Detail(row).getSourceCode(),  true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
@@ -1764,7 +1766,7 @@ public class SOATagging extends Transaction {
                 ldblBalance = Detail(row).APPaymentAdjustmentMaster().getNetTotal().doubleValue()
                         - (Detail(row).getAppliedAmount().doubleValue()
                         + getPayment(Detail(row).getSourceNo(), Detail(row).getSourceCode(), true));
-                if (ldblBalance < 0) {
+                if (ldblBalance < 0.0000) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid transaction balance " + setIntegerValueToDecimalFormat(ldblBalance,true) + " for source no " + Detail(row).getSourceNo() + ".");
                     poJSON.put("row", row);
@@ -2457,10 +2459,14 @@ public class SOATagging extends Transaction {
                 + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
                 + " FROM payment_request_master a "
                 + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
+                + " LEFT JOIN client_master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
+                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+                + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
+                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
                 + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
     }
@@ -2505,11 +2511,15 @@ public class SOATagging extends Transaction {
                 + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
                 + " FROM payment_request_master a "
                 + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
+                + " LEFT JOIN client_master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
+                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+                + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
+                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
     }
 
