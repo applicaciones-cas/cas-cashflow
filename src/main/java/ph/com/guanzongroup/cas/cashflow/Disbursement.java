@@ -1798,10 +1798,10 @@ public class Disbursement extends Transaction {
             vatAmount = rowTotal * (vatPercentage / 100.0);
             Detail(rowIndex).setDetailVatAmount(vatAmount);
         } else {
-            if (rowTotal == 0) {
-                throw new IllegalArgumentException(
-                        "Row total must be greater than zero to compute percentage.");
-            }
+//            if (rowTotal == 0) {
+//                throw new IllegalArgumentException(
+//                        "Row total must be greater than zero to compute percentage.");
+//            }
             vatAmount = vatInput;
             vatPercentage = (vatAmount / rowTotal) * 100.0;
             Detail(rowIndex).setDetailVatRates(vatPercentage);
