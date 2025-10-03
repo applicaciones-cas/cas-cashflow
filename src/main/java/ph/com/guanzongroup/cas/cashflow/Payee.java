@@ -1,5 +1,6 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
@@ -220,5 +221,27 @@ public class Payee extends Parameter {
             return poJSON;
         }
     } 
+        
+    public JSONObject searchPayee(String clientID) throws SQLException {
+    String lsSQL = "SELECT sPayeeIDx FROM payee";
+    lsSQL = MiscUtil.addCondition(lsSQL,
+            " sClientID = " + SQLUtil.toSQL(clientID)
+            + " ORDER BY sPayeeIDx DESC LIMIT 1");
+
+    System.out.println("EXECUTING SQL: " + lsSQL);
+
+    try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
+        JSONObject result = new JSONObject();
+
+        if (loRS != null && loRS.next()) {
+            result.put("sPayeeIDx", loRS.getString("sPayeeIDx"));
+        } else {
+            result.put("sPayeeIDx", null);
+        }
+        result.put("result", "success");
+        return result;
+    }
+}  
+        
 
 }
