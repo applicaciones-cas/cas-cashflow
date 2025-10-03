@@ -1417,8 +1417,11 @@ public class Disbursement extends Transaction {
                     + " 'SOA' AS TransactionType, "
                     + " 'AP_Payment_Master' AS SourceTable, "
                     + " a.sIndstCdx AS Industry, "
-                    + " a.sCompnyID AS Company "
+                    + " a.sCompnyID AS Company, "
+                    + " br.sBranchNm AS Branch "
                     + " FROM AP_Payment_Master a "
+                    + " LEFT JOIN Branch br "
+                    + " ON a.sBranchCd = br.sBranchCd "
                     + " WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + " AND (a.nNetTotal - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
@@ -1440,8 +1443,11 @@ public class Disbursement extends Transaction {
                     + " 'PRF' AS TransactionType, "
                     + " 'Payment_Request_Master' AS SourceTable, "
                     + " b.sIndstCdx AS Industry, "
-                    + " b.sCompnyID AS Company "
+                    + " b.sCompnyID AS Company, "
+                    + " br.sBranchNm AS Branch "
                     + " FROM Payment_Request_Master b "
+                    + " LEFT JOIN Branch br "
+                    + " ON b.sBranchCd = br.sBranchCd "
                     + " WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
                     + " AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
@@ -1463,8 +1469,11 @@ public class Disbursement extends Transaction {
                     + " 'CcPy' AS TransactionType, "
                     + " 'Cache_Payable_Master' AS SourceTable, "
                     + " c.sIndstCdx AS Industry, "
-                    + " c.sCompnyID AS Company "
+                    + " c.sCompnyID AS Company, "
+                    + " br.sBranchNm AS Branch "
                     + " FROM Cache_Payable_Master c "
+                    + " LEFT JOIN Branch br "
+                    + " ON c.sBranchCd = br.sBranchCd "
                     + " WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
                     + " AND (c.nNetTotal - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
                     + " AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
@@ -1494,6 +1503,7 @@ public class Disbursement extends Transaction {
             while (loRS.next()) {
                 JSONObject record = new JSONObject();
                 record.put("sTransNox", loRS.getString("sTransNox"));
+                record.put("sBranchNme", loRS.getString("Branch"));
                 record.put("dTransact", loRS.getDate("dTransact"));
                 record.put("Balance", loRS.getDouble("Balance"));
                 record.put("TransactionType", loRS.getString("TransactionType"));
@@ -1784,7 +1794,7 @@ public class Disbursement extends Transaction {
         double vatableSales;
 
         if (useRate) {
-            vatPercentage = vatInput;
+            vatPercentage = 12.0;
             vatAmount = rowTotal * (vatPercentage / 100.0);
             Detail(rowIndex).setDetailVatAmount(vatAmount);
         } else {
