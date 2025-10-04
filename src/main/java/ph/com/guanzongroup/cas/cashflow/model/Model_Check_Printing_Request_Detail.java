@@ -21,6 +21,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 public class Model_Check_Printing_Request_Detail extends Model {
     Model_Disbursement_Master poDVMaster;
     Model_Disbursement_Detail poDVDetail;
+    Model_Check_Payments poCheckPayments;
 
 
     @Override
@@ -50,6 +51,7 @@ public class Model_Check_Printing_Request_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poDVMaster = cashFlow.DisbursementMaster();
             poDVDetail = cashFlow.DisbursementDetail();
+            poCheckPayments = cashFlow.CheckPayments();
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
             logwrapr.severe(e.getMessage());
@@ -120,12 +122,17 @@ public class Model_Check_Printing_Request_Detail extends Model {
     }
 
     public Model_Disbursement_Master DisbursementMaster() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sSourceNo"))) {
+        poJSON = poCheckPayments.openRecord((String) getValue("sSourceNo"));
+        String Transaction = poCheckPayments.getSourceNo();
+        
+        
+        
+        if (!"".equals(Transaction)) {
             if (poDVMaster.getEditMode() == EditMode.READY
-                    && poDVMaster.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                    && poDVMaster.getTransactionNo().equals(Transaction)) {
                 return poDVMaster;
             } else {
-                poJSON = poDVMaster.openRecord((String) getValue("sSourceNo"));
+                poJSON = poDVMaster.openRecord(Transaction);
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poDVMaster;
@@ -158,6 +165,27 @@ public class Model_Check_Printing_Request_Detail extends Model {
         } else {
             poDVDetail.initialize();
             return poDVDetail;
+        }
+    }
+    
+    public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poCheckPayments.getEditMode() == EditMode.READY
+                    && poCheckPayments.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poCheckPayments;
+            } else {
+                poJSON = poCheckPayments.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poCheckPayments;
+                } else {
+                    poCheckPayments.initialize();
+                    return poCheckPayments;
+                }
+            }
+        } else {
+            poCheckPayments.initialize();
+            return poCheckPayments;
         }
     }
 

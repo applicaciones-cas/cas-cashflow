@@ -473,19 +473,17 @@ public class CheckPrintingRequest extends Transaction {
         return new CashflowControllers(poGRider, logwrapr).CheckPayments();
     }
 
-    private void updateDV(String sourceno)
+    private void updateDV(String sourceno) //transaction no ito ng check
             throws GuanzonException, SQLException, CloneNotSupportedException {
+        poJSON = new JSONObject();
 
-        Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
-        poDV.InitTransaction();
-        poDV.OpenTransaction(sourceno);
-        String checkTrans = poDV.Master().CheckPayments().getTransactionNo();
-        System.out.printf("Updating poCP: ", checkTrans);
-
+        
         poCheckPayments.add(CheckPayments());
         poCheckPayments.get(poCheckPayments.size() - 1).initialize();
-        poCheckPayments.get(poCheckPayments.size() - 1).openRecord(checkTrans);
-        poCheckPayments.get(poCheckPayments.size() - 1).updateRecord();
+        poCheckPayments.get(poCheckPayments.size() - 1).openRecord(sourceno);
+        poJSON = poCheckPayments.get(poCheckPayments.size() - 1).updateRecord();
+        System.out.println("POJSON " + poJSON.toJSONString());
+        System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
 
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifyingId(poGRider.getUserID());
@@ -504,6 +502,7 @@ public class CheckPrintingRequest extends Transaction {
         try {
             /*Only modify this if there are other tables to modify except the master and detail tables*/
             poJSON = new JSONObject();
+            System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
             poJSON = saveUpdates(CheckStatus.PrintStatus.PRINTED);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -704,17 +703,107 @@ public class CheckPrintingRequest extends Transaction {
         }
         return paCheckPayment.size();
     }
+    
+    
+    public JSONObject addCheckPaymentToCheckPrintRequest(String lsValue)
+            throws CloneNotSupportedException, SQLException, GuanzonException {
+     poJSON = new JSONObject();
+     boolean lbExist = false;
+        int lnRow = 0;
+        Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
+        poDV.setWithParent(true);
 
-    public JSONObject addCheckPaymentToCheckPrintRequest(String stransNox)
+        poJSON = poDV.InitTransaction();
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = poDV.OpenTransaction(lsValue);
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = poDV.setCheckpayment();
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        if (poDV.CheckPayments().getModel().getProcessed().equals(CheckStatus.PrintStatus.PRINTED)) {
+            poJSON.put("message", "The system has detected that this check has an existing request on record.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        // Validate if the payee in Master is different from the payee in the RecurringIssuance
+        if (!Master().getBankID().isEmpty()) {
+            if (!Master().getBankID().equals(poDV.CheckPayments().getModel().getBankID())) {
+                poJSON.put("message", "Invalid addition of detail: another bank already exists.");
+                poJSON.put("result", "error");
+                poJSON.put("warning", "true");
+                return poJSON;
+            }
+        }
+        
+         // Check for duplicate SourceNo
+        String sourceNo = poDV.CheckPayments().getModel().getTransactionNo();
+        for (int i = 0; i < getDetailCount(); i++) {
+            if (sourceNo.equals(Detail(i).getSourceNo())) {
+                lbExist = true;
+                lnRow = i;
+                break;
+            }
+        }
+
+        // Handle duplicate detection
+        if (lbExist) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Refer No: " + sourceNo + " already exists in table at row " + (lnRow + 1) + ".");
+            poJSON.put("tableRow", lnRow);
+            poJSON.put("warning", false);
+            return poJSON;
+        }
+
+        // Add new check payment detail
+            Master().setBankID(poDV.CheckPayments().getModel().Banks().getBankID());
+            Detail(getDetailCount() - 1).setSourceNo(poDV.CheckPayments().getModel().getTransactionNo());
+
+        
+        // Return success
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    
+    
+
+    public JSONObject addCheckPaymentToCheckPrintRequestx(String stransNox)
             throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         boolean lbExist = false;
         int lnRow = 0;
+        
+        Disbursement poDV = new CashflowControllers(poGRider, logwrapr).Disbursement();
+        poDV.setWithParent(true);
+        
+        poJSON = poDV.InitTransaction();
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = poDV.OpenTransaction(stransNox);
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        String checkTrans = poDV.Master().getTransactionNo();
+       
         CheckPayments poCheckPayment = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poCheckPayment.setWithParentClass(true);
-
+        
+        poJSON = searchCheck(checkTrans);
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        String checkTranss = (String) poJSON.get("sTransNox");
         // Attempt to open the Check Payment record
-        poJSON = poCheckPayment.openRecord(stransNox);
+        poJSON = poCheckPayment.openRecord(checkTranss);
         if ("error".equals(poJSON.get("result"))) {
             return poJSON;
         }
@@ -1170,5 +1259,49 @@ public class CheckPrintingRequest extends Transaction {
         poJSON.put("message", "computed successfully");
         return poJSON;
     }
+    
+    public JSONObject searchCheck(String lsValue) throws SQLException {
+        String lsSQL = "SELECT sTransNox FROM check_payments";
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(lsValue)
+                + " AND sSourceCd = 'DISb' "
+                + " ORDER BY sTransNox DESC LIMIT 1");
+
+        System.out.println("EXECUTING SQL: " + lsSQL);
+
+        try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
+            JSONObject result = new JSONObject();
+
+            if (loRS != null && loRS.next()) {
+                result.put("sTransNox", loRS.getString("sTransNox"));
+            } else {
+                result.put("sTransNox", null);
+            }
+            result.put("result", "success");
+            return result;
+        }
+    }
+    
+    public JSONObject searchDV(String lsValue) throws SQLException {
+    String lsSQL = "SELECT sTransNox FROM disbursement_master";
+    lsSQL = MiscUtil.addCondition(lsSQL,
+            " sSourceNo = " + SQLUtil.toSQL(lsValue)
+            + " AND sSourceCd = 'DISb' " 
+            + " ORDER BY sTransNox DESC LIMIT 1");
+
+    System.out.println("EXECUTING SQL: " + lsSQL);
+
+    try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
+        JSONObject result = new JSONObject();
+
+        if (loRS != null && loRS.next()) {
+            result.put("sTransNox", loRS.getString("sTransNox"));
+        } else {
+            result.put("sTransNox", null);
+        }
+        result.put("result", "success");
+        return result;
+    }
+}
 
 }
