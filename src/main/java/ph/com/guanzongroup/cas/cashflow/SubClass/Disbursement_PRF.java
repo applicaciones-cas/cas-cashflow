@@ -71,7 +71,9 @@ public class Disbursement_PRF extends Disbursement {
             Detail(newIndex).setSourceCode(sourceCode);
             Detail(newIndex).setParticularID(particular);
             Detail(newIndex).setAmount(amount);
+            Detail(newIndex).setAmountApplied(amount);
             Detail(newIndex).isWithVat(isVatable);
+            System.out.println(Detail(newIndex).isWithVat());
 //            Detail(newIndex).setAccountCode(loPaymentRequest.Detail(i).Particular().getAccountCode());
             Detail(newIndex).setDetailVatSales(0.00);
             Detail(newIndex).setDetailVatAmount(0.00);
