@@ -58,6 +58,7 @@ public class Model_Check_Payments extends Model {
             poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
             poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
             poEntity.updateNull("dPrintxxx");
+            poEntity.updateObject("dModified", poGRider.getServerDate());
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -470,18 +471,17 @@ public class Model_Check_Payments extends Model {
         }
     }
 
-    
     public JSONObject openRecordbySourceNo(String ssourceNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsSQL = MiscUtil.makeSelect(this);
-        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)); 
-                                      
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo));
+
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
             if (loRS.next()) {
-                for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++){
-                    setValue(lnCtr, loRS.getObject(lnCtr)); 
+                for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++) {
+                    setValue(lnCtr, loRS.getObject(lnCtr));
                 }
                 MiscUtil.close(loRS);
                 pnEditMode = EditMode.READY;
@@ -492,12 +492,12 @@ public class Model_Check_Payments extends Model {
                 poJSON = new JSONObject();
                 poJSON.put("result", "error");
                 poJSON.put("message", "No record to load.");
-            } 
+            }
         } catch (SQLException e) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", e.getMessage());
-        } 
+        }
         return poJSON;
     }
 }
