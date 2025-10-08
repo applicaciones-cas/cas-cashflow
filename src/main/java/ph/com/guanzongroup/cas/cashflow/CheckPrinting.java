@@ -577,7 +577,7 @@ public class CheckPrinting extends Transaction {
                 + "  a.dTransact,"
                 + "  c.sBranchNm,"
                 + "  d.sPayeeNme,"
-                + "  e.sCompnyNm AS supplier,"
+                + "  COALESCE(e.sCompnyNm, d.sPayeeNme) AS supplier,"
                 + "  f.sDescript,"
                 + "  a.nNetTotal,"
                 + "  a.cDisbrsTp,"
@@ -587,7 +587,9 @@ public class CheckPrinting extends Transaction {
                 + "  JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
                 + "  JOIN Branch c ON a.sBranchCd = c.sBranchCd "
                 + "  JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + "  JOIN client_master e ON d.sClientID = e.sClientID "
+                + "  LEFT JOIN client_master e ON d.sClientID = e.sClientID "
+                + "  AND d.sClientID IS NOT NULL "
+                + "  AND d.sClientID <> '' "
                 + "  JOIN particular f ON b.sPrtclrID = f.sPrtclrID "
                 + "  LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo ";
     }
