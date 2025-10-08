@@ -34,8 +34,8 @@ public class testCheckPrintAddtoDetail {
     @Test
     public void testOpenTransaction() {
         JSONObject loJSON;
-        String transactionNo = "M00125000012";
-        String bankid = "M00124001";
+        String transactionNo = "M00125000010";
+        String bankid = "M00125002";
         try {
             loJSON = poCheckPrint.CheckPrintingRequest().InitTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
