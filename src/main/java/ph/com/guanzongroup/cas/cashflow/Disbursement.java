@@ -680,6 +680,20 @@ public class Disbursement extends Transaction {
         return poJSON;
     }
 
+//    public JSONObject SearchFilterParticular(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+//        Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
+//        object.setRecordStatus("1");
+//
+//        poJSON = object.searchRecord(value, byCode);
+//        if ("success".equals((String) poJSON.get("result"))) {
+//            Master().setPayeeID(object.getModel().getParticularID());
+//            CheckPayments().getModel().setPayeeID(object.getModel().getPayeeID());
+//            Master().setSupplierClientID(object.getModel().getClientID());
+//        }
+//
+//        return poJSON;
+//    }
+
     public JSONObject SearchBankAccount(String value, String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus("1");
@@ -1400,15 +1414,31 @@ public class Disbursement extends Transaction {
         poJSON = loValidator.validate();
         return poJSON;
     }
-
     public JSONObject getUnifiedPayments(String Trantype) throws SQLException, GuanzonException {
         StringBuilder lsSQL = new StringBuilder("SELECT * FROM (");
         boolean hasCondition = false;
 
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Trantype)) {
+        // Dynamic variables from master
+        String lsIndustry = Master().getIndustryID();
+        String lsCompany = Master().getCompanyID();
+        String lsClientID = (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty())
+                ? "%"
+                : Master().Payee().getClientID();
+        String lsPayeeID = (Master().getPayeeID() == null || Master().getPayeeID().isEmpty())
+                ? "%"
+                : Master().getPayeeID();
+
+        // Constants
+        String lsConfirmed = PaymentRequestStatus.CONFIRMED;
+        double lnDefaultValue = DisbursementStatic.DefaultValues.default_value_double_0000;
+
+        // --- AP_Payment_Master ---
+        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+                || DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Trantype)) {
             if (hasCondition) {
                 lsSQL.append(" UNION ALL ");
             }
+
             lsSQL.append(
                     "SELECT "
                     + " a.sTransNox, "
@@ -1420,21 +1450,24 @@ public class Disbursement extends Transaction {
                     + " a.sCompnyID AS Company, "
                     + " br.sBranchNm AS Branch "
                     + " FROM AP_Payment_Master a "
-                    + " LEFT JOIN Branch br "
-                    + " ON a.sBranchCd = br.sBranchCd "
-                    + " WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + " AND (a.nNetTotal - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + " AND a.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + " AND a.sCompnyID = '" + Master().getCompanyID() + "'"
-                    + " AND a.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
+                    + " LEFT JOIN Branch br ON a.sBranchCd = br.sBranchCd "
+                    + " WHERE a.cTranStat = '" + lsConfirmed + "' "
+                    + " AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue
+                    + " AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                    + " AND a.sCompnyID = '" + lsCompany + "' "
+                    + " AND a.sClientID LIKE '" + lsClientID + "' "
             );
+
             hasCondition = true;
         }
 
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Trantype)) {
+        // --- Payment_Request_Master ---
+        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+                || DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Trantype)) {
             if (hasCondition) {
                 lsSQL.append(" UNION ALL ");
             }
+
             lsSQL.append(
                     "SELECT "
                     + " b.sTransNox, "
@@ -1446,21 +1479,24 @@ public class Disbursement extends Transaction {
                     + " b.sCompnyID AS Company, "
                     + " br.sBranchNm AS Branch "
                     + " FROM Payment_Request_Master b "
-                    + " LEFT JOIN Branch br "
-                    + " ON b.sBranchCd = br.sBranchCd "
-                    + " WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
-                    + " AND b.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"
-                    + " AND b.sPayeeIDx LIKE '" + (Master().getPayeeID() == null || Master().getPayeeID().isEmpty() ? "%" : Master().getPayeeID()) + "'"
+                    + " LEFT JOIN Branch br ON b.sBranchCd = br.sBranchCd "
+                    + " WHERE b.cTranStat = '" + lsConfirmed + "' "
+                    + " AND (b.nNetTotal - b.nAmtPaidx) > " + lnDefaultValue
+                    + " AND b.sIndstCdx IN ('" + lsIndustry + "','') "
+                    + " AND b.sCompnyID = '" + lsCompany + "' "
+                    + " AND b.sPayeeIDx LIKE '" + lsPayeeID + "' "
             );
+
             hasCondition = true;
         }
 
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.CASH_PAYABLE.equals(Trantype)) {
+        // --- Cache_Payable_Master ---
+        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+                || DisbursementStatic.SourceCode.CASH_PAYABLE.equals(Trantype)) {
             if (hasCondition) {
                 lsSQL.append(" UNION ALL ");
             }
+
             lsSQL.append(
                     "SELECT "
                     + " c.sTransNox, "
@@ -1472,17 +1508,17 @@ public class Disbursement extends Transaction {
                     + " c.sCompnyID AS Company, "
                     + " br.sBranchNm AS Branch "
                     + " FROM Cache_Payable_Master c "
-                    + " LEFT JOIN Branch br "
-                    + " ON c.sBranchCd = br.sBranchCd "
-                    + " WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
-                    + " AND (c.nNetTotal - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
-                    + " AND c.sIndstCdx = '" + Master().getIndustryID() + "' "
-                    + " AND c.sCompnyID = '" + Master().getCompanyID() + "'"
-                    + " AND c.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
+                    + " LEFT JOIN Branch br ON c.sBranchCd = br.sBranchCd "
+                    + " WHERE c.cTranStat = '" + lsConfirmed + "' "
+                    + " AND (c.nNetTotal - c.nAmtPaidx) > " + lnDefaultValue
+                    + " AND c.sIndstCdx IN ('" + lsIndustry + "','') "
+                    + " AND c.sCompnyID = '" + lsCompany + "' "
+                    + " AND c.sClientID LIKE '" + lsClientID + "' "
             );
             hasCondition = true;
         }
 
+        // Combine and order
         lsSQL.append(") AS CombinedResults ORDER BY dTransact ASC");
 
         System.out.println("Executing SQL: " + lsSQL.toString());
@@ -1507,7 +1543,6 @@ public class Disbursement extends Transaction {
                 record.put("dTransact", loRS.getDate("dTransact"));
                 record.put("Balance", loRS.getDouble("Balance"));
                 record.put("TransactionType", loRS.getString("TransactionType"));
-
                 dataArray.add(record);
                 lnctr++;
             }
@@ -1522,15 +1557,149 @@ public class Disbursement extends Transaction {
                 loJSON.put("data", new JSONArray());
             }
 
-            MiscUtil.close(loRS);
-
         } catch (SQLException e) {
             loJSON.put("result", "error");
             loJSON.put("message", e.getMessage());
+        } finally {
+            MiscUtil.close(loRS);
         }
 
         return loJSON;
     }
+
+//    public JSONObject getUnifiedPayments(String Trantype) throws SQLException, GuanzonException {
+//        StringBuilder lsSQL = new StringBuilder("SELECT * FROM (");
+//        boolean hasCondition = false;
+//
+//        
+//        
+//        
+//        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Trantype)) {
+//            if (hasCondition) {
+//                lsSQL.append(" UNION ALL ");
+//            }
+//            lsSQL.append(
+//                    "SELECT "
+//                    + " a.sTransNox, "
+//                    + " a.dTransact, "
+//                    + " (a.nNetTotal - a.nAmtPaidx) AS Balance, "
+//                    + " 'SOA' AS TransactionType, "
+//                    + " 'AP_Payment_Master' AS SourceTable, "
+//                    + " a.sIndstCdx AS Industry, "
+//                    + " a.sCompnyID AS Company, "
+//                    + " br.sBranchNm AS Branch "
+//                    + " FROM AP_Payment_Master a "
+//                    + " LEFT JOIN Branch br "
+//                    + " ON a.sBranchCd = br.sBranchCd "
+//                    + " WHERE a.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+//                    + " AND (a.nNetTotal - a.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
+//                    + " AND a.sIndstCdx IN ('" + Master().getIndustryID() + "','') "
+//                    + " AND a.sCompnyID = '" + Master().getCompanyID() + "'"
+//                    + " AND a.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
+//            );
+//            hasCondition = true;
+//        }
+//
+//        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Trantype)) {
+//            if (hasCondition) {
+//                lsSQL.append(" UNION ALL ");
+//            }
+//            lsSQL.append(
+//                    "SELECT "
+//                    + " b.sTransNox, "
+//                    + " b.dTransact, "
+//                    + " (b.nNetTotal - b.nAmtPaidx) AS Balance, "
+//                    + " 'PRF' AS TransactionType, "
+//                    + " 'Payment_Request_Master' AS SourceTable, "
+//                    + " b.sIndstCdx AS Industry, "
+//                    + " b.sCompnyID AS Company, "
+//                    + " br.sBranchNm AS Branch "
+//                    + " FROM Payment_Request_Master b "
+//                    + " LEFT JOIN Branch br "
+//                    + " ON b.sBranchCd = br.sBranchCd "
+//                    + " WHERE b.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+//                    + " AND (b.nNetTotal - b.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double_0000 + " "
+//                    + " AND b.sIndstCdx IN ('" + Master().getIndustryID() + "','') "
+//                    + " AND b.sCompnyID = '" + Master().getCompanyID() + "'"
+//                    + " AND b.sPayeeIDx LIKE '" + (Master().getPayeeID() == null || Master().getPayeeID().isEmpty() ? "%" : Master().getPayeeID()) + "'"
+//            );
+//            hasCondition = true;
+//        }
+//
+//        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype) || DisbursementStatic.SourceCode.CASH_PAYABLE.equals(Trantype)) {
+//            if (hasCondition) {
+//                lsSQL.append(" UNION ALL ");
+//            }
+//            lsSQL.append(
+//                    "SELECT "
+//                    + " c.sTransNox, "
+//                    + " c.dTransact, "
+//                    + " (c.nNetTotal - c.nAmtPaidx) AS Balance, "
+//                    + " 'CcPy' AS TransactionType, "
+//                    + " 'Cache_Payable_Master' AS SourceTable, "
+//                    + " c.sIndstCdx AS Industry, "
+//                    + " c.sCompnyID AS Company, "
+//                    + " br.sBranchNm AS Branch "
+//                    + " FROM Cache_Payable_Master c "
+//                    + " LEFT JOIN Branch br "
+//                    + " ON c.sBranchCd = br.sBranchCd "
+//                    + " WHERE c.cTranStat = '" + PaymentRequestStatus.CONFIRMED + "' "
+//                    + " AND (c.nNetTotal - c.nAmtPaidx) > " + DisbursementStatic.DefaultValues.default_value_double + " "
+//                    + " AND c.sIndstCdx IN ('" + Master().getIndustryID() + "','') "
+//                    + " AND c.sCompnyID = '" + Master().getCompanyID() + "'"
+//                    + " AND c.sClientID LIKE '" + (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty() ? "%" : Master().Payee().getClientID()) + "'"
+//            );
+//            hasCondition = true;
+//        }
+//
+//        lsSQL.append(") AS CombinedResults ORDER BY dTransact ASC");
+//
+//        System.out.println("Executing SQL: " + lsSQL.toString());
+//
+//        ResultSet loRS = poGRider.executeQuery(lsSQL.toString());
+//        JSONArray dataArray = new JSONArray();
+//        JSONObject loJSON = new JSONObject();
+//
+//        if (loRS == null) {
+//            loJSON.put("result", "error");
+//            loJSON.put("message", "Query execution failed.");
+//            return loJSON;
+//        }
+//
+//        try {
+//            int lnctr = 0;
+//
+//            while (loRS.next()) {
+//                JSONObject record = new JSONObject();
+//                record.put("sTransNox", loRS.getString("sTransNox"));
+//                record.put("sBranchNme", loRS.getString("Branch"));
+//                record.put("dTransact", loRS.getDate("dTransact"));
+//                record.put("Balance", loRS.getDouble("Balance"));
+//                record.put("TransactionType", loRS.getString("TransactionType"));
+//
+//                dataArray.add(record);
+//                lnctr++;
+//            }
+//
+//            if (lnctr > 0) {
+//                loJSON.put("result", "success");
+//                loJSON.put("message", "Record(s) loaded successfully.");
+//                loJSON.put("data", dataArray);
+//            } else {
+//                loJSON.put("result", "error");
+//                loJSON.put("message", "No records found.");
+//                loJSON.put("data", new JSONArray());
+//            }
+//
+//            MiscUtil.close(loRS);
+//
+//        } catch (SQLException e) {
+//            loJSON.put("result", "error");
+//            loJSON.put("message", e.getMessage());
+//        }
+//
+//        return loJSON;
+//    }
 
     public JSONObject addUnifiedPaymentToDisbursement(String transactionNo, String paymentType)
             throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -1794,8 +1963,8 @@ public class Disbursement extends Transaction {
         double vatableSales;
 
         if (useRate) {
-            vatPercentage = 12.0;
-            vatAmount = rowTotal * (vatPercentage / 100.0);
+            vatPercentage = 1.12;
+            vatAmount = rowTotal - (rowTotal / vatPercentage);
             Detail(rowIndex).setDetailVatAmount(vatAmount);
         } else {
 //            if (rowTotal == 0) {
@@ -1806,6 +1975,7 @@ public class Disbursement extends Transaction {
             vatPercentage = (vatAmount / rowTotal) * 100.0;
             Detail(rowIndex).setDetailVatRates(vatPercentage);
         }
+        
         if (Detail(rowIndex).isWithVat()){
             vatableSales = rowTotal -  vatAmount;
             Detail(rowIndex).setDetailVatSales(vatableSales);
@@ -2029,11 +2199,11 @@ public class Disbursement extends Transaction {
 
     public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        if (Master().getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record to load");
-            return poJSON;
-        }
+//        if (Master().getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "No record to load");
+//            return poJSON;
+//        }
 //        System.out.println("JE EDIT : " + poJournal.getEditMode());
         if (poJournal == null || getEditMode() == EditMode.READY) {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
@@ -2062,7 +2232,8 @@ public class Disbursement extends Transaction {
                 }
             }
         } else {
-            if (Master().getEditMode() == EditMode.ADDNEW && poJournal.getEditMode() != EditMode.ADDNEW) {
+            if (Master().getEditMode() == EditMode.ADDNEW && poJournal.getEditMode() != EditMode.ADDNEW ||
+                    Master().getEditMode() == EditMode.UPDATE && poJournal.getEditMode() != EditMode.ADDNEW) {
                 poJSON = poJournal.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;

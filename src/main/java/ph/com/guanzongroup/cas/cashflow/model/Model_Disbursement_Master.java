@@ -33,6 +33,7 @@ public class Model_Disbursement_Master extends Model {
     Model_Check_Payments poCheckPayments;
     private String oldDisbursementType = DisbursementStatic.DisbursementType.CHECK;
     private String supplierClientID = "";
+    private String searchParticularID = "";
 
     @Override
     public void initialize() {
@@ -313,6 +314,14 @@ public class Model_Disbursement_Master extends Model {
 
     public String getOldDisbursementType() {
         return this.oldDisbursementType;
+    }
+    
+    public void setSearchParticular(String searchParticular) {
+        this.searchParticularID = searchParticular;
+    }
+
+    public String getSearchParticular() {
+        return this.searchParticularID;
     }
     
     public void setSupplierClientID(String SupplierClientID) {
