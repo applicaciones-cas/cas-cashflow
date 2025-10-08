@@ -1802,7 +1802,9 @@ public class SOATagging extends Transaction {
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND b.sSourceCd = " + SQLUtil.toSQL(sourceCode)
                     + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
                     + " AND a.sClientID = " + SQLUtil.toSQL(Master().getClientId())
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.VOID)
@@ -1813,7 +1815,9 @@ public class SOATagging extends Transaction {
                 lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND b.sSourceCd = " + SQLUtil.toSQL(sourceCode)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
                     + " AND a.sClientID = " + SQLUtil.toSQL(Master().getClientId())
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
                     + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE)
                     + " AND ( a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.PROCESSED)
                     + " OR a.cTranStat = " + SQLUtil.toSQL(SOATaggingStatus.CONFIRMED)
@@ -1837,6 +1841,8 @@ public class SOATagging extends Transaction {
 
             lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
                     + " AND a.sPayeeIDx = " + SQLUtil.toSQL(Master().getClientId()) //TODO
 //                    + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE) //TODO
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
@@ -1869,7 +1875,9 @@ public class SOATagging extends Transaction {
             String lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND b.sSourceCd = " + SQLUtil.toSQL(sourceCode)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
                     + " AND a.sClientID = " + SQLUtil.toSQL(Master().getClientId())
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
                     + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE)
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND a.cTranStat != " + SQLUtil.toSQL(SOATaggingStatus.CANCELLED)
@@ -1893,7 +1901,9 @@ public class SOATagging extends Transaction {
 
             lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
                     + " AND a.sPayeeIDx = " + SQLUtil.toSQL(Master().getClientId()) //TODO
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
 //                    + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE) //TODO
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
@@ -1927,6 +1937,8 @@ public class SOATagging extends Transaction {
             String lsSQL = MiscUtil.addCondition(getAPPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND b.sSourceCd = " + SQLUtil.toSQL(sourceCode)
+                    + " AND a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryId())
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())
                     + " AND a.sClientID = " + SQLUtil.toSQL(Master().getClientId())
                     + " AND b.cReversex = " + SQLUtil.toSQL(SOATaggingStatic.Reverse.INCLUDE)
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
