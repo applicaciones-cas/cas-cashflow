@@ -34,6 +34,8 @@ public class Model_Disbursement_Master extends Model {
     private String oldDisbursementType = DisbursementStatic.DisbursementType.CHECK;
     private String supplierClientID = "";
     private String searchParticularID = "";
+    private String searchBranchID = "";
+    private String searchPayee = "";
 
     @Override
     public void initialize() {
@@ -322,6 +324,22 @@ public class Model_Disbursement_Master extends Model {
 
     public String getSearchParticular() {
         return this.searchParticularID;
+    }
+    
+    public void setSearchBranch(String searchBranch) {
+        this.searchBranchID = searchBranch;
+    }
+
+    public String getSearchBranch() {
+        return this.searchBranchID;
+    }
+    
+    public void setSearchpayee(String searchpayee) {
+        this.searchPayee = searchpayee;
+    }
+
+    public String getSearchpayee() {
+        return this.searchPayee;
     }
     
     public void setSupplierClientID(String SupplierClientID) {

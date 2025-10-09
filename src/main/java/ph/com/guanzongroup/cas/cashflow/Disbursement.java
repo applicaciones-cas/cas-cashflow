@@ -619,6 +619,31 @@ public class Disbursement extends Transaction {
 
         return poJSON;
     }
+    public JSONObject SearchFilterBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setSearchBranch(object.getModel().getBranchCode());
+            poJSON.put("branch", object.getModel().getBranchName());
+        }
+
+        return poJSON;
+    }
+    
+    public JSONObject SearchFilterpayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecordbyClientID(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setSearchpayee(object.getModel().getPayeeID());
+            poJSON.put("payee", object.getModel().getPayeeName());
+        }
+
+        return poJSON;
+    }
 
     public JSONObject SearchParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
@@ -1414,158 +1439,169 @@ public class Disbursement extends Transaction {
         poJSON = loValidator.validate();
         return poJSON;
     }
-    public JSONObject getUnifiedPayments(String Trantype) throws SQLException, GuanzonException {
-        StringBuilder lsSQL = new StringBuilder("SELECT * FROM (");
-        boolean hasCondition = false;
+  public JSONObject getUnifiedPayments(String Trantype) throws SQLException, GuanzonException {
+    JSONObject loJSON = new JSONObject();
+    JSONArray dataArray = new JSONArray();
 
-        // Dynamic variables from master
-        String lsIndustry = Master().getIndustryID();
-        String lsCompany = Master().getCompanyID();
-        String lsClientID = (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty())
-                ? "%"
-                : Master().Payee().getClientID();
-        String lsPayeeID = (Master().getPayeeID() == null || Master().getPayeeID().isEmpty())
-                ? "%"
-                : Master().getPayeeID();
+    String lsPayee = (Master().getSearchpayee()== null || Master().getSearchpayee().isEmpty())
+        ? "%"
+        : Master().getSearchpayee();
+    String lsIndustry = Master().getIndustryID();
+    String lsBranchCd = (Master().getSearchBranch() == null || Master().getSearchBranch().isEmpty())
+        ? "%"
+        : Master().getSearchBranch();
+    String lsCompany = Master().getCompanyID();
+    String lsClientID = (Master().Payee().getClientID() == null || Master().Payee().getClientID().isEmpty())
+            ? "%"
+            : Master().Payee().getClientID();
+    String lsPayeeID = (Master().getPayeeID() == null || Master().getPayeeID().isEmpty())
+            ? "%"
+            : Master().getPayeeID();
 
-        // Constants
-        String lsConfirmed = PaymentRequestStatus.CONFIRMED;
-        double lnDefaultValue = DisbursementStatic.DefaultValues.default_value_double_0000;
+    // Constant for confirmed status
+    String lsConfirmed = PaymentRequestStatus.CONFIRMED;
+    double lnDefaultValue = DisbursementStatic.DefaultValues.default_value_double_0000;
 
-        // --- AP_Payment_Master ---
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
-                || DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Trantype)) {
-            if (hasCondition) {
-                lsSQL.append(" UNION ALL ");
-            }
+    StringBuilder lsSQL = new StringBuilder("SELECT * FROM (");
+    boolean hasCondition = false;
 
-            lsSQL.append(
-                    "SELECT "
-                    + " a.sTransNox, "
-                    + " a.dTransact, "
-                    + " (a.nNetTotal - a.nAmtPaidx) AS Balance, "
-                    + " 'SOA' AS TransactionType, "
-                    + " 'AP_Payment_Master' AS SourceTable, "
-                    + " a.sIndstCdx AS Industry, "
-                    + " a.sCompnyID AS Company, "
-                    + " br.sBranchNm AS Branch "
-                    + " FROM AP_Payment_Master a "
-                    + " LEFT JOIN Branch br ON a.sBranchCd = br.sBranchCd "
-                    + " WHERE a.cTranStat = '" + lsConfirmed + "' "
-                    + " AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue
-                    + " AND a.sIndstCdx IN ('" + lsIndustry + "','') "
-                    + " AND a.sCompnyID = '" + lsCompany + "' "
-                    + " AND a.sClientID LIKE '" + lsClientID + "' "
-            );
+    // --- Cache_Payable_Master ---
+    if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+            || DisbursementStatic.SourceCode.CASH_PAYABLE.equals(Trantype)) {
+        if (hasCondition) lsSQL.append(" UNION ALL ");
 
-            hasCondition = true;
-        }
+        lsSQL.append(
+                "SELECT a.sIndstCdx AS Industry, "
+                + "a.sCompnyID AS Company, "
+                + "b.sBranchNm AS Branch, "
+                + "a.sTransNox, "
+                + "a.dTransact, "
+                + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + "'CcPy' AS TransactionType, "
+                + "'Cache_Payable_Master' AS SourceTable, "
+                + "c.sPayeeNme AS Payee, "
+                + "a.sReferNox AS Reference "
+                + "FROM Cache_Payable_Master a "
+                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID, "
+                + "Branch b "
+                + "WHERE a.sBranchCd = b.sBranchCd "
+                + "AND a.cTranStat = '" + lsConfirmed + "' "
+                + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
+                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sCompnyID = '" + lsCompany + "'"
+                + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
+                + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+        );
+        hasCondition = true;
+    }
 
-        // --- Payment_Request_Master ---
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
-                || DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Trantype)) {
-            if (hasCondition) {
-                lsSQL.append(" UNION ALL ");
-            }
+    // --- AP_Payment_Master ---
+    if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+            || DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Trantype)) {
+        if (hasCondition) lsSQL.append(" UNION ALL ");
 
-            lsSQL.append(
-                    "SELECT "
-                    + " b.sTransNox, "
-                    + " b.dTransact, "
-                    + " (b.nNetTotal - b.nAmtPaidx) AS Balance, "
-                    + " 'PRF' AS TransactionType, "
-                    + " 'Payment_Request_Master' AS SourceTable, "
-                    + " b.sIndstCdx AS Industry, "
-                    + " b.sCompnyID AS Company, "
-                    + " br.sBranchNm AS Branch "
-                    + " FROM Payment_Request_Master b "
-                    + " LEFT JOIN Branch br ON b.sBranchCd = br.sBranchCd "
-                    + " WHERE b.cTranStat = '" + lsConfirmed + "' "
-                    + " AND (b.nNetTotal - b.nAmtPaidx) > " + lnDefaultValue
-                    + " AND b.sIndstCdx IN ('" + lsIndustry + "','') "
-                    + " AND b.sCompnyID = '" + lsCompany + "' "
-                    + " AND b.sPayeeIDx LIKE '" + lsPayeeID + "' "
-            );
+        lsSQL.append(
+                "SELECT a.sIndstCdx AS Industry, "
+                + "a.sCompnyID AS Company, "
+                + "b.sBranchNm AS Branch, "
+                + "a.sTransNox, "
+                + "a.dTransact, "
+                + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + "'SOA' AS TransactionType, "
+                + "'AP_Payment_Master' AS SourceTable, "
+                + "c.sPayeeNme AS Payee, "
+                + "a.sSOANoxxx AS Reference "
+                + "FROM AP_Payment_Master a "
+                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID, "
+                + "Branch b "
+                + "WHERE a.sBranchCd = b.sBranchCd "
+                + "AND a.cTranStat = '" + lsConfirmed + "' "
+                + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
+                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sCompnyID = '" + lsCompany + "'"
+                + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
+                + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+        );
+        hasCondition = true;
+    }
 
-            hasCondition = true;
-        }
+    // --- Payment_Request_Master ---
+    if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
+            || DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Trantype)) {
+        if (hasCondition) lsSQL.append(" UNION ALL ");
 
-        // --- Cache_Payable_Master ---
-        if (DisbursementStatic.SourceCode.LOAD_ALL.equals(Trantype)
-                || DisbursementStatic.SourceCode.CASH_PAYABLE.equals(Trantype)) {
-            if (hasCondition) {
-                lsSQL.append(" UNION ALL ");
-            }
+        lsSQL.append(
+                "SELECT a.sIndstCdx AS Industry, "
+                + "a.sCompnyID AS Company, "
+                + "b.sBranchNm AS Branch, "
+                + "a.sTransNox, "
+                + "a.dTransact, "
+                + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + "'PRF' AS TransactionType, "
+                + "'Payment_Request_Master' AS SourceTable, "
+                + "c.sPayeeNme AS Payee, "
+                + "a.sSeriesNo AS Reference "
+                + "FROM Payment_Request_Master a "
+                + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx, "
+                + "Branch b "
+                + "WHERE a.sBranchCd = b.sBranchCd "
+                + "AND a.cTranStat = '" + lsConfirmed + "' "
+                + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
+                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sCompnyID = '" + lsCompany + "'"
+                + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
+                + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+        );
+        hasCondition = true;
+    }
 
-            lsSQL.append(
-                    "SELECT "
-                    + " c.sTransNox, "
-                    + " c.dTransact, "
-                    + " (c.nNetTotal - c.nAmtPaidx) AS Balance, "
-                    + " 'CcPy' AS TransactionType, "
-                    + " 'Cache_Payable_Master' AS SourceTable, "
-                    + " c.sIndstCdx AS Industry, "
-                    + " c.sCompnyID AS Company, "
-                    + " br.sBranchNm AS Branch "
-                    + " FROM Cache_Payable_Master c "
-                    + " LEFT JOIN Branch br ON c.sBranchCd = br.sBranchCd "
-                    + " WHERE c.cTranStat = '" + lsConfirmed + "' "
-                    + " AND (c.nNetTotal - c.nAmtPaidx) > " + lnDefaultValue
-                    + " AND c.sIndstCdx IN ('" + lsIndustry + "','') "
-                    + " AND c.sCompnyID = '" + lsCompany + "' "
-                    + " AND c.sClientID LIKE '" + lsClientID + "' "
-            );
-            hasCondition = true;
-        }
+    lsSQL.append(") aa ORDER BY dTransact ASC");
 
-        // Combine and order
-        lsSQL.append(") AS CombinedResults ORDER BY dTransact ASC");
+    System.out.println("Executing SQL: " + lsSQL.toString());
 
-        System.out.println("Executing SQL: " + lsSQL.toString());
+    ResultSet loRS = poGRider.executeQuery(lsSQL.toString());
 
-        ResultSet loRS = poGRider.executeQuery(lsSQL.toString());
-        JSONArray dataArray = new JSONArray();
-        JSONObject loJSON = new JSONObject();
-
-        if (loRS == null) {
-            loJSON.put("result", "error");
-            loJSON.put("message", "Query execution failed.");
-            return loJSON;
-        }
-
-        try {
-            int lnctr = 0;
-
-            while (loRS.next()) {
-                JSONObject record = new JSONObject();
-                record.put("sTransNox", loRS.getString("sTransNox"));
-                record.put("sBranchNme", loRS.getString("Branch"));
-                record.put("dTransact", loRS.getDate("dTransact"));
-                record.put("Balance", loRS.getDouble("Balance"));
-                record.put("TransactionType", loRS.getString("TransactionType"));
-                dataArray.add(record);
-                lnctr++;
-            }
-
-            if (lnctr > 0) {
-                loJSON.put("result", "success");
-                loJSON.put("message", "Record(s) loaded successfully.");
-                loJSON.put("data", dataArray);
-            } else {
-                loJSON.put("result", "error");
-                loJSON.put("message", "No records found.");
-                loJSON.put("data", new JSONArray());
-            }
-
-        } catch (SQLException e) {
-            loJSON.put("result", "error");
-            loJSON.put("message", e.getMessage());
-        } finally {
-            MiscUtil.close(loRS);
-        }
-
+    if (loRS == null) {
+        loJSON.put("result", "error");
+        loJSON.put("message", "Query execution failed.");
         return loJSON;
     }
+
+    try {
+        int lnctr = 0;
+
+        while (loRS.next()) {
+            JSONObject record = new JSONObject();
+            record.put("sTransNox", loRS.getString("sTransNox"));
+            record.put("sBranchNme", loRS.getString("Branch"));
+            record.put("dTransact", loRS.getDate("dTransact"));
+            record.put("Balance", loRS.getDouble("Balance"));
+            record.put("TransactionType", loRS.getString("TransactionType"));
+            record.put("Payee", loRS.getString("Payee"));
+            record.put("Reference", loRS.getString("Reference"));
+            dataArray.add(record);
+            lnctr++;
+        }
+
+        if (lnctr > 0) {
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record(s) loaded successfully.");
+            loJSON.put("data", dataArray);
+        } else {
+            loJSON.put("result", "error");
+            loJSON.put("message", "No records found.");
+            loJSON.put("data", new JSONArray());
+        }
+
+    } catch (SQLException e) {
+        loJSON.put("result", "error");
+        loJSON.put("message", e.getMessage());
+    } finally {
+        MiscUtil.close(loRS);
+    }
+
+    return loJSON;
+}
 
 //    public JSONObject getUnifiedPayments(String Trantype) throws SQLException, GuanzonException {
 //        StringBuilder lsSQL = new StringBuilder("SELECT * FROM (");
