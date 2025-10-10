@@ -962,6 +962,7 @@ public class Disbursement extends Transaction {
                         checkPayments.getModel().setSourceNo(Master().getTransactionNo());
                         checkPayments.getModel().setSourceCode(SOURCE_CODE);
                         checkPayments.getModel().setBranchCode(Master().getBranchCode());
+                        checkPayments.getModel().setIndustryID(Master().getIndustryID());
                         checkPayments.getEditMode();
 
                     }
@@ -1491,6 +1492,7 @@ public class Disbursement extends Transaction {
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+                + "GROUP BY a.sTransNox "
         );
         hasCondition = true;
     }
@@ -1521,6 +1523,7 @@ public class Disbursement extends Transaction {
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+                + "GROUP BY a.sTransNox "
         );
         hasCondition = true;
     }
@@ -1551,6 +1554,7 @@ public class Disbursement extends Transaction {
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
+                + "GROUP BY a.sTransNox "
         );
         hasCondition = true;
     }
@@ -2044,9 +2048,9 @@ public class Disbursement extends Transaction {
             VATSales += Detail(lnCntr).getDetailVatSales();
             VATAmount += Detail(lnCntr).getDetailVatAmount();
             VATExempt += Detail(lnCntr).getDetailVatExempt();
-
+            Double amountlesvat = Detail(lnCntr).getAmount() - Detail(lnCntr).getDetailVatAmount();
             Detail(lnCntr).setTaxRates(Detail(lnCntr).getTaxRates());
-            Detail(lnCntr).setTaxAmount(Detail(lnCntr).getAmount() * Detail(lnCntr).getTaxRates() / 100);
+            Detail(lnCntr).setTaxAmount( amountlesvat * Detail(lnCntr).getTaxRates() / 100);
 
             TransactionTotal += Detail(lnCntr).getAmountApplied();
 

@@ -399,7 +399,7 @@ public class CheckPaymentImporting extends Parameter {
                 " d.sIndstCdx = " + SQLUtil.toSQL(poGRider.getIndustry()),
                 " d.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId()),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
-                " d.sVouchrNo = " + VoucherNo );
+                " d.sVouchrNo = '" + VoucherNo + "'");
                 
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
@@ -408,7 +408,7 @@ public class CheckPaymentImporting extends Parameter {
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         int lnCtr = 0;
-        if (MiscUtil.RecordCount(loRS) >= 0) {
+        if (MiscUtil.RecordCount(loRS) > 0) {
             paCheckPayment = new ArrayList<>();
             while (loRS.next()) {
                 paCheckPayment.add(Check_Payment_List());
@@ -480,6 +480,10 @@ public class CheckPaymentImporting extends Parameter {
         String lsSQL = "UPDATE "
                 + poModel.getTable()
                 + " SET   sCheckNox = " + SQLUtil.toSQL(CheckNo)
+                + "    ,cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
+                + "    ,dPrintxxx = " + SQLUtil.toSQL(poGRider.getServerDate())
+                + "    ,cLocation = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
+                + "    ,cReleased = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
                 + " WHERE sTransNox = " + SQLUtil.toSQL(transactionNo);
 
         Long lnResult = poGRider.executeQuery(lsSQL,

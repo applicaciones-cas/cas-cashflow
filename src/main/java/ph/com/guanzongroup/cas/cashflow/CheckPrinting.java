@@ -932,9 +932,7 @@ public class CheckPrinting extends Transaction {
             this.UpdateTransaction();
             this.setCheckpayment();
             checkPayments.getEditMode();
-            checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
-            checkPayments.getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
-            checkPayments.getModel().setDatePrint(poGRider.getServerDate());
+            
             System.out.println("CHECK TRansaction : " + checkPayments.getModel().getTransactionNo());
             System.out.println("CHECK TRansaction : " + Master().CheckPayments().getTransactionNo());
             boolean isDVPrinted = "1".equals(Master().getPrint());
@@ -970,6 +968,10 @@ public class CheckPrinting extends Transaction {
                     }
                 }
             }
+            checkPayments.getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+            checkPayments.getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
+            checkPayments.getModel().setDatePrint(poGRider.getServerDate());
+            checkPayments.getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = "";
             String sPayeeNme = "";
