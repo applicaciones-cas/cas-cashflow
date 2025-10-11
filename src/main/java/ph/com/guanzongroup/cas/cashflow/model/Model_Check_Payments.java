@@ -56,6 +56,8 @@ public class Model_Check_Payments extends Model {
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
+            poEntity.updateString("cLocation", DisbursementStatic.OPEN);
+            poEntity.updateString("cReleased", DisbursementStatic.OPEN);
             poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
             poEntity.updateNull("dPrintxxx");
             poEntity.updateObject("dModified", poGRider.getServerDate());
