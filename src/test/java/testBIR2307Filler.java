@@ -1,0 +1,62 @@
+
+
+import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.MiscUtil;
+import org.json.simple.JSONObject;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.BeforeClass;
+import org.junit.FixMethodOrder;
+import org.junit.Test;
+import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.BIR2307Filler;
+
+@FixMethodOrder(MethodSorters.NAME_ASCENDING)
+public class testBIR2307Filler {
+
+    static GRiderCAS poApp;
+    static BIR2307Filler poBIR2307Filler;
+
+    @BeforeClass
+    public static void setUpClass() {
+        try {
+            System.setProperty("sys.default.path.metadata", "D:/GGC_Maven_Systems/config/metadata/new/");
+            poApp = MiscUtil.Connect();
+            Assert.assertNotNull("❌ GRider connection failed!", poApp);
+
+            // Initialize Disbursement controller and BIR2307 filler
+            poBIR2307Filler = new BIR2307Filler(
+                    "D:/forms/2307 Jan 2018 ENCS v3.xlsx",
+                    "D:/forms/BIR2307_Filled.xlsx"
+            );
+            poBIR2307Filler.poGRider = poApp;
+
+            System.out.println("✅ Setup complete.");
+        } catch (Exception e) {
+            Assert.fail("Setup failed: " + e.getMessage());
+        }
+    }
+    @Test
+    public void testOPenSource() {
+        JSONObject loJSON;
+
+        try {
+            loJSON = poBIR2307Filler.openSource("M00125000001");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+
+            
+        } catch (ExceptionInInitializerError  e) {
+            System.err.println(MiscUtil.getException(e));
+            Assert.fail();
+        }
+    }
+    
+    @AfterClass
+    public static void tearDownClass() {
+        poBIR2307Filler = null;
+        poApp = null;
+    }
+}

@@ -6,6 +6,7 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
 import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
 import ph.com.guanzongroup.cas.cashflow.AccountChart;
+import ph.com.guanzongroup.cas.cashflow.BIR2307Filler;
 import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
@@ -406,6 +407,19 @@ public class CashflowControllers {
         return poOtherPayments;
     }
     
+    public BIR2307Filler BIR2307Filler() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.BIR2307Filler: Application driver is not set.");
+            return null;
+        }
+
+        if (poBIR2307Filler != null) {
+            return poBIR2307Filler;
+        }
+         poOtherPayments = new OtherPayments();
+        return poBIR2307Filler;
+    }
+    
 
     @Override
     protected void finalize() throws Throwable {
@@ -431,6 +445,7 @@ public class CashflowControllers {
             poDocummentMapping = null;
             poCheckStatusUpdate = null;
             poCheckImporting = null;
+            poBIR2307Filler = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -462,4 +477,5 @@ public class CashflowControllers {
     private CheckImporting poCheckImporting;
     private OtherPayments poOtherPayments;    
     private CheckPaymentImporting poCheckPaymentImports;
+    private BIR2307Filler poBIR2307Filler;
 }
