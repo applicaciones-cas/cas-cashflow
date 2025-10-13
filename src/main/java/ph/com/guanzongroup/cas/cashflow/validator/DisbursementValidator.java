@@ -113,6 +113,12 @@ public class DisbursementValidator implements GValidator{
             poJSON.put("message", "Payee is missing or not set.");
             return poJSON;
         }
+         for (int x = 0; x < poDetail.size(); x++) {
+            if (poDetail.get(x).getParticularID().equals(null) || poDetail.get(x).getParticularID().isEmpty()) {
+                poJSON.put("message", "Particular is missing or not set.");
+                return poJSON;
+            }
+        }
         
         poJSON.put("result", "success");
         return poJSON;

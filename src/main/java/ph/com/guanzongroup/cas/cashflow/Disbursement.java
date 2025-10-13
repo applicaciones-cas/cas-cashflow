@@ -666,6 +666,7 @@ public class Disbursement extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             Detail(row).setTaxCode(object.getModel().getTaxCode());
             Detail(row).setTaxRates(object.getModel().getRegularRate());
+            Double lsLesVat =(Detail(row).getAmount() - Detail(row).getDetailVatAmount());
             Detail(row).setTaxAmount((Detail(row).getAmount() * object.getModel().getRegularRate() / 100));
             poJSON = computeFields();
             if ("error".equals((String) poJSON.get("result"))) {
@@ -2041,6 +2042,7 @@ public class Disbursement extends Transaction {
         double VATAmount = DisbursementStatic.DefaultValues.default_value_double_0000;
         double VATExempt = DisbursementStatic.DefaultValues.default_value_double_0000;
         double ZeroVATSales = DisbursementStatic.DefaultValues.default_value_double_0000;
+        double taxamount = DisbursementStatic.DefaultValues.default_value_double_0000;
         Double lnLessWithHoldingTax = DisbursementStatic.DefaultValues.default_value_double_0000;
 
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
@@ -2048,7 +2050,9 @@ public class Disbursement extends Transaction {
             VATSales += Detail(lnCntr).getDetailVatSales();
             VATAmount += Detail(lnCntr).getDetailVatAmount();
             VATExempt += Detail(lnCntr).getDetailVatExempt();
+            taxamount += Detail(lnCntr).getTaxAmount();
             Double amountlesvat = Detail(lnCntr).getAmount() - Detail(lnCntr).getDetailVatAmount();
+            
             Detail(lnCntr).setTaxRates(Detail(lnCntr).getTaxRates());
             Detail(lnCntr).setTaxAmount( amountlesvat * Detail(lnCntr).getTaxRates() / 100);
 
@@ -2057,7 +2061,7 @@ public class Disbursement extends Transaction {
             // Withholding Tax Computation
             lnLessWithHoldingTax += TransactionTotal * (Detail(lnCntr).getTaxRates() / 100);
         }
-        double lnNetAmountDue = TransactionTotal - lnLessWithHoldingTax;
+        double lnNetAmountDue = TransactionTotal - (taxamount + VATAmount);
 
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
@@ -2070,7 +2074,7 @@ public class Disbursement extends Transaction {
         Master().setVATAmount(VATAmount);
         Master().setVATExmpt(VATExempt);
         Master().setZeroVATSales(ZeroVATSales);
-        Master().setWithTaxTotal(lnLessWithHoldingTax);
+        Master().setWithTaxTotal(taxamount);
         Master().setNetTotal(lnNetAmountDue);
 
         if (Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)) {
