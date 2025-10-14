@@ -727,6 +727,8 @@ public class CheckPrintingRequest extends Transaction {
         if ("error".equals(poJSON.get("result"))) {
             return poJSON;
         }
+        
+        System.out.println("CHECK : " + poDV.CheckPayments().getModel().getTransactionNo());
         if (poDV.CheckPayments().getModel().getProcessed().equals(CheckStatus.PrintStatus.PRINTED)) {
             poJSON.put("message", "The system has detected that this check has an existing request on record.");
             poJSON.put("result", "error");

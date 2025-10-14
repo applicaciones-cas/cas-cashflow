@@ -28,6 +28,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.xml.soap.Detail;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -45,6 +46,7 @@ public class BIR2307Filler {
     public GRiderCAS poGRider;
     private Disbursement poDisbursementController;
     JSONObject loJSON = new JSONObject();
+    private XSSFSheet activeSheet; 
 
     public BIR2307Filler() {
         loJSON = new JSONObject();
@@ -114,6 +116,7 @@ public class BIR2307Filler {
         try (FileInputStream fis = new FileInputStream(inputFile); XSSFWorkbook workbook = (XSSFWorkbook) WorkbookFactory.create(fis)) {
 
             XSSFSheet sheet = workbook.getSheetAt(0);
+            this.activeSheet = sheet;
             XSSFDrawing drawing = sheet.getDrawingPatriarch();
 
             if (drawing != null) {
@@ -333,7 +336,40 @@ public class BIR2307Filler {
                 String zip = (String) loJSON.getOrDefault("payorTin",payorTIN);
                 return formatTIN(payorTIN);
             }
+            
+            double detailAmount = 0.00;
+            //DETAILS
+// DETAILS
+            try {
+                for (int lnctr = 0; lnctr < poDisbursementController.getDetailCount(); lnctr++) {
+                    detailAmount = poDisbursementController.Detail(lnctr).getAmount();
 
+                    // ✅ NEW FEATURE: write details to Excel cells if sheet is available
+                    if (activeSheet != null) {
+                        int startRow = 37;   // Excel row 38 (0-based index)
+                        int colAmount = 24;  // Column Y (0-based index)
+
+                        int rowIndex = startRow + lnctr;
+                        XSSFRow row = activeSheet.getRow(rowIndex);
+                        if (row == null) {
+                            row = activeSheet.createRow(rowIndex);
+                        }
+
+                        // ✅ Write amount into AD38, AD39, etc.
+                        XSSFCell cellAmt = row.getCell(colAmount);
+                        if (cellAmt == null) {
+                            cellAmt = row.createCell(colAmount);
+                        }
+                        cellAmt.setCellValue(detailAmount);
+                    }
+                }
+            } catch (Exception e) {
+                Logger.getLogger(BIR2307Filler.class.getName())
+                        .log(Level.WARNING, "Error writing detail section: " + e.getMessage(), e);
+            }
+
+
+            
         } catch (Exception ex) {
             Logger.getLogger(BIR2307Filler.class.getName()).log(Level.WARNING,
                     "Error replacing text value: " + ex.getMessage(), ex);
