@@ -459,10 +459,12 @@ public class CheckPrinting extends Transaction {
     }
 
     public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
-
+        
         bankAccount.setWithParentClass(true);
-        if ("error".equals(bankAccount.saveRecord().get("result"))) {
-
+        poJSON = bankAccount.saveRecord();
+        if ("error".equals(poJSON.get("result"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", poJSON.get("message"));
             return poJSON;
         }
         poJSON.put("result", "success");
@@ -813,15 +815,22 @@ public class CheckPrinting extends Transaction {
             String transactionNo = Master().getTransactionNo();
 
             String bankAccountID = "";
-            if (bankAccount == null) {
+            //if (bankAccount == null) {
                 bankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
                 bankAccount.setWithParentClass(true);
-            }
+            //}
 
-            if (bankAccount.getEditMode() != EditMode.UPDATE) {
+            if (editMode == EditMode.UPDATE) {
                 bankAccountID = Master().CheckPayments().getBankAcountID();
-                bankAccount.openRecord(bankAccountID);
-                bankAccount.updateRecord();
+                poJSON = bankAccount.openRecord(bankAccountID);
+                if ("error".equals((String)poJSON.get("result"))){
+                    return poJSON;
+                }
+                poJSON = bankAccount.updateRecord();
+                if ("error".equals((String)poJSON.get("result"))){
+                    return poJSON;
+                }
+                bankAccount.getModel().getEditMode();
                 bankAccount.getModel().setLastTransactionDate(poGRider.getServerDate());
                 bankAccount.getModel().setModifiedDate(poGRider.getServerDate());
                 bankAccount.getModel().setModifyingId(poGRider.getUserID());
