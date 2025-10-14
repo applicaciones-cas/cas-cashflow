@@ -1018,7 +1018,7 @@ public class CheckPrintingRequest extends Transaction {
 //        }
 
         /* ── 1.  Resolve / prepare export directory D:/ggcExports ───── */
-        File exportDir = new File("D:/ggcExports");
+        File exportDir = new File("D:/temp/Export");
         try {
             if (!exportDir.exists() && !exportDir.mkdirs()) {
                 poJSON.put("result", "error");
