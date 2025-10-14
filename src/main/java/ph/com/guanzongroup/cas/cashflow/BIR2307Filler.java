@@ -46,9 +46,37 @@ public class BIR2307Filler {
     private Disbursement poDisbursementController;
     JSONObject loJSON = new JSONObject();
 
-    public BIR2307Filler() throws FileNotFoundException {
+    public BIR2307Filler() {
+        loJSON = new JSONObject();
         inputFile = new File("D:\\GGC_Maven_Systems\\Reports\\excel templates\\2307 Jan 2018 ENCS v3.xlsx");
-        FileInputStream fis = new FileInputStream(inputFile);
+    }
+
+    public JSONObject initialize() {
+        try {
+            if (!inputFile.exists()) {
+                loJSON.put("result", "error");
+                loJSON.put("message", "Template file not found: " + inputFile.getAbsolutePath());
+                return loJSON;
+            }
+
+            try (FileInputStream fis = new FileInputStream(inputFile)) {
+                // Workbook workbook = WorkbookFactory.create(fis);
+                loJSON.put("result", "success");
+                loJSON.put("message", "Template file loaded successfully.");
+            }
+
+        } catch (FileNotFoundException e) {
+            loJSON.put("result", "error");
+            loJSON.put("message", "File not found: " + e.getMessage());
+        } catch (IOException e) {
+            loJSON.put("result", "error");
+            loJSON.put("message", "Error reading file: " + e.getMessage());
+        } catch (Exception e) {
+            loJSON.put("result", "error");
+            loJSON.put("message", "Unexpected error: " + e.getMessage());
+        }
+
+        return loJSON;
     }
 
     public JSONObject openSource(String transNox) {
@@ -131,6 +159,7 @@ public class BIR2307Filler {
             System.out.println("✅ Form filled successfully: " + finalOutput.getAbsolutePath());
         }
     }
+
     private String formatFileName(String name) {
         if (name == null || name.trim().isEmpty()) {
             return "UNKNOWN";
@@ -208,6 +237,7 @@ public class BIR2307Filler {
         }
 
         try {
+            //payee information
             if (text.contains("periodFrom")) {
                 String periodFrom = (String) loJSON.getOrDefault("periodFrom",
                         SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
@@ -247,6 +277,61 @@ public class BIR2307Filler {
                 String zip = (String) loJSON.getOrDefault("payeeZip",
                         poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
                 return formatZipCode(zip);
+            }
+            
+            //payor information
+            
+            if (text.contains("payorName")) {
+                String payee = (String) loJSON.getOrDefault("payorName",
+                        poDisbursementController.Master().Company().getCompanyName());
+                return payee.toUpperCase();
+            }
+            
+            String payorRegAddress = "";
+            String payorZIP = "";
+            String payorTIN = "";
+            switch (poDisbursementController.Master().Company().getCompanyCode()) {
+                case "LGK":
+                    payorRegAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
+                    payorZIP = "2401";
+                    payorTIN = "000-252-794-000";
+                    break;
+                case "GMC":
+                    payorRegAddress = "PEREZ BLVD.DAGUPAN CITY";
+                    payorZIP = "2401";
+                    payorTIN = "000-251-793-000";
+                    break;
+                case "UEMI":
+                    payorRegAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
+                    payorZIP = "2401";
+                    payorTIN = "000-253-795-000";
+                    break;
+                case "MCC":
+                    payorRegAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAN CITY";
+                    payorZIP = "2401";
+                    payorTIN = "000-254-796-000";
+                    break;
+                case "Monarch":
+                    payorRegAddress = "BRGY. SAN MIGUEL, CALASIAO";
+                    payorZIP = "2418";
+                    payorTIN = "000-255-797-000";
+                    break;
+                default:
+                    throw new AssertionError();
+            }
+            
+            if (text.contains("payorRegAddress")) {
+                String address = (String) loJSON.getOrDefault("payorRegAddress",payorRegAddress);
+                return address;
+            }
+            
+            if (text.contains("payorZip")) {
+                String zip = (String) loJSON.getOrDefault("payorZip",payorZIP);
+                return formatZipCode(zip);
+            }
+            if (text.contains("payorTin")) {
+                String zip = (String) loJSON.getOrDefault("payorTin",payorTIN);
+                return formatTIN(payorTIN);
             }
 
         } catch (Exception ex) {

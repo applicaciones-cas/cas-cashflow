@@ -1177,6 +1177,11 @@ public class Disbursement extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
 //            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+            if (Detail(lnCtr).getParticularID().equals(null) || Detail(lnCtr).getParticularID().isEmpty()) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Particular is missing or not set.");
+                return poJSON;
+            }
         }
 
         if (poJournal != null) {
