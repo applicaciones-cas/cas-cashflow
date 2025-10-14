@@ -25,10 +25,7 @@ public class testBIR2307Filler {
             Assert.assertNotNull("❌ GRider connection failed!", poApp);
 
             // Initialize Disbursement controller and BIR2307 filler
-            poBIR2307Filler = new BIR2307Filler(
-                    "D:/forms/2307 Jan 2018 ENCS v3.xlsx",
-                    "D:/forms/BIR2307_Filled.xlsx"
-            );
+            poBIR2307Filler = new BIR2307Filler();
             poBIR2307Filler.poGRider = poApp;
 
             System.out.println("✅ Setup complete.");

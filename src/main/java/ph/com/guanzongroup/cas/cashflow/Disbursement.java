@@ -1928,7 +1928,7 @@ public class Disbursement extends Transaction {
             // Withholding Tax Computation
             lnLessWithHoldingTax += TransactionTotal * (Detail(lnCntr).getTaxRates() / 100);
         }
-        double lnNetAmountDue = TransactionTotal - (taxamount + VATAmount);
+        double lnNetAmountDue = TransactionTotal - taxamount;
 
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
