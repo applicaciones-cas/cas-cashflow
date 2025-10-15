@@ -44,7 +44,7 @@ public class testBIR2307Filler {
                 Assert.fail();
             }
             
-            loJSON = poBIR2307Filler.openSource("M00125000001");
+            loJSON = poBIR2307Filler.openSource("M00125000003");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();

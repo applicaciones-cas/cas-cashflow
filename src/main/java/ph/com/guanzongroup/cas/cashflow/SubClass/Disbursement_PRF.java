@@ -185,5 +185,33 @@ public class Disbursement_PRF extends Disbursement {
         json.put("message", message);
         return json;
     }
+    
+    public JSONObject getPRFDate(String transactionNo)
+            throws SQLException, GuanzonException, CloneNotSupportedException {
+
+        JSONObject result = new JSONObject();
+        int insertedCount = 0;
+
+        try {
+            PaymentRequest loPaymentRequest = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
+
+            result = loPaymentRequest.InitTransaction();
+            if (!"success".equals(result.get("result"))) {
+                return errorJSON("No records found during InitTransaction.");
+            }
+
+            result = loPaymentRequest.OpenTransaction(transactionNo);
+            if (!"success".equals(result.get("result"))) {
+                return errorJSON("No records found for transaction " + transactionNo);
+            }
+
+            result.put("date", loPaymentRequest.Master().getTransactionDate());
+            result.put("result", "success");
+            return result;
+
+        } catch (Exception e) {
+            return errorJSON("PRF PaymentRequest error: " + e.getMessage());
+        }
+    }
 
 }

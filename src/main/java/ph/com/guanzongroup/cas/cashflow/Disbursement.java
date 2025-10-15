@@ -885,6 +885,19 @@ public class Disbursement extends Transaction {
             if (!"success".equals(poJSON.get("result"))) {
                 return poJSON;
             }
+            
+            switch (lsStatus) {
+                case DisbursementStatic.DISAPPROVED:
+                    populateJournal();
+                    break;
+                case DisbursementStatic.RETURNED:
+                    populateJournal();
+                    break;
+                case DisbursementStatic.CERTIFIED:
+                    populateJournal();
+                    break;
+            }
+            
             // Begin transaction for each item
             poGRider.beginTrans("UPDATE STATUS", remarks, SOURCE_CODE, transNo);
             // Attempt to change status
@@ -896,11 +909,11 @@ public class Disbursement extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-            // Commit the transaction
-            poGRider.commitTrans();
+            poJournal.setWithParent(true);
+            poJournal.setWithUI(false);
             switch (lsStatus) {
                 case DisbursementStatic.DISAPPROVED:
-                    populateJournal();
+                   
                     poJSON = poJournal.VoidTransaction("Voided");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         poGRider.rollbackTrans();
@@ -908,7 +921,7 @@ public class Disbursement extends Transaction {
                     }
                     break;
                 case DisbursementStatic.RETURNED:
-                    populateJournal();
+                  
                     poJSON = poJournal.ReopenTransaction("Reopen");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         poGRider.rollbackTrans();
@@ -916,7 +929,7 @@ public class Disbursement extends Transaction {
                     }
                     break;
                 case DisbursementStatic.CERTIFIED:
-                    populateJournal();
+                   
                     poJSON = poJournal.ConfirmTransaction("Confirmed");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         poGRider.rollbackTrans();
@@ -924,6 +937,12 @@ public class Disbursement extends Transaction {
                     }
                     break;
             }
+            
+            
+            
+            // Commit the transaction
+            poGRider.commitTrans();
+            
         }
         poJSON.put("result", "success");
         return poJSON;

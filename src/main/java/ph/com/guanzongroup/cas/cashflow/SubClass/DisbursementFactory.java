@@ -87,6 +87,32 @@ public class DisbursementFactory {
                 return errorJSON("Unsupported source code: " + sourceCd);   
         }
     }
+    public static JSONObject getDate(String sourceCd, String transactionNo, Disbursement base) 
+            throws CloneNotSupportedException, SQLException, GuanzonException {
+        if (sourceCd == null || sourceCd.trim().isEmpty()) {
+            return errorJSON("Source code is required.");
+        }
+
+        switch (sourceCd) {
+            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                Disbursement_PRF prf = new Disbursement_PRF(base);
+                base.setSourceType(DisbursementStatic.SourceCode.PAYMENT_REQUEST); // mark on base as well
+                return prf.getPRFDate(transactionNo);
+                
+            case DisbursementStatic.SourceCode.CASH_PAYABLE:
+                Disbursement_CachePayable cachePayable = new Disbursement_CachePayable(base);
+                base.setSourceType(DisbursementStatic.SourceCode.CASH_PAYABLE); // mark on base as well
+                 return cachePayable.getCachePayableDate(transactionNo);
+                
+//            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+//                Disbursement_SOA SOATagging = new Disbursement_SOA(base);
+//                base.setSourceType(DisbursementStatic.SourceCode.CASH_PAYABLE); // mark on base as well
+//                 return SOATagging.updateSOATagging(transactionNo,sourceCd,particular,isaadd);
+                 
+            default:
+                return errorJSON("Unsupported source code: " + sourceCd);   
+        }
+    }
 
     
     private static JSONObject errorJSON(String msg) {

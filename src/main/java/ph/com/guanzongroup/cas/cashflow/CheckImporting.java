@@ -352,7 +352,6 @@ public class CheckImporting extends Transaction {
     }
 
     public JSONObject saveCheckPayments() throws SQLException, GuanzonException, CloneNotSupportedException {
-        System.out.println("EDIT MODE Ng CHECK PAYM : " + checkPayments.getEditMode());
         poJSON = new JSONObject();
 
         checkPayments.setWithParentClass(true);
@@ -365,7 +364,6 @@ public class CheckImporting extends Transaction {
     }
 
     public JSONObject saveBankAccountMaster() throws SQLException, GuanzonException, CloneNotSupportedException {
-        System.out.println("EDIT MODE Ng bankAccount  : " + bankAccount.getEditMode());
 
         bankAccount.setWithParentClass(true);
         if ("error".equals(bankAccount.saveRecord().get("result"))) {
@@ -420,7 +418,6 @@ public class CheckImporting extends Transaction {
         try {
             /*Only modify this if there are other tables to modify except the master and detail tables*/
             poJSON = new JSONObject();
-            System.out.println("EDIT MODE : " + checkPayments.getEditMode());
             poJSON = saveCheckPayments();
             if ("error".equals(poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -591,7 +588,7 @@ public class CheckImporting extends Transaction {
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sIndstCdx = " + SQLUtil.toSQL(poGRider.getIndustry()),
+                " d.sIndstCdx = " + SQLUtil.toSQL(psIndustryId),
                 " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
                 " d.sVouchrNo = " + VoucherNo );
