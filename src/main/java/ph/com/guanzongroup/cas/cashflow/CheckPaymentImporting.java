@@ -484,6 +484,7 @@ public class CheckPaymentImporting extends Parameter {
                 + "    ,dPrintxxx = " + SQLUtil.toSQL(poGRider.getServerDate())
                 + "    ,cLocation = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
                 + "    ,cReleased = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
+                + "    ,cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
                 + " WHERE sTransNox = " + SQLUtil.toSQL(transactionNo);
 
         Long lnResult = poGRider.executeQuery(lsSQL,

@@ -1239,6 +1239,9 @@ public class CheckPrinting extends Transaction {
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Master().CheckPayments().getAmount());
+                params.put("sPrepared", poGRider.getLogName());
+                params.put("sChecked", "Rex Adversalo");
+                params.put("sApproved", "Guanson Lo");
 
                 switch (Master().getPrint()) {
                     case CheckStatus.PrintStatus.PRINTED:

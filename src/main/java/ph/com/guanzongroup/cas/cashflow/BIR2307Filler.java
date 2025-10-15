@@ -26,6 +26,7 @@ import org.json.simple.JSONObject;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.soap.Detail;
@@ -33,20 +34,22 @@ import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.SQLUtil;
+import ph.com.guanzongroup.cas.cashflow.SubClass.DisbursementFactory;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
  * Utility class for filling out BIR 2307 Excel template forms. Supports
  * replacing placeholder text inside textboxes and grouped shapes.
  */
-public class BIR2307Filler {
+public class BIR2307Filler  {
 
     private final File inputFile;
     private final File outputFile = null;
     public GRiderCAS poGRider;
     private Disbursement poDisbursementController;
     JSONObject loJSON = new JSONObject();
-    private XSSFSheet activeSheet; 
+    private XSSFSheet activeSheet;
 
     public BIR2307Filler() {
         loJSON = new JSONObject();
@@ -234,148 +237,190 @@ public class BIR2307Filler {
     /**
      * Replaces known placeholders with formatted text
      */
-    private String replaceTextValue(String text) {
-        if (loJSON == null || loJSON.isEmpty()) {
-            return text; // nothing loaded yet
+   private String replaceTextValue(String text) {
+    int ColIndex = -1;
+    if (loJSON == null || loJSON.isEmpty()) {
+        return text; // nothing loaded yet
+    }
+
+    try {
+        // ==========================
+        // PAYEE INFORMATION
+        // ==========================
+        if (text.contains("periodFrom")) {
+            String periodFrom = (String) loJSON.getOrDefault("periodFrom",
+                    SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
+            return formatDateForTextbox(periodFrom);
         }
 
-        try {
-            //payee information
-            if (text.contains("periodFrom")) {
-                String periodFrom = (String) loJSON.getOrDefault("periodFrom",
-                        SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
-                return formatDateForTextbox(periodFrom);
-            }
+        if (text.contains("periodTo")) {
+            String periodTo = (String) loJSON.getOrDefault("periodTo", "");
+            return formatDateForTextbox(periodTo);
+        }
 
-            if (text.contains("periodTo")) {
-                String periodTo = (String) loJSON.getOrDefault("periodTo", "");
-                return formatDateForTextbox(periodTo);
-            }
+        if (text.contains("payeeName")) {
+            String payee = (String) loJSON.getOrDefault("payeeName",
+                    poDisbursementController.Master().Payee().getPayeeName());
+            return payee.toUpperCase();
+        }
 
-            if (text.contains("payeeName")) {
-                String payee = (String) loJSON.getOrDefault("payeeName",
-                        poDisbursementController.Master().Payee().getPayeeName());
-                return payee.toUpperCase();
-            }
+        if (text.contains("payeeTin")) {
+            String tin = (String) loJSON.getOrDefault("payeeTin",
+                    poDisbursementController.Master().Payee().Client().getTaxIdNumber());
+            return formatTIN(tin);
+        }
 
-            if (text.contains("payeeTin")) {
-                String tin = (String) loJSON.getOrDefault("payeeTin",
-                        poDisbursementController.Master().Payee().Client().getTaxIdNumber());
-                return formatTIN(tin);
-            }
+        if (text.contains("payeeRegAddress")) {
+            String address = (String) loJSON.getOrDefault("payeeRegAddress",
+                    poDisbursementController.Master().Payee().ClientAddress().getAddress());
+            return address;
+        }
 
-            if (text.contains("payeeRegAddress")) {
-                String address = (String) loJSON.getOrDefault("payeeRegAddress",
-                        poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                return address;
-            }
+        if (text.contains("payeeForeignAddress")) {
+            String faddress = (String) loJSON.getOrDefault("payeeForeignAddress",
+                    poDisbursementController.Master().Payee().ClientAddress().getAddress());
+            return faddress;
+        }
 
-            if (text.contains("payeeForeignAddress")) {
-                String faddress = (String) loJSON.getOrDefault("payeeForeignAddress",
-                        poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                return faddress;
-            }
+        if (text.contains("payeeZip")) {
+            String zip = (String) loJSON.getOrDefault("payeeZip",
+                    poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
+            return formatZipCode(zip);
+        }
 
-            if (text.contains("payeeZip")) {
-                String zip = (String) loJSON.getOrDefault("payeeZip",
-                        poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
-                return formatZipCode(zip);
-            }
-            
-            //payor information
-            
-            if (text.contains("payorName")) {
-                String payee = (String) loJSON.getOrDefault("payorName",
-                        poDisbursementController.Master().Company().getCompanyName());
-                return payee.toUpperCase();
-            }
-            
-            String payorRegAddress = "";
-            String payorZIP = "";
-            String payorTIN = "";
-            switch (poDisbursementController.Master().Company().getCompanyCode()) {
-                case "LGK":
-                    payorRegAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-252-794-000";
-                    break;
-                case "GMC":
-                    payorRegAddress = "PEREZ BLVD.DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-251-793-000";
-                    break;
-                case "UEMI":
-                    payorRegAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-253-795-000";
-                    break;
-                case "MCC":
-                    payorRegAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-254-796-000";
-                    break;
-                case "Monarch":
-                    payorRegAddress = "BRGY. SAN MIGUEL, CALASIAO";
-                    payorZIP = "2418";
-                    payorTIN = "000-255-797-000";
-                    break;
-                default:
-                    throw new AssertionError();
-            }
-            
-            if (text.contains("payorRegAddress")) {
-                String address = (String) loJSON.getOrDefault("payorRegAddress",payorRegAddress);
-                return address;
-            }
-            
-            if (text.contains("payorZip")) {
-                String zip = (String) loJSON.getOrDefault("payorZip",payorZIP);
-                return formatZipCode(zip);
-            }
-            if (text.contains("payorTin")) {
-                String zip = (String) loJSON.getOrDefault("payorTin",payorTIN);
-                return formatTIN(payorTIN);
-            }
-            
-            double detailAmount = 0.00;
-            //DETAILS
-// DETAILS
-            try {
-                for (int lnctr = 0; lnctr < poDisbursementController.getDetailCount(); lnctr++) {
-                    detailAmount = poDisbursementController.Detail(lnctr).getAmount();
+        // ==========================
+        // PAYOR INFORMATION
+        // ==========================
+        String company = poDisbursementController.Master().Company().getCompanyName();
+        String value = null;
 
-                    // ✅ NEW FEATURE: write details to Excel cells if sheet is available
-                    if (activeSheet != null) {
-                        int startRow = 37;   // Excel row 38 (0-based index)
-                        int colAmount = 24;  // Column Y (0-based index)
+        switch (company.toUpperCase()) {
+            case "GUANZON GROUP OF COMPANIES, INC.":
+                if (text.contains("payorTin")) value = "000-553-782-000";
+                else if (text.contains("payorRegAddress")) value = "M.H. del Pilar St., Dagupan City";
+                else if (text.contains("payorZip")) value = "2400";
+                break;
 
-                        int rowIndex = startRow + lnctr;
-                        XSSFRow row = activeSheet.getRow(rowIndex);
-                        if (row == null) {
-                            row = activeSheet.createRow(rowIndex);
-                        }
+            case "GUANZON ENTERPRISES CO., INC.":
+                if (text.contains("payorTin")) value = "000-169-106-000";
+                else if (text.contains("payorRegAddress")) value = "Perez Blvd., Dagupan City";
+                else if (text.contains("payorZip")) value = "2400";
+                break;
 
-                        // ✅ Write amount into AD38, AD39, etc.
-                        XSSFCell cellAmt = row.getCell(colAmount);
-                        if (cellAmt == null) {
-                            cellAmt = row.createCell(colAmount);
-                        }
-                        cellAmt.setCellValue(detailAmount);
+            case "HONDA CARMELRAY CORPORATION":
+                if (text.contains("payorTin")) value = "006-278-411-000";
+                else if (text.contains("payorRegAddress")) value = "Lot 6A, Carmelray Industrial Park I, Canlubang, Calamba City";
+                else if (text.contains("payorZip")) value = "4028";
+                break;
+
+            default:
+                break;
+        }
+
+        if (value != null) {
+            return value;
+        }
+
+        // ==========================
+        // DETAIL SECTION
+        // ==========================
+        double detailAmount = 0.00;
+        double detailTAXAmount = 0.00;
+
+        if (activeSheet != null && poDisbursementController != null) {
+            for (int lnctr = 0; lnctr < poDisbursementController.getDetailCount(); lnctr++) {
+                detailAmount = poDisbursementController.Detail(lnctr).getAmount();
+                String particular = poDisbursementController.Detail(lnctr).Particular().getDescription();
+                String taxCode = poDisbursementController.Detail(lnctr).getTaxCode();
+                detailTAXAmount = poDisbursementController.Detail(lnctr).getTaxAmount();
+                String SourceCode = poDisbursementController.Detail(lnctr).getSourceCode();
+                String SourceNo = poDisbursementController.Detail(lnctr).getSourceNo();
+
+                JSONObject poJSON = getDisbursementSourceDate(SourceNo, SourceCode);
+                if ("error".equals(poJSON.get("result"))) {
+                    return poJSON.get("message").toString();
+                }
+
+                Object dateObj = poJSON.get("date");
+                String dateStr = null;
+
+                if (dateObj instanceof java.sql.Date) {
+                    dateStr = ((java.sql.Date) dateObj).toLocalDate().toString();
+                } else if (dateObj instanceof java.util.Date) {
+                    dateStr = new java.sql.Date(((java.util.Date) dateObj).getTime()).toLocalDate().toString();
+                } else if (dateObj != null) {
+                    dateStr = dateObj.toString();
+                }
+
+                if (dateStr != null && !dateStr.isEmpty()) {
+                    LocalDate date = LocalDate.parse(dateStr);
+                    int month = date.getMonthValue();
+                    int monthOfQuarter = ((month - 1) % 3) + 1;
+
+                    switch (monthOfQuarter) {
+                        case 1:
+                            ColIndex = 14; // 1st Month
+                            break;
+                        case 2:
+                            ColIndex = 19; // 2nd Month
+                            break;
+                        case 3:
+                            ColIndex = 24; // 3rd Month
+                            break;
+                        default:
+                            break;
                     }
                 }
-            } catch (Exception e) {
-                Logger.getLogger(BIR2307Filler.class.getName())
-                        .log(Level.WARNING, "Error writing detail section: " + e.getMessage(), e);
+
+                int startRow = 37;
+                int rowIndex = startRow + lnctr;
+
+                XSSFRow row = activeSheet.getRow(rowIndex);
+                if (row == null) {
+                    row = activeSheet.createRow(rowIndex);
+                }
+
+                getOrCreateCell(row, 0).setCellValue(particular != null ? particular : "");
+                getOrCreateCell(row, 11).setCellValue(taxCode != null ? taxCode : "");
+                getOrCreateCell(row, ColIndex).setCellValue(detailAmount);
+                getOrCreateCell(row, 34).setCellValue(detailTAXAmount);
             }
 
-
-            
-        } catch (Exception ex) {
-            Logger.getLogger(BIR2307Filler.class.getName()).log(Level.WARNING,
-                    "Error replacing text value: " + ex.getMessage(), ex);
+            activeSheet.getWorkbook().getCreationHelper()
+                    .createFormulaEvaluator()
+                    .evaluateAll();
         }
 
-        return text;
+    } catch (Exception ex) {
+        Logger.getLogger(BIR2307Filler.class.getName()).log(Level.WARNING,
+                "Error replacing text value: " + ex.getMessage(), ex);
+    }
+
+    return text;
+}
+
+
+    private XSSFCell getOrCreateCell(XSSFRow row, int colIndex) {
+        XSSFCell cell = row.getCell(colIndex);
+        return (cell != null) ? cell : row.createCell(colIndex);
+    }
+
+    public JSONObject getDisbursementSourceDate(String sourceNo, String sourceCode)
+            throws SQLException, GuanzonException, CloneNotSupportedException {
+        
+        
+
+        if (sourceCode.equals("PORc")) {
+            sourceCode = DisbursementStatic.SourceCode.CASH_PAYABLE;
+        }
+        poDisbursementController = new CashflowControllers(poGRider, null).Disbursement();
+        loJSON = DisbursementFactory.getDate(sourceCode, sourceNo,poDisbursementController);
+        if ("error".equals(loJSON.get("result"))) {
+            return loJSON;
+        }
+
+        loJSON.put("result", "success");
+        return loJSON;
     }
 
     /**
@@ -481,4 +526,6 @@ public class BIR2307Filler {
         }
         shape.setText(replaceTextValue(text));
     }
+    
+    
 }
