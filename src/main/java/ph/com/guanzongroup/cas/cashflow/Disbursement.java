@@ -1513,11 +1513,14 @@ public class Disbursement extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = '" + lsConfirmed + "' "
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
-                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sIndstCdx IN ('01', '02', '09', '') "
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
                 + "GROUP BY a.sTransNox "
+                
+                //commented by mac 20251016
+                //+ "AND a.sIndstCdx IN ('" + lsIndustry + "','')
         );
         hasCondition = true;
     }
@@ -1544,7 +1547,7 @@ public class Disbursement extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = '" + lsConfirmed + "' "
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
-                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sIndstCdx IN ('01', '02', '09', '') "
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
@@ -1575,7 +1578,7 @@ public class Disbursement extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = '" + lsConfirmed + "' "
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " + lnDefaultValue + " "
-                + "AND a.sIndstCdx IN ('" + lsIndustry + "','') "
+                + "AND a.sIndstCdx IN ('01', '02', '09', '') "
                 + "AND a.sCompnyID = '" + lsCompany + "'"
                 + "AND a.sBranchCd LIKE '" + lsBranchCd + "'"
                 + "AND c.sPayeeIDx LIKE '"+ lsPayee +"'"
