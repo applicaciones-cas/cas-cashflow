@@ -3,6 +3,7 @@ package ph.com.guanzongroup.cas.cashflow.SubClass;
 import java.sql.ResultSet;
 import ph.com.guanzongroup.cas.cashflow.*;
 import java.sql.SQLException;
+import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -248,7 +249,7 @@ public class Disbursement_CachePayable extends Disbursement {
         return poJSON;
     }
     
-    public JSONObject getCachePayableDate(String transactionNo)
+    public JSONObject getCachePayableDatex(String transactionNo)
             throws SQLException, GuanzonException, CloneNotSupportedException {
 
         JSONObject result = new JSONObject();
@@ -294,6 +295,37 @@ public class Disbursement_CachePayable extends Disbursement {
 
         } catch (Exception e) {
             return errorJSON("Cache Payable error: " + e.getMessage());
+        }
+    }
+    
+    
+public JSONObject getCachePayableDate(String transactionNo)
+            throws SQLException, GuanzonException, CloneNotSupportedException {
+
+        JSONObject result = new JSONObject();
+        int insertedCount = 0;
+
+        try {
+            PurchaseOrderReceiving loPaymentRequest = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
+            if (loPaymentRequest == null){
+                ShowMessageFX.Information("loPaymentRequest is not initialize", null, null);
+            }
+            result = loPaymentRequest.InitTransaction();
+            if (!"success".equals(result.get("result"))) {
+                return errorJSON("No records found during InitTransaction.");
+            }
+
+            result = loPaymentRequest.OpenTransaction(transactionNo);
+            if (!"success".equals(result.get("result"))) {
+                return errorJSON("No records found for transaction " + transactionNo);
+            }
+
+            result.put("date", loPaymentRequest.Master().getTransactionDate());
+            result.put("result", "success");
+            return result;
+
+        } catch (Exception e) {
+            return errorJSON("PRF PaymentRequest error: " + e.getMessage());
         }
     }
 
