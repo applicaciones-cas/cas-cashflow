@@ -890,9 +890,9 @@ public class Disbursement extends Transaction {
                 case DisbursementStatic.DISAPPROVED:
                     populateJournal();
                     break;
-                case DisbursementStatic.RETURNED:
-                    populateJournal();
-                    break;
+//                case DisbursementStatic.RETURNED:
+//                    populateJournal();
+//                    break;
                 case DisbursementStatic.CERTIFIED:
                     populateJournal();
                     break;
@@ -901,7 +901,7 @@ public class Disbursement extends Transaction {
             // Begin transaction for each item
             poGRider.beginTrans("UPDATE STATUS", remarks, SOURCE_CODE, transNo);
             // Attempt to change status
-            poJSON = statusChange(poMaster.getTable(), transNo, remarks, lsStatus, !lbConfirm, Boolean.TRUE);
+             poJSON = statusChange(poMaster.getTable(), transNo, remarks, lsStatus, !lbConfirm, Boolean.TRUE);
             if ("success".equals((String) poJSON.get("result"))) {
                 remarks = (String) poJSON.get("notes");
                 poJSON = statusChange(poMaster.getTable(), transNo, remarks, lsStatus, true, true);
@@ -920,14 +920,14 @@ public class Disbursement extends Transaction {
                         return poJSON;
                     }
                     break;
-                case DisbursementStatic.RETURNED:
-                  
-                    poJSON = poJournal.ReopenTransaction("Reopen");
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                    break;
+//                case DisbursementStatic.RETURNED:
+//                  
+//                    poJSON = poJournal.ReopenTransaction("Reopen");
+//                    if (!"success".equals((String) poJSON.get("result"))) {
+//                        poGRider.rollbackTrans();
+//                        return poJSON;
+//                    }
+//                    break;
                 case DisbursementStatic.CERTIFIED:
                    
                     poJSON = poJournal.ConfirmTransaction("Confirmed");
@@ -1149,8 +1149,8 @@ public class Disbursement extends Transaction {
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
             }
-
-            Master().setTransactionStatus(DisbursementStatic.OPEN);
+            
+//            Master().setTransactionStatus(DisbursementStatic.OPEN);
 
             poGRider.beginTrans("UPDATE STATUS", "ReopenTransaction", SOURCE_CODE, Master().getTransactionNo());
             //change status
@@ -2147,8 +2147,11 @@ public class Disbursement extends Transaction {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
             poJournal.InitTransaction();
         }
-
-        String lsJournal = existJournal();
+        String lsJournal = null;
+        if(Master().getEditMode() == EditMode.UPDATE){
+             lsJournal = existJournal();
+        }
+        
         if (lsJournal != null && !"".equals(lsJournal)) {
             if (Master().getEditMode() == EditMode.READY) {
                 poJSON = poJournal.OpenTransaction(lsJournal);

@@ -9,7 +9,7 @@ public class DisbursementStatic {
     public static final  String AUTHORIZED = "4";
     public static final  String VOID = "5";
     public static final  String  DISAPPROVED= "6";
-    public static final  String RETURNED = "7";
+    public static final  String RETURNED = "9";
         
     public static class DisbursementType  {
         public static final String CHECK = "0";
