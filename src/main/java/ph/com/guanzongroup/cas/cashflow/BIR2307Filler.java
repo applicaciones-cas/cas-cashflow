@@ -44,7 +44,9 @@ public class BIR2307Filler {
     private Disbursement poDisbursementController;
     JSONObject loJSON = new JSONObject();
     private XSSFSheet activeSheet;
-    String payeeName, transactionNo;
+    String payeeName, transactionNo, payeeTin,payeeAddress, payeeForeignAddress, payeeZip,payorName,payorAddress,payorZip,company,payorTin;
+    LocalDate minDate = null;
+    LocalDate maxDate = null;
 
     public BIR2307Filler() {
         loJSON = new JSONObject();
@@ -95,19 +97,24 @@ public class BIR2307Filler {
                 loJSON.put("result", "error");
                 return loJSON;
             }
-            try {
-                payeeName = poDisbursementController.Master().Payee().getPayeeName();
-                transactionNo = poDisbursementController.Master().getTransactionNo();
-            } catch (SQLException | GuanzonException e) {
-                payeeName = (String) loJSON.getOrDefault("payeeName", "UNKNOWN");
-                transactionNo = (String) loJSON.getOrDefault("transNox", "NO_TRANS_NO");
-            }
+            payeeName = safeGet(poDisbursementController.Master().Payee().getPayeeName());
+            transactionNo =  safeGet(poDisbursementController.Master().getTransactionNo());
+            payeeTin =  safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber());
+            payeeAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
+            payeeForeignAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
+            company =  safeGet(poDisbursementController.Master().Company().getCompanyCode());
+            payorName = safeGet(poDisbursementController.Master().Company().getCompanyName());
+   
+
             fillForm();
 
         } catch (SQLException | GuanzonException | CloneNotSupportedException | IOException | InvalidFormatException ex) {
             Logger.getLogger(BIR2307Filler.class.getName()).log(Level.SEVERE, null, ex);
         }
         return loJSON;
+    }
+    private String safeGet(Object value) {
+        return value == null ? "" : value.toString();
     }
 
     /**
@@ -131,14 +138,13 @@ public class BIR2307Filler {
             } else {
                 System.out.println("⚠️ No drawing found in sheet!");
             }
+            
             if (poDisbursementController != null) {
                 JSONObject detailResult = detailSection();
                 if (!"success".equals(detailResult.get("result"))) {
                     System.out.println("⚠️ Detail section skipped: " + detailResult.get("message"));
                 }
             }
-
-            
 
             // ✅ Prepare folder
             String yearFolder = "D:/temp/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/";
@@ -241,112 +247,97 @@ public class BIR2307Filler {
             return text; // nothing loaded yet
         }
 
-        try {
-            // ==========================
-            // PAYEE INFORMATION
-            // ==========================
-            if (text.contains("periodFrom")) {
-                String periodFrom = (String) loJSON.getOrDefault("periodFrom",
-                        SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
-                return formatDateForTextbox(periodFrom);
-            }
-
-            if (text.contains("periodTo")) {
-                String periodTo = (String) loJSON.getOrDefault("periodTo", "");
-                return formatDateForTextbox(periodTo);
-            }
-
-            if (text.contains("payeeName")) {
-                String payee = (String) loJSON.getOrDefault("payeeName",
-                        poDisbursementController.Master().Payee().getPayeeName());
-                return payee.toUpperCase();
-            }
-
-            if (text.contains("payeeTin")) {
-                String tin = (String) loJSON.getOrDefault("payeeTin",
-                        poDisbursementController.Master().Payee().Client().getTaxIdNumber());
-                return formatTIN(tin);
-            }
-
-            if (text.contains("payeeRegAddress")) {
-                String address = (String) loJSON.getOrDefault("payeeRegAddress",
-                        poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                return address;
-            }
-
-            if (text.contains("payeeForeignAddress")) {
-                String faddress = (String) loJSON.getOrDefault("payeeForeignAddress",
-                        poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                return faddress;
-            }
-
-            if (text.contains("payeeZip")) {
-                String zip = (String) loJSON.getOrDefault("payeeZip",
-                        poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
-                return formatZipCode(zip);
-            }
-
-            // ==========================
-            // PAYOR INFORMATION
-            // ==========================
-            if (text.contains("payorName")) {
-                String payee = (String) loJSON.getOrDefault("payorName",
-                        poDisbursementController.Master().Company().getCompanyName());
-                return payee.toUpperCase();
-            }
-
-            String payorRegAddress = "";
-            String payorZIP = "";
-            String payorTIN = "";
-            switch (poDisbursementController.Master().Company().getCompanyCode()) {
-                case "LGK":
-                    payorRegAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-252-794-000";
-                    break;
-                case "GMC":
-                    payorRegAddress = "PEREZ BLVD.DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-251-793-000";
-                    break;
-                case "UEMI":
-                    payorRegAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-253-795-000";
-                    break;
-                case "MCC":
-                    payorRegAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
-                    payorZIP = "2401";
-                    payorTIN = "000-254-796-000";
-                    break;
-                case "Monarch":
-                    payorRegAddress = "BRGY. SAN MIGUEL, CALASIAO";
-                    payorZIP = "2418";
-                    payorTIN = "000-255-797-000";
-                    break;
-                default:
-                    throw new AssertionError();
-            }
-
-            if (text.contains("payorRegAddress")) {
-                String address = (String) loJSON.getOrDefault("payorRegAddress", payorRegAddress);
-                return address;
-            }
-
-            if (text.contains("payorZip")) {
-                String zip = (String) loJSON.getOrDefault("payorZip", payorZIP);
-                return formatZipCode(zip);
-            }
-
-            if (text.contains("payorTin")) {
-                String zip = (String) loJSON.getOrDefault("payorTin", payorTIN);
-                return formatTIN(payorTIN);
-            }
-
-
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(BIR2307Filler.class.getName()).log(Level.WARNING,
-                    "Error replacing text value: " + ex.getMessage(), ex);
+        // ==========================
+        // PAYEE INFORMATION
+        // ==========================
+        if (text.contains("periodFrom")) {
+            String periodFrom = (String) loJSON.getOrDefault("periodFrom",SQLUtil.dateFormat(minDate,SQLUtil.FORMAT_SHORT_DATE));
+//                        SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
+            return formatDateForTextbox(periodFrom);
+        }
+        if (text.contains("periodTo")) {
+            String periodTo = (String) loJSON.getOrDefault("periodTo", SQLUtil.dateFormat(maxDate,SQLUtil.FORMAT_SHORT_DATE));
+            return formatDateForTextbox(periodTo);
+        }
+        if (text.contains("payeeName")) {
+            String payee = (String) loJSON.getOrDefault("payeeName",payeeName);
+//                        poDisbursementController.Master().Payee().getPayeeName());
+            return payee.toUpperCase();
+        }
+        if (text.contains("payeeTin")) {
+            String tin = (String) loJSON.getOrDefault("payeeTin",payeeTin);
+//                        poDisbursementController.Master().Payee().Client().getTaxIdNumber());
+return formatTIN(tin);
+        }
+        if (text.contains("payeeRegAddress")) {
+            String address = (String) loJSON.getOrDefault("payeeRegAddress",payeeAddress);
+//                        poDisbursementController.Master().Payee().ClientAddress().getAddress() + ","
+//                        + poDisbursementController.Master().Payee().ClientAddress().Town().getDescription());
+//                System.out.println("BIR : " + poDisbursementController.Master().Payee().ClientAddress().Town().getDescription());
+return address;
+        }
+        if (text.contains("payeeForeignAddress")) {
+            String faddress = (String) loJSON.getOrDefault("payeeForeignAddress",payeeForeignAddress);
+//                        poDisbursementController.Master().Payee().ClientAddress().getAddress() + ","
+//                        + poDisbursementController.Master().Payee().ClientAddress().Barangay().getBarangayName());
+return faddress;
+        }
+        if (text.contains("payeeZip")) {
+            String zip = (String) loJSON.getOrDefault("payeeZip",payeeZip);
+//                        poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
+return formatZipCode(zip);
+        }
+        // ==========================
+        // PAYOR INFORMATION
+        // ==========================
+        if (text.contains("payorName")) {
+            String payee = (String) loJSON.getOrDefault("payorName",payorName);
+//                        poDisbursementController.Master().Company().getCompanyName());
+            return payee.toUpperCase();
+        }
+        String payorRegAddress = "";
+        String payorZIP = "";
+        String payorTIN = "";
+        switch (company) {
+            case "LGK":
+                payorRegAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
+                payorZIP = "2401";
+                payorTIN = "000-252-794-000";
+                break;
+            case "GMC":
+                payorRegAddress = "PEREZ BLVD.DAGUPAN CITY";
+                payorZIP = "2401";
+                payorTIN = "000-251-793-000";
+                break;
+            case "UEMI":
+                payorRegAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
+                payorZIP = "2401";
+                payorTIN = "000-253-795-000";
+                break;
+            case "MCC":
+                payorRegAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
+                payorZIP = "2401";
+                payorTIN = "000-254-796-000";
+                break;
+            case "Monarch":
+                payorRegAddress = "BRGY. SAN MIGUEL, CALASIAO";
+                payorZIP = "2418";
+                payorTIN = "000-255-797-000";
+                break;
+            default:
+                throw new AssertionError();
+        }
+        if (text.contains("payorRegAddress")) {
+            String address = (String) loJSON.getOrDefault("payorRegAddress", payorRegAddress);
+            return address;
+        }
+        if (text.contains("payorZip")) {
+            String zip = (String) loJSON.getOrDefault("payorZip", payorZIP);
+            return formatZipCode(zip);
+        }
+        if (text.contains("payorTin")) {
+            String zip = (String) loJSON.getOrDefault("payorTin", payorTIN);
+            return formatTIN(payorTIN);
         }
 
         return text;
@@ -383,9 +374,9 @@ public class BIR2307Filler {
         }
 
         if (activeSheet != null) {
-    // ✅ FIX: Cache detail count first
+            // ✅ FIX: Cache detail count first
 //        int detailCount = poDisbursementController.getDetailCount();
-    System.out.println("Detail count = " + detailCount);
+            System.out.println("Detail count = " + detailCount);
 
             for (int lnctr = 0; lnctr < detailCount; lnctr++) {
                 detailAmount = poDisbursementController.Detail(lnctr).getAmount();
@@ -414,17 +405,26 @@ public class BIR2307Filler {
 
                 if (dateStr != null && !dateStr.isEmpty()) {
                     LocalDate date = LocalDate.parse(dateStr);
+
+                    // ✅ Track min/max
+                    if (minDate == null || date.isBefore(minDate)) {
+                        minDate = date;
+                    }
+                    if (maxDate == null || date.isAfter(maxDate)) {
+                        maxDate = date;
+                    }
+
                     int month = date.getMonthValue();
                     int monthOfQuarter = ((month - 1) % 3) + 1;
 
                     switch (monthOfQuarter) {
-                        case 1 :
+                        case 1:
                             ColIndex = 14; // 1st Month
                             break;
-                        case 2 :
+                        case 2:
                             ColIndex = 19; // 2nd Month
                             break;
-                        case 3 :
+                        case 3:
                             ColIndex = 24; // 3rd Month
                             break;
                     }
@@ -442,6 +442,15 @@ public class BIR2307Filler {
                 getOrCreateCell(row, 11).setCellValue(taxCode != null ? taxCode : "");
                 getOrCreateCell(row, ColIndex).setCellValue(detailAmount);
                 getOrCreateCell(row, 34).setCellValue(detailTAXAmount);
+            }
+
+// ✅ After loop, adjust min/max to full months
+            if (minDate != null && maxDate != null) {
+                minDate = minDate.withDayOfMonth(1); // first day of earliest month
+                maxDate = maxDate.withDayOfMonth(maxDate.lengthOfMonth()); // last day of latest month
+
+                System.out.println("Earliest Date: " + minDate);
+                System.out.println("Latest Date  : " + maxDate);
             }
 
             // ✅ Recalculate formulas after loop
