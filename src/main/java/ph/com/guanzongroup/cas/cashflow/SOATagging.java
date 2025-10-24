@@ -2138,7 +2138,7 @@ public class SOATagging extends Transaction {
                         //Populate cache payable
                         paCachePayable.add(CachePayable());
                         paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                        paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo()));
+                        paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo(),Detail(lnCtr).getSourceCode()));
                         paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                         paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
                         
@@ -2173,7 +2173,7 @@ public class SOATagging extends Transaction {
                         //Populate cache payable
                         paCachePayable.add(CachePayable());
                         paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                        paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo()));
+                        paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode()));
                         paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                         paCachePayable.get(paCachePayable.size() - 1).Master().setProcessed(true);
                         
@@ -2234,7 +2234,7 @@ public class SOATagging extends Transaction {
                 case SOATaggingStatic.POReceiving:
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo(), DetailRemove(lnCtr).getSourceCode()));
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     
                     lbIsLinked = getLinkedPayment(DetailRemove(lnCtr).getSourceNo(),DetailRemove(lnCtr).getSourceCode());
@@ -2254,7 +2254,7 @@ public class SOATagging extends Transaction {
                 case SOATaggingStatic.APPaymentAdjustment:
                     paCachePayable.add(CachePayable());
                     paCachePayable.get(paCachePayable.size() - 1).InitTransaction();
-                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo()));
+                    paCachePayable.get(paCachePayable.size() - 1).OpenTransaction(getCachePayable(DetailRemove(lnCtr).getSourceNo(), DetailRemove(lnCtr).getSourceCode()));
                     paCachePayable.get(paCachePayable.size() - 1).UpdateTransaction();
                     
                     paAPAdjustment.add(APPaymentAdjustment());
@@ -2279,12 +2279,13 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
     
-    private String getCachePayable(String fsTransactionNo){
+    private String getCachePayable(String fsSourceNo, String fsSourceCode){
         String lsTransactionNo = "";
         try {
             Model_Cache_Payable_Master object = new CashflowModels(poGRider).Cache_Payable_Master();
             String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(object),
-                    " sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
+                    " sSourceNo = " + SQLUtil.toSQL(fsSourceNo)
+                   + " AND sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
                    + " AND sClientID = " + SQLUtil.toSQL(Master().getClientId())); 
             
             System.out.println("Executing SQL: " + lsSQL);
