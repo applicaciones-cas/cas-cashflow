@@ -61,8 +61,8 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
 
-            poController.setIndustryId(industryId); 
-            poController.setCompanyId(companyId); 
+            poController.setIndustryID(industryId); 
+            poController.setCompanyID(companyId); 
 
             loJSON = poController.initFields();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -107,8 +107,8 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
 
-            poController.setIndustryId(industryId); 
-            poController.setCompanyId(companyId); 
+            poController.setIndustryID(industryId); 
+            poController.setCompanyID(companyId); 
 
             loJSON = poController.loadPayables("");
             if (!"success".equals((String) loJSON.get("result"))) {
