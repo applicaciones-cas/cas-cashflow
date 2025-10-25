@@ -2,6 +2,7 @@
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.script.ScriptException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -40,7 +41,7 @@ public class testDisbursementVoucher {
         poController = new CashflowControllers(instance, null).DisbursementVoucher();
     }
     
-    @Test
+//    @Test
     public void testNewTransaction() {
         String industryId = "02";
         String companyId = "0002";
@@ -91,6 +92,72 @@ public class testDisbursementVoucher {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
     }
+    
+    @Test
+    public void testUpdateTransaction() {
+        String industryId = "02";
+        String companyId = "0002";
+        String supplierId = "C00124000009";
+        try {
+
+            JSONObject loJSON = new JSONObject();
+
+            loJSON = poController.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+
+            loJSON = poController.OpenTransaction("M00125000001");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poController.populateJournal();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poController.populateCheck();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            System.out.println("Company : " + poController.Master().Company().getCompanyName());
+            System.out.println("Payee : " + poController.Master().Payee().getPayeeName());
+            System.out.println("Client : " + poController.Master().Payee().Client().getCompanyName());
+            for(int lnCtr = 0; lnCtr <= poController.getDetailCount() - 1; lnCtr++){
+                System.out.println("Source No : " + poController.Detail(lnCtr).getSourceNo());
+                System.out.println("Source Code : " + poController.Detail(lnCtr).getSourceCode());
+                System.out.println("Particular : " + poController.Detail(lnCtr).getParticularID());
+                System.out.println("Amount : " + poController.Detail(lnCtr).getAmount());
+            }
+            
+            for(int lnCtr = 0; lnCtr <= poController.Journal().getDetailCount() - 1; lnCtr++){
+                System.out.println("Transaction No : " + poController.Journal().Detail(lnCtr).getTransactionNo());
+                System.out.println("Account Code : " + poController.Journal().Detail(lnCtr).getAccountCode());
+                System.out.println("Credit : " + poController.Journal().Detail(lnCtr).getCreditAmount());
+                System.out.println("Debit : " + poController.Journal().Detail(lnCtr).getDebitAmount());
+            }
+            
+            System.out.println("Bank : " + poController.CheckPayments().getModel().getBankID());
+            System.out.println("Bank Account : " + poController.CheckPayments().getModel().getBankAcountID());
+            System.out.println("Bank Account : " + poController.CheckPayments().getModel().getClaimant());
+            
+            loJSON = poController.SaveTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+
+        } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        } 
+    }
+
 
 //    @Test
     public void testLoadPayables() {

@@ -30,7 +30,10 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.TaxCode;
+import org.guanzon.cas.parameter.model.Model_Category;
+import org.guanzon.cas.parameter.model.Model_Inv_Type;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
 import org.guanzon.cas.purchasing.model.Model_POR_Detail;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
@@ -57,6 +60,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
@@ -80,6 +84,8 @@ public class DisbursementVoucher extends Transaction {
     private CheckPayments poCheckPayments;
     private Journal poJournal;
     
+    private List<Model> paMaster;
+    
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
 
@@ -89,6 +95,7 @@ public class DisbursementVoucher extends Transaction {
         poCheckPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poOtherPayments = new CashflowControllers(poGRider, logwrapr).OtherPayments();
         
+        paMaster = new ArrayList<Model>();
         return initialize();
     }
     
@@ -121,9 +128,15 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         try {
+            //General Voucher Number
             getVoucherNo();
-        } catch (SQLException ex) {
-            Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, null, ex);
+            //Populate check by default
+            poJSON = populateCheck();
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        } catch (SQLException | GuanzonException | ScriptException ex) {
+            Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         initFields();
         return poJSON;
@@ -134,11 +147,7 @@ public class DisbursementVoucher extends Transaction {
     }
 
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
-        resetMaster();
-        Detail().clear();
-        resetJournal();
-        resetCheckPayment();
-        resetOtherPayment();
+        resetTransaction();
         return openTransaction(transactionNo);
     }
 
@@ -267,7 +276,8 @@ public class DisbursementVoucher extends Transaction {
         }
 
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                         + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                         + " AND c.sBranchNm LIKE " + SQLUtil.toSQL("%" + psBranch)
                         + " AND d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
@@ -545,6 +555,61 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    public JSONObject loadTransactionList(String supplier, String referenceNo) throws SQLException, GuanzonException {
+        if (supplier == null) {
+            supplier = "";
+        }
+        if (referenceNo == null) {
+            referenceNo = "";
+        }
+
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + supplier)
+                                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier) 
+                                        + " ) ");
+        String lsCondition = "";
+        if (psTranStat != null) {
+            if (this.psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= this.psTranStat.length() - 1; lnCtr++) {
+                    lsCondition = lsCondition + ", " + SQLUtil.toSQL(Character.toString(this.psTranStat.charAt(lnCtr)));
+                }
+                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+            } else {
+                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
+            }
+            lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+        }
+
+        if(psIndustryId == null || "".equals(psIndustryId)){
+            lsSQL = lsSQL + " AND (a.sIndstCdx = '' OR a.sIndstCdx = null) " ;
+        } else {
+            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+
+        lsSQL = lsSQL + " ORDER BY a.dTransact DESC ";
+
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+            if ("success".equals((String) poJSON.get("result"))) {
+                paMaster.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    
     @Override
     public Model_Disbursement_Master Master() { 
         return (Model_Disbursement_Master) poMaster; 
@@ -618,6 +683,14 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
+    }
+    
+    public List<Model_Disbursement_Master> getMasterList() {
+        return (List<Model_Disbursement_Master>) (List<?>) paMaster;
+    }
+
+    public Model_Disbursement_Master getMaster(int masterRow) {
+        return (Model_Disbursement_Master) paMaster.get(masterRow);
     }
 
     /*RESET CACHE ROW SET*/
@@ -819,11 +892,11 @@ public class DisbursementVoucher extends Transaction {
                     //Save Check Payment
                     if(poCheckPayments != null){
                         if(poCheckPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
-                            poCheckPayments.setWithParentClass(true);
                             poCheckPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                            poCheckPayments.setWithParentClass(true);
+                            poCheckPayments.setWithUI(false);
                             poJSON = poCheckPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
-                                poGRider.rollbackTrans();
                                 return poJSON;
                             }
                         }
@@ -838,7 +911,6 @@ public class DisbursementVoucher extends Transaction {
                             poOtherPayments.getModel().setModifiedDate(poGRider.getServerDate());
                             poJSON = poOtherPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
-                                poGRider.rollbackTrans();
                                 return poJSON;
                             }
                         }
@@ -920,6 +992,33 @@ public class DisbursementVoucher extends Transaction {
                     poGRider.rollbackTrans();
                     return poJSON;
                 }
+                
+                switch(Master().getDisbursementType()){
+                    case DisbursementStatic.DisbursementType.CHECK:
+                        //Save Check Payment
+                        if(poCheckPayments != null){
+                            poCheckPayments.setWithParentClass(true);
+                            poCheckPayments.setWithUI(false);
+                            poJSON = poCheckPayments.deactivateRecord();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                        break;
+                    case DisbursementStatic.DisbursementType.WIRED:
+                    case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                        //Save Other Payment
+                        if(poOtherPayments != null){
+                            poOtherPayments.setWithParentClass(true);
+                            poOtherPayments.setWithUI(false);
+                            poJSON = poOtherPayments.deactivateRecord();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                        break;
+                }
+                
                 break;
             case DisbursementStatic.CANCELLED:
                 //Cancel Journal
@@ -934,6 +1033,39 @@ public class DisbursementVoucher extends Transaction {
                 
             case DisbursementStatic.DISAPPROVED:
             case DisbursementStatic.RETURNED:
+                break;
+        }
+        
+        //Update record status of Check Payment or Other Payment
+        switch(fsStatus){
+            case DisbursementStatic.VOID:
+            case DisbursementStatic.CANCELLED:
+            case DisbursementStatic.DISAPPROVED:
+                switch(Master().getDisbursementType()){
+                    case DisbursementStatic.DisbursementType.CHECK:
+                        //Save Check Payment
+                        if(poCheckPayments != null){
+                            poCheckPayments.setWithParentClass(true);
+                            poCheckPayments.setWithUI(false);
+                            poJSON = poCheckPayments.deactivateRecord();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                        break;
+                    case DisbursementStatic.DisbursementType.WIRED:
+                    case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                        //Save Other Payment
+                        if(poOtherPayments != null){
+                            poOtherPayments.setWithParentClass(true);
+                            poOtherPayments.setWithUI(false);
+                            poJSON = poOtherPayments.deactivateRecord();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                        break;
+                }
                 break;
         }
     
@@ -1168,6 +1300,7 @@ public class DisbursementVoucher extends Transaction {
         double ldblAmount = 0.000;
         double ldblBalance = loCachePayable.Master().getNetTotal() - loCachePayable.Master().getAmountPaid();
         boolean lbExist = false;
+        String lsParticular = "";
 
         //Validate transaction to be add in DV Detail
         poJSON = validateDetail(ldblBalance, loPayee.getModel().getPayeeID(), loCachePayable.Master().getClientId());
@@ -1175,14 +1308,29 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("row", 0);
             return poJSON;
         }
-        
         double ldblSOAAmount = 0.0000;
         if(fbWithSoa){
             ldblSOAAmount = foSOADetail.getAppliedAmount().doubleValue();
         } 
 
+        Model_POR_Master loPOR = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
         //Add Cache Payable Detail to DV Detail
         for(int lnCtr = 0; lnCtr <= loCachePayable.getDetailCount() - 1;lnCtr++){
+            lsParticular = generateParticular(loCachePayable.Detail(lnCtr).getTransactionType(),null);
+            switch(loCachePayable.Master().getSourceCode()){
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    poJSON = loPOR.openRecord(loCachePayable.Master().getSourceNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("row", 0);
+                        return poJSON;
+                    }
+                    //If transaction type is not exist in category directly check the particular based on transaction type
+                    if(withCategory(loPOR.getCategoryCode(), loCachePayable.Detail(lnCtr).getTransactionType())){
+                        lsParticular = generateParticular(loCachePayable.Detail(lnCtr).getTransactionType(),loPOR.getCategoryCode());
+                    } 
+                    break;
+            }
+            
             //If with SOA and the SOA Amount is 0.0000 break the loop 
             //Do not insert the remaining row of transaction
             if(fbWithSoa){
@@ -1191,7 +1339,7 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
             
-            ldblBalance = loCachePayable.Detail(lnCtr).getPayables()- loCachePayable.Detail(lnCtr).getAmountPaid();
+            ldblBalance = loCachePayable.Detail(lnCtr).getPayables() - loCachePayable.Detail(lnCtr).getAmountPaid();
             //skip detail that is already paid
             if(ldblBalance <= 0.0000){
                 continue;
@@ -1201,7 +1349,7 @@ public class DisbursementVoucher extends Transaction {
             for (lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (loCachePayable.Master().getSourceNo().equals(Detail(lnRow).getSourceNo())
                     && loCachePayable.Master().getSourceCode().equals(Detail(lnRow).getSourceCode())
-                    && loCachePayable.Detail(lnCtr).getTransactionType().equals(Detail(lnRow).getParticularID())) {
+                    && lsParticular.equals(Detail(lnRow).getParticularID())) {
                     ldblAmount = ldblAmount + ldblBalance;
                     lbExist = true; //If already exist break the loop to current row and it will be the basis for setting of value
                     break;
@@ -1229,7 +1377,7 @@ public class DisbursementVoucher extends Transaction {
 //                    Detail(lnRow).isReverse(true);
             Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
             Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
-            Detail(lnRow).setParticularID(loCachePayable.Detail(lnRow).getTransactionType());
+            Detail(lnRow).setParticularID(lsParticular); //loCachePayable.Detail(lnRow).getTransactionType()
             Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
             Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
             
@@ -1245,6 +1393,8 @@ public class DisbursementVoucher extends Transaction {
             }
             
             AddDetail();
+            //clear amount
+            ldblAmount = 0000;
         }
         
         //TODO
@@ -1258,7 +1408,7 @@ public class DisbursementVoucher extends Transaction {
             
             Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
             Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
-            Detail(lnRow).setParticularID(getInvTypeCode("freight")); 
+            Detail(lnRow).setParticularID(getParticularId("freight charge")); //hard code frieght charge no connection for cache payable detail to particular
             Detail(lnRow).setAmount(loCachePayable.Master().getFreight()); //Only set the amount based on the balance of selected transaction
             Detail(lnRow).setAmountApplied(loCachePayable.Master().getFreight()); //Set transaction balance as default applied amount
             AddDetail();
@@ -1404,6 +1554,129 @@ public class DisbursementVoucher extends Transaction {
             
         return  "";
     }
+    /**
+     * get Inventory Type Code value
+     * @param fsValue description
+     * @return 
+     */
+    private boolean withCategory(String fsCategory, String fsInvTypeCode){
+        try {
+            Model_Category loCategory = new ParamModels(poGRider).Category();
+            String lsSQL = MiscUtil.makeSelect(loCategory);
+            lsSQL = MiscUtil.addCondition(lsSQL, " sInvTypCd = " + SQLUtil.toSQL(fsInvTypeCode)
+                                                    + " AND sCategrCd = " + SQLUtil.toSQL(fsCategory));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return true;
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+                return false;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+            
+        return  false;
+    }
+    /**
+     * Get Particular based on inv type code: No connection for cache payable detail to particular
+     * @param fsValue description
+     * @return 
+     */
+    private String generateParticular(String fsInvTypeCode, String fsCategory){
+        String lsDescript = "";
+        try {
+            String lsSQL = getInvTypeCategorySQL();
+            lsSQL = MiscUtil.addCondition(lsSQL, " a.sInvTypCd = " + SQLUtil.toSQL(fsInvTypeCode));
+            if(fsCategory != null && !"".equals(fsCategory)){
+                lsSQL =  lsSQL + " AND b.sCategrCd = " + SQLUtil.toSQL(fsCategory);
+            }
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0 && loRS.next()) {
+                    //PURCHASING
+                    switch(loRS.getString("sInvTypex").toLowerCase().replace(" ", "")){
+                        case "merchandiserelatedinventory":
+                            switch(loRS.getString("sCategrCd")){
+                                case "0001": //CELLPHONE
+                                    lsDescript = "Purchases - Mobile Phone";
+                                    break;
+                                case "0002": //APPLIANCES
+                                    lsDescript = "Purchases - Appliances";
+                                    break;
+                                case "0003": //MC UNIT
+                                    lsDescript = "Purchases - Motorcycle";
+                                    break;
+                                case "0004": //MC SPAREPARTS
+                                    lsDescript = "Purchases - Spareparts";
+                                    break;
+                                case "0005": //CAR UNIT
+                                    lsDescript = "Purchases - Car";
+                                    break;
+                                case "0006": //CAR SPAREPARTS
+                                    lsDescript = "Purchases - Spareparts";
+                                    break;
+                                case "0007": //GENERAL
+                                    lsDescript = "Purchases - General";
+                                    break;
+                                case "0008": //LP - Food
+                                case "0009": //Monarch - Food
+                                    lsDescript = "Purchases - LP";
+                                    break;
+                            }
+                        break;
+                        default:
+                            lsDescript = loRS.getString("sInvTypex").toLowerCase();
+                        break;
+                    }
+                    lsDescript = getParticularId(lsDescript);
+                    
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+            
+        return  lsDescript;
+    }
+    
+    /**
+     * get Inventory Type Code value
+     * @param fsValue description
+     * @return 
+     */
+    private String getParticularId(String fsValue){
+        try {
+            String lsSQL = "SELECT sPrtclrID, sDescript FROM particular ";
+            lsSQL = MiscUtil.addCondition(lsSQL, " lower(sDescript) LIKE " + SQLUtil.toSQL("%"+fsValue+"%"));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return  loRS.getString("sPrtclrID");
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+            
+        return  "";
+    }
     
     /**
      * Validate insertion of detail
@@ -1413,33 +1686,50 @@ public class DisbursementVoucher extends Transaction {
      * @return 
      */
     private JSONObject validateDetail(double fdblBalance, String fsPayeeId, String fsClientId){
-        if(fdblBalance <= 0.0000){
-            poJSON.put("result", "error");
-            poJSON.put("message", "No remaining balance for the selected transaction.\n\nContact System Administrator to address the issue.");
-            poJSON.put("row", 0);
-            return poJSON;
-        }
+        try {
+    //        if(Master().getIndustryID() == null || "".equals(Master().getIndustryID())){
+    //            Master().setIndustryID(industryId);
+    //        } else {
+    //            if (!Master().getIndustryID().equals(industryId)) {
+    //                poJSON.put("result", "error");
+    //                poJSON.put("message", "Selected transaction is not equal to .");
+    //                poJSON.put("row", 0);
+    //                return poJSON;
+    //            }
+    //        }
 
-        if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
-            Master().setPayeeID(fsPayeeId);
-        } else {
-            if (!Master().getPayeeID().equals(fsPayeeId)) {
+            if(fdblBalance <= 0.0000){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+                poJSON.put("message", "No remaining balance for the selected transaction.\n\nContact System Administrator to address the issue.");
                 poJSON.put("row", 0);
                 return poJSON;
             }
-        }
 
-        if(Master().getSupplierClientID() == null || "".equals(Master().getSupplierClientID())){
-            Master().setSupplierClientID(fsClientId);
-        } else {
-            if (!Master().getSupplierClientID().equals(fsClientId)) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
-                poJSON.put("row", 0);
-                return poJSON;
+            if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
+                    Master().setPayeeID(fsPayeeId);
+                    setSearchPayee(Master().Payee().getPayeeName());
+            } else {
+                if (!Master().getPayeeID().equals(fsPayeeId)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+                    poJSON.put("row", 0);
+                    return poJSON;
+                }
             }
+
+            if(Master().getSupplierClientID() == null || "".equals(Master().getSupplierClientID())){
+                Master().setSupplierClientID(fsClientId);
+                setSearchClient(Master().Payee().Client().getCompanyName());
+            } else {
+                if (!Master().getSupplierClientID().equals(fsClientId)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
+                    poJSON.put("row", 0);
+                    return poJSON;
+                }
+            }
+        } catch (GuanzonException | SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         
         poJSON.put("result", "success");
@@ -1517,7 +1807,7 @@ public class DisbursementVoucher extends Transaction {
                 jsondetail.put("Disbursement_Master", jsonmaster);
                 jsondetail.put("Disbursement_Detail", jsondetails);
 
-                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryID(), "");
+                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,"", "");
                 tbj.setGRiderCAS(poGRider);
                 tbj.setData(jsondetail);
                 jsonmaster = tbj.processRequest();
@@ -1639,6 +1929,14 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
+                
+                //Set initial value for check payment
+                poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
+                poCheckPayments.getModel().setBranchCode(Master().getBranchCode());
+                poCheckPayments.getModel().setIndustryID(Master().getIndustryID());
+                poCheckPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
+                poCheckPayments.getModel().setSourceCode(getSourceCode());
+                
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
@@ -1865,7 +2163,7 @@ public class DisbursementVoucher extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " +  SQLUtil.toSQL(psDefaultValue)
-                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+//                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
@@ -1889,7 +2187,7 @@ public class DisbursementVoucher extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " +  SQLUtil.toSQL(psDefaultValue)
-                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+//                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
@@ -1913,25 +2211,36 @@ public class DisbursementVoucher extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " +  SQLUtil.toSQL(psDefaultValue)
-                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+//                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
                 + "GROUP BY a.sTransNox ";
     }
     
+    private String getInvTypeCategorySQL(){
+        return     " SELECT "                                            
+            + "   a.sInvTypCd "                                     
+            + " , b.sCategrCd "                                     
+            + " , a.sDescript AS sInvTypex "                        
+            + " , b.sDescript AS sCategory "                        
+            + " FROM inv_type a "                                   
+            + " LEFT JOIN category b ON b.sInvTypCd = a.sInvTypCd ";
+    }
+    
     @Override
     public void initSQL() {
         SQL_BROWSE = "SELECT "
                 + " a.sTransNox,"
+                + " a.sVouchrNo,"
                 + " a.dTransact,"
                 + " c.sBranchNm,"
                 + " d.sPayeeNme,"
                 + " e.sCompnyNm AS supplier,"
                 + " f.sDescript,"
                 + " a.nNetTotal, "
-                + " a.cDisbrsTp "
-                + " a.nAmtAppld "
+                + " a.cDisbrsTp, "
+                + " a.nNetTotal "
                 + " FROM Disbursement_Master a "
                 + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
