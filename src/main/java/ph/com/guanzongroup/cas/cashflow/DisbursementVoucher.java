@@ -129,8 +129,8 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         try {
-            //General Voucher Number
-            getVoucherNo();
+            //Generate Voucher Number
+            Master().setVoucherNo(getVoucherNo());
             //Populate check by default
             poJSON = populateCheck();
             if ("error".equals((String) poJSON.get("result"))) {
@@ -998,6 +998,7 @@ public class DisbursementVoucher extends Transaction {
      */
     public JSONObject loadTransactionList(String fsValue1, String fsValue2, String fsValue3, boolean isUpdateTransactionStatus) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
+        paMaster = new ArrayList<>();
         if (fsValue1 == null) { fsValue1 = ""; }
         if (fsValue2 == null) { fsValue2 = ""; }
         if (fsValue3 == null) { fsValue3 = ""; }
@@ -1219,6 +1220,12 @@ public class DisbursementVoucher extends Transaction {
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
+        //Re-set the transaction no and voucher no
+        if(getEditMode() == EditMode.ADDNEW){
+            Master().setTransactionNo(Master().getNextCode());
+            Master().setVoucherNo(getVoucherNo());
+        }
+        
         //Seek Approval
 //        poJSON = callApproval();
 //        if (!"success".equals((String) poJSON.get("result"))) {
@@ -1327,8 +1334,9 @@ public class DisbursementVoucher extends Transaction {
             //Save Journal
             if(poJournal != null){
                 if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
-                    poJournal.setWithParent(true);
+                    poJournal.Master().setSourceNo(Master().getTransactionNo());
                     poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                    poJournal.setWithParent(true);
                     poJSON = poJournal.SaveTransaction();
                     if ("error".equals((String) poJSON.get("result"))) {
                         poGRider.rollbackTrans();
@@ -1342,6 +1350,8 @@ public class DisbursementVoucher extends Transaction {
                     //Save Check Payment
                     if(poCheckPayments != null){
                         if(poCheckPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
+                            poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
+                            poCheckPayments.getModel().setTransactionStatus(RecordStatus.ACTIVE);
                             poCheckPayments.getModel().setModifiedDate(poGRider.getServerDate());
                             poCheckPayments.setWithParentClass(true);
                             poCheckPayments.setWithUI(false);
@@ -1357,8 +1367,10 @@ public class DisbursementVoucher extends Transaction {
                     //Save Other Payment
                     if(poOtherPayments != null){
                         if(poOtherPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
-                            poOtherPayments.setWithParentClass(true);
+                            poOtherPayments.getModel().setSourceNo(Master().getTransactionNo());
+                            poOtherPayments.getModel().setTransactionStatus(RecordStatus.ACTIVE);
                             poOtherPayments.getModel().setModifiedDate(poGRider.getServerDate());
+                            poOtherPayments.setWithParentClass(true);
                             poJSON = poOtherPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
@@ -2356,14 +2368,15 @@ public class DisbursementVoucher extends Transaction {
                 poCheckPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                 poCheckPayments.getModel().setSourceCode(getSourceCode());
                 
-            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
+            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
-            } else {
-                poJSON.put("result", "error");
-                poJSON.put("message", "No record to load");
-                return poJSON;
-            }
+            } 
+//            else {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            }
         
         }
         
@@ -2449,14 +2462,15 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
+            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
-            } else {
-                poJSON.put("result", "error");
-                poJSON.put("message", "No record to load");
-                return poJSON;
-            }
+            } 
+//            else {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            }
         
         }
         
