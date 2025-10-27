@@ -108,19 +108,13 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
 
-            loJSON = poController.OpenTransaction("M00125000001");
+            loJSON = poController.OpenTransaction("M00125000004");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            
-            loJSON = poController.populateJournal();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            
-            loJSON = poController.populateCheck();
+
+            loJSON = poController.UpdateTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -129,6 +123,7 @@ public class testDisbursementVoucher {
             System.out.println("Company : " + poController.Master().Company().getCompanyName());
             System.out.println("Payee : " + poController.Master().Payee().getPayeeName());
             System.out.println("Client : " + poController.Master().Payee().Client().getCompanyName());
+            System.out.println("-----------------------------------------------------------------------");
             for(int lnCtr = 0; lnCtr <= poController.getDetailCount() - 1; lnCtr++){
                 System.out.println("Source No : " + poController.Detail(lnCtr).getSourceNo());
                 System.out.println("Source Code : " + poController.Detail(lnCtr).getSourceCode());
@@ -146,7 +141,7 @@ public class testDisbursementVoucher {
             System.out.println("Bank : " + poController.CheckPayments().getModel().getBankID());
             System.out.println("Bank Account : " + poController.CheckPayments().getModel().getBankAcountID());
             System.out.println("Bank Account : " + poController.CheckPayments().getModel().getClaimant());
-            
+            poController.Master().setRemarks("Test");
             loJSON = poController.SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -195,6 +190,43 @@ public class testDisbursementVoucher {
                     System.out.println(obj.get("sTransNox") != null ? obj.get("sTransNox").toString() : "");
                 }
             }
+        } catch (GuanzonException | SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+    }
+    
+//    @Test
+    public void testLoadTransactionList() {
+        String industryId = "02";
+        String companyId = "0002";
+        String supplierId = "C00124000009";
+        try {
+
+            JSONObject loJSON = new JSONObject();
+
+            loJSON = poController.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+
+            poController.setIndustryID("06"); 
+            poController.setCompanyID(companyId); 
+            poController.setTransactionStatus(DisbursementStatic.OPEN+DisbursementStatic.RETURNED);
+            loJSON = poController.loadTransactionList("","", "", false);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            for(int lnCtr = 0; lnCtr <= poController.getMasterList().size() - 1; lnCtr++){
+                System.out.println("getPayeeName : " + poController.getMaster(lnCtr).Payee().getPayeeName());
+                System.out.println("getVoucherNo : " + poController.getMaster(lnCtr).getVoucherNo());
+                System.out.println("getTransactionNo : " + poController.getMaster(lnCtr).getTransactionNo());
+                System.out.println("getTransactionDate : " + poController.getMaster(lnCtr).getTransactionDate());
+                System.out.println("getTransactionTotal : " + poController.getMaster(lnCtr).getTransactionTotal());
+            }
+            
         } catch (GuanzonException | SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }

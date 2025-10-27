@@ -1316,7 +1316,20 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
-
+        Master().setModifyingId(poGRider.getUserID());
+        Master().setModifiedDate(poGRider.getServerDate());
+        
+        System.out.println("--------------------------WILL SAVE---------------------------------------------");
+        for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+            System.out.println("COUNTER : " + lnCtr);
+            System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
+            System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
+            System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+            System.out.println("Amount : " + Detail(lnCtr).getAmount());
+            System.out.println("-----------------------------------------------------------------------");
+        }
+        
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -1331,10 +1344,22 @@ public class DisbursementVoucher extends Transaction {
     @Override
     public JSONObject saveOthers() {
         try {
+            
+            System.out.println("--------------------------SAVE OTHERS---------------------------------------------");
+            for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+                System.out.println("COUNTER : " + lnCtr);
+                System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
+                System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
+                System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+                System.out.println("Amount : " + Detail(lnCtr).getAmount());
+                System.out.println("-----------------------------------------------------------------------");
+            }
+            
             //Save Journal
             if(poJournal != null){
                 if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
                     poJournal.Master().setSourceNo(Master().getTransactionNo());
+                    poJournal.Master().setModifyingId(poGRider.getUserID());
                     poJournal.Master().setModifiedDate(poGRider.getServerDate());
                     poJournal.setWithParent(true);
                     poJSON = poJournal.SaveTransaction();
@@ -1352,6 +1377,7 @@ public class DisbursementVoucher extends Transaction {
                         if(poCheckPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
                             poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
                             poCheckPayments.getModel().setTransactionStatus(RecordStatus.ACTIVE);
+                            poCheckPayments.getModel().setModifyingId(poGRider.getUserID());
                             poCheckPayments.getModel().setModifiedDate(poGRider.getServerDate());
                             poCheckPayments.setWithParentClass(true);
                             poCheckPayments.setWithUI(false);
@@ -1382,11 +1408,9 @@ public class DisbursementVoucher extends Transaction {
             
             
             //Update other linked transaction in DV Detail
-            if(Master().getTransactionStatus().equals(DisbursementStatic.AUTHORIZED)){
-                poJSON = updateLinkedTransactions(DisbursementStatic.AUTHORIZED);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
+            poJSON = updateLinkedTransactions(Master().getTransactionStatus());
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
@@ -1417,6 +1441,7 @@ public class DisbursementVoucher extends Transaction {
         loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
         poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
         
@@ -2020,7 +2045,7 @@ public class DisbursementVoucher extends Transaction {
      * @param fsValue description
      * @return 
      */
-    private String generateParticular(String fsInvTypeCode, String fsCategory){
+    public String generateParticular(String fsInvTypeCode, String fsCategory){
         String lsDescript = "";
         try {
             String lsSQL = getInvTypeCategorySQL();
@@ -2088,7 +2113,7 @@ public class DisbursementVoucher extends Transaction {
      */
     private String getParticularId(String fsValue){
         try {
-            String lsSQL = "SELECT sPrtclrID, sDescript FROM particular ";
+            String lsSQL = "SELECT sPrtclrID, sDescript, sTranType FROM particular ";
             lsSQL = MiscUtil.addCondition(lsSQL, " lower(sDescript) LIKE " + SQLUtil.toSQL("%"+fsValue+"%"));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
