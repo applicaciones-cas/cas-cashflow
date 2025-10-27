@@ -226,7 +226,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
             }
         } 
         
-        //Auto re-compute amount paid to details
+        //Auto destribute amount paid to details with the same transacton type / particular 
         for (int lnCtr = 0; lnCtr <= laDetail.size() - 1; lnCtr++) {
             if(isAdd){ //Apply amount paid if payment was release
                 ldblDetailBalance = laDetail.get(lnCtr).getAmount() - laDetail.get(lnCtr).getAmountPaid();
@@ -448,7 +448,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
             }
         } 
         
-        //Auto re-compute amount paid to details
+        //Auto destribute amount paid to details with the same transacton type / particular 
         for (int lnCtr = 0; lnCtr <= laDetail.size() - 1; lnCtr++) {
             System.out.println("Retrieve : " + laDetail.get(lnCtr).getTransactionType());
             if(isAdd){ //Apply amount paid if payment was release
@@ -684,7 +684,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                         
                     }
 
-                    //Auto re-compute amount paid to details
+                    //Auto destribute amount paid to details with the same transacton type / particular 
                     for (int lnRow = 0; lnRow <= laDetail.size() - 1; lnRow++) {
                         if(isAdd){ //Apply amount paid if payment was release
                             ldblDetailBalance = laDetail.get(lnRow).getAppliedAmount().doubleValue() - laDetail.get(lnRow).getAmountPaid().doubleValue();
