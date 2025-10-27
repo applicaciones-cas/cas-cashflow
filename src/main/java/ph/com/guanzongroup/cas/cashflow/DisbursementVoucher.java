@@ -986,19 +986,36 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    public JSONObject loadTransactionList(String supplier, String referenceNo) throws SQLException, GuanzonException {
-        if (supplier == null) {
-            supplier = "";
-        }
-        if (referenceNo == null) {
-            referenceNo = "";
-        }
-
+    /**
+     * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
+     * @param fsValue1 if isUpdateTransactionStatus is false pass the supplier else bank
+     * @param fsValue2 if isUpdateTransactionStatus is false pass the reference no else bankAccount
+     * @param fsValue3 if isUpdateTransactionStatus is false pass empty string else check no
+     * @param isUpdateTransactionStatus set TRUE if retrieval called at certification, check authorization and check update status else set FALSE for verification retrieval
+     * @return JSON
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
+    public JSONObject loadTransactionList(String fsValue1, String fsValue2, String fsValue3, boolean isUpdateTransactionStatus) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if (fsValue1 == null) { fsValue1 = ""; }
+        if (fsValue2 == null) { fsValue2 = ""; }
+        if (fsValue3 == null) { fsValue3 = ""; }
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
-                                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + supplier)
-                                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier) 
-                                        + " ) ");
+        //set default retrieval for supplier / reference no
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                    " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
+                    + " ) ");
+        //if method was called in certification/checka auhorization/check update change the condition into bank and bank account and check no
+        if(isUpdateTransactionStatus){
+            lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                    " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " AND g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsValue2))
+                    + ( fsValue3.isEmpty() ? "" : " AND g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsValue3));
+        }
+        
         String lsCondition = "";
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
@@ -1017,9 +1034,11 @@ public class DisbursementVoucher extends Transaction {
         } else {
             lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
         }
-
-        lsSQL = lsSQL + " ORDER BY a.dTransact DESC ";
-
+        if(isUpdateTransactionStatus){
+            lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+        } else {
+            lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact DESC ";
+        }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
