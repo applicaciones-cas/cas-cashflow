@@ -80,6 +80,7 @@ public class DisbursementVoucher extends Transaction {
     private String psPayee = "";
     private String psParticular = "";
     private String psDefaultValue = "0.00";
+    private boolean pbIsUpdateAmountPaid = false;
     
     private OtherPayments poOtherPayments;
     private CheckPayments poCheckPayments;
@@ -831,16 +832,25 @@ public class DisbursementVoucher extends Transaction {
         if(Banks == null || "".equals(Banks)){
             poJSON = object.searchRecord(value, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
-                CheckPayments().getModel().setBankID(object.getModel().getBankId());
-                CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-
+                if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
+                    CheckPayments().getModel().setBankID(object.getModel().getBankId());
+                    CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                } else {
+                    OtherPayments().getModel().setBankID(object.getModel().getBankId());
+                    OtherPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                }
                 Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
             }
         } else {
             poJSON = object.searchRecordbyBanks(value, Banks, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
-                CheckPayments().getModel().setBankID(object.getModel().getBankId());
-                CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
+                    CheckPayments().getModel().setBankID(object.getModel().getBankId());
+                    CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                } else {
+                    OtherPayments().getModel().setBankID(object.getModel().getBankId());
+                    OtherPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                }
 
                 Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
             }
@@ -855,6 +865,11 @@ public class DisbursementVoucher extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankID(object.getModel().getBankID());
+            if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
+                CheckPayments().getModel().setBankID(object.getModel().getBankID());
+            } else {
+                OtherPayments().getModel().setBankID(object.getModel().getBankID());
+            }
         }
 
         return poJSON;
@@ -1316,6 +1331,7 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
+        
         Master().setModifyingId(poGRider.getUserID());
         Master().setModifiedDate(poGRider.getServerDate());
         
@@ -1328,7 +1344,6 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("Amount : " + Detail(lnCtr).getAmount());
             System.out.println("-----------------------------------------------------------------------");
         }
-        
         
         poJSON.put("result", "success");
         return poJSON;
@@ -1344,7 +1359,6 @@ public class DisbursementVoucher extends Transaction {
     @Override
     public JSONObject saveOthers() {
         try {
-            
             System.out.println("--------------------------SAVE OTHERS---------------------------------------------");
             for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
                 System.out.println("COUNTER : " + lnCtr);
@@ -1425,6 +1439,10 @@ public class DisbursementVoucher extends Transaction {
         System.out.println("Transaction saved successfully.");
     }
     
+    public void setUpdateAmountPaid(boolean fdblAmountPaid){
+        pbIsUpdateAmountPaid = fdblAmountPaid;
+    }
+    
     /**
      * Update linked transaction in DV Detail
      * @param fsStatus
@@ -1439,6 +1457,7 @@ public class DisbursementVoucher extends Transaction {
         //Call Class for updating of linked transactions in DV Details
         Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
         loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
+        loDVExtend.setUpdateAmountPaid(pbIsUpdateAmountPaid);
         poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
@@ -1717,13 +1736,16 @@ public class DisbursementVoucher extends Transaction {
                     ldblSOAAmount = 0.0000;
                 }
                 
-                Detail(lnRow).setDetailSource(foSOADetail.getTransactionNo());
+                Detail(lnRow).setDetailSource(loPaymentRequest.Master().getTransactionNo());
                 Detail(lnRow).setDetailNo(foSOADetail.getEntryNo().intValue());
+                Detail(lnRow).setSourceNo(foSOADetail.getTransactionNo());
+                Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
+            } else {
+                Detail(lnRow).setSourceNo(loPaymentRequest.Master().getTransactionNo());
+                Detail(lnRow).setSourceCode(loPaymentRequest.getSourceCode());
             }
 
 //                    Detail(lnRow).isReverse(true);
-            Detail(lnRow).setSourceNo(loPaymentRequest.Master().getTransactionNo());
-            Detail(lnRow).setSourceCode(loPaymentRequest.getSourceCode());
             Detail(lnRow).setParticularID(loPaymentRequest.Detail(lnCtr).getParticularID());
             Detail(lnRow).setAmount(ldblAmount);
             Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
@@ -1826,13 +1848,16 @@ public class DisbursementVoucher extends Transaction {
                     ldblSOAAmount = 0.0000;
                 }
                 
-                Detail(lnRow).setDetailSource(foSOADetail.getTransactionNo());
+                Detail(lnRow).setDetailSource(loCachePayable.Master().getSourceNo());
                 Detail(lnRow).setDetailNo(foSOADetail.getEntryNo().intValue());
+                Detail(lnRow).setSourceNo(foSOADetail.getTransactionNo());
+                Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
+            } else {
+                Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
+                Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
             }
 
 //                    Detail(lnRow).isReverse(true);
-            Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
-            Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
             Detail(lnRow).setParticularID(lsParticular); //loCachePayable.Detail(lnRow).getTransactionType()
             Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
             Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
@@ -2571,14 +2596,31 @@ public class DisbursementVoucher extends Transaction {
             }
 
             int lnctr = 0;
+            String lsTransactionType = "";
             JSONArray dataArray = new JSONArray();
             while (loRS.next()) {
+                switch(loRS.getString("TransactionType")){
+                    case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                        lsTransactionType = "SOA";
+                        break;
+                    case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                        lsTransactionType = "PRF";
+                        break;
+                    case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                        lsTransactionType = "AP Adjustment";
+                        break;
+                    case DisbursementStatic.SourceCode.PO_RECEIVING:
+                        lsTransactionType = "PO Receiving";
+                        break;
+                }
+                
                 JSONObject record = new JSONObject();
                 record.put("sTransNox", loRS.getString("sTransNox"));
                 record.put("sBranchNme", loRS.getString("Branch"));
                 record.put("dTransact", loRS.getDate("dTransact"));
                 record.put("Balance", loRS.getDouble("Balance"));
-                record.put("TransactionType", loRS.getString("TransactionType"));
+                record.put("TransactionType", lsTransactionType);
+                record.put("PayableType", loRS.getString("PayableType"));
                 record.put("Payee", loRS.getString("Payee"));
                 record.put("Reference", loRS.getString("Reference"));
                 dataArray.add(record);
@@ -2611,7 +2653,8 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox, "
                 + "a.dTransact, "
                 + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
-                + SQLUtil.toSQL(DisbursementStatic.SourceCode.CASH_PAYABLE) +" AS TransactionType, "
+                + SQLUtil.toSQL(DisbursementStatic.SourceCode.CASH_PAYABLE) +" AS PayableType, "
+                + "a.sSourceCd AS TransactionType, "
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
                 + "a.sReferNox AS Reference "
@@ -2623,6 +2666,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " +  SQLUtil.toSQL(psDefaultValue)
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
+                + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
                 + "GROUP BY a.sTransNox ";
@@ -2635,6 +2679,7 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox, "
                 + "a.dTransact, "
                 + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST) +" AS PayableType, "
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST) +" AS TransactionType, "
                 + SQLUtil.toSQL("Payment_Request_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
@@ -2646,6 +2691,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > " +  SQLUtil.toSQL(psDefaultValue)
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+                + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
@@ -2659,6 +2705,7 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox, "
                 + "a.dTransact, "
                 + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE) +" AS PayableType, "
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE) +" AS TransactionType, "
                 + SQLUtil.toSQL("AP_Payment_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
