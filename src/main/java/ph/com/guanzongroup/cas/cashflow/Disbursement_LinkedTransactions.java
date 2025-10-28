@@ -60,6 +60,10 @@ public class Disbursement_LinkedTransactions extends Transaction {
         logwrapr = logWrapper;
     }
     
+    public void setUpdateAmountPaid(boolean fdblAmountPaid){
+        pbIsUpdateAmountPaid = fdblAmountPaid;
+    }
+    
     @Override
     public Model_Disbursement_Master Master() { 
         return (Model_Disbursement_Master) poController.Master(); 
@@ -94,13 +98,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
 //            case DisbursementStatic.OPEN:
 //            case DisbursementStatic.VERIFIED:
 //            case DisbursementStatic.CERTIFIED:
-            case DisbursementStatic.AUTHORIZED:
-                pbIsUpdateAmountPaid = true;
-                break;
+//            case DisbursementStatic.AUTHORIZED:
             case DisbursementStatic.DISAPPROVED:
             case DisbursementStatic.CANCELLED:
-                pbIsUpdateAmountPaid = true;
-                return false;
             case DisbursementStatic.RETURNED:
             case DisbursementStatic.VOID:
             return false;
