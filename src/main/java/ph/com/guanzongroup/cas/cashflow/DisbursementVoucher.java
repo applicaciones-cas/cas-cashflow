@@ -1001,6 +1001,10 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    public Double getDetailNetTotal(int row){
+        return Detail(row).getAmount() - Detail(row).getTaxAmount();
+    }
+    
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
      * @param fsValue1 if isUpdateTransactionStatus is false pass the supplier else bank
@@ -1908,6 +1912,13 @@ public class DisbursementVoucher extends Transaction {
      * @throws GuanzonException 
      */
     private JSONObject getPOReceivingVAT(int row) throws SQLException, GuanzonException{
+        Double ldblDetVatatableSales = 0.0000;
+        Double ldblDetVatatableRate = 0.0000;
+        Double ldblDetVatAmount = 0.0000;
+        Double ldblDetVatExemption = 0.0000;
+        Double ldblDetZeroVat = 1.12;
+        Double ldblDetTotal = 0.0000;
+        Double ldblVatAmount = 0.0000;
         Model_POR_Master loMaster = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
         Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
         poJSON = loMaster.openRecord(Detail(row).getSourceNo());
@@ -1915,16 +1926,34 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("row", 0);
             return poJSON;
         }
+        
         for (int lnCtr = 0; lnCtr <= loMaster.getEntryNo() - 1; lnCtr++) {
             poJSON = loDetail.openRecord(Detail(row).getSourceNo(), Integer.valueOf(lnCtr + 1));
             if (!"success".equals(this.poJSON.get("result"))) {
               return poJSON;
             } 
             
-            if(loDetail.Inventory().getInventoryTypeId().equals(Detail(row).getParticularID())){
-            
+            ldblDetTotal = (loDetail.getUnitPrce().doubleValue() * loDetail.getQuantity().doubleValue());
+            if(loMaster.isVatTaxable()){
+                ldblVatAmount = ldblDetTotal - (ldblDetTotal / 1.12);
+                ldblDetVatatableSales = ldblDetVatatableSales + (ldblDetTotal - ldblVatAmount);
+                ldblDetVatAmount = ldblDetVatAmount + ldblVatAmount;
+            } else {
+                //If vat exclusive detail total + vat amount
+                ldblDetVatAmount = ldblDetTotal * 0.12;
+                if(loDetail.isVatable()){
+                    ldblDetTotal = ldblDetTotal + ldblDetVatAmount;
+                }
+                
+                ldblDetVatExemption = ldblDetVatExemption + ldblDetTotal;
             }
         } 
+        
+        Detail(row).setDetailVatAmount(ldblDetVatAmount);
+        Detail(row).setDetailVatExempt(ldblDetVatExemption);
+        Detail(row).setDetailVatSales(ldblDetVatatableSales);
+        Detail(row).setDetailZeroVat(ldblDetZeroVat);
+        Detail(row).setDetailVatRates(ldblDetVatatableRate);
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");

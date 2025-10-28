@@ -125,10 +125,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
         
         //SAVE Linked Transaction DETAIL
         for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
-            System.out.println("Particular ID : " + Detail(lnCtr).getParticularID());
             switch(Detail(lnCtr).getSourceCode()){
                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                    //1.PRF DETAIL
+                    //1.PRF DETAIL directly linked to DV
                     poJSON = savePRFDetail(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -136,20 +135,44 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     break;
                 case DisbursementStatic.SourceCode.PO_RECEIVING: 
                 case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
-                    //2. CACHE PAYABLE
+                    //2. CACHE PAYABLE directly linked to DV
                     poJSON = saveCachePayableDetail(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
                     break;
+                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: 
+                    //3. SOA
+                    if(!paSOATaggingMaster.contains(Detail(lnCtr).getSourceNo())){
+                        paSOATaggingMaster.add(Detail(lnCtr).getSourceNo());
+                        
+                        //Update linked transaction in SOA
+                        Model_AP_Payment_Detail loObject = new CashflowModels(poGRider).SOATaggingDetails();
+                        poJSON = loObject.openRecord(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getDetailNo());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                        
+                        switch(loObject.getSourceCode()){
+                            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                                //1.PRF DETAIL
+                                poJSON = savePRFDetail(lnCtr, lbAdd);
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }
+                                break;
+                            case DisbursementStatic.SourceCode.PO_RECEIVING: 
+                            case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
+                                //2. CACHE PAYABLE
+                                poJSON = saveCachePayableDetail(lnCtr, lbAdd);
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }
+                                break;
+                        }
+                    }
+                    break;
             } 
-            
-            //Check if with SOA
-            if(Detail(lnCtr).getDetailSource() != null && !"".equals(Detail(lnCtr).getDetailSource())){
-                if(!paSOATaggingMaster.contains(Detail(lnCtr).getDetailSource())){
-                    paSOATaggingMaster.add(Detail(lnCtr).getDetailSource());
-                }
-            }
         }
         
         //SAVE Linked Transaction MASTER
