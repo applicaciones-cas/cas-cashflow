@@ -142,8 +142,11 @@ public class Model_Payment_Request_Detail extends Model {
         return setValue("nAmtPaidx", amountPaid);
     }
 
-    public double getAmountPaid() {
-        return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
+    public Double getAmountPaid() {
+        if (getValue("nAmtPaidx") == null || "".equals(getValue("nAmtPaidx"))) {
+            return 0.00;
+        }
+        return Double.valueOf(getValue("nAmtPaidx").toString());
     }
 
     public JSONObject setModifiedDate(Date modifiedDate) {

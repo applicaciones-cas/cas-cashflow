@@ -182,6 +182,7 @@ public class testDisbursementVoucher {
             if (unifiedPayments != null && !unifiedPayments.isEmpty()) {
                 for (Object requestObj : unifiedPayments) {
                     JSONObject obj = (JSONObject) requestObj;
+                    System.out.println(obj.get("PayableType") != null ? obj.get("PayableType").toString() : "");
                     System.out.println(obj.get("TransactionType") != null ? obj.get("TransactionType").toString() : "");
                     System.out.println(obj.get("sBranchNme") != null ? obj.get("sBranchNme").toString() : "");
                     System.out.println(obj.get("dTransact") != null ? obj.get("dTransact").toString() : "");
