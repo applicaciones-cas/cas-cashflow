@@ -1501,7 +1501,18 @@ public class DisbursementVoucher extends Transaction {
                     break;
             }
             
+            //Sample lang po ito pag nag error kung model master ang ni ssave dapat mag rollBack
+            Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+            loObject.openRecord(Detail(0).getSourceNo());
+            loObject.updateRecord();
+            loObject.setRemarks("DV");
+            poJSON = loObject.saveRecord();
+            if ("error".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
             
+            //Wala pang functionality ito kasi ni rerevise pa yung linking base sa napag meetingan
             //Update other linked transaction in DV Detail
             poJSON = updateLinkedTransactions(Master().getTransactionStatus());
             if ("error".equals((String) poJSON.get("result"))) {
@@ -1536,14 +1547,14 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject updateLinkedTransactions(String fsStatus) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
         poJSON = new JSONObject();
         //Call Class for updating of linked transactions in DV Details
-        Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
-        loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
-        loDVExtend.setUpdateAmountPaid(pbIsUpdateAmountPaid);
-        poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
-        if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
+//        Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
+//        loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
+//        loDVExtend.setUpdateAmountPaid(pbIsUpdateAmountPaid);
+//        poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            poGRider.rollbackTrans();
+//            return poJSON;
+//        }
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
@@ -1708,29 +1719,28 @@ public class DisbursementVoucher extends Transaction {
             GuanzonException {
         poJSON = new JSONObject();
         poJSON.put("row", 0);
-        CashflowControllers controller = new CashflowControllers(poGRider, logwrapr);
         switch (payableType) {
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                poJSON = setPRFToDetail(controller, transactionNo, null,false);
+                poJSON = setPRFToDetail(transactionNo);
                 if ("error".equals((String) poJSON.get("result"))) {
                     poJSON.put("row", 0);
                     return poJSON;
                 }
                 break;
-            case DisbursementStatic.SourceCode.CASH_PAYABLE:
-                poJSON = setCachePayableToDetail(controller, transactionNo, null, false);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("row", 0);
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                poJSON = setSOAToDetail(controller, transactionNo);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("row", 0);
-                    return poJSON;
-                }
-                break;
+//            case DisbursementStatic.SourceCode.CASH_PAYABLE:
+//                poJSON = setCachePayableToDetail(controller, transactionNo);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("row", 0);
+//                    return poJSON;
+//                }
+//                break;
+//            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+//                poJSON = setSOAToDetail(controller, transactionNo);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("row", 0);
+//                    return poJSON;
+//                }
+//                break;
         }
         
         poJSON.put("result", "success");
@@ -1774,114 +1784,117 @@ public class DisbursementVoucher extends Transaction {
     
     /**
      * Populate DV Detail based on selected PRF Transaction
-     * @param foCashflowControllers initialize of cashflow controller
-     * @param transactionNo the transaction number of PRF
-     * @param foSOADetail the model of SOA when selected transaction is from PRF to call the same function of PRF but assign value based on SOA Detail
-     * @param fbWithSoa if TRUE add info from SOA Detail else FALSE only set the PRF Detail
+     * @param transactionNo the transaction number
      * @return JSON
      * @throws CloneNotSupportedException
      * @throws GuanzonException
      * @throws SQLException 
      */
-    private JSONObject setPRFToDetail(CashflowControllers foCashflowControllers, String transactionNo, Model_AP_Payment_Detail foSOADetail, boolean fbWithSoa) throws CloneNotSupportedException, GuanzonException, SQLException{
-        
-
-        PaymentRequest loPaymentRequest = foCashflowControllers.PaymentRequest();
-        loPaymentRequest.setWithParent(true);
-        loPaymentRequest.InitTransaction();
-        poJSON = loPaymentRequest.OpenTransaction(transactionNo);
+    private JSONObject setPRFToDetail(String transactionNo) throws CloneNotSupportedException, GuanzonException, SQLException{
+        PaymentRequest loController = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
+        loController.setWithParent(true);
+        loController.InitTransaction();
+        poJSON = loController.OpenTransaction(transactionNo);
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
         }
         
         //Validate linked of transaction per source code
-        poJSON = validateDetailSourceCode(loPaymentRequest.getSourceCode());
+        poJSON = validateDetailSourceCode(loController.getSourceCode());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
         }
         
-        int lnRow;
-        double ldblAmount = 0.000;
-        double ldblBalance = loPaymentRequest.Master().getTranTotal() - loPaymentRequest.Master().getAmountPaid();
-        boolean lbExist = false;
+        int lnRow = getDetailCount() - 1; //set default value 
+        Double ldblBalance = loController.Master().getTranTotal() - loController.Master().getAmountPaid();
         //Validate transaction to be add in DV Detail
-        poJSON = validateDetail(ldblBalance, loPaymentRequest.Master().getPayeeID(), loPaymentRequest.Master().Payee().getClientID());
+        poJSON = validateDetail(ldblBalance, loController.Master().getPayeeID(), loController.Master().Payee().getClientID());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
-        }
-        
-        double ldblSOAAmount = 0.0000;
-        if(fbWithSoa){
-            ldblSOAAmount = foSOADetail.getAppliedAmount().doubleValue();
         }
 
         //Add PRF Detail to DV Detail
-        for(int lnCtr = 0; lnCtr <= loPaymentRequest.getDetailCount() - 1;lnCtr++){
-            //If with SOA and the SOA Amount is 0.0000 break the loop 
-            //Do not insert the remaining row of transaction
-            if(fbWithSoa){
-                if(ldblSOAAmount <= 0.0000){
-                    break;
-                }
+        //Check if transaction already exists in the list
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (loController.Master().getTransactionNo().equals(Detail(lnCtr).getSourceNo())
+                && loController.getSourceCode().equals(Detail(lnCtr).getSourceCode())) {
+                //If already exist break the loop to current row and it will be the basis for setting of value
+                lnRow = lnCtr; 
+                break;
             }
-            
-            //Get the balance per transaciton detail
-            ldblBalance = loPaymentRequest.Detail(lnCtr).getAmount()  - ( loPaymentRequest.Detail(lnCtr).getAddDiscount() + loPaymentRequest.Detail(lnCtr).getAmountPaid());
-            //skip detail that is already paid
-            if(ldblBalance <= 0.0000){
-                continue;
-            }
-
-            //Check if transaction already exists in the list
-            for (lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
-                if (loPaymentRequest.Master().getTransactionNo().equals(Detail(lnRow).getSourceNo())
-                    && loPaymentRequest.getSourceCode().equals(Detail(lnRow).getSourceCode())
-                    && loPaymentRequest.Detail(lnCtr).getParticularID().equals(Detail(lnRow).getParticularID())) {
-                    ldblAmount = ldblAmount + ldblBalance;
-                    lbExist = true; //If already exist break the loop to current row and it will be the basis for setting of value
-                    break;
-                }
-            }
-
-            if(!lbExist){
-                ldblAmount = ldblBalance; 
-                lnRow = getDetailCount() - 1;
-            }
-            
-            //Get the amount from SOA when PRF is with SOA
-            if(fbWithSoa){
-                if(ldblSOAAmount >= ldblAmount){
-                    ldblSOAAmount = ldblSOAAmount - ldblAmount;
-                } else {
-                    ldblAmount = ldblSOAAmount;
-                    ldblSOAAmount = 0.0000;
-                }
-                
-                Detail(lnRow).setDetailSource(loPaymentRequest.Master().getTransactionNo());
-                Detail(lnRow).setDetailNo(foSOADetail.getEntryNo().intValue());
-                Detail(lnRow).setSourceNo(foSOADetail.getTransactionNo());
-                Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
-            } else {
-                Detail(lnRow).setSourceNo(loPaymentRequest.Master().getTransactionNo());
-                Detail(lnRow).setSourceCode(loPaymentRequest.getSourceCode());
-            }
-
-//                    Detail(lnRow).isReverse(true);
-            Detail(lnRow).setParticularID(loPaymentRequest.Detail(lnCtr).getParticularID());
-            Detail(lnRow).setAmount(ldblAmount);
-            Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
-            AddDetail();
         }
+        
+        Detail(lnRow).setSourceNo(loController.Master().getTransactionNo());
+        Detail(lnRow).setSourceCode(loController.getSourceCode());
+        Detail(lnRow).setAmount(ldblBalance);
+        Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
+        AddDetail();
     
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
     }
     
-    private JSONObject setCachePayableToDetail(CashflowControllers foCashflowControllers, String transactionNo, Model_AP_Payment_Detail foSOADetail, boolean fbWithSoa) throws CloneNotSupportedException, GuanzonException, SQLException{
+    /**
+     * Populate DV Detail based on selected PRF Transaction
+     * @param transactionNo the transaction number
+     * @return JSON
+     * @throws CloneNotSupportedException
+     * @throws GuanzonException
+     * @throws SQLException 
+     */
+    private JSONObject setCachePayableToDetail(String transactionNo) throws CloneNotSupportedException, GuanzonException, SQLException{
+        CachePayable loController = new CashflowControllers(poGRider, logwrapr).CachePayable();
+        loController.setWithParent(true);
+        loController.InitTransaction();
+        poJSON = loController.OpenTransaction(transactionNo);
+        if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("row", 0);
+            return poJSON;
+        }
+        
+        //Validate linked of transaction per source code
+        poJSON = validateDetailSourceCode(loController.getSourceCode());
+        if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("row", 0);
+            return poJSON;
+        }
+        
+        int lnRow = getDetailCount() - 1; //set default value 
+//        Double ldblBalance = loController.Master().getTranTotal() - loController.Master().getAmountPaid();
+        //Validate transaction to be add in DV Detail
+//        poJSON = validateDetail(ldblBalance, loController.Master().getPayeeID(), loController.Master().Payee().getClientID());
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            poJSON.put("row", 0);
+//            return poJSON;
+//        }
+
+        //Add PRF Detail to DV Detail
+        //Check if transaction already exists in the list
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (loController.Master().getTransactionNo().equals(Detail(lnCtr).getSourceNo())
+                && loController.getSourceCode().equals(Detail(lnCtr).getSourceCode())) {
+                //If already exist break the loop to current row and it will be the basis for setting of value
+                lnRow = lnCtr; 
+                break;
+            }
+        }
+        
+        Detail(lnRow).setSourceNo(loController.Master().getTransactionNo());
+        Detail(lnRow).setSourceCode(loController.getSourceCode());
+//        Detail(lnRow).setAmount(ldblBalance);
+//        Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
+        AddDetail();
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject setCachePayableToDetail(CashflowControllers foCashflowControllers, String transactionNo) throws CloneNotSupportedException, GuanzonException, SQLException{
         CachePayable loCachePayable = foCashflowControllers.CachePayable();
         Payee loPayee = foCashflowControllers.Payee();
         loPayee.initialize();
@@ -1897,15 +1910,6 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("row", 0);
             return poJSON;
         }
-
-        //Validate linked of transaction per source code
-        if(!fbWithSoa){
-            poJSON = validateDetailSourceCode(loCachePayable.Master().getSourceCode());
-            if ("error".equals((String) poJSON.get("result"))) {
-                poJSON.put("row", 0);
-                return poJSON;
-            }
-        }
         
         int lnRow = getDetailCount() - 1;
         double ldblAmount = 0.000;
@@ -1919,10 +1923,6 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("row", 0);
             return poJSON;
         }
-        double ldblSOAAmount = 0.0000;
-        if(fbWithSoa){
-            ldblSOAAmount = foSOADetail.getAppliedAmount().doubleValue();
-        } 
 
         Model_POR_Master loPOR = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
         //Add Cache Payable Detail to DV Detail
@@ -1940,14 +1940,6 @@ public class DisbursementVoucher extends Transaction {
                         lsParticular = generateParticular(loCachePayable.Detail(lnCtr).getTransactionType(),loPOR.getCategoryCode());
                     } 
                     break;
-            }
-            
-            //If with SOA and the SOA Amount is 0.0000 break the loop 
-            //Do not insert the remaining row of transaction
-            if(fbWithSoa){
-                if(ldblSOAAmount <= 0.0000){
-                    break;
-                }
             }
             
             ldblBalance = loCachePayable.Detail(lnCtr).getPayables() - loCachePayable.Detail(lnCtr).getAmountPaid();
@@ -1971,26 +1963,10 @@ public class DisbursementVoucher extends Transaction {
                 ldblAmount = ldblBalance;
                 lnRow = getDetailCount() - 1;
             }
-            
-            //Get the amount from SOA when PRF is with SOA
-            if(fbWithSoa){
-                if(ldblSOAAmount >= ldblAmount){
-                    ldblSOAAmount = ldblSOAAmount - ldblAmount;
-                } else {
-                    ldblAmount = ldblSOAAmount;
-                    ldblSOAAmount = 0.0000;
-                }
-                
-                Detail(lnRow).setDetailSource(loCachePayable.Master().getSourceNo());
-                Detail(lnRow).setDetailNo(foSOADetail.getEntryNo().intValue());
-                Detail(lnRow).setSourceNo(foSOADetail.getTransactionNo());
-                Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
-            } else {
-                Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
-                Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
-            }
 
 //                    Detail(lnRow).isReverse(true);
+            Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
+            Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
             Detail(lnRow).setParticularID(lsParticular); //loCachePayable.Detail(lnRow).getTransactionType()
             Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
             Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
@@ -1998,7 +1974,7 @@ public class DisbursementVoucher extends Transaction {
             //set value of DV Detail vat's
             switch(loCachePayable.Master().getSourceCode()){
                 case DisbursementStatic.SourceCode.PO_RECEIVING:
-                    poJSON = getPOReceivingVAT(lnRow);
+                    poJSON = getPOReceivingVAT(lnRow ,false);
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("row", 0);
                         return poJSON;
@@ -2007,24 +1983,45 @@ public class DisbursementVoucher extends Transaction {
             }
             
             AddDetail();
+            
             //clear amount
             ldblAmount = 0000;
         }
         
-        //TODO
         //add Freight amount in DV DETAIL
         if(loCachePayable.Master().getFreight() > 0.0000){
-            //Get the amount from SOA when PRF is with SOA
-            if(fbWithSoa){
-                Detail(getDetailCount() - 1).setDetailSource(foSOADetail.getTransactionNo());
-                Detail(getDetailCount() - 1).setDetailNo(foSOADetail.getEntryNo().intValue());
+            ldblAmount = loCachePayable.Master().getFreight();
+            lsParticular = getParticularId("freight charge");
+             //If already exist break the loop to current row and it will be the basis for setting of value
+            for (lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if (loCachePayable.Master().getSourceNo().equals(Detail(lnRow).getSourceNo())
+                    && loCachePayable.Master().getSourceCode().equals(Detail(lnRow).getSourceCode())
+                    && lsParticular.equals(Detail(lnRow).getParticularID())) {
+                    break;
+                }
+            }
+
+            if(!lbExist){
+                lnRow = getDetailCount() - 1;
             }
             
-            Detail(getDetailCount() - 1).setSourceNo(loCachePayable.Master().getSourceNo());
-            Detail(getDetailCount() - 1).setSourceCode(loCachePayable.Master().getSourceCode());
-            Detail(getDetailCount() - 1).setParticularID(getParticularId("freight charge")); //hard code frieght charge no connection for cache payable detail to particular
-            Detail(getDetailCount() - 1).setAmount(loCachePayable.Master().getFreight()); //Only set the amount based on the balance of selected transaction
-            Detail(getDetailCount() - 1).setAmountApplied(loCachePayable.Master().getFreight()); //Set transaction balance as default applied amount
+            Detail(lnRow).setSourceNo(loCachePayable.Master().getSourceNo());
+            Detail(lnRow).setSourceCode(loCachePayable.Master().getSourceCode());
+            Detail(lnRow).setParticularID(lsParticular); //hard code frieght charge no connection for cache payable detail to particular
+            Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
+            Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
+            
+            //set value of DV Detail vat's
+            switch(loCachePayable.Master().getSourceCode()){
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    poJSON = getPOReceivingVAT(lnRow ,true);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("row", 0);
+                        return poJSON;
+                    }
+                    break;
+            }
+            
             AddDetail();
         }
     
@@ -2040,7 +2037,7 @@ public class DisbursementVoucher extends Transaction {
      * @throws SQLException
      * @throws GuanzonException 
      */
-    private JSONObject getPOReceivingVAT(int row) throws SQLException, GuanzonException{
+    private JSONObject getPOReceivingVAT(int row, boolean isFreight) throws SQLException, GuanzonException, CloneNotSupportedException{
         String lsTransactionType = getTransactionType(Detail(row).getParticularID()); // TODO NEED TO UPDATE XML TO GET TRANSACTION TYPE NEW COLUMN IN PARTICULAR TABLE
         Double ldblDetVatatableSales = 0.0000;
         Double ldblDetVatatableRate = 1.12;
@@ -2050,41 +2047,75 @@ public class DisbursementVoucher extends Transaction {
         Double ldblDetTotal = 0.0000;
         Double ldblVatAmount = 0.0000;
         Double ldblVatSales = 0.0000;
-        Model_POR_Master loMaster = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
-        Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
-        poJSON = loMaster.openRecord(Detail(row).getSourceNo());
+        boolean lbIsWithVat = false;
+        PurchaseOrderReceiving loObject = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
+        poJSON = loObject.OpenTransaction(Detail(row).getSourceNo());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
         }
         
-        for (int lnCtr = 0; lnCtr <= loMaster.getEntryNo() - 1; lnCtr++) {
-            poJSON = loDetail.openRecord(Detail(row).getSourceNo(), Integer.valueOf(lnCtr + 1));
-            if (!"success".equals(this.poJSON.get("result"))) {
-              return poJSON;
-            } 
-            
-            if(loDetail.Inventory().getInventoryTypeId().equals(lsTransactionType)){
-                ldblDetTotal = (loDetail.getUnitPrce().doubleValue() * loDetail.getQuantity().doubleValue());
-                if(loDetail.isVatable()){
-                   if(loMaster.isVatTaxable()){ //Vat Inclusive
-                        ldblDetVatAmount = ldblDetTotal - (ldblDetTotal / 1.12);
-                    } else {
-                        ldblDetVatAmount = ldblDetTotal * 0.12;
-                    }
-                    
-                    ldblDetVatatableSales = ldblDetTotal - ldblDetVatAmount;
-                    ldblVatAmount = ldblVatAmount + ldblDetVatAmount;
-                    ldblVatSales = ldblVatSales + ldblDetVatatableSales;
-                } else {  //If vat exclusive detail total + vat amount
-                    ldblDetVatExemption += ldblDetTotal;
+        Double ldblVatExemptSales = 0.0000;
+        Double ldblDiscountVatAmount = 0.0000;
+        Double ldblFreightVatAmount = 0.0000;
+        Double ldblDetailVatAmount = 0.0000;
+        Double ldblDetailVatSales = 0.0000;
+        Double ldblDetailTotal = 0.0000;
+        Double ldblTotal = loObject.Master().getTransactionTotal().doubleValue();
+        Double ldblDiscount = loObject.Master().getDiscount().doubleValue();
+        Double ldblDiscountRate = loObject.Master().getDiscountRate().doubleValue();
+        if(ldblDiscountRate > 0){
+            ldblDiscountRate = ldblTotal * (ldblDiscountRate / 100);
+        }
+        Double ldblDiscountTotal = ldblDiscountRate + ldblDiscount;
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if(loObject.Detail(lnCtr).isVatable()){
+                lbIsWithVat = true;
+                ldblDetailTotal = loObject.Detail(lnCtr).getUnitPrce().doubleValue() * loObject.Detail(lnCtr).getQuantity().doubleValue();
+                if(loObject.Master().isVatTaxable()){
+                    ldblDetailVatAmount = ldblDetailTotal - (ldblDetailTotal / 1.12);
+                    ldblDetailVatSales = ldblDetailTotal - ldblDetailVatAmount;
+                } else {
+                    ldblDetailVatAmount = ldblDetailTotal * 0.12;
+                    ldblDetailVatSales = ldblDetailTotal;  
+                }
+
+                ldblVatAmount = ldblVatAmount + ldblDetailVatAmount;
+                ldblVatSales = ldblVatSales + ldblDetailVatSales;
+            } else {
+                ldblVatExemptSales += (loObject.Detail(lnCtr).getUnitPrce().doubleValue() * loObject.Detail(lnCtr).getQuantity().doubleValue());
+            }
+        }
+        //If all items are non vatable no vatable sales and vat amount will be computed.
+        if(lbIsWithVat){
+            if(isFreight){
+                if(loObject.Master().isVatTaxable()){
+                    ldblVatAmount = loObject.Master().getFreight().doubleValue() - (loObject.Master().getFreight().doubleValue() / 1.12);
+                    ldblVatSales = loObject.Master().getFreight().doubleValue() - ldblVatAmount;
+                } else {
+                    ldblVatAmount = loObject.Master().getFreight().doubleValue() * 0.12;
+                    ldblVatAmount = (ldblVatAmount + ldblFreightVatAmount) - ldblDiscountVatAmount;
+                    ldblVatSales = loObject.Master().getFreight().doubleValue();
+                }
+            } else {
+                if(loObject.Master().isVatTaxable()){
+                    ldblDiscountVatAmount = ldblDiscountTotal - (ldblDiscountTotal / 1.12);
+                    ldblVatAmount = ldblVatAmount - ldblDiscountVatAmount;
+                    ldblVatSales = ldblVatSales - (ldblDiscountTotal - ldblDiscountVatAmount);
+                } else {
+                    ldblDiscountVatAmount = ldblDiscountTotal * 0.12;
+                    ldblVatAmount = ldblVatAmount - ldblDiscountVatAmount;
+                    ldblVatSales = ldblVatSales - ldblDiscountTotal;
                 }
             }
-        } 
+        } else {
+            ldblVatSales = 0.0000;
+            ldblVatExemptSales = ldblTotal;
+        }
         
         Detail(row).setDetailVatAmount(ldblVatAmount);
         Detail(row).setDetailVatSales(ldblVatSales);
-        Detail(row).setDetailVatExempt(ldblDetVatExemption);
+        Detail(row).setDetailVatExempt(ldblVatExemptSales);
         Detail(row).setDetailVatRates(ldblDetVatatableRate);
         Detail(row).setDetailZeroVat(ldblDetZeroVat);
         
@@ -2136,36 +2167,197 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        String lsParticular = "";
         String lsSource = "";
-        double ldblBalance = loSOATagging.Master().getNetTotal().doubleValue() - loSOATagging.Master().getAmountPaid().doubleValue();
+        Double ldblAmount = 0.0000;
+        Double ldblBalance = loSOATagging.Master().getNetTotal().doubleValue() - loSOATagging.Master().getAmountPaid().doubleValue();
         //Validate transaction to be add in DV Detail
         poJSON = validateDetail(ldblBalance,  loSOATagging.Master().getIssuedTo(), loSOATagging.Master().getClientId());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
         }
-
+        
+        boolean lbExist = false;
+        int lnRow = getDetailCount() - 1;
+        Double ldblSOAAmount = 0.0000;
+        Double ldblDetailBalance = 0.0000;
+        Double ldblSOAFreightAmount = loSOATagging.Master().getFreightAmount().doubleValue();
+        Double ldblDetailFreightAmount = 0.0000;
         //Add Cache Payable Detail to DV Detail
         for(int lnCtr = 0; lnCtr <= loSOATagging.getDetailCount() - 1;lnCtr++){
-            ldblBalance = loSOATagging.Detail(lnCtr).getAppliedAmount().doubleValue() - loSOATagging.Detail(lnCtr).getAmountPaid().doubleValue();
+            ldblSOAAmount = loSOATagging.Detail(lnCtr).getAppliedAmount().doubleValue() - loSOATagging.Detail(lnCtr).getAmountPaid().doubleValue();
             //skip detail that is already paid
-            if(ldblBalance <= 0.0000){
+            if(ldblSOAAmount <= 0.0000){
                 continue;
             }
             
             //Populate DV Detail based on transaction linked in SOA Detail
             switch(loSOATagging.Detail(lnCtr).getSourceCode()){
                 case SOATaggingStatic.PaymentRequest: //Directly set PRF 
-                    setPRFToDetail(foCashflowControllers, loSOATagging.Detail(lnCtr).getSourceNo(),loSOATagging.Detail(lnCtr),true);
+//                    setPRFToDetail(foCashflowControllers, loSOATagging.Detail(lnCtr).getSourceNo(),loSOATagging.Detail(lnCtr),true);
                 break;
                 case SOATaggingStatic.POReceiving: //With cache payable
                 case SOATaggingStatic.APPaymentAdjustment: //With cache payable
                     lsSource = getCachePayable(loSOATagging.Detail(lnCtr).getSourceNo(), loSOATagging.Detail(lnCtr).getSourceCode());
                     if(lsSource != null && !"".equals(lsSource)){
-                        poJSON = setCachePayableToDetail(foCashflowControllers, transactionNo, loSOATagging.Detail(lnCtr), true);
+                        CachePayable loCachePayable = foCashflowControllers.CachePayable();
+                        Payee loPayee = foCashflowControllers.Payee();
+                        loPayee.initialize();
+                        loCachePayable.InitTransaction();
+                        poJSON = loCachePayable.OpenTransaction(transactionNo);
                         if ("error".equals((String) poJSON.get("result"))) {
                             poJSON.put("row", 0);
                             return poJSON;
+                        }
+
+                        poJSON = loPayee.getModel().openRecordByReference(loCachePayable.Master().getClientId());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            poJSON.put("row", 0);
+                            return poJSON;
+                        }
+                        
+                        poJSON = validateDetailSourceCode(loCachePayable.Master().getSourceCode());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            poJSON.put("row", 0);
+                            return poJSON;
+                        }
+
+                        //Validate transaction to be add in DV Detail
+                        ldblDetailBalance = loCachePayable.Master().getNetTotal() - loCachePayable.Master().getAmountPaid();
+                        poJSON = validateDetail(ldblDetailBalance, loPayee.getModel().getPayeeID(), loCachePayable.Master().getClientId());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            poJSON.put("row", 0);
+                            return poJSON;
+                        }
+
+                        Model_POR_Master loPOR = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+                        //Add Cache Payable Detail to DV Detail
+                        for(int lnDetail = 0; lnDetail <= loCachePayable.getDetailCount() - 1;lnDetail++){
+                            lsParticular = generateParticular(loCachePayable.Detail(lnDetail).getTransactionType(),null);
+                            switch(loCachePayable.Master().getSourceCode()){
+                                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                                    poJSON = loPOR.openRecord(loCachePayable.Master().getSourceNo());
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        poJSON.put("row", 0);
+                                        return poJSON;
+                                    }
+                                    //If transaction type is not exist in category directly check the particular based on transaction type
+                                    if(withCategory(loPOR.getCategoryCode(), loCachePayable.Detail(lnDetail).getTransactionType())){
+                                        lsParticular = generateParticular(loCachePayable.Detail(lnDetail).getTransactionType(),loPOR.getCategoryCode());
+                                    } 
+                                    break;
+                            }
+
+                            ldblDetailBalance = loCachePayable.Detail(lnCtr).getPayables() - loCachePayable.Detail(lnCtr).getAmountPaid();
+                            //skip detail that is already paid
+                            if(ldblDetailBalance <= 0.0000){
+                                continue;
+                            }
+
+                            //Check if transaction already exists in the list
+                            for (lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                                if (loCachePayable.Master().getSourceNo().equals(Detail(lnRow).getSourceNo())
+                                    && loCachePayable.Master().getSourceCode().equals(Detail(lnRow).getSourceCode())
+                                    && lsParticular.equals(Detail(lnRow).getParticularID())) {
+                                    ldblAmount = ldblAmount + ldblDetailBalance;
+                                    lbExist = true; //If already exist break the loop to current row and it will be the basis for setting of value
+                                    break;
+                                }
+                            }
+
+                            if(!lbExist){
+                                ldblAmount = ldblDetailBalance;
+                                lnRow = getDetailCount() - 1;
+                            }
+
+                            if(ldblSOAAmount >= ldblAmount){
+                                ldblSOAAmount = ldblSOAAmount - ldblAmount;
+                            } else {
+                                ldblAmount = ldblSOAAmount;
+                                ldblSOAAmount = 0.0000;
+                            }
+
+                            Detail(lnRow).setDetailSource(loCachePayable.Master().getSourceNo());
+                            Detail(lnRow).setDetailNo(loSOATagging.Detail(lnCtr).getEntryNo().intValue());
+                            Detail(lnRow).setSourceNo(loSOATagging.Master().getTransactionNo());
+                            Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
+                            Detail(lnRow).setParticularID(lsParticular); //loCachePayable.Detail(lnRow).getTransactionType()
+                            Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
+                            Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
+
+                            //set value of DV Detail vat's
+                            switch(loCachePayable.Master().getSourceCode()){
+                                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                                    poJSON = getPOReceivingVAT(lnRow ,false);
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        poJSON.put("row", 0);
+                                        return poJSON;
+                                    }
+                                    break;
+                            }
+
+                            AddDetail();
+                        }
+                        
+                        //populate DV detail from SOA Freight Amount
+                        if(ldblSOAFreightAmount > 0.0000 && ldblSOAAmount > 0.0000){
+                            //Reset Amount
+                            ldblAmount = loCachePayable.Master().getFreight();
+
+                            //add Freight amount in DV DETAIL
+                            if(ldblAmount > 0.0000){
+                                 //If already exist break the loop to current row and it will be the basis for setting of value
+                                lsParticular = getParticularId("freight charge");  //hard code frieght charge no connection for cache payable detail to particular
+                                for (lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                                    if (loCachePayable.Master().getSourceNo().equals(Detail(lnRow).getSourceNo())
+                                        && loCachePayable.Master().getSourceCode().equals(Detail(lnRow).getSourceCode())
+                                        && lsParticular.equals(Detail(lnRow).getParticularID())) {
+                                        lbExist = true;
+                                        break;
+                                    }
+                                }
+
+                                if(!lbExist){
+                                    lnRow = getDetailCount() - 1;
+                                }
+
+                                //Get the amount from SOA when PRF is with SOA
+                                if(ldblSOAAmount >= ldblAmount){
+                                    ldblAmount = ldblSOAAmount - ldblAmount;
+                                } else {
+                                    ldblSOAAmount = 0.0000;
+                                }
+                                
+                                if(ldblSOAFreightAmount >= ldblAmount){
+                                    ldblAmount = ldblSOAFreightAmount - ldblAmount;
+                                } else {
+                                    ldblAmount = ldblSOAFreightAmount;
+                                    ldblSOAFreightAmount = 0.0000;
+                                }
+
+                                Detail(lnRow).setDetailSource(loCachePayable.Master().getSourceNo());
+                                Detail(lnRow).setDetailNo(loSOATagging.Detail(lnCtr).getEntryNo().intValue());
+                                Detail(lnRow).setSourceNo(loSOATagging.Master().getTransactionNo());
+                                Detail(lnRow).setSourceCode(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
+                                Detail(lnRow).setParticularID(lsParticular);
+                                Detail(lnRow).setAmount(ldblAmount); //Only set the amount based on the balance of selected transaction
+                                Detail(lnRow).setAmountApplied(ldblAmount); //Set transaction balance as default applied amount
+                                
+                                //set value of DV Detail vat's
+                                switch(loCachePayable.Master().getSourceCode()){
+                                    case DisbursementStatic.SourceCode.PO_RECEIVING:
+                                        poJSON = getPOReceivingVAT(lnRow ,true);
+                                        if ("error".equals((String) poJSON.get("result"))) {
+                                            poJSON.put("row", 0);
+                                            return poJSON;
+                                        }
+                                        break;
+                                }
+                                
+                                AddDetail();
+                            }
+                        
                         }
                     }
                 break;
@@ -2262,7 +2454,8 @@ public class DisbursementVoucher extends Transaction {
     }
     /**
      * Get Particular based on inv type code: No connection for cache payable detail to particular
-     * @param fsValue description
+     * @param fsInvTypeCode
+     * @param fsCategory
      * @return 
      */
     public String generateParticular(String fsInvTypeCode, String fsCategory){
