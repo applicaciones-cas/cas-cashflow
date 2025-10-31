@@ -56,6 +56,7 @@ public class Model_AP_Payment_Detail extends Model {
             poEntity.updateObject("nCredtAmt", 0.0000);
             poEntity.updateObject("nTranTotl", 0.0000);
             poEntity.updateObject("nAppliedx", 0.0000);
+            poEntity.updateObject("nAmtPaidx", 0.0000);
             poEntity.updateObject("cReversex", "+");
             //end - assign default values
 
@@ -165,6 +166,17 @@ public class Model_AP_Payment_Detail extends Model {
             return 0.0000;
         }
         return (Number) getValue("nAppliedx");
+    }
+
+    public JSONObject setAmountPaid(Number amountPaid) {
+        return setValue("nAmtPaidx", amountPaid);
+    }
+
+    public Number getAmountPaid() {
+        if (getValue("nAmtPaidx") == null || "".equals(getValue("nAmtPaidx"))) {
+            return 0.0000;
+        }
+        return (Number) getValue("nAmtPaidx");
     }
     
     public JSONObject isReverse(boolean isReverse) {

@@ -26,9 +26,13 @@ public class DisbursementStatic {
         public static final int default_value_integer = 0;
     }
      public static class SourceCode  {
-        public static final String PAYMENT_REQUEST = "PRF";
-        public static final  String ACCOUNTS_PAYABLE = "SOA";
-        public static final  String CASH_PAYABLE = "CcPy";        
+         public static final String PAYMENT_REQUEST = "PRFx"; //PRF
+        public static final  String ACCOUNTS_PAYABLE = "SOAt"; //SOA
+        public static final  String CASH_PAYABLE = "CcPy";      
+        public static final  String PO_RECEIVING = "PORc";      
+        public static final  String AP_ADJUSTMENT = "APAd";      
+        public static final  String PURCHASE_ORDER = "PO";  
+        
         public static final  String LOAD_ALL = "ALL";
     }
     

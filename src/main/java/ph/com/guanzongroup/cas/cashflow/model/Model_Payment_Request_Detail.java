@@ -137,6 +137,17 @@ public class Model_Payment_Request_Detail extends Model {
     public double getWithHoldingTax() {
         return Double.parseDouble(String.valueOf(getValue("nTWithHld")));
     }
+    
+    public JSONObject setAmountPaid(double amountPaid) {
+        return setValue("nAmtPaidx", amountPaid);
+    }
+
+    public Double getAmountPaid() {
+        if (getValue("nAmtPaidx") == null || "".equals(getValue("nAmtPaidx"))) {
+            return 0.00;
+        }
+        return Double.valueOf(getValue("nAmtPaidx").toString());
+    }
 
     public JSONObject setModifiedDate(Date modifiedDate) {
         return setValue("dModified", modifiedDate);

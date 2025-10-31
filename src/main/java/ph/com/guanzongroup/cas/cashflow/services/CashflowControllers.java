@@ -18,6 +18,7 @@ import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
+import ph.com.guanzongroup.cas.cashflow.DisbursementVoucher;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
 import ph.com.guanzongroup.cas.cashflow.OtherPayments;
@@ -184,6 +185,24 @@ public class CashflowControllers {
         poDisbursement.setVerifyEntryNo(true);
         poDisbursement.setWithParent(false);
         return poDisbursement;
+    }
+    public DisbursementVoucher DisbursementVoucher() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.DisbursementVoucher: Application driver is not set.");
+            return null;
+        }
+
+        if (poDisbursementVoucher != null) {
+            return poDisbursementVoucher;
+        }
+
+        poDisbursementVoucher = new DisbursementVoucher();
+        poDisbursementVoucher.setApplicationDriver(poGRider);
+        poDisbursementVoucher.setBranchCode(poGRider.getBranchCode());
+        poDisbursementVoucher.setLogWrapper(poLogWrapper);
+        poDisbursementVoucher.setVerifyEntryNo(true);
+        poDisbursementVoucher.setWithParent(false);
+        return poDisbursementVoucher;
     }
 
     public CheckPayments CheckPayments() throws SQLException, GuanzonException {
@@ -433,6 +452,7 @@ public class CashflowControllers {
             poRecurringIssuance = null;
             poCachePayable = null;
             poBankAccountMaster = null;
+            poDisbursementVoucher = null;
             poDisbursement = null;
             poDisbursementBase = null;
             poDisbursement_PRF = null;
@@ -462,6 +482,7 @@ public class CashflowControllers {
     private Particular poParticular;
     private Payee poPayee;
     private PaymentRequest poPaymentRequest;
+    private DisbursementVoucher poDisbursementVoucher;
     private Disbursement poDisbursement;
     private Disbursement poDisbursementBase;
     private Disbursement_PRF poDisbursement_PRF;
