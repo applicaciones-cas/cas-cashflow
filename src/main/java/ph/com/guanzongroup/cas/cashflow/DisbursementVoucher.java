@@ -1478,6 +1478,7 @@ public class DisbursementVoucher extends Transaction {
                             poCheckPayments.setWithUI(false);
                             poJSON = poCheckPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
+                                poGRider.rollbackTrans();
                                 return poJSON;
                             }
                         }
@@ -1494,6 +1495,7 @@ public class DisbursementVoucher extends Transaction {
                             poOtherPayments.setWithParentClass(true);
                             poJSON = poOtherPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
+                                poGRider.rollbackTrans();
                                 return poJSON;
                             }
                         }
