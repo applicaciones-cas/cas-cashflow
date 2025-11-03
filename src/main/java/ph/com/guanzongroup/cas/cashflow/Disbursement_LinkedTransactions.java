@@ -696,7 +696,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     System.out.println("--------------------------DV--------------------------");
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("------------------------------------------------------------------------------");
-                    ldPayment = ldPayment + loRS.getDouble("nAmtAppld");
+                    ldPayment = ldPayment + loRS.getDouble("nAppliedx");
                 }
             }
             MiscUtil.close(loRS);
@@ -875,7 +875,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
     public String getDVPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
-                + " , sum(b.nAmountxx) AS nAppliedx"
+                + " , sum(b.nAmtAppld) AS nAppliedx"
                 + " FROM disbursement_master a "
                 + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
     }

@@ -316,6 +316,7 @@ public class DisbursementVoucher extends Transaction {
             //Update Related transaction to DV
             poJSON = updateRelatedTransactions(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
                 return poJSON;
             }
 
@@ -381,6 +382,7 @@ public class DisbursementVoucher extends Transaction {
             //Update Related transaction to DV
             poJSON = updateRelatedTransactions(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
                 return poJSON;
             }
 
@@ -446,6 +448,7 @@ public class DisbursementVoucher extends Transaction {
             //Update Related transaction to DV
             poJSON = updateRelatedTransactions(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
                 return poJSON;
             }
 
@@ -497,6 +500,7 @@ public class DisbursementVoucher extends Transaction {
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
         
@@ -553,6 +557,7 @@ public class DisbursementVoucher extends Transaction {
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
@@ -610,6 +615,7 @@ public class DisbursementVoucher extends Transaction {
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
@@ -675,6 +681,7 @@ public class DisbursementVoucher extends Transaction {
             //Update Related transaction to DV
             poJSON = updateRelatedTransactions(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
                 return poJSON;
             }
 
@@ -814,6 +821,7 @@ public class DisbursementVoucher extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
                 setSearchPayee(object.getModel().getPayeeName()); 
+                setSearchClient(object.getModel().Client().getCompanyName());
             } else {
                 Master().setPayeeID(object.getModel().getPayeeID());
                 System.out.println("Payee : " +  Master().Payee().getPayeeName());
@@ -830,6 +838,7 @@ public class DisbursementVoucher extends Transaction {
         poJSON = object.searchRecordbyCompany(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
+                setSearchPayee(object.getModel().getPayeeName());
                 setSearchClient(object.getModel().Client().getCompanyName());
             } else {
                 Master().setPayeeID(object.getModel().getPayeeID());
@@ -875,29 +884,23 @@ public class DisbursementVoucher extends Transaction {
         
         if(Banks == null || "".equals(Banks)){
             poJSON = object.searchRecord(value, byCode);
-            if ("success".equals((String) poJSON.get("result"))) {
-                if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
-                    CheckPayments().getModel().setBankID(object.getModel().getBankId());
-                    CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-                } else {
-                    OtherPayments().getModel().setBankID(object.getModel().getBankId());
-                    OtherPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-                }
-                Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
-            }
         } else {
             poJSON = object.searchRecordbyBanks(value, Banks, byCode);
-            if ("success".equals((String) poJSON.get("result"))) {
-                if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
-                    CheckPayments().getModel().setBankID(object.getModel().getBankId());
-                    CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-                } else {
+        }
+        
+        if ("success".equals((String) poJSON.get("result"))) {
+            switch(Master().getDisbursementType()){
+                case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                case DisbursementStatic.DisbursementType.WIRED:
                     OtherPayments().getModel().setBankID(object.getModel().getBankId());
                     OtherPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
-                }
-
-                Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
+                break;
+                default:
+                    CheckPayments().getModel().setBankID(object.getModel().getBankId());
+                    CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
+                break;
             }
+            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
         }
         return poJSON;
     }
@@ -909,10 +912,14 @@ public class DisbursementVoucher extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankID(object.getModel().getBankID());
-            if(Master().getDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)){
-                CheckPayments().getModel().setBankID(object.getModel().getBankID());
-            } else {
-                OtherPayments().getModel().setBankID(object.getModel().getBankID());
+            switch(Master().getDisbursementType()){
+                case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                case DisbursementStatic.DisbursementType.WIRED:
+                    OtherPayments().getModel().setBankID(object.getModel().getBankID());
+                break;
+                default:
+                    CheckPayments().getModel().setBankID(object.getModel().getBankID());
+                break;
             }
         }
 
@@ -1108,8 +1115,8 @@ public class DisbursementVoucher extends Transaction {
         //if method was called in certification/checka auhorization/check update change the condition into bank and bank account and check no
         if(isUpdateTransactionStatus){
             lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                    " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsValue1)
-                    + " AND g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsValue2))
+                    " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2))
                     + ( fsValue3.isEmpty() ? "" : " AND g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsValue3));
         }
         
@@ -1126,11 +1133,11 @@ public class DisbursementVoucher extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-        if(psIndustryId == null || "".equals(psIndustryId)){
-            lsSQL = lsSQL + " AND (a.sIndstCdx = '' OR a.sIndstCdx = null) " ;
-        } else {
-            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
-        }
+//        if(psIndustryId == null || "".equals(psIndustryId)){
+//            lsSQL = lsSQL + " AND (a.sIndstCdx = '' OR a.sIndstCdx = null) " ;
+//        } else {
+//            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+//        }
         if(isUpdateTransactionStatus){
             lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         } else {
@@ -1540,7 +1547,6 @@ public class DisbursementVoucher extends Transaction {
         loDVExtend.setUpdateAmountPaid(pbIsUpdateAmountPaid);
         poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
             return poJSON;
         }
         
@@ -1560,7 +1566,6 @@ public class DisbursementVoucher extends Transaction {
                 poJournal.setWithUI(false);
                 poJSON = poJournal.ConfirmTransaction("");
                 if (!"success".equals((String) poJSON.get("result"))) {
-                    poGRider.rollbackTrans();
                     return poJSON;
                 }
                 break;
@@ -1570,7 +1575,6 @@ public class DisbursementVoucher extends Transaction {
                 poJournal.setWithUI(false);
                 poJSON = poJournal.VoidTransaction("");
                 if (!"success".equals((String) poJSON.get("result"))) {
-                    poGRider.rollbackTrans();
                     return poJSON;
                 }
                 
@@ -1581,7 +1585,6 @@ public class DisbursementVoucher extends Transaction {
                 poJournal.setWithUI(false);
                 poJSON = poJournal.CancelTransaction("");
                 if (!"success".equals((String) poJSON.get("result"))) {
-                    poGRider.rollbackTrans();
                     return poJSON;
                 }
                 break;

@@ -2430,7 +2430,7 @@ public class SOATagging extends Transaction {
     public String getDVPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
-                + " , sum(b.nAmountxx) AS nAppliedx"
+                + " , sum(b.nAmtAppld) AS nAppliedx"
                 + " FROM disbursement_master a "
                 + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
     }
