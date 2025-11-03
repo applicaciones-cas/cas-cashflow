@@ -307,13 +307,7 @@ public class DisbursementVoucher extends Transaction {
 
             poGRider.beginTrans("UPDATE STATUS", "CertifyTransaction", SOURCE_CODE, Master().getTransactionNo());
 
-            //Update Related transaction to DV
-            poJSON = updateLinkedTransactions(lsStatus);
-            if (!"success".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-
-            //Update Related transaction to DV
+            //Update Related transaction to DV ex. JE
             poJSON = updateRelatedTransactions(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -1434,6 +1428,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     
@@ -1517,6 +1512,8 @@ public class DisbursementVoucher extends Transaction {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
             
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     

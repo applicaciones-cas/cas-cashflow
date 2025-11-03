@@ -14,6 +14,7 @@ import org.guanzon.cas.parameter.model.Model_Inv_Type;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -29,6 +30,7 @@ public class Model_Disbursement_Detail extends Model {
     Model_Tax_Code poTaxCode;
     Model_Payment_Request_Master poPRF;
     Model_POR_Master poPOR;
+    Model_AP_Payment_Detail poAPDetail;
     String InvType = "";
 
     @Override
@@ -67,10 +69,12 @@ public class Model_Disbursement_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
             poPRF = cashFlow.PaymentRequestMaster();
+            poAPDetail = cashFlow.SOATaggingDetails();
             ParamModels model = new ParamModels(poGRider);
             poTaxCode = model.TaxCode();
             poInvType = model.InventoryType();
-
+            PurchaseOrderReceivingModels POReceiving = new PurchaseOrderReceivingModels(poGRider);
+            poPOR = POReceiving.PurchaseOrderReceivingMaster();
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -301,12 +305,17 @@ public class Model_Disbursement_Detail extends Model {
     }
 
     public Model_Payment_Request_Master PRF() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sSourceNo"))) {
+        String lsSourceNo = (String) getValue("sSourceNo");
+        if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals((String) getValue("sSourceCd"))){
+            lsSourceNo = (String) getValue("sDetlSrce");
+        }
+        
+        if (!"".equals(lsSourceNo)) {
             if ((poPRF.getEditMode() == EditMode.READY || poPRF.getEditMode() == EditMode.UPDATE)
-                    && poPRF.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                    && poPRF.getTransactionNo().equals(lsSourceNo)) {
                 return poPRF;
             } else {
-                poJSON = poPRF.openRecord((String) getValue("sSourceNo"));
+                poJSON = poPRF.openRecord(lsSourceNo);
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poPRF;
@@ -322,12 +331,17 @@ public class Model_Disbursement_Detail extends Model {
     }
 
     public Model_POR_Master POReceiving() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sSourceNo"))) {
+        String lsSourceNo = (String) getValue("sSourceNo");
+        if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals((String) getValue("sSourceCd"))){
+            lsSourceNo = (String) getValue("sDetlSrce");
+        }
+        
+        if (!"".equals(lsSourceNo)) {
             if ((poPOR.getEditMode() == EditMode.READY || poPOR.getEditMode() == EditMode.UPDATE)
-                    && poPOR.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                    && poPOR.getTransactionNo().equals(lsSourceNo)) {
                 return poPOR;
             } else {
-                poJSON = poPOR.openRecord((String) getValue("sSourceNo"));
+                poJSON = poPOR.openRecord(lsSourceNo);
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poPOR;
@@ -339,6 +353,28 @@ public class Model_Disbursement_Detail extends Model {
         } else {
             poPOR.initialize();
             return poPOR;
+        }
+    }
+
+    public Model_AP_Payment_Detail SOADetail() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if ((poAPDetail.getEditMode() == EditMode.READY || poPOR.getEditMode() == EditMode.UPDATE)
+                    && poAPDetail.getTransactionNo().equals((String) getValue("sSourceNo"))
+                    && poAPDetail.getEntryNo().equals((int) getValue("nDetailNo"))) {
+                return poAPDetail;
+            } else {
+                poJSON = poAPDetail.openRecord((String) getValue("sSourceNo"), (int) getValue("nDetailNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poAPDetail;
+                } else {
+                    poAPDetail.initialize();
+                    return poAPDetail;
+                }
+            }
+        } else {
+            poAPDetail.initialize();
+            return poAPDetail;
         }
     }
 }
