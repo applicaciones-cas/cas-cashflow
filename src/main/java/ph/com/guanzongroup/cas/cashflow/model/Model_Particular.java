@@ -67,6 +67,14 @@ public class Model_Particular extends Model {
     public String getAccountCode() {
         return (String) getValue("sAcctCode");
     }
+    
+    public JSONObject setTransactionType(String transactionType) {
+        return setValue("sTranType", transactionType);
+    }
+
+    public String getTransactionType() {
+        return (String) getValue("sTranType");
+    }
                 
     public JSONObject setRecordStatus(String recordStatus){
         return setValue("cRecdStat", recordStatus);

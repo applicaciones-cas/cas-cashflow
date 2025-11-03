@@ -13,6 +13,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.parameter.model.Model_Inv_Type;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -26,6 +27,8 @@ public class Model_Disbursement_Detail extends Model {
     Model_Particular poParticular;
     Model_Inv_Type poInvType;
     Model_Tax_Code poTaxCode;
+    Model_Payment_Request_Master poPRF;
+    Model_POR_Master poPOR;
     String InvType = "";
 
     @Override
@@ -63,6 +66,7 @@ public class Model_Disbursement_Detail extends Model {
 
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
+            poPRF = cashFlow.PaymentRequestMaster();
             ParamModels model = new ParamModels(poGRider);
             poTaxCode = model.TaxCode();
             poInvType = model.InventoryType();
@@ -293,6 +297,48 @@ public class Model_Disbursement_Detail extends Model {
         } else {
             poInvType.initialize();
             return poInvType;
+        }
+    }
+
+    public Model_Payment_Request_Master PRF() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if ((poPRF.getEditMode() == EditMode.READY || poPRF.getEditMode() == EditMode.UPDATE)
+                    && poPRF.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPRF;
+            } else {
+                poJSON = poPRF.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPRF;
+                } else {
+                    poPRF.initialize();
+                    return poPRF;
+                }
+            }
+        } else {
+            poPRF.initialize();
+            return poPRF;
+        }
+    }
+
+    public Model_POR_Master POReceiving() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if ((poPOR.getEditMode() == EditMode.READY || poPOR.getEditMode() == EditMode.UPDATE)
+                    && poPOR.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPOR;
+            } else {
+                poJSON = poPOR.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOR;
+                } else {
+                    poPOR.initialize();
+                    return poPOR;
+                }
+            }
+        } else {
+            poPOR.initialize();
+            return poPOR;
         }
     }
 }

@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
 import org.guanzon.appdriver.agent.systables.TransactionStatusHistory;
@@ -52,7 +54,8 @@ public class Model_Check_Payments extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+//            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateNull("dCheckDte");
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
@@ -146,8 +149,16 @@ public class Model_Check_Payments extends Model {
     public String getCheckNo() {
         return (String) getValue("sCheckNox");
     }
-
+    
     public JSONObject setCheckDate(Date checkDate) {
+        if(checkDate == null){
+            try {
+                poEntity.updateNull("dCheckDte");
+                return null;
+            } catch (SQLException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         return setValue("dCheckDte", checkDate);
     }
 
