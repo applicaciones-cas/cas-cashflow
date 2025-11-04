@@ -128,12 +128,14 @@ public class Disbursement_LinkedTransactions extends Transaction {
         for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
             switch(Detail(lnCtr).getSourceCode()){
                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    //Save PRF and update connected PO / Transaction
                     poJSON = savePRFMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
                     break;
                 case DisbursementStatic.SourceCode.PO_RECEIVING: 
+                    //Save PO Receiving and update connected cache payable
                     poJSON = savePOReceivingMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -144,12 +146,13 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     //TODO
                     break;
                 case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: 
+                    //Save SOA Detail and update connected transactions ex. PO Receiving, Cache Payable, PRF
                     poJSON = saveSOADetail(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
                     
-                    //3. SOA TODO
+                    //Store SOA Master will be triggered on saveSOAMaster
                     if(!paSOATaggingMaster.contains(Detail(lnCtr).getSourceNo())){
                         paSOATaggingMaster.add(Detail(lnCtr).getSourceNo());
                     }
@@ -158,9 +161,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
             } 
         }
         
-        //3.SOA TAGGING MASTER AND DETAIL
+        //SAVE SOA TAGGING MASTER
         for(int lnCtr = 0;lnCtr <= paSOATaggingMaster.size() - 1;lnCtr++){
-            poJSON = saveSOATagging(paSOATaggingMaster.get(lnCtr),lbAdd);
+            poJSON = saveSOAMaster(paSOATaggingMaster.get(lnCtr),lbAdd);
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
@@ -171,68 +174,6 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return poJSON;
     }
     
-    private JSONObject saveSOADetail(int row, boolean isAdd)  throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
-        String lsSourceNo = Detail(row).getSourceNo();
-        String lsSourceCode = Detail(row).getSourceCode();
-        Double ldblAppliedAmount = Detail(row).getAmountApplied();
-        Double ldblAmountPaid = 0.0000;
-        Double ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, Detail(row).getDetailSource());
-        //Update linked transaction in SOA
-        Model_AP_Payment_Detail loModel = new CashflowModels(poGRider).SOATaggingDetails();
-        poJSON = loModel.openRecord(lsSourceNo, Detail(row).getDetailNo());
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
-            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
-        } else { //Get only the other paid amount from OTHER DV
-            ldblAmountPaid = ldblOtherPayment; 
-        }
-        //Validate Amount paid do not allow when payment is greater than the transaction net total
-        if(ldblAmountPaid > loModel.getAppliedAmount().doubleValue()){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
-            return poJSON;
-        }
-        
-        loModel.updateRecord();
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        if(pbIsUpdateAmountPaid){
-            loModel.setAmountPaid(ldblAmountPaid);
-        }
-        
-        //Update linked transaction in SOA Detail
-        switch(loModel.getSourceCode()){
-            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                poJSON = savePRFMaster(row, isAdd);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.SourceCode.PO_RECEIVING: 
-                poJSON = savePOReceivingMaster(row, isAdd);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
-                //TODO
-                break;
-        }
-        
-        poJSON = loModel.saveRecord();
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-    
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
     /**
      * SAVE PRF Transaction 
      * @param loMaster
@@ -351,6 +292,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if(pbIsUpdateAmountPaid){
             loModel.setAmountPaid(ldblAmountPaid);
         }
+        loModel.setModifyingId(poGRider.getUserID());
+        loModel.setModifiedDate(poGRider.getServerDate());
         poJSON = loModel.saveRecord();
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -480,12 +423,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
             }
         }
         
-        System.out.println("Cache Payable Before set Mode : " + loModel.getEditMode());
         loModel.setModifyingId(poGRider.getUserID());
         loModel.setModifiedDate(poGRider.getServerDate());
-        
-        
-        System.out.println("Cache Payable Before Save Update Mode : " + loModel.getEditMode());
         poJSON = loModel.saveRecord();
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -511,12 +450,85 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return poJSON;
     }
     
-    private JSONObject saveSOATagging(String fsTransactioNo, boolean isAdd) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
-        Double ldblOtherPayment = 0.0000;
+    
+    private JSONObject saveSOADetail(int row, boolean isAdd)  throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
+        String lsSourceNo = Detail(row).getSourceNo();
+        String lsSourceCode = Detail(row).getSourceCode();
+        Double ldblAppliedAmount = Detail(row).getAmountApplied();
+        Double ldblAmountPaid = 0.0000;
+        Double ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, Detail(row).getDetailSource());
+        //Update linked transaction in SOA
+        Model_AP_Payment_Detail loModel = new CashflowModels(poGRider).SOATaggingDetails();
+        poJSON = loModel.openRecord(lsSourceNo, Detail(row).getDetailNo());
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
+            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
+        } else { //Get only the other paid amount from OTHER DV
+            ldblAmountPaid = ldblOtherPayment; 
+        }
+        //Validate Amount paid do not allow when payment is greater than the transaction net total
+        if(ldblAmountPaid > loModel.getAppliedAmount().doubleValue()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Amount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
+            return poJSON;
+        }
+        
+        loModel.updateRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(pbIsUpdateAmountPaid){
+            loModel.setAmountPaid(ldblAmountPaid);
+        }
+        
+        //Update linked transaction in SOA Detail
+        switch(loModel.getSourceCode()){
+            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                poJSON = savePRFMaster(row, isAdd);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.SourceCode.PO_RECEIVING: 
+                poJSON = savePOReceivingMaster(row, isAdd);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
+                //TODO
+                break;
+        }
+        
+        loModel.setModifiedDate(poGRider.getServerDate());
+        poJSON = loModel.saveRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Update SOA Tagging Master
+     * @param fsTransactioNo
+     * @param isAdd
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ParseException 
+     */
+    private JSONObject saveSOAMaster(String fsTransactioNo, boolean isAdd) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
         Double ldblAmountPaid = 0.0000;
         Double ldblTotalAppliedAmt = 0.0000;
-        Double ldblDetailBalance = 0.0000;
-        Double ldblSetAmountPaid = 0.0000;
+        Double ldblOtherPayment = getOtherPayment(fsTransactioNo, DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE, "");
         boolean lbIsProcessed = getLinkedPayment(fsTransactioNo,"", false);
         
         //Open the linked transaction of the model master
@@ -529,86 +541,21 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
-        //Populate detail list per particular of linked transaction
-        Double ldblDetailAppliedAmt = 0.0000;
-        Model_AP_Payment_Detail loDetail = new CashflowModels(poGRider).SOATaggingDetails();
-        List<Model_AP_Payment_Detail> laDetail = new ArrayList<>();
-        for(int lnCtr = 0; lnCtr <= getDetailCount() - 1;lnCtr++){
-            ldblDetailAppliedAmt = Detail(lnCtr).getAmountApplied();
-            if(Detail(lnCtr).getDetailSource() != null && !"".equals(Detail(lnCtr).getDetailSource())){
-                if(fsTransactioNo.equals(Detail(lnCtr).getDetailSource()) ){
-                    //Get Applied amount per DV detail that is detail source equal to SOA trans no
-                    ldblTotalAppliedAmt = ldblTotalAppliedAmt + Detail(lnCtr).getAmountApplied();
-                    
-                    poJSON = loDetail.openRecord(Detail(lnCtr).getDetailSource(), Detail(lnCtr).getDetailNo());
-                    if (!"success".equals(this.poJSON.get("result"))) {
-                      return poJSON;
-                    } 
 
-                    if(!laDetail.contains(loDetail)){
-                        loDetail.updateRecord();
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                        laDetail.add(loDetail);
-                        
-                        //Sum the amount applied plus the other payment
-                        ldblOtherPayment = ldblOtherPayment + getOtherPayment(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode(), "");
-                        
-                    }
-
-                    //Auto destribute amount paid to details with the same transacton type / particular 
-                    for (int lnRow = 0; lnRow <= laDetail.size() - 1; lnRow++) {
-                        if(isAdd){ //Apply amount paid if payment was release
-                            ldblDetailBalance = laDetail.get(lnRow).getAppliedAmount().doubleValue() - laDetail.get(lnRow).getAmountPaid().doubleValue();
-                            if(ldblDetailBalance > 0.0000){
-                                if(ldblDetailAppliedAmt > ldblDetailBalance){
-                                    ldblSetAmountPaid = laDetail.get(lnRow).getAppliedAmount().doubleValue();
-                                    ldblDetailAppliedAmt = ldblDetailAppliedAmt - ldblDetailBalance;
-                                } else {
-                                    ldblSetAmountPaid = ldblDetailAppliedAmt + laDetail.get(lnRow).getAmountPaid().doubleValue();
-                                    ldblDetailAppliedAmt = 0.0000;
-                                }
-                            }
-                        } else { //Deduct the applied amount from the DV
-                            if(laDetail.get(lnCtr).getAmountPaid().doubleValue() > 0.0000){
-                                if(ldblDetailAppliedAmt > laDetail.get(lnRow).getAmountPaid().doubleValue()){
-                                    ldblSetAmountPaid = 0.0000;
-                                    ldblDetailAppliedAmt = ldblDetailAppliedAmt - laDetail.get(lnRow).getAmountPaid().doubleValue();
-                                } else {
-                                    ldblSetAmountPaid = ldblDetailAppliedAmt;
-                                    ldblDetailAppliedAmt = 0.0000;
-                                }
-                            }
-                        }
-                        
-                        if(pbIsUpdateAmountPaid){
-                            laDetail.get(lnCtr).setAmountPaid(ldblSetAmountPaid);
-                        }
-
-                        //Break the loop when applied amount was already desiminate to source detail
-                        if(ldblDetailAppliedAmt <= 0.0000){
-                            break;
-                        }
-                    }
-
-                    //Validate applied amount when the applied amount is greater than ZERO mean the total applied amount for the particular detail was already exceed
-                    if(isAdd){
-                        if(ldblDetailAppliedAmt > 0.0000){
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Amount paid for "+Detail(lnCtr).Particular().getDescription()+" cannot be exceed to the SOA Detail amount of transaction no "+Detail(lnCtr).getSourceNo()+".");
-                            return poJSON;
-                        }
-                    }
-                }
+        for(int lnCtr = 0;lnCtr <= getDetailCount() - 1;lnCtr++){
+            if(loMaster.getTransactionNo().equals(Detail(lnCtr).getSourceNo())
+                && DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnCtr).getSourceCode())
+                ) {
+                ldblTotalAppliedAmt = ldblTotalAppliedAmt + Detail(lnCtr).getAmountApplied();
             }
         }
         
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
             ldblAmountPaid = ldblOtherPayment + ldblTotalAppliedAmt; 
+            loMaster.isProcessed(true);
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
+            loMaster.isProcessed(lbIsProcessed);
         }
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loMaster.getNetTotal().doubleValue()){
@@ -617,21 +564,14 @@ public class Disbursement_LinkedTransactions extends Transaction {
             return poJSON;
         }
         
-        
-        //Save Transaction Master
-        loMaster.isProcessed(lbIsProcessed);
-        loMaster.setAmountPaid(ldblAmountPaid);
+        if(pbIsUpdateAmountPaid){
+            loMaster.setAmountPaid(ldblAmountPaid);
+        }
+        loMaster.setModifyingId(poGRider.getUserID());
+        loMaster.setModifiedDate(poGRider.getServerDate());
         poJSON = loMaster.saveRecord();
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
-        }
-        
-        //Save Transaction Detail
-        for (int lnCtr = 0; lnCtr <= laDetail.size() - 1; lnCtr++) {
-            poJSON = laDetail.get(lnCtr).saveRecord();
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
         }
         
         //PAID Transaction

@@ -59,6 +59,7 @@ public class Model_Disbursement_Master extends Model {
             poEntity.updateObject("nVatExmpt", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateObject("nNetTotal", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
+            poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
 
 //            poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
 //            poEntity.updateString("cDisbrsTp", DisbursementStatic.DisbursementType.CHECK);
@@ -270,6 +271,15 @@ public class Model_Disbursement_Master extends Model {
 
     public String getPrint() {
         return (String) getValue("cPrintxxx");
+    }
+    
+    public JSONObject isPrinted(boolean replaced) {
+        return setValue("cPrintxxx", replaced ? "1" : "0");
+    }
+
+    public boolean isPrinted() {
+        Object value = getValue("cPrintxxx");
+        return "1".equals(String.valueOf(value));
     }
 
     public JSONObject setDatePrint(Date datePrint) {
