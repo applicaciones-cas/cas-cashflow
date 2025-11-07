@@ -703,6 +703,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+                    + " AND a.sPayeeIDx = " + SQLUtil.toSQL(Master().getPayeeID())
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
             );
             System.out.println("Executing SQL: " + lsSQL);

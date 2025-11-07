@@ -129,6 +129,7 @@ public class DisbursementVoucher extends Transaction {
     
     private OtherPayments poOtherPayments;
     private CheckPayments poCheckPayments;
+    private BankAccountMaster poBankAccount;
     private Journal poJournal;
     
     private List<Model> paMaster;
@@ -141,6 +142,7 @@ public class DisbursementVoucher extends Transaction {
         poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
         poCheckPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poOtherPayments = new CashflowControllers(poGRider, logwrapr).OtherPayments();
+        poBankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         
         paMaster = new ArrayList<Model>();
         return initialize();
@@ -1229,6 +1231,9 @@ public class DisbursementVoucher extends Transaction {
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                     " a.cBankPrnt = '0' AND i.sBankName LIKE " + SQLUtil.toSQL("%" + fsBankName)
+                    + " AND a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
+                    + " AND g.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " AND g.cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
                     + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsBankAccount)
                     + " AND a.dTransact BETWEEN " + SQLUtil.toSQL(fsFromDate)
                     + " AND " + SQLUtil.toSQL(fsToDate)
@@ -1599,6 +1604,30 @@ public class DisbursementVoucher extends Transaction {
                             poCheckPayments.setWithParentClass(true);
                             poCheckPayments.setWithUI(false);
                             poJSON = poCheckPayments.saveRecord();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    }
+                    //Save Bank Account : triggered only in assign check
+                    if(poBankAccount != null){
+                        if(poBankAccount.getEditMode() == EditMode.UPDATE){
+                            //get the latest check no existed in bank account
+                            String lsCheckNo = poCheckPayments.getModel().getCheckNo();
+                            String lsMaxCheckNo = getMaxCheckNo();
+                            if (lsMaxCheckNo.matches("\\d+") && lsCheckNo.matches("\\d+")) {
+                                if(Long.parseLong(lsCheckNo) > Long.parseLong(lsMaxCheckNo)){
+                                    lsMaxCheckNo = lsCheckNo;
+                                }
+                            }
+                            //set the latest assigned check no
+                            poBankAccount.getModel().setCheckNo(lsMaxCheckNo);
+                            poBankAccount.getModel().setLastTransactionDate(poGRider.getServerDate());    
+                            poBankAccount.getModel().setModifyingId(poGRider.getUserID());
+                            poBankAccount.getModel().setModifiedDate(poGRider.getServerDate());
+                            poBankAccount.setWithParentClass(true);
+                            poBankAccount.setWithUI(false);
+                            poJSON = poBankAccount.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
                             }
@@ -2167,7 +2196,8 @@ public class DisbursementVoucher extends Transaction {
             Model_Cache_Payable_Master object = new CashflowModels(poGRider).Cache_Payable_Master();
             String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(object),
                     " sSourceNo = " + SQLUtil.toSQL(fsSourceNo)
-                   + " AND sSourceCd = " + SQLUtil.toSQL(fsSourceCode)); 
+                   + " AND sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
+                   + " AND sClientID = " + SQLUtil.toSQL(Master().Payee().getClientID())); 
             
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -2175,9 +2205,9 @@ public class DisbursementVoucher extends Transaction {
                 lsTransactionNo = loRS.getString("sTransNox");
                 MiscUtil.close(loRS);
             } 
-        } catch (SQLException e) {
+        } catch (SQLException | GuanzonException ex) {
             return lsTransactionNo;
-        } 
+        }
             
         return lsTransactionNo;
     }
@@ -2643,38 +2673,96 @@ public class DisbursementVoucher extends Transaction {
         return "";
     }
     
-    //TODO
-    public JSONObject populateCheckNo(){
+    public JSONObject populateCheckNo() throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record to load");
+            return poJSON;
+        }
+        
+        if(poBankAccount == null || getEditMode() == EditMode.READY){
+            poBankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+            poBankAccount.initialize();
+        }
         String lsCheckNo = "";
-        String lsOriginalCheckNo = "";
-//        if (Master().CheckPayments().getCheckNo().isEmpty()) {
-//            lsCheckNo = CheckPayments().getModel().Bank_Account_Master().getCheckNo();
-//
-//            if (lsCheckNo.matches("\\d+")) {
-//                long incremented = Long.parseLong(lsCheckNo) + 1;
-//                lsCheckNo = String.format("%0" + lsCheckNo.length() + "d", incremented);
-//            }
-//            lsOriginalCheckNo = lsCheckNo;
-//            if (currentTransactionIndex == 0 && startingCheckNo == -1 && checkNoValue != null && checkNoValue.matches("\\d+")) {
-//                startingCheckNo = Long.parseLong(checkNoValue);
-//                checkNoLength = checkNoValue.length();
-//                poController.CheckPayments().getModel().setCheckNo(checkNoValue);
-//                poController.BankAccountMaster().getModel().setCheckNo(checkNoValue);
-//    //             poController.BankAccountLedger().getModel().setSourceNo(checkNoValue);
-//                poController.CheckPayments().getModel().setTransactionStatus(CheckStatus.OPEN);
-//            } else if (startingCheckNo != -1) {
-//                long currentCheckNo = startingCheckNo + currentTransactionIndex;
-//                String formatted = String.format("%0" + checkNoLength + "d", currentCheckNo);
-//                tfCheckNo.setText(formatted);
-//                poController.CheckPayments().getModel().setCheckNo(formatted);
-//                poController.CheckPayments().getModel().setTransactionStatus(CheckStatus.OPEN);
-//                poController.BankAccountMaster().getModel().setCheckNo(formatted);
-//    //            poController.BankAccountLedger().getModel().setSourceNo(formatted);
-//
-//            }
-//        }
+        if (poCheckPayments.getModel().getCheckNo() == null || "".equals(poCheckPayments.getModel().getCheckNo())) {
+            switch(getEditMode()){
+                case EditMode.READY:
+                    poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
+                    if ("error".equals((String) poJSON.get("result"))){
+                        return poJSON;
+                    }
+                break;
+                case EditMode.UPDATE:
+                    if(poBankAccount.getEditMode() == EditMode.ADDNEW || poBankAccount.getEditMode() == EditMode.READY || poBankAccount.getEditMode() == EditMode.UNKNOWN){
+                        poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
+                        if ("error".equals((String) poJSON.get("result"))){
+                            return poJSON;
+                        }
+                        poJSON = poBankAccount.updateRecord();
+                        if ("error".equals((String) poJSON.get("result"))){
+                            return poJSON;
+                        }
+                    } 
+                break;
+            }
+            
+            if(poBankAccount.getEditMode() == EditMode.UPDATE) {
+                //get the latest check no existed in bank account
+                lsCheckNo = poBankAccount.getModel().getCheckNo();
+                if (lsCheckNo.matches("\\d+")) {
+                    long incremented = Long.parseLong(lsCheckNo) + 1;
+                    lsCheckNo = String.format("%0" + lsCheckNo.length() + "d", incremented);
+                }
+                //Update check info in check payments
+                poCheckPayments.getModel().setCheckNo(lsCheckNo);
+                poCheckPayments.getModel().setCheckDate(poGRider.getServerDate());
+                poCheckPayments.getModel().setAmount(Master().getNetTotal());
+            }
+        }
             
         return poJSON;
+    }
+    
+    public JSONObject existCheckNo(String checkNo) throws SQLException {
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT sCheckNox FROM check_payments ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " sCheckNox = " + SQLUtil.toSQL(checkNo)
+                                            + " AND sSourceNo <> " + SQLUtil.toSQL(Master().getTransactionNo())
+                                            + " LIMIT 1");
+
+        ResultSet loRS = null;
+        System.out.println("Executing SQL: " + lsSQL);
+        loRS = poGRider.executeQuery(lsSQL);
+
+        if (loRS != null && loRS.next()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Check no " + loRS.getString("sCheckNox") + " is already exist");
+        } else {
+            poJSON.put("result", "success");
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    
+    public String getMaxCheckNo() throws SQLException {
+        String lsCheckNo = "";
+        String lsSQL = " SELECT "
+                    + " MAX(b.sCheckNox) AS sCheckNox "
+                    + " FROM bank_account_master a "
+                    + " LEFT JOIN check_payments b ON b.sBnkActID = a.sBnkActID ";
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBnkActID = " + SQLUtil.toSQL(poCheckPayments.getModel().getBankAcountID()));
+
+        ResultSet loRS = null;
+        System.out.println("Executing SQL: " + lsSQL);
+        loRS = poGRider.executeQuery(lsSQL);
+
+        if (loRS != null && loRS.next()) {
+            lsCheckNo = loRS.getString("sCheckNox");
+        }
+        MiscUtil.close(loRS);
+        return lsCheckNo;
     }
     
     /**
@@ -2930,7 +3018,7 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
+                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
     
@@ -3031,6 +3119,7 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
             
+//            CheckPayments().getModel().setTransactionStatus(""); //TODO
             CheckPayments().getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
             CheckPayments().getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
             CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
@@ -3278,7 +3367,7 @@ public class DisbursementVoucher extends Transaction {
         
         String watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
         try {
-            String jrxmlPath = System.getProperty("sys.default.path.config") + "Reports/CheckDisbursementVoucher.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
+            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/DisbursementVoucher.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
             for (String txnNo : fsTransactionNos) {
@@ -3356,13 +3445,11 @@ public class DisbursementVoucher extends Transaction {
 
             poJSON.put("result", "success");
 
-        } catch (JRException | SQLException | GuanzonException ex) {
+        } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction print aborted!");
-            Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (ScriptException ex) {
-            Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, null, ex);
-        }
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+        } 
 
         return poJSON;
     }
