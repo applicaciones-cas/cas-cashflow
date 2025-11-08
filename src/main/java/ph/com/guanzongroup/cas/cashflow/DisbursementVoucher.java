@@ -3018,7 +3018,8 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
+                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) 
+//                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
     
@@ -3125,7 +3126,6 @@ public class DisbursementVoucher extends Transaction {
             CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
             CheckPayments().getModel().setDatePrint(poGRider.getServerDate());
             
-            //DISABLED - ARSIELA 11042025 DV MUST BE PRINTED BEFORE PRINTING OF CHECK
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = fsTransactionNos.get(lnCtr);
             String sPayeeNme = CheckPayments().getModel().Payee().getPayeeName();
@@ -3133,7 +3133,7 @@ public class DisbursementVoucher extends Transaction {
             String nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             String bankCode = CheckPayments().getModel().Banks().getBankCode();
-//            bankCode = "MBTDSChk";
+            bankCode = "MBTDSChk";
             System.out.println("===============================================");
             System.out.println("No : " + (lnCtr + 1));
             System.out.println("transactionNo No : " + fsTransactionNos.get(lnCtr));
@@ -3151,12 +3151,16 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-            }
 
-            //Save Disbursement
-            pbIsUpdateAmountPaid = true;
-            poJSON = SaveTransaction();
-            if ("error".equals((String) poJSON.get("result"))){
+                //Save Disbursement
+                pbIsUpdateAmountPaid = true;
+                poJSON = SaveTransaction();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Print check aborted.");
                 return poJSON;
             }
         }
@@ -3203,6 +3207,7 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("[SUCCESS] Printed transaction " + tx.transactionNo
                     + " for " + tx.sPayeeNme
                     + " | Amount: ₱" + tx.nAmountxx);
+            poJSON.put("result", "success");
         } else {
             job.cancelJob();
             System.err.println("[FAILED] Printing failed for transaction " + tx.transactionNo);
@@ -3211,7 +3216,6 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
-        poJSON.put("result", "success");
         return poJSON;
     }
 
@@ -3238,7 +3242,11 @@ public class DisbursementVoucher extends Transaction {
             ((Stage) btnPrint.getScene().getWindow()).setUserData(Boolean.TRUE);
             ((Stage) btnPrint.getScene().getWindow()).close();
         });
-        btnCancel.setOnAction(e -> ((Stage) btnCancel.getScene().getWindow()).close());
+        btnCancel.setOnAction(e -> {
+            ((Stage) btnPrint.getScene().getWindow()).setUserData(Boolean.FALSE);
+            ((Stage) btnPrint.getScene().getWindow()).close();
+        });
+//        btnCancel.setOnAction(e -> ((Stage) btnCancel.getScene().getWindow()).close());
 
         HBox footer = new HBox(10, btnPrint, btnCancel);
         footer.setAlignment(Pos.CENTER_RIGHT);
@@ -3358,6 +3366,18 @@ public class DisbursementVoucher extends Transaction {
             this.nAmountxxValue = nAmountxxValue;
         }
     }
+    
+    private String particular(String fsSouceCode){
+        switch(fsSouceCode){
+            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                return "PAYMENT REQUEST";
+            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                return "ADJUSTMENT";
+            case DisbursementStatic.SourceCode.PO_RECEIVING:
+            default:
+                return "PURCHASES";
+        }
+    }
 
     public JSONObject printTransaction(List<String> fsTransactionNos)
             throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -3365,13 +3385,13 @@ public class DisbursementVoucher extends Transaction {
         JasperPrint masterPrint = null;       
         JasperReport jasperReport = null;       
         
-        String watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
         try {
+            String watermarkPath = "";
             String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/DisbursementVoucher.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
-
+            
             for (String txnNo : fsTransactionNos) {
-
+                watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
                 poJSON = OpenTransaction(txnNo);
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -3401,27 +3421,53 @@ public class DisbursementVoucher extends Transaction {
                 params.put("sPrepared", poGRider.getLogName());
                 params.put("sChecked", "Rex Adversalo");
                 params.put("sApproved", "Guanson Lo");
-
-                switch (Master().getPrint()) {
-                    case CheckStatus.PrintStatus.PRINTED:
-                        watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
-                        break;
-                    case CheckStatus.PrintStatus.OPEN:
-                    default:
-                        watermarkPath = watermarkPath + "none.png" ; //"D:\\GGC_Maven_Systems\\Reports\\images\\none.png";
-                        break;
+                
+                if(Master().isPrinted()){
+                    watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
+                } else {
+                    watermarkPath = watermarkPath + "none.png" ; //"D:\\GGC_Maven_Systems\\Reports\\images\\none.png";
                 }
                 params.put("watermarkImagePath", watermarkPath);
-
                 List<TransactionDetail> Details = new ArrayList<>();
-                for (int i = 0; i < getDetailCount(); i++) {
-                    Details.add(new TransactionDetail(
-                            i + 1,
-                            Detail(i).Particular().getDescription(),
-                            Detail(i).Particular().getDescription(),
-                            Detail(i).getAmount()
-                    ));
+                List<String> laParticular = new ArrayList<>();
+                String lsParticular = "";
+                for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+                    //populate particular
+                    switch(Detail(lnCtr).getSourceCode()){
+                        case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                        case DisbursementStatic.SourceCode.PO_RECEIVING:
+                        case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                            lsParticular = particular(Detail(lnCtr).getSourceCode());
+                            if(!laParticular.contains(lsParticular)){
+                                laParticular.add(lsParticular);
+                            }
+                            break;
+                        case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                            lsParticular = particular(Detail(lnCtr).SOADetail().getSourceCode());
+                            if(!laParticular.contains(lsParticular)){
+                                laParticular.add(lsParticular);
+                            }
+                            break;
+                    }
                 }
+                
+                //Particular
+                lsParticular = ""; //Reset value
+                for(int lnCtr = 0;lnCtr <= laParticular.size()-1;lnCtr++){
+                    if(lsParticular.isEmpty()){
+                        lsParticular = laParticular.get(lnCtr);
+                    } else {
+                        lsParticular = lsParticular + " AND " + laParticular.get(lnCtr);
+                    }
+                }
+                
+                Details.add(new TransactionDetail(
+                        1,
+                        lsParticular,
+                        "",
+                        Master().getNetTotal()
+                ));
+                
                 JasperPrint currentPrint = JasperFillManager.fillReport(
                         jasperReport,
                         params,
@@ -3437,14 +3483,14 @@ public class DisbursementVoucher extends Transaction {
             if (masterPrint != null) {
                 CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
                 viewer.setVisible(true);
-                //Check the latest value of JSON object based on save transaction function triggered at CustomJasperViewer method
-                if ("error".equals((String) poJSON.get("result"))){ 
-                    return poJSON;
-                }
             }
-
-            poJSON.put("result", "success");
-
+            
+            if("error".equals((String) poJSON.get("result"))){
+                ShowMessageFX.Warning(null, "Computerized Accounting System", (String) poJSON.get("message"));
+            } else {
+                System.out.println("message " +  (String) poJSON.get("message"));
+                ShowMessageFX.Information(null, "Computerized Accounting System","Transaction Printed Successfully");
+            }
         } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction print aborted!");
@@ -3547,53 +3593,33 @@ public class DisbursementVoucher extends Transaction {
                                         @Override
                                         public void actionPerformed(ActionEvent e) {
                                             try {
-                                                boolean ok = JasperPrintManager.printReport(jasperPrint, true);
-                                                if (ok) {
-
-                                                    PrintTransaction(true);
+                                                boolean isPrinted = JasperPrintManager.printReport(jasperPrint, true);
+                                                if (isPrinted) {
                                                     Master().isPrinted(true);
                                                     Master().setDatePrint(poGRider.getServerDate());
 
                                                     Master().setModifyingId(poGRider.getUserID());
                                                     Master().setModifiedDate(poGRider.getServerDate());
                                                     poJSON = SaveTransaction();
+                                                    if(!"error".equals((String) poJSON.get("result"))){
+                                                        poJSON.put("result", "success");
+                                                        poJSON.put("message",  "Transaction Printed Successfully.");
+                                                    }
                                                     CustomJasperViewer.this.dispose();
                                                 } else {
-                                                    Platform.runLater(new Runnable() {
-                                                        @Override
-                                                        public void run() {
-                                                            ShowMessageFX.Warning(
-                                                                    "Printing was canceled by the user.",
-                                                                    "Print Purchase Order", null);
-                                                            SwingUtilities.invokeLater(new Runnable() {
-                                                                @Override
-                                                                public void run() {
-                                                                    CustomJasperViewer.this.toFront();
-                                                                }
-                                                            });
-                                                        }
-                                                    });
+                                                    poJSON.put("result", "error");
+                                                    poJSON.put("message",  "Printing was canceled by the user.");
                                                 }
-                                            } catch (final JRException ex) {
-                                                Platform.runLater(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        ShowMessageFX.Warning(
-                                                                "Print Failed: " + ex.getMessage(),
-                                                                "Computerized Accounting System", null);
-                                                        SwingUtilities.invokeLater(new Runnable() {
-                                                            @Override
-                                                            public void run() {
-                                                                CustomJasperViewer.this.toFront();
-                                                            }
-                                                        });
-                                                    }
-                                                });
-                                            } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
-                                                Logger.getLogger(CheckPrinting.class.getName()).log(Level.SEVERE, null, ex);
+                                            } catch (SQLException | GuanzonException | CloneNotSupportedException | JRException ex) {
+                                                poJSON.put("result", "error");
+                                                poJSON.put("message",  "Print Failed: " + ex.getMessage());
+                                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
                                             }
                                         }
                                     });
+                                } else {
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message",  "Transaction print aborted!");
                                 }
                             }
                         }
@@ -3607,11 +3633,8 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "Error customizing print button: " + e.getMessage());
             }
             
-            poJSON.put("result", "success");
-            poJSON.put("message", "success");
             return poJSON;
         }
-
 
         private void PrintTransaction(boolean fbIsPrinted)
                 throws SQLException, CloneNotSupportedException, GuanzonException {
@@ -3619,17 +3642,13 @@ public class DisbursementVoucher extends Transaction {
                     ? "Transaction printed successfully."
                     : "Transaction print aborted.";
 
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-                    ShowMessageFX.Information(msg, "Print Disbursement", null);
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            CustomJasperViewer.this.toFront();
-                        }
-                    });
+            Platform.runLater(() -> {
+                if(fbIsPrinted){
+                    ShowMessageFX.Information(null, "Computerized Accounting System", msg);
+                } else {
+                    ShowMessageFX.Warning(null, "Computerized Accounting System", msg);
                 }
+                SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
             });
         }
 
@@ -3637,7 +3656,9 @@ public class DisbursementVoucher extends Transaction {
             Platform.runLater(new Runnable() {
                 @Override
                 public void run() {
-                    ShowMessageFX.Warning(m, "Print Purchase Order", null);
+//                    ShowMessageFX.Warning(m, "Print Disbursement", null);
+                    poJSON.put("result", "error");
+                    poJSON.put("message", m);
                     SwingUtilities.invokeLater(new Runnable() {
                         @Override
                         public void run() {
