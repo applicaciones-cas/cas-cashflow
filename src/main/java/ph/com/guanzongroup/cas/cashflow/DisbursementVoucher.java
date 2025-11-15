@@ -2685,43 +2685,46 @@ public class DisbursementVoucher extends Transaction {
             poBankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
             poBankAccount.initialize();
         }
-        String lsCheckNo = "";
-        if (poCheckPayments.getModel().getCheckNo() == null || "".equals(poCheckPayments.getModel().getCheckNo())) {
-            switch(getEditMode()){
-                case EditMode.READY:
+        
+        switch(getEditMode()){
+            case EditMode.READY:
+                poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            break;
+            case EditMode.UPDATE:
+                if(poBankAccount.getEditMode() == EditMode.READY || poBankAccount.getEditMode() == EditMode.UNKNOWN){
                     poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
                     if ("error".equals((String) poJSON.get("result"))){
                         return poJSON;
                     }
-                break;
-                case EditMode.UPDATE:
-                    if(poBankAccount.getEditMode() == EditMode.ADDNEW || poBankAccount.getEditMode() == EditMode.READY || poBankAccount.getEditMode() == EditMode.UNKNOWN){
-                        poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
-                        if ("error".equals((String) poJSON.get("result"))){
-                            return poJSON;
-                        }
-                        poJSON = poBankAccount.updateRecord();
-                        if ("error".equals((String) poJSON.get("result"))){
-                            return poJSON;
-                        }
-                    } 
-                break;
-            }
-            
-            if(poBankAccount.getEditMode() == EditMode.UPDATE) {
+                    poJSON = poBankAccount.updateRecord();
+                    if ("error".equals((String) poJSON.get("result"))){
+                        return poJSON;
+                    }
+                } 
+            break;
+        }
+
+        String lsCheckNo = "";
+        if(poBankAccount.getEditMode() == EditMode.UPDATE) {
+            //Update check info in check payments
+            if (poCheckPayments.getModel().getCheckNo() == null || "".equals(poCheckPayments.getModel().getCheckNo())) {
                 //get the latest check no existed in bank account
                 lsCheckNo = poBankAccount.getModel().getCheckNo();
                 if (lsCheckNo.matches("\\d+")) {
                     long incremented = Long.parseLong(lsCheckNo) + 1;
                     lsCheckNo = String.format("%0" + lsCheckNo.length() + "d", incremented);
                 }
-                //Update check info in check payments
                 poCheckPayments.getModel().setCheckNo(lsCheckNo);
                 poCheckPayments.getModel().setCheckDate(poGRider.getServerDate());
-                poCheckPayments.getModel().setAmount(Master().getNetTotal());
             }
-        }
             
+            //Set check amount
+            poCheckPayments.getModel().setAmount(Master().getNetTotal());
+        }
+
         return poJSON;
     }
     
@@ -3132,8 +3135,16 @@ public class DisbursementVoucher extends Transaction {
             String dCheckDte = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
             String nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
-            String bankCode = CheckPayments().getModel().Banks().getBankCode();
-            bankCode = "MBTDSChk";
+            
+            String bankCode = getDocumentCode(CheckPayments().getModel().getBankAcountID()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
+            
+            if(bankCode.isEmpty()){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Please configure the document code for bank account.");
+                return poJSON;
+            }
+            
+//            bankCode = "MBTDSChk";
             System.out.println("===============================================");
             System.out.println("No : " + (lnCtr + 1));
             System.out.println("transactionNo No : " + fsTransactionNos.get(lnCtr));
@@ -3168,6 +3179,38 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Check printed successfully");
         return poJSON;
+    }
+    
+    /**
+     * get Inventory Type Code value
+     * @param fsValue description
+     * @return 
+     */
+    private String getDocumentCode(String fsBankAccountId){
+        try {
+            String lsSQL =   " SELECT "                                                        
+                        + " CONCAT(a.sBankCode,'Chk',c.sSlipType) AS sDocCodex "            
+                        + " FROM banks a "                                                  
+                        + " LEFT JOIN bank_account_master b ON b.sBankIDxx = a.sBankIDxx "  
+                        + " LEFT JOIN branch_bank_account c ON c.sBnkActID = b.sBnkActID "  ;
+            lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return  loRS.getString("sDocCodex");
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+            
+        return  "";
     }
     
     private JSONObject PrintCheck(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
