@@ -296,7 +296,7 @@ public class APPaymentAdjustment extends Parameter {
         String lsSQL = " SELECT "
                 + "   sTransNox "
                 + " , sSourceNo "
-                + "   FROM cache_payable_master ";
+                + "   FROM Cache_Payable_Master ";
         lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(getModel().getTransactionNo()));
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -1119,26 +1119,26 @@ public class APPaymentAdjustment extends Parameter {
                 + " , c.sPayeeNme  AS sPayeeNme "
                 + " , d.sCompnyNm  AS sCompnyNm "
                 + " , e.sDescript  AS sIndustry "
-                + " FROM ap_payment_adjustment a "
-                + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
-                + " LEFT JOIN payee c ON c.sPayeeIDx = a.sIssuedTo "
-                + " LEFT JOIN company d ON d.sCompnyID = a.sCompnyID  "
-                + " LEFT JOIN industry e ON e.sIndstCdx = a.sIndstCdx ";
+                + " FROM AP_Payment_Adjustment a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
+                + " LEFT JOIN Payee c ON c.sPayeeIDx = a.sIssuedTo "
+                + " LEFT JOIN Company d ON d.sCompnyID = a.sCompnyID  "
+                + " LEFT JOIN Industry e ON e.sIndstCdx = a.sIndstCdx ";
     }
     
     public String getAPPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , sum(b.nAppliedx) AS nAppliedx"
-                + " FROM ap_payment_master a "
-                + " LEFT JOIN ap_payment_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM AP_Payment_Master a "
+                + " LEFT JOIN AP_Payment_Detail b ON b.sTransNox = a.sTransNox ";
     }
     
     public String getDVPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , sum(b.nAmountxx) AS nAppliedx"
-                + " FROM disbursement_master a "
-                + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM Disbursement_Master a "
+                + " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox ";
     }
 }

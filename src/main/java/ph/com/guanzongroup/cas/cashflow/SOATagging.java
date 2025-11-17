@@ -2495,27 +2495,27 @@ public class SOATagging extends Transaction {
                 + " , c.sCompnyNm  AS sCompnyNm"
                 + " , d.sDescript  AS sIndustry"
                 + " , e.sPayeeNme  AS sPayeeNme"
-                + " FROM ap_payment_master a "
-                + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
-                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
-                + " LEFT JOIN industry d ON d.sIndstCdx = a.sIndstCdx "
-                + " LEFT JOIN payee e ON e.sPayeeIDx = a.sIssuedTo ";
+                + " FROM AP_Payment_Master a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
+                + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
+                + " LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx "
+                + " LEFT JOIN Payee e ON e.sPayeeIDx = a.sIssuedTo ";
     }
 
     public String getAPPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , sum(b.nAppliedx) AS nAppliedx"
-                + " FROM ap_payment_master a "
-                + " LEFT JOIN ap_payment_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM AP_Payment_Master a "
+                + " LEFT JOIN AP_Payment_Detail b ON b.sTransNox = a.sTransNox ";
     }
 
     public String getDVPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , sum(b.nAmtAppld) AS nAppliedx"
-                + " FROM disbursement_master a "
-                + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM Disbursement_Master a "
+                + " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox ";
     }
 
     public String getPayableSQL(String supplier, String company, String payee, String referenceNo) {
@@ -2531,9 +2531,9 @@ public class SOATagging extends Transaction {
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
                 + " , a.sSourceCd AS sPayablTp  "
-                + " FROM cache_payable_master a "
-                + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
-                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " FROM Cache_Payable_Master a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
+                + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
 //                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
 //                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
@@ -2555,10 +2555,10 @@ public class SOATagging extends Transaction {
                 + " , b.sPayeeNme AS sPayablNm    "
                 + " , c.sCompnyNm AS sCompnyNm  "
                 + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
-                + " FROM payment_request_master a "
-                + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
-                + " LEFT JOIN client_master bb ON bb.sClientID = b.sClientID "
-                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " FROM Payment_Request_Master a "
+                + " LEFT JOIN Payee b ON b.sPayeeIDx = a.sPayeeIDx "
+                + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
+                + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
 //                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
 //                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
@@ -2584,9 +2584,9 @@ public class SOATagging extends Transaction {
                 + " , b.sCompnyNm AS sPayablNm  "
                 + " , c.sCompnyNm AS sCompnyNm  "
                 + " , a.sSourceCd AS sPayablTp  "
-                + " FROM cache_payable_master a "
-                + " LEFT JOIN client_master b ON b.sClientID = a.sClientID "
-                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " FROM Cache_Payable_Master a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
+                + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
 //                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
 //                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
@@ -2611,10 +2611,10 @@ public class SOATagging extends Transaction {
                 + " , b.sPayeeNme AS sPayablNm    "
                 + " , c.sCompnyNm AS sCompnyNm  "
                 + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
-                + " FROM payment_request_master a "
-                + " LEFT JOIN payee b ON b.sPayeeIDx = a.sPayeeIDx "
-                + " LEFT JOIN client_master bb ON bb.sClientID = b.sClientID "
-                + " LEFT JOIN company c ON c.sCompnyID = a.sCompnyID "
+                + " FROM Payment_Request_Master a "
+                + " LEFT JOIN Payee b ON b.sPayeeIDx = a.sPayeeIDx "
+                + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
+                + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
 //                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
 //                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)

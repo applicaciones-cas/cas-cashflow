@@ -993,7 +993,7 @@ public class DisbursementVoucher extends Transaction {
     }
     
     public String getVoucherNo() throws SQLException {
-        String lsSQL = "SELECT sVouchrNo FROM disbursement_master";
+        String lsSQL = "SELECT sVouchrNo FROM Disbursement_Master";
         lsSQL = MiscUtil.addCondition(lsSQL,
                 "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                 + " ORDER BY sVouchrNo DESC LIMIT 1");
@@ -2218,7 +2218,7 @@ public class DisbursementVoucher extends Transaction {
      */
     private String getInvTypeCode(String fsValue){
         try {
-            String lsSQL = "SELECT sInvTypCd, sDescript FROM inv_type ";
+            String lsSQL = "SELECT sInvTypCd, sDescript FROM Inv_Type ";
             lsSQL = MiscUtil.addCondition(lsSQL, " cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
                                                 + " AND lower(sDescript) LIKE " + SQLUtil.toSQL("%"+fsValue));
             System.out.println("Executing SQL: " + lsSQL);
@@ -2343,7 +2343,7 @@ public class DisbursementVoucher extends Transaction {
      */
     private String getParticularId(String fsValue){
         try {
-            String lsSQL = "SELECT sPrtclrID, sDescript, sTranType FROM particular ";
+            String lsSQL = "SELECT sPrtclrID, sDescript, sTranType FROM Particular ";
             lsSQL = MiscUtil.addCondition(lsSQL, " lower(sDescript) LIKE " + SQLUtil.toSQL("%"+fsValue+"%"));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -2730,7 +2730,7 @@ public class DisbursementVoucher extends Transaction {
     
     public JSONObject existCheckNo(String checkNo) throws SQLException {
         poJSON = new JSONObject();
-        String lsSQL = "SELECT sCheckNox FROM check_payments ";
+        String lsSQL = "SELECT sCheckNox FROM Check_Payments ";
         lsSQL = MiscUtil.addCondition(lsSQL, " sCheckNox = " + SQLUtil.toSQL(checkNo)
                                             + " AND sSourceNo <> " + SQLUtil.toSQL(Master().getTransactionNo())
                                             + " LIMIT 1");
@@ -2753,8 +2753,8 @@ public class DisbursementVoucher extends Transaction {
         String lsCheckNo = "";
         String lsSQL = " SELECT "
                     + " MAX(b.sCheckNox) AS sCheckNox "
-                    + " FROM bank_account_master a "
-                    + " LEFT JOIN check_payments b ON b.sBnkActID = a.sBnkActID ";
+                    + " FROM Bank_Account_Master a "
+                    + " LEFT JOIN Check_Payments b ON b.sBnkActID = a.sBnkActID ";
         lsSQL = MiscUtil.addCondition(lsSQL, "a.sBnkActID = " + SQLUtil.toSQL(poCheckPayments.getModel().getBankAcountID()));
 
         ResultSet loRS = null;
@@ -3032,8 +3032,8 @@ public class DisbursementVoucher extends Transaction {
             + " , b.sCategrCd "                                     
             + " , a.sDescript AS sInvTypex "                        
             + " , b.sDescript AS sCategory "                        
-            + " FROM inv_type a "                                   
-            + " LEFT JOIN category b ON b.sInvTypCd = a.sInvTypCd ";
+            + " FROM Inv_Type a "                                   
+            + " LEFT JOIN Category b ON b.sInvTypCd = a.sInvTypCd ";
     }
     
     @Override
@@ -3053,12 +3053,12 @@ public class DisbursementVoucher extends Transaction {
                 + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
                 + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " LEFT JOIN client_master e ON d.sClientID = e.sClientID "
-                + " LEFT JOIN particular f ON b.sPrtclrID = f.sPrtclrID"
-                + " LEFT JOIN check_payments g ON a.sTransNox = g.sSourceNo"
-                + " LEFT JOIN other_payments h ON a.sTransNox = h.sSourceNo"
-                + " LEFT JOIN banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
-                + " LEFT JOIN bank_account_master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID";
+                + " LEFT JOIN Client_Master e ON d.sClientID = e.sClientID "
+                + " LEFT JOIN Particular f ON b.sPrtclrID = f.sPrtclrID"
+                + " LEFT JOIN Check_Payments g ON a.sTransNox = g.sSourceNo"
+                + " LEFT JOIN Other_Payments h ON a.sTransNox = h.sSourceNo"
+                + " LEFT JOIN Banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
+                + " LEFT JOIN Bank_Account_Master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID";
     }
     
     /*****************************************************DV AND CHECK PRINTING*************************************************************/
@@ -3190,9 +3190,9 @@ public class DisbursementVoucher extends Transaction {
         try {
             String lsSQL =   " SELECT "                                                        
                         + " CONCAT(a.sBankCode,'Chk',c.sSlipType) AS sDocCodex "            
-                        + " FROM banks a "                                                  
-                        + " LEFT JOIN bank_account_master b ON b.sBankIDxx = a.sBankIDxx "  
-                        + " LEFT JOIN branch_bank_account c ON c.sBnkActID = b.sBnkActID "  ;
+                        + " FROM Banks a "                                                  
+                        + " LEFT JOIN Bank_Account_Master b ON b.sBankIDxx = a.sBankIDxx "  
+                        + " LEFT JOIN Branch_Bank_Account c ON c.sBnkActID = b.sBnkActID "  ;
             lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
