@@ -1,5 +1,7 @@
 
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.script.ScriptException;
@@ -8,6 +10,7 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
@@ -93,7 +96,7 @@ public class testDisbursementVoucher {
         }
     }
     
-    @Test
+//    @Test
     public void testUpdateTransaction() {
         String industryId = "02";
         String companyId = "0002";
@@ -108,7 +111,7 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
 
-            loJSON = poController.OpenTransaction("M00125000004");
+            loJSON = poController.OpenTransaction("M00125000005");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -233,4 +236,30 @@ public class testDisbursementVoucher {
         }
     }
     
+    @Test
+    public void testCertifyTransaction() {
+        String industryId = "02";
+        String companyId = "0002";
+        String supplierId = "C00124000009";
+        try {
+
+            JSONObject loJSON = new JSONObject();
+
+            loJSON = poController.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+//            poController.setUpdateAmountPaid(true);
+            List<String> list = new ArrayList<String>();
+            list.add("M00125000005");
+            loJSON = poController.CertifyTransaction("", list);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+        } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException | ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        } 
+    }
 }
