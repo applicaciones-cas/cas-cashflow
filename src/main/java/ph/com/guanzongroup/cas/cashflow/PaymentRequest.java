@@ -460,7 +460,7 @@ public class PaymentRequest extends Transaction {
                 + " b.sBranchCd,"
                 + " c.sDeptIDxx,"
                 + " d.sPayeeIDx"
-                + " FROM payment_request_master a "
+                + " FROM Payment_Request_Master a "
                 + " LEFT JOIN Branch b ON a.sBranchCd = b.sBranchCd "
                 + " LEFT JOIN Department c ON c.sDeptIDxx = a.sDeptIDxx "
                 + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx";
@@ -764,11 +764,11 @@ public class PaymentRequest extends Transaction {
                 + "    ELSE 0 "
                 + "  END AS currentDue "
                 + " FROM "
-                + "  recurring_issuance a "
-                + "  LEFT JOIN branch b ON a.sBranchCd = b.sBranchCd "
-                + "  LEFT JOIN payee c ON a.sPayeeIDx = c.sPayeeIDx "
-                + "  LEFT JOIN client_master d ON c.sClientID = d.sClientID "
-                + "  LEFT JOIN particular e ON a.sPrtclrID = e.sPrtclrID "
+                + "  Recurring_Issuance a "
+                + "  LEFT JOIN Branch b ON a.sBranchCd = b.sBranchCd "
+                + "  LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx "
+                + "  LEFT JOIN Client_Master d ON c.sClientID = d.sClientID "
+                + "  LEFT JOIN Particular e ON a.sPrtclrID = e.sPrtclrID "
                 + "  LEFT JOIN Payment_Request_Master f ON f.sTransNox = a.sLastRqNo ";
 
         String lsFilterCondition = String.join(" AND ",
@@ -1231,7 +1231,7 @@ public class PaymentRequest extends Transaction {
     }
 
     public String getSeriesNoByBranch() throws SQLException {
-        String lsSQL = "SELECT sSeriesNo FROM payment_request_master";
+        String lsSQL = "SELECT sSeriesNo FROM Payment_Request_Master";
         lsSQL = MiscUtil.addCondition(lsSQL,
                 "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                 + " ORDER BY sSeriesNo DESC LIMIT 1");
@@ -1259,8 +1259,8 @@ public class PaymentRequest extends Transaction {
     public String getPaymentStatusFromIssuanceLastPRFNo(String lastPRFNo) throws SQLException {
         String status = "";
         String lsSQL = "SELECT b.cTranStat "
-                + "FROM recurring_issuance a "
-                + "LEFT JOIN payment_request_master b ON b.sTransNox = a.sLastRqNo "
+                + "FROM Recurring_Issuance a "
+                + "LEFT JOIN Payment_Request_Master b ON b.sTransNox = a.sLastRqNo "
                 + MiscUtil.addCondition("", "a.sLastRqNo = " + SQLUtil.toSQL(lastPRFNo));
 
         ResultSet loRS = poGRider.executeQuery(lsSQL);
