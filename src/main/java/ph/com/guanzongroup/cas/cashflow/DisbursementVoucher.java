@@ -2291,29 +2291,29 @@ public class DisbursementVoucher extends Transaction {
                     switch(loRS.getString("sInvTypex").toLowerCase().replace(" ", "")){
                         case "merchandiserelatedinventory":
                             switch(loRS.getString("sCategrCd")){
-                                case "0001": //CELLPHONE
+                                case DisbursementStatic.Category.MOBILEPHONE: //"0001": //CELLPHONE
                                     lsDescript = "Purchases - Mobile Phone";
                                     break;
-                                case "0002": //APPLIANCES
+                                case DisbursementStatic.Category.APPLIANCES: //"0002": //APPLIANCES
                                     lsDescript = "Purchases - Appliances";
                                     break;
-                                case "0003": //MC UNIT
+                                case DisbursementStatic.Category.MOTORCYCLE: //"0003": //MC UNIT
                                     lsDescript = "Purchases - Motorcycle";
                                     break;
-                                case "0004": //MC SPAREPARTS
+                                case DisbursementStatic.Category.SPMC: //"0004": //MC SPAREPARTS
                                     lsDescript = "Purchases - Spareparts";
                                     break;
-                                case "0005": //CAR UNIT
+                                case DisbursementStatic.Category.CAR: //"0005": //CAR UNIT
                                     lsDescript = "Purchases - Car";
                                     break;
-                                case "0006": //CAR SPAREPARTS
+                                case DisbursementStatic.Category.SPCAR: //"0006": //CAR SPAREPARTS
                                     lsDescript = "Purchases - Spareparts";
                                     break;
-                                case "0007": //GENERAL
+                                case DisbursementStatic.Category.GENERAL: //"0007": //GENERAL
                                     lsDescript = "Purchases - General";
                                     break;
-                                case "0008": //LP - Food
-                                case "0009": //Monarch - Food
+                                case DisbursementStatic.Category.FOOD: //"0008": //LP - Food
+                                case DisbursementStatic.Category.HOSPITALITY: //"0009": //Monarch - Food
                                     lsDescript = "Purchases - LP";
                                     break;
                             }
