@@ -65,7 +65,8 @@ public class testWithholdingTax {
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 
-            
+            System.out.println("editmode: " + record.getEditMode());
+            System.out.println("editmode model: " + record.getModel().getEditMode());
             loJSON = record.saveRecord();
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));

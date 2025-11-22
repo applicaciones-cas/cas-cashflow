@@ -112,11 +112,11 @@ public class Model_Withholding_Tax_Deductions extends Model {
     }
 
     public JSONObject setSourceCode(String sourceCode) {
-        return setValue("sSourceCd", sourceCode);
+        return setValue("sSourceCD", sourceCode);
     }
 
     public String getSourceCode() {
-        return (String) getValue("sSourceCd");
+        return (String) getValue("sSourceCD");
     }
 
     public JSONObject setSourceNo(String sourceNo) {

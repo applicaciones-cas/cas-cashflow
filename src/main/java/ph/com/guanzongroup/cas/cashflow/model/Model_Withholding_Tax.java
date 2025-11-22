@@ -142,7 +142,7 @@ public class Model_Withholding_Tax extends Model {
     @Override
     public String getNextCode() {
 //        return "";
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+        return MiscUtil.getNextCode(getTable(), ID, false, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
 
     //reference object models
