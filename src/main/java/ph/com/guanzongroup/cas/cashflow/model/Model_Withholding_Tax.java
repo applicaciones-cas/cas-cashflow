@@ -10,7 +10,6 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
@@ -20,7 +19,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 /**
  *
- * @author Arsiela 06/05/2025
+ * @author Arsiela 11/22/2025
  */
 public class Model_Withholding_Tax extends Model {
 

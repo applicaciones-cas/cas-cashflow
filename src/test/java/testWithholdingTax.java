@@ -56,7 +56,7 @@ public class testWithholdingTax {
                 Assert.fail((String) loJSON.get("message"));
             } 
             
-            loJSON = record.getModel().setTaxRate(12.00);
+            loJSON = record.getModel().setTaxRate(1.0);
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 

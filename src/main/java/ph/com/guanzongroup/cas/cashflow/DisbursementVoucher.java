@@ -88,6 +88,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
@@ -118,6 +119,7 @@ public class DisbursementVoucher extends Transaction {
     private CheckPayments poCheckPayments;
     private BankAccountMaster poBankAccount;
     private Journal poJournal;
+    private List<WithholdingTaxDeductions> paWTaxDeductions;
     
     private List<Model> paMaster;
     
@@ -132,6 +134,8 @@ public class DisbursementVoucher extends Transaction {
         poBankAccount = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         
         paMaster = new ArrayList<Model>();
+        paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
+        
         return initialize();
     }
     
@@ -912,15 +916,26 @@ public class DisbursementVoucher extends Transaction {
         }
         return poJSON;
     }
-
+    //TODO
     public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            Detail(row).setTaxCode(object.getModel().getTaxCode());
-            Detail(row).setTaxRates(object.getModel().getRegularRate());
+            WTaxDeduction(row).getModel().WithholdingTax().setTaxCode(object.getModel().getTaxCode());
+        }
+
+        return poJSON;
+    }
+
+    public JSONObject SearchTaxRated(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
         }
 
         return poJSON;
@@ -1358,6 +1373,14 @@ public class DisbursementVoucher extends Transaction {
         return (Model_Disbursement_Detail) paDetail.get(row); 
     }
     
+    public List<WithholdingTaxDeductions> WTaxDeductions() {
+        return paWTaxDeductions; 
+    }
+    
+    public WithholdingTaxDeductions WTaxDeduction(int row) {
+        return (WithholdingTaxDeductions) paWTaxDeductions.get(row); 
+    }
+    
     public CheckPayments CheckPayments() {
         try {
             if (poCheckPayments == null) {
@@ -1392,6 +1415,53 @@ public class DisbursementVoucher extends Transaction {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         return poJournal;
+    }
+    
+    public int getWTaxDeductionsCount() {
+        return paWTaxDeductions.size();
+    }
+    
+    public JSONObject AddWTaxDeductions() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if (getWTaxDeductionsCount() > 0) {
+            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has empty item.");
+                return poJSON;
+            }
+        }
+        paWTaxDeductions.add(new CashflowControllers(poGRider, logwrapr).WithholdingTaxDeductions());
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+      
+  protected JSONObject addDetail() throws CloneNotSupportedException {
+    this.poJSON = new JSONObject();
+    if (!this.pbInitTran) {
+      this.poJSON.put("result", "error");
+      this.poJSON.put("message", "Object is not initialized.");
+      return this.poJSON;
+    } 
+    Model loDetail = (Model)this.poDetail.clone();
+    loDetail.newRecord();
+    this.paDetail.add(loDetail);
+    this.poJSON.put("result", "success");
+    return this.poJSON;
+  }
+  
+    
+    public JSONObject removeWTaxDeductions() {
+        poJSON = new JSONObject();
+        Iterator<WithholdingTaxDeductions> detail = WTaxDeductions().iterator();
+        while (detail.hasNext()) {
+            WithholdingTaxDeductions item = detail.next();
+            detail.remove();
+        }
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
     
     public JSONObject AddDetail() throws CloneNotSupportedException {
@@ -1469,6 +1539,7 @@ public class DisbursementVoucher extends Transaction {
         resetCheckPayment();
         resetOtherPayment();
         Detail().clear();
+        WTaxDeductions().clear();
         
         setSearchIndustry("");
         setSearchBranch("");
@@ -1719,6 +1790,24 @@ public class DisbursementVoucher extends Transaction {
                         }
                     }
                     break;
+            }
+            
+            if(Master().getWithTaxTotal() > 0.0000){
+                //Save Withholding Tax Deductions
+                for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                        WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
+                        WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+                        WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
+                        WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
+                        WTaxDeduction(lnCtr).setWithParentClass(true);
+                        WTaxDeduction(lnCtr).setWithUI(false);
+                        poJSON = WTaxDeduction(lnCtr).saveRecord();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    }
+                }
             }
             
             //Update other linked transaction in DV Detail
@@ -2928,6 +3017,69 @@ public class DisbursementVoucher extends Transaction {
         MiscUtil.close(loRS);
 
         return "";
+    }
+    
+    /**
+     * Populate Check
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ScriptException 
+     */
+    public JSONObject populateWithholdingTaxDeductions() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record to load");
+            return poJSON;
+        }
+        
+        switch(getEditMode()){
+            case EditMode.READY:
+                paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
+                WithholdingTaxDeductions loObject = new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions();
+                Model_Withholding_Tax_Deductions loMaster = new CashflowModels(poGRider).Withholding_Tax_Deductions();
+                String lsSQL = MiscUtil.makeSelect(loMaster);
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                        + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                );
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    while (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------WITHHOLDING TAX DEDUCTIONS--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+                            if ("error".equals((String) poJSON.get("result"))){
+                                return poJSON;
+                            }
+                            
+                            paWTaxDeductions.add(loObject);
+                        }  
+                    }
+                }
+                MiscUtil.close(loRS);
+            break;
+            case EditMode.UPDATE:
+                for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.READY){
+                        poJSON = WTaxDeduction(lnCtr).updateRecord();
+                        if ("error".equals((String) poJSON.get("result"))){
+                            return poJSON;
+                        }
+                    }
+                }
+            break;
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
     }
     
     /**

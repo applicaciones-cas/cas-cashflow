@@ -107,6 +107,27 @@ public class WithholdingTax extends Parameter{
         }
     }
     
+    public JSONObject searchRecord(String value, boolean byCode, String taxCode) throws SQLException, GuanzonException{
+        String lsSQL = MiscUtil.addCondition(getSQ_Browse(), " a.sATaxCode = " + SQLUtil.toSQL(taxCode));
+        
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Description»Tax Code»Account",
+                "sTaxRteID»sTaxDescr»sATaxCode»xAccountx", 
+                "a.sTaxRteID»a.sTaxDescr»a.sATaxCode»IFNULL(b.sDescript, '')",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sTaxRteID"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
     @Override
     public String getSQ_Browse(){
         String lsCondition = "";
