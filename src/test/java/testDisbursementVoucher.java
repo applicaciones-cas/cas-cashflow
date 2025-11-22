@@ -217,7 +217,7 @@ public class testDisbursementVoucher {
             poController.setIndustryID("06"); 
             poController.setCompanyID(companyId); 
             poController.setTransactionStatus(DisbursementStatic.OPEN+DisbursementStatic.RETURNED);
-            loJSON = poController.loadTransactionList("","", "", false);
+            loJSON = poController.loadTransactionList("","","", "", false);
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
