@@ -17,7 +17,6 @@ import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
-import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DisbursementVoucher;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
@@ -27,6 +26,8 @@ import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.SOATagging;
 import ph.com.guanzongroup.cas.cashflow.SubClass.Disbursement_PRF;
+import ph.com.guanzongroup.cas.cashflow.WithholdingTax;
+import ph.com.guanzongroup.cas.cashflow.WithholdingTaxDeductions;
 
 public class CashflowControllers {
 
@@ -439,7 +440,44 @@ public class CashflowControllers {
         return poBIR2307Filler;
     }
     
+    public WithholdingTax WithholdingTax() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.WithholdingTax: Application driver is not set.");
+            return null;
+        }
 
+        if (poWithholdingTax != null) {
+            return poWithholdingTax;
+        }
+
+        poWithholdingTax = new WithholdingTax();
+        poWithholdingTax.setApplicationDriver(poGRider);
+        poWithholdingTax.setWithParentClass(true);
+        poWithholdingTax.setLogWrapper(poLogWrapper);
+        poWithholdingTax.initialize();
+        poWithholdingTax.newRecord();
+        return poWithholdingTax;
+    }
+    
+    public WithholdingTaxDeductions WithholdingTaxDeductions() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.WithholdingTaxDeductions: Application driver is not set.");
+            return null;
+        }
+
+        if (poWithholdingTaxDeductions != null) {
+            return poWithholdingTaxDeductions;
+        }
+
+        poWithholdingTaxDeductions = new WithholdingTaxDeductions();
+        poWithholdingTaxDeductions.setApplicationDriver(poGRider);
+        poWithholdingTaxDeductions.setWithParentClass(true);
+        poWithholdingTaxDeductions.setLogWrapper(poLogWrapper);
+        poWithholdingTaxDeductions.initialize();
+        poWithholdingTaxDeductions.newRecord();
+        return poWithholdingTaxDeductions;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {
@@ -466,6 +504,8 @@ public class CashflowControllers {
             poCheckStatusUpdate = null;
             poCheckImporting = null;
             poBIR2307Filler = null;
+            poWithholdingTax = null;
+            poWithholdingTaxDeductions = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -499,4 +539,6 @@ public class CashflowControllers {
     private OtherPayments poOtherPayments;    
     private CheckPaymentImporting poCheckPaymentImports;
     private BIR2307Filler poBIR2307Filler;
+    private WithholdingTax poWithholdingTax;
+    private WithholdingTaxDeductions poWithholdingTaxDeductions;
 }
