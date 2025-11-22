@@ -25,6 +25,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Transaction_Account_Chart;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 
 public class CashflowModels {
     public CashflowModels(GRiderCAS applicationDriver){
@@ -438,6 +440,40 @@ public class CashflowModels {
         return poOtherPayments;
     }
     
+    public Model_Withholding_Tax Withholding_Tax(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Withholding_Tax: Application driver is not set.");
+            return null;
+        }
+        
+        if (poWithholdingTax == null){
+            poWithholdingTax = new Model_Withholding_Tax();
+            poWithholdingTax.setApplicationDriver(poGRider);
+            poWithholdingTax.setXML("Model_Withholding_Tax");
+            poWithholdingTax.setTableName("Withholding_Tax");
+            poWithholdingTax.initialize();
+        }
+
+        return poWithholdingTax;
+    }
+    
+    public Model_Withholding_Tax_Deductions Withholding_Tax_Deductions(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Withholding_Tax_Deductions: Application driver is not set.");
+            return null;
+        }
+        
+        if (poWithholdingTaxDeductions == null){
+            poWithholdingTaxDeductions = new Model_Withholding_Tax_Deductions();
+            poWithholdingTaxDeductions.setApplicationDriver(poGRider);
+            poWithholdingTaxDeductions.setXML("Model_Withholding_Tax_Deductions");
+            poWithholdingTaxDeductions.setTableName("Withholding_Tax_Deductions");
+            poWithholdingTaxDeductions.initialize();
+        }
+
+        return poWithholdingTaxDeductions;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -455,6 +491,8 @@ public class CashflowModels {
             poDocumentMappingMaster = null;
             poDocumentMappingDetail = null;
             poOtherPayments= null;
+            poWithholdingTax = null;
+            poWithholdingTaxDeductions= null;
 
             poGRider = null;
         } finally {
@@ -488,4 +526,6 @@ public class CashflowModels {
     private Model_Document_Mapping poDocumentMappingMaster;    
     private Model_Document_Mapping_Detail poDocumentMappingDetail;
     private Model_Other_Payments poOtherPayments;
+    private Model_Withholding_Tax poWithholdingTax;
+    private Model_Withholding_Tax_Deductions poWithholdingTaxDeductions;
 }
