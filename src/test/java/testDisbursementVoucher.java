@@ -96,7 +96,7 @@ public class testDisbursementVoucher {
         }
     }
     
-//    @Test
+    @Test
     public void testUpdateTransaction() {
         String industryId = "02";
         String companyId = "0002";
@@ -111,7 +111,7 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
 
-            loJSON = poController.OpenTransaction("M00125000005");
+            loJSON = poController.OpenTransaction("GCO125000003");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -140,6 +140,32 @@ public class testDisbursementVoucher {
                 System.out.println("Credit : " + poController.Journal().Detail(lnCtr).getCreditAmount());
                 System.out.println("Debit : " + poController.Journal().Detail(lnCtr).getDebitAmount());
             }
+            
+            for(int lnCtr = 0; lnCtr <= poController.getWTaxDeductionsCount() - 1; lnCtr++){
+                System.out.println("getTaxRateId : " + poController.WTaxDeduction(lnCtr).getModel().getTaxRateId());
+                System.out.println("getTaxCode : " + poController.WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxCode());
+                System.out.println("getTaxRate : " + poController.WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate());
+                System.out.println("getBaseAmount : " + poController.WTaxDeduction(lnCtr).getModel().getBaseAmount());
+                System.out.println("getBIRForm : " + poController.WTaxDeduction(lnCtr).getModel().getBIRForm());
+                System.out.println("getPeriodFrom : " + poController.WTaxDeduction(lnCtr).getModel().getPeriodFrom());
+                System.out.println("getPeriodTo : " + poController.WTaxDeduction(lnCtr).getModel().getPeriodTo());
+                System.out.println("getTaxRateId : " + poController.WTaxDeduction(lnCtr).getModel().getTaxRateId());
+                
+            }
+            
+             poController.WTaxDeduction(0).getModel().setTaxRateId("GK01001");
+             poController.WTaxDeduction(0).getModel().setBaseAmount(21000.0000);
+             poController.WTaxDeduction(0).getModel().setBIRForm("0");
+             poController.WTaxDeduction(0).getModel().setPeriodFrom(instance.getServerDate());
+             poController.WTaxDeduction(0).getModel().setPeriodTo(instance.getServerDate());
+             poController.computeTaxAmount();
+             poController.AddWTaxDeductions();
+             poController.WTaxDeduction(1).getModel().setTaxRateId("GK01002");
+             poController.WTaxDeduction(1).getModel().setBaseAmount(660.0000);
+             poController.WTaxDeduction(1).getModel().setBIRForm("0");
+             poController.WTaxDeduction(1).getModel().setPeriodFrom(instance.getServerDate());
+             poController.WTaxDeduction(1).getModel().setPeriodTo(instance.getServerDate());
+             poController.computeTaxAmount();
             
             System.out.println("Bank : " + poController.CheckPayments().getModel().getBankID());
             System.out.println("Bank Account : " + poController.CheckPayments().getModel().getBankAcountID());
@@ -236,7 +262,7 @@ public class testDisbursementVoucher {
         }
     }
     
-    @Test
+//    @Test
     public void testCertifyTransaction() {
         String industryId = "02";
         String companyId = "0002";

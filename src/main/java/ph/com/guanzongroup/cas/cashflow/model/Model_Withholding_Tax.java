@@ -87,7 +87,7 @@ public class Model_Withholding_Tax extends Model {
         if (getValue("nTaxRatex") == null || "".equals(getValue("nTaxRatex"))) {
             return 0.0000;
         }
-        return (Double) getValue("nTaxRatex");
+        return Double.valueOf(getValue("nTaxRatex").toString());
     }
 
     public JSONObject setTaxType(String taxType) {

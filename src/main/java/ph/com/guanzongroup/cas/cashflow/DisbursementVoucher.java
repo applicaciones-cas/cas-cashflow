@@ -202,6 +202,11 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        poJSON = populateWithholdingTaxDeductions();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
@@ -3071,8 +3076,7 @@ public class DisbursementVoucher extends Transaction {
         
         switch(getEditMode()){
             case EditMode.READY:
-                paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
-                WithholdingTaxDeductions loObject = new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions();
+                paWTaxDeductions = new ArrayList<>();
                 Model_Withholding_Tax_Deductions loMaster = new CashflowModels(poGRider).Withholding_Tax_Deductions();
                 String lsSQL = MiscUtil.makeSelect(loMaster);
                 lsSQL = MiscUtil.addCondition(lsSQL,
@@ -3089,16 +3093,20 @@ public class DisbursementVoucher extends Transaction {
                         System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                         System.out.println("------------------------------------------------------------------------------");
                         if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
-                            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+                            paWTaxDeductions.add( new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
+                            poJSON = paWTaxDeductions.get(paWTaxDeductions.size() - 1).openRecord(loRS.getString("sTransNox"));
                             if ("error".equals((String) poJSON.get("result"))){
                                 return poJSON;
                             }
-                            
-                            paWTaxDeductions.add(loObject);
                         }  
                     }
                 }
                 MiscUtil.close(loRS);
+                
+                if(paWTaxDeductions.isEmpty()){
+                    paWTaxDeductions.add(new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
+                }
+                
             break;
             case EditMode.UPDATE:
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){

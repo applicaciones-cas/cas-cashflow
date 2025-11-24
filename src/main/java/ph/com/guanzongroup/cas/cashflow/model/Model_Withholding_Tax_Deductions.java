@@ -91,7 +91,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (getValue("nBaseAmtx") == null || "".equals(getValue("nBaseAmtx"))) {
             return 0.0000;
         }
-        return (Double) getValue("nBaseAmtx");
+        return Double.valueOf(getValue("nBaseAmtx").toString());
     }
 
     public JSONObject setTaxAmount(Double taxAmount) {
@@ -102,7 +102,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (getValue("nTaxAmtxx") == null || "".equals(getValue("nTaxAmtxx"))) {
             return 0.0000;
         }
-        return (Double) getValue("nTaxAmtxx");
+        return Double.valueOf(getValue("nTaxAmtxx").toString());
     }
 
     public JSONObject setBIRForm(String BIRForm) {
@@ -204,10 +204,11 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (!"".equals((String) getValue("sTaxRteID"))) {
             if (poWithholdingTax.getEditMode() == EditMode.READY
                     && poWithholdingTax.getTaxRateId().equals((String) getValue("sTaxRteID"))) {
+                setTaxCode(poWithholdingTax.getTaxCode());
                 return poWithholdingTax;
             } else {
                 poJSON = poWithholdingTax.openRecord((String) getValue("sTaxRteID"));
-
+                setTaxCode(poWithholdingTax.getTaxCode());
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poWithholdingTax;
                 } else {

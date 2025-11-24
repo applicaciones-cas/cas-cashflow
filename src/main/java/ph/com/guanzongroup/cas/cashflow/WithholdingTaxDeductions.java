@@ -28,68 +28,60 @@ public class WithholdingTaxDeductions extends Parameter{
     @Override
     public JSONObject isEntryOkay() throws SQLException {
         poJSON = new JSONObject();
-        
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
+
+        if (poModel.getTaxRateId() == null ||  poModel.getTaxRateId().isEmpty()){
             poJSON.put("result", "error");
-            poJSON.put("message", "User is not allowed to save record.");
+            poJSON.put("message", "Tax Rate must not be empty.");
             return poJSON;
-        } else {
-            poJSON = new JSONObject();
-            
-            if (poModel.getTaxRateId() == null ||  poModel.getTaxRateId().isEmpty()){
+        }
+
+        if (poModel.getBIRForm() == null ||  poModel.getBIRForm().isEmpty()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "BIR form must not be empty.");
+            return poJSON;
+        }
+
+        if (poModel.getBaseAmount() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid base amount.");
+            return poJSON;
+        }
+
+        if (poModel.getTaxAmount() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid tax amount.");
+            return poJSON;
+        }
+
+        if (poModel.getSourceCode() == null ||  poModel.getSourceCode().isEmpty()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Source Code must not be empty.");
+            return poJSON;
+        }
+
+        if (poModel.getSourceNo() == null ||  poModel.getSourceNo().isEmpty()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Source No must not be empty.");
+            return poJSON;
+        }
+
+        if (poModel.getPeriodFrom() == null ||  "".equals(poModel.getPeriodFrom())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Period From must not be empty.");
+            return poJSON;
+        }
+
+        if (poModel.getPeriodTo() == null ||  "".equals(poModel.getPeriodTo())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Period To must not be empty.");
+            return poJSON;
+        }
+
+        if (poModel.isRemitted()){
+            if (poModel.getRemittedDate()== null ||  "".equals(poModel.getRemittedDate())){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Tax Rate must not be empty.");
+                poJSON.put("message", "Rematted date must not be empty.");
                 return poJSON;
-            }
-            
-            if (poModel.getBIRForm() == null ||  poModel.getBIRForm().isEmpty()){
-                poJSON.put("result", "error");
-                poJSON.put("message", "BIR form must not be empty.");
-                return poJSON;
-            }
-            
-            if (poModel.getBaseAmount()<= 0.0000){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid base amount.");
-                return poJSON;
-            }
-            
-            if (poModel.getTaxAmount() <= 0.0000){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid tax amount.");
-                return poJSON;
-            }
-            
-            if (poModel.getSourceCode() == null ||  poModel.getSourceCode().isEmpty()){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Source Code must not be empty.");
-                return poJSON;
-            }
-            
-            if (poModel.getSourceNo() == null ||  poModel.getSourceNo().isEmpty()){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Source No must not be empty.");
-                return poJSON;
-            }
-            
-            if (poModel.getPeriodFrom() == null ||  "".equals(poModel.getPeriodFrom())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Period From must not be empty.");
-                return poJSON;
-            }
-            
-            if (poModel.getPeriodTo() == null ||  "".equals(poModel.getPeriodTo())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Period To must not be empty.");
-                return poJSON;
-            }
-            
-            if (poModel.isRemitted()){
-                if (poModel.getRemittedDate()== null ||  "".equals(poModel.getRemittedDate())){
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Rematted date must not be empty.");
-                    return poJSON;
-                }
             }
         }
         
