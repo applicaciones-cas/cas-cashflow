@@ -923,21 +923,20 @@ public class DisbursementVoucher extends Transaction {
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            WTaxDeduction(row).getModel().WithholdingTax().setTaxCode(object.getModel().getTaxCode());
+            WTaxDeduction(row).getModel().setTaxCode(object.getModel().getTaxCode());
         }
 
         return poJSON;
     }
 
-    public JSONObject SearchTaxRated(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
         object.setRecordStatus(RecordStatus.ACTIVE);
 
-        poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
             WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
         }
-
         return poJSON;
     }
 
@@ -1107,9 +1106,44 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    public JSONObject computeDetailFields(){
-        Double ldblTaxRate = 0.0000;
+    public JSONObject computeTaxAmount(){
+        poJSON = new JSONObject();
+        
+        //set/compute value to tax amount
         Double ldblTaxAmount = 0.0000;
+        Double ldblDetTaxAmt = 0.0000;
+        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+            if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
+                WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                try {
+                    ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
+                } catch (SQLException | GuanzonException ex) {
+                    Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                    poJSON.put("result", "error");
+                    poJSON.put("message", MiscUtil.getException(ex));
+                    return poJSON;
+                }
+                WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
+            }
+            ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
+        }
+        
+        if(ldblTaxAmount > Master().getTransactionTotal()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax amount cannot be greater than the transaction total.");
+            return poJSON;
+        }
+        
+        Master().setWithTaxTotal(ldblTaxAmount);
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "Tax computed successfully");
+        return poJSON;
+    }
+    
+    public JSONObject computeDetailFields(){
+//        Double ldblTaxRate = 0.0000;
+//        Double ldblTaxAmount = 0.0000;
         Double ldblAmountApplied = 0.0000;
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
@@ -1131,16 +1165,16 @@ public class DisbursementVoucher extends Transaction {
                     }
             }
             
-            ldblTaxRate = Detail(lnCtr).getTaxRates();
-            if(ldblTaxRate > 0.00){
-                ldblTaxAmount = (ldblAmountApplied / 1.12) * (ldblTaxRate / 100);
-            }
-            
-            //Set Amounts
-            Detail(lnCtr).setTaxAmount(ldblTaxAmount);
-            
-            //Clear 
-            ldblTaxAmount = 0.0000;
+//            ldblTaxRate = Detail(lnCtr).getTaxRates();
+//            if(ldblTaxRate > 0.00){
+//                ldblTaxAmount = (ldblAmountApplied / 1.12) * (ldblTaxRate / 100);
+//            }
+//            
+//            //Set Amounts
+//            Detail(lnCtr).setTaxAmount(ldblTaxAmount);
+//            
+//            //Clear 
+//            ldblTaxAmount = 0.0000;
         }
         
         poJSON.put("result", "success");

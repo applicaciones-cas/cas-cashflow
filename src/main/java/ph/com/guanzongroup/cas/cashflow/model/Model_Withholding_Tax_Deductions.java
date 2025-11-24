@@ -26,6 +26,8 @@ public class Model_Withholding_Tax_Deductions extends Model {
 
     Model_Disbursement_Master poDisbursement_Master;
     Model_Withholding_Tax poWithholdingTax;
+    
+    String psTaxCode = "";
 
     @Override
     public void initialize() {
@@ -181,6 +183,14 @@ public class Model_Withholding_Tax_Deductions extends Model {
 
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
+    }
+
+    public void setTaxCode(String taxCode) {
+       psTaxCode = taxCode ;
+    }
+
+    public String getTaxCode() {
+        return psTaxCode;
     }
 
     @Override
