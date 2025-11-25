@@ -20,12 +20,13 @@ import org.openxmlformats.schemas.drawingml.x2006.main.CTRegularTextRun;
 import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTGroupShape;
 import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTShape;
 
+
 import java.io.*;
-import java.lang.reflect.Field;
 import org.json.simple.JSONObject;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -34,10 +35,7 @@ import javax.script.ScriptException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
-import ph.com.guanzongroup.cas.cashflow.SubClass.DisbursementFactory;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
  * Utility class for filling out BIR 2307 Excel template forms. Supports
@@ -121,7 +119,7 @@ public class BIR2307Print {
                 //Set Value
                 payeeName = safeGet(poDisbursementController.Master().Payee().getPayeeName());
                 transactionNo =  safeGet(poDisbursementController.Master().getTransactionNo());
-                payeeTin =  safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber());
+                payeeTin =  "0002223334567"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
                 payeeAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
                 payeeForeignAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
                 company =  safeGet(poDisbursementController.Master().Company().getCompanyCode());
@@ -198,6 +196,7 @@ public class BIR2307Print {
     
     /**
      * Executes the fill process
+     * @param foWTdeductions
      * @return 
      * @throws IOException
      * @throws InvalidFormatException
@@ -206,6 +205,8 @@ public class BIR2307Print {
      * @throws GuanzonException 
      */
     public void fillForm(List<WithholdingTaxDeductions> foWTdeductions) throws IOException, InvalidFormatException, CloneNotSupportedException, SQLException, GuanzonException {
+        minDate = null;
+        maxDate = null;
         if (!inputFile.exists()) {
             throw new FileNotFoundException("Input file not found: " + inputFile.getAbsolutePath());
         }
@@ -219,9 +220,12 @@ public class BIR2307Print {
                 System.out.println("No drawings found.");
                 return;
             }
-
+            
+            updatePeriodDate(foWTdeductions);
+            
             for (XSSFShape shape : drawing.getShapes()) {
-                System.out.println("XSSF Shape: " + shape.getClass().getSimpleName());
+                System.out.println("Top-Level Shape: " + shape.getShapeName());
+//                updateShapeID(shape);
                 updateShape(shape);
             }
             
@@ -259,7 +263,7 @@ public class BIR2307Print {
 
             // ✅ Build clean file name
             String formattedName = formatFileName(payeeName);
-            String baseFileName = formattedName + "_" + transactionNo;
+            String baseFileName = formattedName + "_" + transactionNo+"_"+pnQuarter+"_QTR";
             String outputPath = yearFolder + baseFileName + ".xlsx";
 
             // ✅ Check for existing file and append (1), (2), etc.
@@ -276,30 +280,48 @@ public class BIR2307Print {
         }
     }
     
-    private List<XSSFShape> getChildShapes(XSSFShapeGroup group) {
-        try {
-            // POI 3.9 – 4.1.2
-            return getPrivateList(group, "_shapes");
-
-        } catch (Exception e1) {
-            try {
-                // POI 4.1.2+
-                return getPrivateList(group, "shapes");
-
-            } catch (Exception e2) {
-                e2.printStackTrace();
-                return new java.util.ArrayList<>();
+    private String PeriodDate(Object dateObj){
+        System.out.println("DATE : " + dateObj);
+        if (dateObj instanceof java.sql.Date) {
+            return ((java.sql.Date) dateObj).toLocalDate().toString();
+        } else if (dateObj instanceof java.util.Date) {
+            return  new java.sql.Date(((java.util.Date) dateObj).getTime()).toLocalDate().toString();
+        } else if (dateObj != null) {
+            return  dateObj.toString();
+        }
+        
+        return "";
+    }
+    
+    private void updatePeriodDate(List<WithholdingTaxDeductions> foWTdeductions){
+        for (int lnctr = 0; lnctr <= foWTdeductions.size() - 1; lnctr++) {
+            Object dateObjFrom = foWTdeductions.get(lnctr).getModel().getPeriodFrom();
+            Object dateObjTo = foWTdeductions.get(lnctr).getModel().getPeriodTo();
+            String dateStrFrom = PeriodDate(dateObjFrom);
+            String dateStrTo = PeriodDate(dateObjTo);
+            if (dateStrFrom != null && !dateStrFrom.isEmpty()) {
+                LocalDate date = LocalDate.parse(dateStrFrom);
+                if (minDate == null || date.isBefore(minDate)) {
+                    minDate = date;
+                }
+            }
+            if (dateStrTo != null && !dateStrTo.isEmpty()) {
+                LocalDate date = LocalDate.parse(dateStrTo);
+                if (maxDate == null || date.isAfter(maxDate)) {
+                    maxDate = date;
+                }
             }
         }
-    }
 
-    @SuppressWarnings("unchecked")
-    private List<XSSFShape> getPrivateList(XSSFShapeGroup group, String fieldName) throws Exception {
-        Field f = XSSFShapeGroup.class.getDeclaredField(fieldName);
-        f.setAccessible(true);
-        return (List<XSSFShape>) f.get(group);
-    }
+        // ✅ After loop, adjust min/max to full months
+        if (minDate != null && maxDate != null) {
+            minDate = minDate.withDayOfMonth(1); // first day of earliest month
+            maxDate = maxDate.withDayOfMonth(maxDate.lengthOfMonth()); // last day of latest month
 
+            System.out.println("Earliest Date: " + minDate);
+            System.out.println("Latest Date  : " + maxDate);
+        }
+    }
 
     private String formatFileName(String name) {
         if (name == null || name.trim().isEmpty()) {
@@ -337,166 +359,92 @@ public class BIR2307Print {
         return newFile;
     }
     
-    private void updateShape(XSSFShape shape) throws CloneNotSupportedException {
-
-        // 1. TEXTBOX
-        if (shape instanceof XSSFTextBox) {
-            XSSFTextBox textBox = (XSSFTextBox) shape;
-            textBox.setText(replaceTextValue(textBox.getShapeName()));
-            return;
-        }
-
-        // 2. SIMPLE SHAPE (rectangles, circles, etc.)
-        if (shape instanceof XSSFSimpleShape) {
-            XSSFSimpleShape simple = (XSSFSimpleShape) shape;
-            String text = simple.getText();
-            if (text != null && !text.trim().isEmpty()) {
-                simple.setText(replaceTextValue(text));
-            }
-            return;
-        }
-
-        // 3. SHAPE GROUP (contains nested shapes)
-        if (shape instanceof XSSFShapeGroup) {
-            XSSFShapeGroup group = (XSSFShapeGroup) shape;
-            CTGroupShape ctGroup = group.getCTGroupShape();
-
-            for (CTShape ctShape : ctGroup.getSpList()) {
-
-                // Child shape name (the textbox name)
-                String shapeName = ctShape.getNvSpPr().getCNvPr().getName();
-                System.out.println("Child Shape: " + shapeName);
-
-                // 👉 Match the specific TextBox you want to modify
-                if (shapeName.equals("TextBox 2")) {
-
-                    if (ctShape.isSetTxBody()) {
-                        CTTextBody body = ctShape.getTxBody();
-
-                        for (CTTextParagraph p : body.getPList()) {
-                            for (CTRegularTextRun r : p.getRList()) {
-                                r.setT("YOUR NEW TEXT HERE");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-
-        // 4. PICTURE (images)
-        if (shape instanceof XSSFPicture) {
-            // Maybe you want to read metadata or replace the image?
-            System.out.println("Picture found: " ); //+ ((XSSFPicture) shape).getPictureData().getFileName());
-            return;
-        }
-
-        // 5. CONNECTOR (lines/arrows)
-        if (shape instanceof XSSFConnector) {
-            System.out.println("Connector shape (line/arrow) found.");
-            return;
-        }
-
-        // 6. CHARTS
-        if (shape instanceof XSSFGraphicFrame) {
-            System.out.println("Chart or graphic frame found.");
-            return;
-        }
-
-        // 7. ANY OTHER SHAPE
-        System.out.println("Other shape found: " + shape.getClass().getName());
-    }
-
-
     /**
      * Updates all shapes (textboxes and groups) recursively
      */
-//    private void updateShape(XSSFShape shape) throws CloneNotSupportedException {
-//        if (shape instanceof XSSFTextBox) {
-//            XSSFTextBox textBox = (XSSFTextBox) shape;
-//            replaceText(textBox, textBox.getText());
-//
-//        } else if (shape instanceof XSSFSimpleShape) {
-//            XSSFSimpleShape simple = (XSSFSimpleShape) shape;
-//            String text = simple.getText();
-//            if (text != null && !text.trim().isEmpty()) {
-//                simple.setText(replaceTextValue(text));
-//            }
-//
-//        } else if (shape instanceof XSSFShapeGroup) {
-//            XSSFShapeGroup group = (XSSFShapeGroup) shape;
-//            CTGroupShape ctGroup = group.getCTGroupShape();
-//
-//            for (CTShape ctShape : ctGroup.getSpList()) {
-//                if (ctShape.isSetTxBody()) {
-//                    CTTextBody textBody = ctShape.getTxBody();
-//                    for (CTTextParagraph p : textBody.getPList()) {
-//                        for (CTRegularTextRun r : p.getRList()) {
-//                            r.setT(replaceTextValue(r.getT()));
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
-
+    private void updateShape(XSSFShape shape) throws CloneNotSupportedException {
+        String lsID = "";
+        String lsText = "";
+         if (shape instanceof XSSFTextBox) {
+            XSSFTextBox tb = (XSSFTextBox) shape;
+            System.out.println("TextBox text: " + tb.getText());
+            lsID = String.valueOf(tb.getShapeId());
+            lsText = replaceTextValue(lsID);
+            if(!lsText.isEmpty()){
+                tb.setText(lsText);
+            }
+        } else if (shape instanceof XSSFSimpleShape) {
+            XSSFSimpleShape ss = (XSSFSimpleShape) shape;
+            System.out.println("SimpleShape ID: " + ss.getShapeId());
+            System.out.println("SimpleShape text: " + ss.getText());
+            lsID = String.valueOf(ss.getShapeId());
+            lsText = replaceTextValue(lsID);
+            if(!lsText.isEmpty()){
+                ss.setText(lsText);
+            }
+        } else if (shape instanceof XSSFShapeGroup) {
+            System.out.println("Nested group detected");
+            XSSFShapeGroup group = (XSSFShapeGroup) shape;
+            CTGroupShape ctGroup = group.getCTGroupShape();
+            
+            // First, handle shapes directly in this group
+            for (CTShape insideShape : ctGroup.getSpList()) {
+                updateGroupShape(insideShape);
+            }
+            
+            for (CTGroupShape nestedGrp : ctGroup.getGrpSpList()) {
+                for (CTShape insideShape : nestedGrp.getSpList()) {
+                    updateGroupShape(insideShape);
+                }
+                for (CTGroupShape insideShape2 : nestedGrp.getGrpSpList()) {
+                    for (CTShape insideShape : insideShape2.getSpList()) {
+                        updateGroupShape(insideShape);
+                    }
+                }
+            }
+            // optionally recurse into the group
+        } else if (shape instanceof XSSFPicture) {
+            System.out.println("Picture found");
+        }
+    }
+    
+    private void updateGroupShape(CTShape insideShape) throws CloneNotSupportedException{
+        String lsID = "";
+        if (insideShape.getNvSpPr() != null && insideShape.getNvSpPr().getCNvPr() != null) {
+            String name = insideShape.getNvSpPr().getCNvPr().getName();
+            lsID = String.valueOf(insideShape.getNvSpPr().getCNvPr().getId());
+            System.out.println("TEXT NAME ID : " + insideShape.getNvSpPr().getCNvPr().getId());
+            System.out.println("TEXT NAME : " + name);
+            if ("Text Box 2".equals(name)) {
+                // Make sure txBody exists
+                if (!insideShape.isSetTxBody()) {
+                    insideShape.addNewTxBody();
+                }
+                CTTextBody body = insideShape.getTxBody();
+                for (CTTextParagraph p : body.getPList()) {
+                    if (p.sizeOfRArray() == 0) {
+                        // Create a new run if none exists
+                        CTRegularTextRun r = p.addNewR();
+                        r.addNewRPr(); // optional: add run properties if needed
+                        r.setT(replaceTextValue(lsID));
+                    } else {
+                        // Update existing runs
+                        for (CTRegularTextRun r : p.getRList()) {
+                            r.setT(replaceTextValue(lsID));
+                        }
+                    }
+                }
+                System.out.println("Updated text for: " + name);
+            }
+        }
+    }
+    
     /**
      * Replaces known placeholders with formatted text
      */
-    private String replaceTextValue(String text) throws CloneNotSupportedException {
-        int ColIndex = -1;
-        if (poJSON == null || poJSON.isEmpty()) {
-            return text; // nothing loaded yet
-        }
-        System.out.println("TEXT : " + text);
-        // ==========================
-        // PAYEE INFORMATION
-        // ==========================
-        if (text.contains("periodFrom") || text.contains("Group 214")) {
-            String periodFrom = (String) poJSON.getOrDefault("periodFrom",SQLUtil.dateFormat(minDate,SQLUtil.FORMAT_SHORT_DATE));
-//                        SQLUtil.dateFormat(poDisbursementController.Master().getTransactionDate(), SQLUtil.FORMAT_SHORT_DATE));
-            return formatDateForTextbox(periodFrom);
-        }
-        if (text.contains("periodTo") || text.contains("Group 286")) {
-            String periodTo = (String) poJSON.getOrDefault("periodTo", SQLUtil.dateFormat(maxDate,SQLUtil.FORMAT_SHORT_DATE));
-            return formatDateForTextbox(periodTo);
-        }
-        if (text.contains("_payeeName")) {
-            String payee = (String) poJSON.getOrDefault("payeeName",payeeName);
-//                        poDisbursementController.Master().Payee().getPayeeName());
-            return payee.toUpperCase();
-        }
-        if (text.contains("payeeTin") || text.contains("Group 10")) {
-            String tin = (String) poJSON.getOrDefault("payeeTin",payeeTin);
-//                        poDisbursementController.Master().Payee().Client().getTaxIdNumber());
-            return formatTIN(tin);
-        }
-        if (text.contains("_RegisteredAddress")) {
-            String address = (String) poJSON.getOrDefault("payeeRegAddress",payeeAddress);
-//                        poDisbursementController.Master().Payee().ClientAddress().getAddress() + ","
-//                        + poDisbursementController.Master().Payee().ClientAddress().Town().getDescription());
-//                System.out.println("BIR : " + poDisbursementController.Master().Payee().ClientAddress().Town().getDescription());
-            return address;
-        }
-        if (text.contains("_ForeignAddress")) {
-            String faddress = (String) poJSON.getOrDefault("payeeForeignAddress",payeeForeignAddress);
-//                        poDisbursementController.Master().Payee().ClientAddress().getAddress() + ","
-//                        + poDisbursementController.Master().Payee().ClientAddress().Barangay().getBarangayName());
-            return faddress;
-        }
-        if (text.contains("payeeZip") || text.contains("Group 371")) {
-            String zip = (String) poJSON.getOrDefault("payeeZip",payeeZip);
-//                        poDisbursementController.Master().Payee().ClientAddress().Town().getZipCode());
-            return formatZipCode(zip);
-        }
-        // ==========================
-        // PAYOR INFORMATION
-        // ==========================
-        if (text.contains("_payorName")) {
-            String payee = (String) poJSON.getOrDefault("payorName",payorName);
-//                        poDisbursementController.Master().Company().getCompanyName());
-            return payee.toUpperCase();
-        }
+    private String replaceTextValue(String fsID) throws CloneNotSupportedException {
+        System.out.println("ID : " + fsID);
+        String lsGetText = "";
         String payorRegAddress = "";
         String payorZIP = "";
         String payorTIN = "";
@@ -527,24 +475,165 @@ public class BIR2307Print {
                 payorTIN = "000-255-797-000";
                 break;
             default:
-                throw new AssertionError();
+                payorRegAddress = "";
         }
-        if (text.contains("_payorRegAddress")) {
-            String address = (String) poJSON.getOrDefault("payorRegAddress", payorRegAddress);
-            return address;
+        payorTIN = payorTIN.replace("-", "");
+        switch(fsID){
+            case "223": //Period From Month
+                lsGetText = addSpaceBetweenChars(minDate.format(DateTimeFormatter.ofPattern("MMdd")), 2);
+                System.out.println("FROM : Month-Day = " + lsGetText); // Output: Month-Day = 01-01
+            break;
+            case "218": //Period From Year
+                lsGetText = addSpaceBetweenChars(minDate.format(DateTimeFormatter.ofPattern("YYYY")), 2);
+                System.out.println("FROM : Year = " + lsGetText); 
+            break;
+            case "294": //Period To Month
+                lsGetText = addSpaceBetweenChars(maxDate.format(DateTimeFormatter.ofPattern("MMdd")), 2);
+                System.out.println("TO : Month-Day = " + lsGetText); // Output: Month-Day = 01-01
+            break;
+            case "290": //Period To Year
+                lsGetText = addSpaceBetweenChars(maxDate.format(DateTimeFormatter.ofPattern("YYYY")), 2);
+                System.out.println("TO : Year = " + lsGetText); 
+            break;
+            case "135": //Payee's TIN 1
+                if(payeeTin.length() < 4) return "";
+                lsGetText = addSpaceBetweenChars(payeeTin.substring(0, 3), 1);
+                System.out.println("Payee's TIN 1 = "+ lsGetText);
+            break;
+            case "339": //Payee's TIN 2
+                if(payeeTin.length() < 7) return "";
+                lsGetText = addSpaceBetweenChars(payeeTin.substring(3, 6), 1);
+                System.out.println("Payee's TIN 2 = "+ lsGetText);
+            break;
+            case "343": //Payee's TIN 3
+                if(payeeTin.length() < 10) return "";
+                lsGetText = addSpaceBetweenChars(payeeTin.substring(6, 9), 1);
+                System.out.println("Payee's TIN 3 = "+ lsGetText);
+            break;
+            case "347": //Payee's TIN 4
+                if(payeeTin.length() < 13) return "";
+                lsGetText = addSpaceBetweenChars(payeeTin.substring(9, 12), 1);
+                System.out.println("Payee's TIN 4 = "+ lsGetText);
+            break;
+            case "370": //Payee's Name
+                return payeeName.toUpperCase();
+            case "371": //Payee's Registered Address
+//                return payeeAddress.toUpperCase();
+                return "TEST PAYEE ADDRESS";
+            case "373": //Payee's ZIP Code
+//                return addSpaceBetweenChars(payeeZip, 1);
+                return addSpaceBetweenChars("2141", 1);
+            case "377": //Payee's Foreign Address
+//                return payeeForeignAddress.toUpperCase();
+                return "TEST PAYEE FOREIGN ADDRESS";
+            case "403": //Payor's Name
+                return payorName.toUpperCase();
+            case "404": //Payor's Registered Address
+                return payorRegAddress.toUpperCase();
+            case "406": //Payor's ZIP Code
+                return addSpaceBetweenChars(payorZIP, 1);
+            case "130": //Payor's TIN 1
+                if(payorTIN.length() < 4) return "";
+                lsGetText = addSpaceBetweenChars(payorTIN.substring(0, 3), 1);
+                System.out.println("Payor's TIN 1 = "+ lsGetText);
+            break;
+            case "383": //Payor's TIN 2
+                if(payorTIN.length() < 7) return "";
+                lsGetText = addSpaceBetweenChars(payorTIN.substring(3, 6), 1);
+                System.out.println("Payor's TIN 2 = "+ lsGetText);
+            break;
+            case "387": //Payor's TIN 3
+                if(payorTIN.length() < 10) return "";
+                lsGetText = addSpaceBetweenChars(payorTIN.substring(6, 9), 1);
+                System.out.println("Payor's TIN 3 = "+ lsGetText);
+            break;
+            case "391": //Payor's TIN 4
+                if(payorTIN.length() < 13) return "";
+                lsGetText = addSpaceBetweenChars(payorTIN.substring(9, 12), 1);
+                System.out.println("Payor's TIN 4 = "+ lsGetText);
+            break;
         }
-        if (text.contains("payorZip") || text.contains("Group 404")) {
-            String zip = (String) poJSON.getOrDefault("payorZip", payorZIP);
-            return formatZipCode(zip);
+        return lsGetText;
+    }
+    
+    
+    
+    private void updateShapeID(XSSFShape shape) throws CloneNotSupportedException {
+        String lsID = "";
+        String lsText = "";
+         if (shape instanceof XSSFTextBox) {
+            XSSFTextBox tb = (XSSFTextBox) shape;
+            System.out.println("TextBox text: " + tb.getText());
+            lsID = String.valueOf(tb.getShapeId());
+            tb.setText(lsID);
+        } else if (shape instanceof XSSFSimpleShape) {
+            XSSFSimpleShape ss = (XSSFSimpleShape) shape;
+            System.out.println("SimpleShape ID: " + ss.getShapeId());
+            System.out.println("SimpleShape text: " + ss.getText());
+            lsID = String.valueOf(ss.getShapeId());
+            ss.setText(lsID);
+        } else if (shape instanceof XSSFShapeGroup) {
+            System.out.println("Nested group detected");
+            XSSFShapeGroup group = (XSSFShapeGroup) shape;
+            CTGroupShape ctGroup = group.getCTGroupShape();
+            
+            // First, handle shapes directly in this group
+            for (CTShape insideShape : ctGroup.getSpList()) {
+                updateGroupShapeID(insideShape);
+            }
+            
+            for (CTGroupShape nestedGrp : ctGroup.getGrpSpList()) {
+                for (CTShape insideShape : nestedGrp.getSpList()) {
+                    updateGroupShapeID(insideShape);
+                }
+                for (CTGroupShape insideShape2 : nestedGrp.getGrpSpList()) {
+                    for (CTShape insideShape : insideShape2.getSpList()) {
+                        updateGroupShapeID(insideShape);
+                    }
+                }
+            }
+            
+            // optionally recurse into the group
+        } else if (shape instanceof XSSFPicture) {
+            System.out.println("Picture found");
         }
-        if (text.contains("payorTin") || text.contains("Group 8")) {
-            String zip = (String) poJSON.getOrDefault("payorTin", payorTIN);
-            return formatTIN(payorTIN);
-        }
-
-        return text;
+         
+         System.out.println("-------------------------------------------------------");
     }
 
+    private void updateGroupShapeID(CTShape insideShape){
+        String lsID = "";
+        if (insideShape.getNvSpPr() != null && insideShape.getNvSpPr().getCNvPr() != null) {
+            String name = insideShape.getNvSpPr().getCNvPr().getName();
+            lsID = String.valueOf(insideShape.getNvSpPr().getCNvPr().getId());
+            System.out.println("TEXT NAME ID : " + insideShape.getNvSpPr().getCNvPr().getId());
+            System.out.println("TEXT NAME : " + name);
+            if ("Text Box 2".equals(name)) {
+                // Make sure txBody exists
+                if (!insideShape.isSetTxBody()) {
+                    insideShape.addNewTxBody();
+                }
+                CTTextBody body = insideShape.getTxBody();
+                for (CTTextParagraph p : body.getPList()) {
+                    if (p.sizeOfRArray() == 0) {
+                        // Create a new run if none exists
+                        CTRegularTextRun r = p.addNewR();
+                        r.addNewRPr(); // optional: add run properties if needed
+                        r.setT(lsID);
+                    } else {
+                        // Update existing runs
+                        for (CTRegularTextRun r : p.getRList()) {
+//                                        r.setT("TEST");
+                            r.setT(lsID);
+                        }
+                    }
+                }
+                System.out.println("Updated text for: " + name);
+            }
+        }
+        
+    }
+    
     private JSONObject detailSection(List<WithholdingTaxDeductions> foWTdeductions) throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject poJSON = new JSONObject();
         int ColIndex = -1;
@@ -553,6 +642,11 @@ public class BIR2307Print {
         // ==========================
         String detailAmount = "0.0000";
         String detailTAXAmount = "0.0000";
+        Double ldblTotalQtr1 = 0.0000;
+        Double ldblTotalQtr2 = 0.0000;
+        Double ldblTotalQtr3 = 0.0000;
+        Double ldblTotalQtr = 0.0000;
+        Double ldblTotalTax = 0.0000;
 
         if (activeSheet != null) {
             System.out.println("WTaxDeduction as count = " + foWTdeductions);
@@ -563,38 +657,23 @@ public class BIR2307Print {
                 detailAmount = setIntegerValueToDecimalFormat(foWTdeductions.get(lnctr).getModel().getBaseAmount(), false);
 
                 Object dateObj = foWTdeductions.get(lnctr).getModel().getPeriodFrom();
-                String dateStr = null;
-
-                if (dateObj instanceof java.sql.Date) {
-                    dateStr = ((java.sql.Date) dateObj).toLocalDate().toString();
-                } else if (dateObj instanceof java.util.Date) {
-                    dateStr = new java.sql.Date(((java.util.Date) dateObj).getTime()).toLocalDate().toString();
-                } else if (dateObj != null) {
-                    dateStr = dateObj.toString();
-                }
-
+                String dateStr = PeriodDate(dateObj);
                 if (dateStr != null && !dateStr.isEmpty()) {
                     LocalDate date = LocalDate.parse(dateStr);
 
-                    // ✅ Track min/max
-                    if (minDate == null || date.isBefore(minDate)) {
-                        minDate = date;
-                    }
-                    if (maxDate == null || date.isAfter(maxDate)) {
-                        maxDate = date;
-                    }
-
                     int month = date.getMonthValue();
                     int monthOfQuarter = ((month - 1) % 3) + 1;
-
                     switch (monthOfQuarter) {
                         case 1:
+                            ldblTotalQtr1 += foWTdeductions.get(lnctr).getModel().getBaseAmount();
                             ColIndex = 14; // 1st Month
                             break;
                         case 2:
+                            ldblTotalQtr2 += foWTdeductions.get(lnctr).getModel().getBaseAmount();
                             ColIndex = 19; // 2nd Month
                             break;
                         case 3:
+                            ldblTotalQtr3 += foWTdeductions.get(lnctr).getModel().getBaseAmount();
                             ColIndex = 24; // 3rd Month
                             break;
                     }
@@ -606,14 +685,30 @@ public class BIR2307Print {
                 if (row == null) {
                     row = activeSheet.createRow(rowIndex);
                 }
-
+                
+                ldblTotalQtr += foWTdeductions.get(lnctr).getModel().getBaseAmount();
+                ldblTotalTax += foWTdeductions.get(lnctr).getModel().getTaxAmount();
+                
                 // ✏️ Write values
                 getOrCreateCell(row, 0).setCellValue(safeGet(particular));
                 getOrCreateCell(row, 11).setCellValue(safeGet(taxCode));
                 getOrCreateCell(row, ColIndex).setCellValue(detailAmount);
+                getOrCreateCell(row, 29).setCellValue(detailAmount);
                 getOrCreateCell(row, 34).setCellValue(detailTAXAmount);
             }
-
+            
+            if(ldblTotalQtr1 > 0.0000){
+                getOrCreateCell(activeSheet.getRow(47), 14).setCellValue(setIntegerValueToDecimalFormat(ldblTotalQtr1, false));
+            }
+            if(ldblTotalQtr2 > 0.0000){
+                getOrCreateCell(activeSheet.getRow(47), 19).setCellValue(setIntegerValueToDecimalFormat(ldblTotalQtr2, false));
+            }
+            if(ldblTotalQtr3 > 0.0000){
+                getOrCreateCell(activeSheet.getRow(47), 24).setCellValue(setIntegerValueToDecimalFormat(ldblTotalQtr3, false));
+            }
+            getOrCreateCell(activeSheet.getRow(47), 29).setCellValue(setIntegerValueToDecimalFormat(ldblTotalQtr, false));
+            getOrCreateCell(activeSheet.getRow(47), 34).setCellValue(setIntegerValueToDecimalFormat(ldblTotalTax, false));
+            
             // ✅ After loop, adjust min/max to full months
             if (minDate != null && maxDate != null) {
                 minDate = minDate.withDayOfMonth(1); // first day of earliest month
