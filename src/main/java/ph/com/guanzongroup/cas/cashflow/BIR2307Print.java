@@ -395,9 +395,11 @@ public class BIR2307Print {
             }
             
             for (CTGroupShape nestedGrp : ctGroup.getGrpSpList()) {
+                //if group shape has only a 1 shape
                 for (CTShape insideShape : nestedGrp.getSpList()) {
                     updateGroupShape(insideShape);
                 }
+                //If group shape has another group shape inside
                 for (CTGroupShape insideShape2 : nestedGrp.getGrpSpList()) {
                     for (CTShape insideShape : insideShape2.getSpList()) {
                         updateGroupShape(insideShape);
@@ -607,9 +609,9 @@ public class BIR2307Print {
                             + repeatSpace(4)
                             + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("dd")), 3);
         } else {
-            return repeatSpace(2) + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("YYYY")).substring(0,2), 3)
+            return repeatSpace(2) + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("yyyy")).substring(0,2), 3)
                             + repeatSpace(3)
-                            + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("YYYY")).substring(2,4), 3);
+                            + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("yyyy")).substring(2,4), 3);
         }
     }
     
