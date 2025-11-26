@@ -3103,11 +3103,11 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
                 MiscUtil.close(loRS);
-                
+            break;
+            case EditMode.ADDNEW:    
                 if(paWTaxDeductions.isEmpty()){
                     paWTaxDeductions.add(new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
                 }
-                
             break;
             case EditMode.UPDATE:
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
