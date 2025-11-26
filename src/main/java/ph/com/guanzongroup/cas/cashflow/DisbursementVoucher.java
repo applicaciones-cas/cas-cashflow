@@ -922,16 +922,37 @@ public class DisbursementVoucher extends Transaction {
         }
         return poJSON;
     }
-    //TODO
+    
     public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        poJSON.put("row", row);
+        
+        if(WTaxDeduction(row).getModel().getPeriodFrom() == null || WTaxDeduction(row).getModel().getPeriodTo() == null){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Period date is not set.");
+            return poJSON;
+        }
+        
+        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+            if(lnCtr != row){
+                if(WTaxDeduction(lnCtr).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())){
+                    if(WTaxDeduction(lnCtr).getModel().getTaxRateId() == null || "".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Particular at row "+(lnCtr+1)+" is not set.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
         TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             WTaxDeduction(row).getModel().setTaxCode(object.getModel().getTaxCode());
         }
-
+        
+        poJSON.put("row", row);
         return poJSON;
     }
 
@@ -941,6 +962,10 @@ public class DisbursementVoucher extends Transaction {
 
         poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
+            poJSON = checkExistTaxRate(row, object.getModel().getTaxRateId());
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
             WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
         }
         return poJSON;
@@ -998,7 +1023,7 @@ public class DisbursementVoucher extends Transaction {
     /*Validate detail exisitence*/
     public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode){
         poJSON = new JSONObject();
-        
+
         for(int lnCtr = 0;lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
             if(fsAcctCode.equals(poJournal.Detail(lnCtr).getAccountCode()) && fnRow != lnCtr){
                 poJSON.put("row", lnCtr);
@@ -1008,9 +1033,113 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
         }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Check Existing tax rate per selected period date
+     * @param fnRow
+     * @param fsTaxRated
+     * @return 
+     */
+    private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated){
+        poJSON = new JSONObject();
+        try {
+            for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
+                if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                    //Check the tax rate
+                    if(fsTaxRated.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
+                        && fnRow != lnCtr){
+                        //Check Period Date do not allow when taxratedid was already covered of the specific period date
+                        if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
+                            == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
+                            //Check Period date per quarter
+                            if( getQuarter(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom()))) 
+                                == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) 
+                                    ){
+                                poJSON.put("row", lnCtr);
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Account " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
+                                return poJSON;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
     
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+    /**
+     * Validate period date
+     * @param fnRow pass withholding tax deduction selected row
+     * @param foDate pass selected period date from / to
+     * @return 
+     */
+    public JSONObject checkPeriodDate(int fnRow, LocalDate foDate){
+        //Validate period from must be per quarter per year.
+        if(WTaxDeduction(fnRow).getModel().getPeriodFrom() != null){
+            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear() != foDate.getYear() ){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Period Date must be with the same year.");
+                return poJSON;
+            }
+            
+            if( (getQuarter(foDate) != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())))) ){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Selected date must be the same quarter for period to.");
+                return poJSON;
+            }
+        }
+        //Validate period to must be per quarter per year.
+        if(WTaxDeduction(fnRow).getModel().getPeriodTo() != null){
+            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())).getYear() != foDate.getYear()){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Period Date must be with the same year.");
+                return poJSON;
+            }
+            if( (getQuarter(foDate) != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())))) ){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Selected date must be the same quarter for period from.");
+                return poJSON;
+            }
+        }
+        
+        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
+            //Check the tax rate
+            if(fnRow != lnCtr){
+                //Check Period Date do not allow when taxratedid was already covered of the specific period date
+                if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
+                    == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
+                    //Check Period date per quarter
+                    if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
+                        poJSON.put("row", lnCtr);
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
+                        return poJSON;
+                    }
+                }
+            }
+        }
+            poJSON.put("row", fnRow);
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    private int getQuarter(LocalDate fdDate){
+        int month = fdDate.getMonthValue();
+        int quarter = ((month - 1) / 3) + 1;
+        return quarter;
     }
     
     public String getVoucherNo() throws SQLException {
@@ -1040,23 +1169,23 @@ public class DisbursementVoucher extends Transaction {
         return branchVoucherNo;
     }
     
-    public JSONObject validateTAXandVat() {
-        JSONObject loJSON = new JSONObject();
-            for (int x = 0; x < getDetailCount() - 1; x++) {
-                boolean withVat = Detail(x).isWithVat();
-                String taxCode = Detail(x).getTaxCode();
-
-                if ((!withVat && taxCode != null && !taxCode.isEmpty())
-                        || (withVat && (taxCode == null || taxCode.isEmpty()))) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Detail no. " + (x + 1) + " : Has VAT but missing Tax Code, or has Tax Code without VAT.");
-                    poJSON.put("pnDetailDV" , x);
-                    return poJSON;
-                }
-            }
-        loJSON.put("result", "success");
-        return loJSON;
-    }
+//    public JSONObject validateTAXandVat() {
+//        JSONObject loJSON = new JSONObject();
+//            for (int x = 0; x < getDetailCount() - 1; x++) {
+//                boolean withVat = Detail(x).isWithVat();
+//                String taxCode = Detail(x).getTaxCode();
+//
+//                if ((!withVat && taxCode != null && !taxCode.isEmpty())
+//                        || (withVat && (taxCode == null || taxCode.isEmpty()))) {
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "Detail no. " + (x + 1) + " : Has VAT but missing Tax Code, or has Tax Code without VAT.");
+//                    poJSON.put("pnDetailDV" , x);
+//                    return poJSON;
+//                }
+//            }
+//        loJSON.put("result", "success");
+//        return loJSON;
+//    }
     /**
      * Computation of vat and transaction total
      * @return JSON
@@ -1118,6 +1247,7 @@ public class DisbursementVoucher extends Transaction {
         //set/compute value to tax amount
         Double ldblTaxAmount = 0.0000;
         Double ldblDetTaxAmt = 0.0000;
+        Double ldblTotalBaseAmount = 0.0000;
         for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
             if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
                 WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
@@ -1132,6 +1262,13 @@ public class DisbursementVoucher extends Transaction {
                 WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
             }
             ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
+            ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
+        }
+        
+        if(ldblTotalBaseAmount > Master().getTransactionTotal()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Base amount cannot be greater than the transaction total.");
+            return poJSON;
         }
         
         if(ldblTaxAmount > Master().getTransactionTotal()){
@@ -1472,25 +1609,12 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         paWTaxDeductions.add(new CashflowControllers(poGRider, logwrapr).WithholdingTaxDeductions());
+        //set default period date
+        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
+        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-      
-  protected JSONObject addDetail() throws CloneNotSupportedException {
-    this.poJSON = new JSONObject();
-    if (!this.pbInitTran) {
-      this.poJSON.put("result", "error");
-      this.poJSON.put("message", "Object is not initialized.");
-      return this.poJSON;
-    } 
-    Model loDetail = (Model)this.poDetail.clone();
-    loDetail.newRecord();
-    this.paDetail.add(loDetail);
-    this.poJSON.put("result", "success");
-    return this.poJSON;
-  }
-  
     
     public JSONObject removeWTaxDeductions() {
         poJSON = new JSONObject();
@@ -1628,6 +1752,12 @@ public class DisbursementVoucher extends Transaction {
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
             Master().setVoucherNo(getVoucherNo());
+        }
+        
+        if(Master().getVATAmount() > 0.0000 && Master().getWithTaxTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Amount is not set.");
+            return poJSON;
         }
         
         //Seek Approval
@@ -1770,6 +1900,10 @@ public class DisbursementVoucher extends Transaction {
                     poJSON.put("message", "Invalid Update mode for Journal.");
                     return poJSON;
                 }
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Journal is not set.");
+                return poJSON;
             }
             
             switch(Master().getDisbursementType()){
@@ -1787,6 +1921,10 @@ public class DisbursementVoucher extends Transaction {
                                 return poJSON;
                             }
                         }
+                    } else {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Check info is not set.");
+                        return poJSON;
                     }
                     //Save Bank Account : triggered only in assign check
                     if(poBankAccount != null){
@@ -1828,6 +1966,10 @@ public class DisbursementVoucher extends Transaction {
                                 return poJSON;
                             }
                         }
+                    } else {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Other Payment info is not set.");
+                        return poJSON;
                     }
                     break;
             }
@@ -3104,9 +3246,12 @@ public class DisbursementVoucher extends Transaction {
                 }
                 MiscUtil.close(loRS);
             break;
-            case EditMode.ADDNEW:    
+            case EditMode.ADDNEW:   
                 if(paWTaxDeductions.isEmpty()){
                     paWTaxDeductions.add(new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
+                    //set default period date
+                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
+                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
                 }
             break;
             case EditMode.UPDATE:
