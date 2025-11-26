@@ -6,7 +6,7 @@ package ph.com.guanzongroup.cas.cashflow;
 
 /**
  *
- * @author user : mdot223
+ * @author user : Teejei continued by Arsiela
  * @date created : October 13, 2025
  * @purpose : use to print the bir 2307 form only
  *
@@ -35,6 +35,7 @@ import javax.script.ScriptException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.openxmlformats.schemas.drawingml.x2006.main.CTTextBodyProperties;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 /**
@@ -119,7 +120,8 @@ public class BIR2307Print {
                 //Set Value
                 payeeName = safeGet(poDisbursementController.Master().Payee().getPayeeName());
                 transactionNo =  safeGet(poDisbursementController.Master().getTransactionNo());
-                payeeTin =  "0002223334567"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
+                payeeTin =  "00022233345609"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
+                payeeZip = "1241";
                 payeeAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
                 payeeForeignAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
                 company =  safeGet(poDisbursementController.Master().Company().getCompanyCode());
@@ -421,6 +423,10 @@ public class BIR2307Print {
                     insideShape.addNewTxBody();
                 }
                 CTTextBody body = insideShape.getTxBody();
+                // Remove left/right margins
+                CTTextBodyProperties bodyPr = body.getBodyPr();
+                bodyPr.setLIns(0);  // left margin = 0
+                bodyPr.setRIns(0);  // right margin = 0
                 for (CTTextParagraph p : body.getPList()) {
                     if (p.sizeOfRArray() == 0) {
                         // Create a new run if none exists
@@ -480,39 +486,36 @@ public class BIR2307Print {
         payorTIN = payorTIN.replace("-", "");
         switch(fsID){
             case "223": //Period From Month
-                lsGetText = addSpaceBetweenChars(minDate.format(DateTimeFormatter.ofPattern("MMdd")), 2);
+                lsGetText = formatPeriodDate(minDate, true);
                 System.out.println("FROM : Month-Day = " + lsGetText); // Output: Month-Day = 01-01
             break;
             case "218": //Period From Year
-                lsGetText = addSpaceBetweenChars(minDate.format(DateTimeFormatter.ofPattern("YYYY")), 2);
+                lsGetText = formatPeriodDate(minDate, false);
                 System.out.println("FROM : Year = " + lsGetText); 
             break;
             case "294": //Period To Month
-                lsGetText = addSpaceBetweenChars(maxDate.format(DateTimeFormatter.ofPattern("MMdd")), 2);
+                lsGetText = formatPeriodDate(maxDate, true);
                 System.out.println("TO : Month-Day = " + lsGetText); // Output: Month-Day = 01-01
             break;
             case "290": //Period To Year
-                lsGetText = addSpaceBetweenChars(maxDate.format(DateTimeFormatter.ofPattern("YYYY")), 2);
+                lsGetText = formatPeriodDate(maxDate, false);
                 System.out.println("TO : Year = " + lsGetText); 
             break;
             case "135": //Payee's TIN 1
-                if(payeeTin.length() < 4) return "";
-                lsGetText = addSpaceBetweenChars(payeeTin.substring(0, 3), 1);
+                System.out.println("TIN : " + payeeTin);
+                lsGetText =  formatTIN(payeeTin, 1);
                 System.out.println("Payee's TIN 1 = "+ lsGetText);
             break;
             case "339": //Payee's TIN 2
-                if(payeeTin.length() < 7) return "";
-                lsGetText = addSpaceBetweenChars(payeeTin.substring(3, 6), 1);
+                lsGetText =  formatTIN(payeeTin, 2);
                 System.out.println("Payee's TIN 2 = "+ lsGetText);
             break;
             case "343": //Payee's TIN 3
-                if(payeeTin.length() < 10) return "";
-                lsGetText = addSpaceBetweenChars(payeeTin.substring(6, 9), 1);
+                lsGetText =  formatTIN(payeeTin, 3);
                 System.out.println("Payee's TIN 3 = "+ lsGetText);
             break;
             case "347": //Payee's TIN 4
-                if(payeeTin.length() < 13) return "";
-                lsGetText = addSpaceBetweenChars(payeeTin.substring(9, 12), 1);
+                lsGetText =  formatTIN(payeeTin, 4);
                 System.out.println("Payee's TIN 4 = "+ lsGetText);
             break;
             case "370": //Payee's Name
@@ -521,42 +524,102 @@ public class BIR2307Print {
 //                return payeeAddress.toUpperCase();
                 return "TEST PAYEE ADDRESS";
             case "373": //Payee's ZIP Code
-//                return addSpaceBetweenChars(payeeZip, 1);
-                return addSpaceBetweenChars("2141", 1);
+                lsGetText = formatZIPCode(payeeZip);
+                System.out.println("Payee's ZIP Code = "+ lsGetText);
+            break;
             case "377": //Payee's Foreign Address
 //                return payeeForeignAddress.toUpperCase();
                 return "TEST PAYEE FOREIGN ADDRESS";
+                
             case "403": //Payor's Name
                 return payorName.toUpperCase();
             case "404": //Payor's Registered Address
                 return payorRegAddress.toUpperCase();
             case "406": //Payor's ZIP Code
-                return addSpaceBetweenChars(payorZIP, 1);
+                lsGetText = formatZIPCode(payorZIP);
+                System.out.println("Payor's ZIP Code = "+ lsGetText);
+            break;
             case "130": //Payor's TIN 1
-                if(payorTIN.length() < 4) return "";
-                lsGetText = addSpaceBetweenChars(payorTIN.substring(0, 3), 1);
+                lsGetText =  formatTIN(payorTIN, 1);
                 System.out.println("Payor's TIN 1 = "+ lsGetText);
             break;
             case "383": //Payor's TIN 2
-                if(payorTIN.length() < 7) return "";
-                lsGetText = addSpaceBetweenChars(payorTIN.substring(3, 6), 1);
+                lsGetText =  formatTIN(payorTIN, 2);
                 System.out.println("Payor's TIN 2 = "+ lsGetText);
             break;
             case "387": //Payor's TIN 3
                 if(payorTIN.length() < 10) return "";
-                lsGetText = addSpaceBetweenChars(payorTIN.substring(6, 9), 1);
+                lsGetText =  formatTIN(payorTIN, 3);
                 System.out.println("Payor's TIN 3 = "+ lsGetText);
             break;
             case "391": //Payor's TIN 4
-                if(payorTIN.length() < 13) return "";
-                lsGetText = addSpaceBetweenChars(payorTIN.substring(9, 12), 1);
+                lsGetText =  formatTIN(payorTIN, 4);
                 System.out.println("Payor's TIN 4 = "+ lsGetText);
             break;
         }
         return lsGetText;
     }
     
+    private String formatTIN(String fsTin, int fnPattern){
+        switch(fnPattern){
+            case 1: //TIN 1
+                System.out.println("TIN : " + fsTin);
+                if(fsTin.length() < 4) return "";
+                return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(0, 2), 2)
+                            + repeatSpace(3)
+                            + fsTin.substring(2, 3);
+            case 2: //TIN 2
+                if(fsTin.length() < 7) return "";
+                return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(3, 5), 2)
+                            + repeatSpace(3)
+                            + fsTin.substring(5, 6);
+            case 3: //TIN 3
+                if(fsTin.length() < 10) return "";
+                return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(6, 8), 2)
+                            + repeatSpace(3)
+                            + fsTin.substring(8, 9);
+            case 4: //TIN 4
+                if(fsTin.length() < 12) return "";
+            switch (fsTin.length()) { 
+                case 13:
+                    return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(9, 11), 4)
+                            + repeatSpace(4)
+                            + addSpaceBetweenChars(fsTin.substring(11, 13), 4);
+                case 14:
+                    return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(9, 11), 4)
+                            + repeatSpace(4)
+                            + addSpaceBetweenChars(fsTin.substring(11, 13), 4)
+                            + repeatSpace(3) + fsTin.substring(13, 14);
+                default:
+                    return repeatSpace(2) + addSpaceBetweenChars(fsTin.substring(9, 11), 4)
+                            + repeatSpace(4)
+                            + addSpaceBetweenChars(fsTin.substring(11, 12), 4);
+            }
+
+        }
+        return "";
+    }
     
+    private String formatPeriodDate(LocalDate fDate, boolean isMonth){
+        
+        if(isMonth){
+            return  repeatSpace(2) + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("MM")), 2)
+                            + repeatSpace(4)
+                            + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("dd")), 3);
+        } else {
+            return repeatSpace(2) + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("YYYY")).substring(0,2), 3)
+                            + repeatSpace(3)
+                            + addSpaceBetweenChars(fDate.format(DateTimeFormatter.ofPattern("YYYY")).substring(2,4), 3);
+        }
+    }
+    
+    private String formatZIPCode(String fsZIPCode){
+        if(fsZIPCode.length() < 4) return "";
+        return repeatSpace(2) + addSpaceBetweenChars(fsZIPCode.substring(0, 2), 2)
+                        + repeatSpace(3) 
+                         + addSpaceBetweenChars(fsZIPCode.substring(2, 4), 3);
+         
+    }
     
     private void updateShapeID(XSSFShape shape) throws CloneNotSupportedException {
         String lsID = "";

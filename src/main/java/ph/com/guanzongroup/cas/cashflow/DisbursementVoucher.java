@@ -5,6 +5,7 @@
  */
 package ph.com.guanzongroup.cas.cashflow;
 
+import com.ibm.icu.impl.Assert;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
@@ -3323,6 +3324,28 @@ public class DisbursementVoucher extends Transaction {
                 + " LEFT JOIN Banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
                 + " LEFT JOIN Bank_Account_Master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID"
                 + " LEFT JOIN Industry k ON k.sIndstCdx = a.sIndstCdx";
+    }
+    
+    
+    public JSONObject PrintBIR(List<String> fsTransactionNos){
+        poJSON = new JSONObject();
+        
+        BIR2307Print loObject = new BIR2307Print();
+        loObject.poGRider = poGRider;
+        
+        poJSON = loObject.initialize();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = loObject.openSource(fsTransactionNos);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "BIR 2307 printed successfully");
+        return poJSON;
     }
     
     /*****************************************************DV AND CHECK PRINTING*************************************************************/
