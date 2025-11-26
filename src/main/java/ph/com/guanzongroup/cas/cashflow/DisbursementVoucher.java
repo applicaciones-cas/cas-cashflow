@@ -179,7 +179,7 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
         } catch (SQLException | GuanzonException | ScriptException ex) {
-            Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         initFields();
         return poJSON;
@@ -203,7 +203,7 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
-        poJSON = populateWithholdingTaxDeductions();
+        poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -1254,7 +1254,7 @@ public class DisbursementVoucher extends Transaction {
                 try {
                     ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
                 } catch (SQLException | GuanzonException ex) {
-                    Logger.getLogger(DisbursementVoucher.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
                     poJSON.put("result", "error");
                     poJSON.put("message", MiscUtil.getException(ex));
                     return poJSON;
@@ -1550,7 +1550,7 @@ public class DisbursementVoucher extends Transaction {
         return (Model_Disbursement_Detail) paDetail.get(row); 
     }
     
-    public List<WithholdingTaxDeductions> WTaxDeductions() {
+    public List<WithholdingTaxDeductions> WTaxDeduction() {
         return paWTaxDeductions; 
     }
     
@@ -1598,7 +1598,7 @@ public class DisbursementVoucher extends Transaction {
         return paWTaxDeductions.size();
     }
     
-    public JSONObject AddWTaxDeductions() throws CloneNotSupportedException, SQLException, GuanzonException {
+    public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         if (getWTaxDeductionsCount() > 0) {
             if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId().isEmpty()) {
@@ -1616,9 +1616,9 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    public JSONObject removeWTaxDeductions() {
+    public JSONObject removeWTaxDeduction() {
         poJSON = new JSONObject();
-        Iterator<WithholdingTaxDeductions> detail = WTaxDeductions().iterator();
+        Iterator<WithholdingTaxDeductions> detail = WTaxDeduction().iterator();
         while (detail.hasNext()) {
             WithholdingTaxDeductions item = detail.next();
             detail.remove();
@@ -1703,7 +1703,7 @@ public class DisbursementVoucher extends Transaction {
         resetCheckPayment();
         resetOtherPayment();
         Detail().clear();
-        WTaxDeductions().clear();
+        WTaxDeduction().clear();
         
         setSearchIndustry("");
         setSearchBranch("");
@@ -3209,7 +3209,7 @@ public class DisbursementVoucher extends Transaction {
      * @throws CloneNotSupportedException
      * @throws ScriptException 
      */
-    public JSONObject populateWithholdingTaxDeductions() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+    public JSONObject populateWithholdingTaxDeduction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
             poJSON.put("result", "error");

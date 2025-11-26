@@ -154,17 +154,24 @@ public class testDisbursementVoucher {
             }
             
              poController.WTaxDeduction(0).getModel().setTaxRateId("GK01001");
-             poController.WTaxDeduction(0).getModel().setBaseAmount(21000.0000);
+             poController.WTaxDeduction(0).getModel().setBaseAmount(20000.0000);
              poController.WTaxDeduction(0).getModel().setBIRForm("0");
              poController.WTaxDeduction(0).getModel().setPeriodFrom(instance.getServerDate());
              poController.WTaxDeduction(0).getModel().setPeriodTo(instance.getServerDate());
              poController.computeTaxAmount();
-             poController.AddWTaxDeductions();
+             poController.AddWTaxDeduction();
              poController.WTaxDeduction(1).getModel().setTaxRateId("GK01002");
              poController.WTaxDeduction(1).getModel().setBaseAmount(660.0000);
              poController.WTaxDeduction(1).getModel().setBIRForm("0");
              poController.WTaxDeduction(1).getModel().setPeriodFrom(instance.getServerDate());
              poController.WTaxDeduction(1).getModel().setPeriodTo(instance.getServerDate());
+             poController.computeTaxAmount();
+             poController.AddWTaxDeduction();
+             poController.WTaxDeduction(2).getModel().setTaxRateId("GK01003");
+             poController.WTaxDeduction(2).getModel().setBaseAmount(1000.0000);
+             poController.WTaxDeduction(2).getModel().setBIRForm("0");
+             poController.WTaxDeduction(2).getModel().setPeriodFrom(instance.getServerDate());
+             poController.WTaxDeduction(2).getModel().setPeriodTo(instance.getServerDate());
              poController.computeTaxAmount();
             
             System.out.println("Bank : " + poController.CheckPayments().getModel().getBankID());
