@@ -934,6 +934,12 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        //validate period
+        poJSON = checkPeriodDate(row);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
             if(lnCtr != row){
                 if(WTaxDeduction(lnCtr).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())){
@@ -958,6 +964,12 @@ public class DisbursementVoucher extends Transaction {
     }
 
     public JSONObject SearchParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        //validate period
+        poJSON = checkPeriodDate(row);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
         object.setRecordStatus(RecordStatus.ACTIVE);
 
@@ -1084,61 +1096,28 @@ public class DisbursementVoucher extends Transaction {
     /**
      * Validate period date
      * @param fnRow pass withholding tax deduction selected row
-     * @param foDate pass selected period date from / to
      * @return 
      */
-    public JSONObject checkPeriodDate(int fnRow, LocalDate foDate){
+    public JSONObject checkPeriodDate(int fnRow){
         //Validate period from must be per quarter per year.
         if(WTaxDeduction(fnRow).getModel().getPeriodFrom() != null){
-            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear() != foDate.getYear() ){
+            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())).getYear() 
+                != strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear() ){
                 poJSON.put("row", fnRow);
                 poJSON.put("result", "error");
-                poJSON.put("message", "Period Date must be with the same year.");
+                poJSON.put("message", "Period Date must be with the same year at row "+(fnRow + 1)+".");
                 return poJSON;
             }
             
-            if( (getQuarter(foDate) != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())))) ){
+            if( (getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo()))) 
+                != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())))) ){
                 poJSON.put("row", fnRow);
                 poJSON.put("result", "error");
-                poJSON.put("message", "Selected date must be the same quarter for period to.");
-                return poJSON;
-            }
-        }
-        //Validate period to must be per quarter per year.
-        if(WTaxDeduction(fnRow).getModel().getPeriodTo() != null){
-            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())).getYear() != foDate.getYear()){
-                poJSON.put("row", fnRow);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Period Date must be with the same year.");
-                return poJSON;
-            }
-            if( (getQuarter(foDate) != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())))) ){
-                poJSON.put("row", fnRow);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Selected date must be the same quarter for period from.");
+                poJSON.put("message", "Period date must be in the same quarter at row "+(fnRow + 1)+".");
                 return poJSON;
             }
         }
         
-//        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
-//            //Check the tax rate
-//            if(fnRow != lnCtr ){
-//                if(WTaxDeduction(lnCtr).getModel().getTaxRateId()!= null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
-//                    && WTaxDeduction(fnRow).getModel().getTaxRateId()!= null && !"".equals(WTaxDeduction(fnRow).getModel().getTaxRateId())){
-//                    //Check Period Date do not allow when taxratedid was already covered of the specific period date
-//                    if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
-//                        == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
-//                        //Check Period date per quarter
-//                        if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
-//                            poJSON.put("row", lnCtr);
-//                            poJSON.put("result", "error");
-//                            poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
-//                            return poJSON;
-//                        }
-//                    }
-//                }
-//            }
-//        }
         poJSON.put("row", fnRow);
         poJSON.put("result", "success");
         return poJSON;
@@ -1766,6 +1745,19 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("result", "error");
             poJSON.put("message", "Tax Amount is not set.");
             return poJSON;
+        }
+        
+        //Validate Withholding Tax Deductions
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                    //validate period
+                    poJSON = checkPeriodDate(lnCtr);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
         }
         
         //Seek Approval
