@@ -950,8 +950,8 @@ public class DisbursementVoucher extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             WTaxDeduction(row).getModel().setTaxCode(object.getModel().getTaxCode());
+            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxCode());
         }
-        
         poJSON.put("row", row);
         return poJSON;
     }
@@ -967,7 +967,11 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
             WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
+            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxRateId());
+            System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
         }
+        
+        poJSON.put("row", row);
         return poJSON;
     }
 
@@ -1117,21 +1121,23 @@ public class DisbursementVoucher extends Transaction {
         
         for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
             //Check the tax rate
-            if(fnRow != lnCtr){
-                //Check Period Date do not allow when taxratedid was already covered of the specific period date
-                if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
-                    == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
-                    //Check Period date per quarter
-                    if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
-                        poJSON.put("row", lnCtr);
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
-                        return poJSON;
+            if(fnRow != lnCtr ){
+                if(WTaxDeduction(fnRow).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(fnRow).getModel().getTaxCode())){
+                    //Check Period Date do not allow when taxratedid was already covered of the specific period date
+                    if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
+                        == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
+                        //Check Period date per quarter
+                        if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
+                            poJSON.put("row", lnCtr);
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
+                            return poJSON;
+                        }
                     }
                 }
             }
         }
-            poJSON.put("row", fnRow);
+        poJSON.put("row", fnRow);
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -2722,7 +2728,7 @@ public class DisbursementVoucher extends Transaction {
                     return poJSON;
                 }
             }
-
+            System.out.println("Industry ID : " + Master().getIndustryID());
             if(fdblBalance <= 0.0000){
                 poJSON.put("result", "error");
                 poJSON.put("message", "No remaining balance for the selected transaction.\n\nContact System Administrator to address the issue.");
