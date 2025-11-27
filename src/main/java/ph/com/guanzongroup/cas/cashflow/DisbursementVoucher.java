@@ -758,11 +758,12 @@ public class DisbursementVoucher extends Transaction {
 
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                        + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                         " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                         + " AND c.sBranchNm LIKE " + SQLUtil.toSQL("%" + psBranch)
-                        + " AND d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
-                        + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + psClient)
+                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
+                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + psClient) 
+                        + " ) "
                         );
         if (!psTranStat.isEmpty()) {
             lsSQL = lsSQL + lsTransStat;
@@ -805,8 +806,8 @@ public class DisbursementVoucher extends Transaction {
 
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                        + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                         " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                         + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferenceNo)
                         + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
                         + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + psPayee)
@@ -850,8 +851,8 @@ public class DisbursementVoucher extends Transaction {
     
     public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
-        object.setRecordStatus("1");
-
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
@@ -867,7 +868,7 @@ public class DisbursementVoucher extends Transaction {
     
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecordbyClientID(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
@@ -888,7 +889,7 @@ public class DisbursementVoucher extends Transaction {
 
     public JSONObject SearchSupplier(String value, boolean byCode, boolean isSearch) throws SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecordbyCompany(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
@@ -909,7 +910,7 @@ public class DisbursementVoucher extends Transaction {
 
     public JSONObject SearchParticular(String value, int row, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
@@ -977,7 +978,7 @@ public class DisbursementVoucher extends Transaction {
 
     public JSONObject SearchBankAccount(String value, String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
         
         if(Banks == null || "".equals(Banks)){
             poJSON = object.searchRecord(value, byCode);
@@ -1004,7 +1005,7 @@ public class DisbursementVoucher extends Transaction {
 
     public JSONObject SearchBanks(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Banks object = new ParamControllers(poGRider, logwrapr).Banks();
-        object.setRecordStatus("1");
+        object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
@@ -1065,7 +1066,7 @@ public class DisbursementVoucher extends Transaction {
                                     ){
                                 poJSON.put("row", lnCtr);
                                 poJSON.put("result", "error");
-                                poJSON.put("message", "Account " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
+                                poJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
                                 return poJSON;
                             }
                         }
@@ -1119,24 +1120,25 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
-        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
-            //Check the tax rate
-            if(fnRow != lnCtr ){
-                if(WTaxDeduction(fnRow).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(fnRow).getModel().getTaxCode())){
-                    //Check Period Date do not allow when taxratedid was already covered of the specific period date
-                    if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
-                        == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
-                        //Check Period date per quarter
-                        if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
-                            poJSON.put("row", lnCtr);
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
-                            return poJSON;
-                        }
-                    }
-                }
-            }
-        }
+//        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
+//            //Check the tax rate
+//            if(fnRow != lnCtr ){
+//                if(WTaxDeduction(lnCtr).getModel().getTaxRateId()!= null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
+//                    && WTaxDeduction(fnRow).getModel().getTaxRateId()!= null && !"".equals(WTaxDeduction(fnRow).getModel().getTaxRateId())){
+//                    //Check Period Date do not allow when taxratedid was already covered of the specific period date
+//                    if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
+//                        == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
+//                        //Check Period date per quarter
+//                        if( getQuarter(foDate) == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) ){
+//                            poJSON.put("row", lnCtr);
+//                            poJSON.put("result", "error");
+//                            poJSON.put("message", "Selected period date already exists at row " + (lnCtr+1) + ".");
+//                            return poJSON;
+//                        }
+//                    }
+//                }
+//            }
+//        }
         poJSON.put("row", fnRow);
         poJSON.put("result", "success");
         return poJSON;
@@ -3462,7 +3464,7 @@ public class DisbursementVoucher extends Transaction {
                 + " f.sDescript,"
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp, "
-                + " a.cBankPrnt "
+                + " a.cBankPrnt, "
                 + " k.sDescript AS sIndustry "
                 + " FROM Disbursement_Master a "
                 + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
