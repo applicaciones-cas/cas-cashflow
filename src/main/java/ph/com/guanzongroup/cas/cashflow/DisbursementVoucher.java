@@ -5,7 +5,6 @@
  */
 package ph.com.guanzongroup.cas.cashflow;
 
-import com.ibm.icu.impl.Assert;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
@@ -1265,7 +1264,8 @@ public class DisbursementVoucher extends Transaction {
         }
         
         Master().setWithTaxTotal(ldblTaxAmount);
-    
+        System.out.println("Withholding tax total : " + Master().getWithTaxTotal());
+        
         poJSON.put("result", "success");
         poJSON.put("message", "Tax computed successfully");
         return poJSON;
@@ -1735,6 +1735,14 @@ public class DisbursementVoucher extends Transaction {
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
+        
+        System.out.println("Class Edit Mode : " + getEditMode());
+        System.out.println("Master Edit Mode : " + Master().getEditMode());
+        System.out.println("Journal Class Edit Mode : " + poJournal.getEditMode());
+        System.out.println("Journal Master Edit Mode : " + poJournal.Master().getEditMode());
+        System.out.println("Check Class Edit Mode : " + poCheckPayments.getEditMode());
+        System.out.println("Check Master Edit Mode : " + poCheckPayments.getModel().getEditMode());
+        
         //Re-set the transaction no and voucher no
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
@@ -1745,19 +1753,6 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("result", "error");
             poJSON.put("message", "Tax Amount is not set.");
             return poJSON;
-        }
-        
-        //Validate Withholding Tax Deductions
-        if(Master().getWithTaxTotal() > 0.0000){
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    //validate period
-                    poJSON = checkPeriodDate(lnCtr);
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                }
-            }
         }
         
         //Seek Approval
@@ -1835,6 +1830,29 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
+        Iterator<WithholdingTaxDeductions> loObject = WTaxDeduction().iterator();
+        while (loObject.hasNext()) {
+            WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
+            String lsTaxRateId = (String) item.getModel().getTaxRateId();
+
+            if ("".equals(lsTaxRateId) || lsTaxRateId == null) {
+                loObject.remove(); // Correctly remove the item
+            }
+        }
+        
+        //Validate Withholding Tax Deductions
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                    //validate period
+                    poJSON = checkPeriodDate(lnCtr);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
@@ -1879,6 +1897,7 @@ public class DisbursementVoucher extends Transaction {
             }
             
             //Save Journal
+            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
             if(poJournal != null){
                 if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
                     poJSON = validateJournal();
@@ -1893,6 +1912,7 @@ public class DisbursementVoucher extends Transaction {
                     poJournal.setWithParent(true);
                     poJSON = poJournal.SaveTransaction();
                     if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("Save Journal : " + poJSON.get("message"));
                         return poJSON;
                     }
                 } else {
@@ -1905,9 +1925,11 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "Journal is not set.");
                 return poJSON;
             }
+            System.out.println("-----------------------------------------------------------------------");
             
             switch(Master().getDisbursementType()){
                 case DisbursementStatic.DisbursementType.CHECK:
+                    System.out.println("--------------------------SAVE CHECK PAYMENT---------------------------------------------");
                     //Save Check Payment
                     if(poCheckPayments != null){
                         if(poCheckPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
@@ -1918,6 +1940,7 @@ public class DisbursementVoucher extends Transaction {
                             poCheckPayments.setWithUI(false);
                             poJSON = poCheckPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Check Payment : " + poJSON.get("message"));
                                 return poJSON;
                             }
                         }
@@ -1926,8 +1949,10 @@ public class DisbursementVoucher extends Transaction {
                         poJSON.put("message", "Check info is not set.");
                         return poJSON;
                     }
+                    System.out.println("-----------------------------------------------------------------------");
                     //Save Bank Account : triggered only in assign check
                     if(poBankAccount != null){
+                        System.out.println("--------------------------SAVE BANK ACCOUNT---------------------------------------------");
                         if(poBankAccount.getEditMode() == EditMode.UPDATE){
                             //get the latest check no existed in bank account
                             String lsCheckNo = poCheckPayments.getModel().getCheckNo();
@@ -1946,15 +1971,18 @@ public class DisbursementVoucher extends Transaction {
                             poBankAccount.setWithUI(false);
                             poJSON = poBankAccount.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Bank Account : " + poJSON.get("message"));
                                 return poJSON;
                             }
                         }
+                        System.out.println("-----------------------------------------------------------------------");
                     }
                     break;
                 case DisbursementStatic.DisbursementType.WIRED:
                 case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                     //Save Other Payment
                     if(poOtherPayments != null){
+                        System.out.println("--------------------------SAVE OTHER PAYMENT---------------------------------------------");
                         if(poOtherPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
                             poOtherPayments.getModel().setSourceNo(Master().getTransactionNo());
                             poOtherPayments.getModel().setTransactionStatus(RecordStatus.ACTIVE);
@@ -1963,9 +1991,11 @@ public class DisbursementVoucher extends Transaction {
                             poOtherPayments.setWithUI(false);
                             poJSON = poOtherPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Other Payment : " + poJSON.get("message"));
                                 return poJSON;
                             }
                         }
+                        System.out.println("-----------------------------------------------------------------------");
                     } else {
                         poJSON.put("result", "error");
                         poJSON.put("message", "Other Payment info is not set.");
@@ -1975,10 +2005,11 @@ public class DisbursementVoucher extends Transaction {
             }
             
             if(Master().getWithTaxTotal() > 0.0000){
+                System.out.println("--------------------------SAVE WITHHOLDING TAX DEDUCTION---------------------------------------------");
                 //Save Withholding Tax Deductions
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
                     if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                        WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
+//                        WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
                         WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
                         WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
                         WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
@@ -1986,17 +2017,21 @@ public class DisbursementVoucher extends Transaction {
                         WTaxDeduction(lnCtr).setWithUI(false);
                         poJSON = WTaxDeduction(lnCtr).saveRecord();
                         if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Withholding Tax Deduction : " + poJSON.get("message"));
                             return poJSON;
                         }
                     }
                 }
+                System.out.println("--------------------------SAVE BANK ACCOUNT---------------------------------------------");
             }
             
+            System.out.println("--------------------------SAVE OTHER TRANSACTION---------------------------------------------");
             //Update other linked transaction in DV Detail
             poJSON = updateLinkedTransactions(Master().getTransactionStatus());
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
+            System.out.println("-----------------------------------------------------------------------");
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
