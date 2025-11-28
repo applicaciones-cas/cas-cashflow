@@ -977,11 +977,6 @@ public class DisbursementVoucher extends Transaction {
 
         poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
-            poJSON = checkExistTaxRate(row, object.getModel().getTaxRateId());
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-            
             JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId());
             if ("error".equals((String) loJSON.get("result"))) {
                 if((boolean) loJSON.get("reverse")){
@@ -1084,6 +1079,14 @@ public class DisbursementVoucher extends Transaction {
                     lnRow++;
                 }
                 if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                    if(WTaxDeduction(lnCtr).getModel().isReverse() && !WTaxDeduction(fnRow).getModel().WithholdingTax().getTaxType().equals(WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxType()) ){
+                        poJSON.put("result", "error");
+                        poJSON.put("reverse", true);
+                        poJSON.put("row", lnCtr);
+                        poJSON.put("Message", "Tax type must be equal to other withholding tax deductions.");
+                        return poJSON;
+                    }
+                    
                     //Check the tax rate
                     if(fsTaxRated.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
                         && fnRow != lnCtr){
@@ -1234,7 +1237,6 @@ public class DisbursementVoucher extends Transaction {
         Master().setVATAmount(ldblVATAmount);
         Master().setVATExmpt(ldblVATExempt);
         Master().setZeroVATSales(ldblZeroVATSales);
-        Master().setWithTaxTotal(ldblTaxamount);
         Master().setNetTotal(lnNetAmountDue);
 
         switch(Master().getDisbursementType()){
@@ -4103,6 +4105,7 @@ public class DisbursementVoucher extends Transaction {
 
         try {
             latch.await();                     // 🔴 blocks here until viewer closes
+            proceedAfterViewerClosed();
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt(); // keep interruption status
         }
