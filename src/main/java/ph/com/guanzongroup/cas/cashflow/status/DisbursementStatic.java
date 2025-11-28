@@ -1,5 +1,7 @@
 package ph.com.guanzongroup.cas.cashflow.status;
 
+import org.guanzon.cas.inv.InvTransCons;
+
 public class DisbursementStatic {
         
     public static final String OPEN = "0";
@@ -29,9 +31,10 @@ public class DisbursementStatic {
          public static final String PAYMENT_REQUEST = "PRFx"; //PRF
         public static final  String ACCOUNTS_PAYABLE = "SOAt"; //SOA
         public static final  String CASH_PAYABLE = "CcPy";      
-        public static final  String PO_RECEIVING = "PORc";      
+        public static final  String PO_RECEIVING = InvTransCons.PURCHASE_RECEIVING; //"PORc";      
         public static final  String AP_ADJUSTMENT = "APAd";      
-        public static final  String PURCHASE_ORDER = "PO";  
+        public static final  String PURCHASE_ORDER = InvTransCons.PURCHASE_ORDER; //"PO";  
+        public static final  String DISBURSEMENT_VOUCHER = "DISb"; 
         
         public static final  String LOAD_ALL = "ALL";
     }
@@ -53,5 +56,10 @@ public class DisbursementStatic {
         public static final String HOSPITALITY = "0000009";   //Hospitality  
     }
     
-     public static final String DEFAULT_VOUCHER_NO = "00000001";
+    public static final String DEFAULT_VOUCHER_NO = "00000001";
+     
+    public static class Reverse  {
+        public static final  String INCLUDE = "+"; 
+        public static final  String EXCLUDE = "-"; 
+    }
 }				

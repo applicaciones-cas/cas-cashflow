@@ -5,7 +5,7 @@
  */
 package ph.com.guanzongroup.cas.cashflow.status;
 
-import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
+import org.guanzon.cas.inv.InvTransCons;
 
 /**
  *
@@ -16,7 +16,7 @@ public class SOATaggingStatic {
     public static final String PaymentRequest = "PRFx";
 //    public static final String CachePayable = "CcPy";
     public static final String APPaymentAdjustment = "APAd";
-    public static final String POReceiving = "PORc";
+    public static final String POReceiving = InvTransCons.PURCHASE_RECEIVING;
     
     public static class Reverse  {
         public static final  String INCLUDE = "+"; 
