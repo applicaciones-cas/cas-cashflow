@@ -22,6 +22,7 @@ import org.openxmlformats.schemas.drawingml.x2006.spreadsheetDrawing.CTShape;
 
 
 import java.io.*;
+import java.sql.ResultSet;
 import org.json.simple.JSONObject;
 import java.sql.SQLException;
 import java.text.DecimalFormat;
@@ -35,8 +36,13 @@ import javax.script.ScriptException;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.openxmlformats.schemas.drawingml.x2006.main.CTTextBodyProperties;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**
  * Utility class for filling out BIR 2307 Excel template forms. Supports
@@ -46,7 +52,8 @@ public class BIR2307Print {
 
     private final File inputFile;
     public GRiderCAS poGRider;
-    private DisbursementVoucher poDisbursementController;
+    private List<WithholdingTaxDeductions> paWTaxDeductions;
+//    private DisbursementVoucher poDisbursementController;
     JSONObject poJSON = new JSONObject();
     private XSSFSheet activeSheet;
     int pnQuarter = 1;
@@ -89,47 +96,48 @@ public class BIR2307Print {
     public JSONObject openSource(List<String> transNox) {
         try {
             poJSON = new JSONObject();
-            poDisbursementController = new CashflowControllers(poGRider, null).DisbursementVoucher();
-            poJSON = poDisbursementController.InitTransaction();
-            if ("error".equals(poJSON.get("result"))) {
-                return poJSON;
-            }
-            
-            List<WithholdingTaxDeductions> loFirstQuarter = new ArrayList<>();
-            List<WithholdingTaxDeductions> loSecondQuarter = new ArrayList<>();
-            List<WithholdingTaxDeductions> loThirdQuarter = new ArrayList<>();
-            List<WithholdingTaxDeductions> loFourthQuarter = new ArrayList<>();
             
             for(int lnCtr = 0;lnCtr <= transNox.size() - 1;lnCtr++){
-                poJSON = poDisbursementController.OpenTransaction(transNox.get(lnCtr));
-                if ("error".equals(poJSON.get("result"))) {
+                List<WithholdingTaxDeductions> loFirstQuarter = new ArrayList<>();
+                List<WithholdingTaxDeductions> loSecondQuarter = new ArrayList<>();
+                List<WithholdingTaxDeductions> loThirdQuarter = new ArrayList<>();
+                List<WithholdingTaxDeductions> loFourthQuarter = new ArrayList<>();
+                
+                Model_Disbursement_Master loDVMaster = new CashflowModels(poGRider).DisbursementMaster();
+                poJSON = loDVMaster.openRecord(transNox.get(lnCtr));
+                if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
                 
-                if (poDisbursementController == null) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Disbursement controller not initialized.");
+                poJSON = loDVMaster.updateRecord();
+                if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
-                if (poDisbursementController.getWTaxDeductionsCount() == 0) {
+                
+                poJSON = populateWTDeduction(transNox.get(lnCtr));
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                if (paWTaxDeductions.size() == 0) {
                     poJSON.put("result", "warning");
                     poJSON.put("message", "No detail records found for this transaction.");
                     return poJSON;
                 }
                 
                 //Set Value
-                payeeName = safeGet(poDisbursementController.Master().Payee().getPayeeName());
-                transactionNo =  safeGet(poDisbursementController.Master().getTransactionNo());
+                payeeName = safeGet(loDVMaster.Payee().getPayeeName());
+                transactionNo =  safeGet(loDVMaster.getTransactionNo());
                 payeeTin =  "00022233345609"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
                 payeeZip = "1241";
-                payeeAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                payeeForeignAddress =  safeGet(poDisbursementController.Master().Payee().ClientAddress().getAddress());
-                company =  safeGet(poDisbursementController.Master().Company().getCompanyCode());
-                payorName = safeGet(poDisbursementController.Master().Company().getCompanyName());
+                payeeAddress =  safeGet(loDVMaster.Payee().ClientAddress().getAddress());
+                payeeForeignAddress =  safeGet(loDVMaster.Payee().ClientAddress().getAddress());
+                company =  safeGet(loDVMaster.Company().getCompanyCode());
+                payorName = safeGet(loDVMaster.Company().getCompanyName());
                 
                 //Group tax per quarter
-                for (int lnctr = 0; lnctr <= poDisbursementController.getWTaxDeductionsCount() - 1; lnctr++) {
-                    Object dateObj = poDisbursementController.WTaxDeduction(lnctr).getModel().getPeriodFrom();
+                for (int lnctr = 0; lnctr <= paWTaxDeductions.size() - 1; lnctr++) {
+                    Object dateObj = paWTaxDeductions.get(lnctr).getModel().getPeriodFrom();
                     String dateStr = null;
                     if (dateObj instanceof java.sql.Date) {
                         dateStr = ((java.sql.Date) dateObj).toLocalDate().toString();
@@ -147,41 +155,49 @@ public class BIR2307Print {
 
                         switch (quarter) {
                             case 1:
-                                loFirstQuarter.add(poDisbursementController.WTaxDeduction(lnctr)); // 1st Quarter
+                                loFirstQuarter.add(paWTaxDeductions.get(lnctr)); // 1st Quarter
                                 break;
                             case 2:
-                                loSecondQuarter.add(poDisbursementController.WTaxDeduction(lnctr)); // 2nd Quarter
+                                loSecondQuarter.add(paWTaxDeductions.get(lnctr)); // 2nd Quarter
                                 break;
                             case 3:
-                                loThirdQuarter.add(poDisbursementController.WTaxDeduction(lnctr)); // 3rd Quarter
+                                loThirdQuarter.add(paWTaxDeductions.get(lnctr)); // 3rd Quarter
                                 break;
                             case 4:
-                                loFourthQuarter.add(poDisbursementController.WTaxDeduction(lnctr)); // 4th Quarter
+                                loFourthQuarter.add(paWTaxDeductions.get(lnctr)); // 4th Quarter
                                 break;
                         }
                     }
                 }
-            }
             
-            if(!loFirstQuarter.isEmpty()){
-                pnQuarter = 1;
-                fillForm(loFirstQuarter);
+                if(!loFirstQuarter.isEmpty()){
+                    pnQuarter = 1;
+                    fillForm(loFirstQuarter);
+                }
+                if(!loSecondQuarter.isEmpty()){
+                    pnQuarter = 2;
+                    fillForm(loSecondQuarter);
+                }
+                if(!loThirdQuarter.isEmpty()){
+                    pnQuarter = 3;
+                    fillForm(loThirdQuarter);
+                }
+                if(!loFourthQuarter.isEmpty()){
+                    pnQuarter = 4;
+                    fillForm(loFourthQuarter);
+                }
+                
+                System.out.println("EDIT MODE : " + loDVMaster.getEditMode());
+                loDVMaster.isBIRPrinted(true);
+                loDVMaster.setBIRPrintDate(poGRider.getServerDate());
+                poJSON = loDVMaster.saveRecord();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
             }
-            if(!loSecondQuarter.isEmpty()){
-                pnQuarter = 2;
-                fillForm(loSecondQuarter);
-            }
-            if(!loThirdQuarter.isEmpty()){
-                pnQuarter = 3;
-                fillForm(loThirdQuarter);
-            }
-            if(!loFourthQuarter.isEmpty()){
-                pnQuarter = 4;
-                fillForm(loFourthQuarter);
-            }
-            
-        } catch (SQLException | GuanzonException | CloneNotSupportedException | IOException | InvalidFormatException | ScriptException ex) {
-            Logger.getLogger(BIR2307Print.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        } catch (SQLException | GuanzonException | CloneNotSupportedException | IOException | InvalidFormatException  ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
             poJSON.put("message", MiscUtil.getException(ex));
             return poJSON;
@@ -189,6 +205,40 @@ public class BIR2307Print {
         
         poJSON.put("result", "success");
         poJSON.put("message", "BIR 2307 Printed Successfully");
+        return poJSON;
+    }
+    
+    private JSONObject populateWTDeduction(String fsTransactionNo) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        paWTaxDeductions = new ArrayList<>();
+        Model_Withholding_Tax_Deductions loMaster = new CashflowModels(poGRider).Withholding_Tax_Deductions();
+        String lsSQL = MiscUtil.makeSelect(loMaster);
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
+                + " AND sSourceCD = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER)
+                + " AND cReversex = " + SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)
+        );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        poJSON = new JSONObject();
+        if (MiscUtil.RecordCount(loRS) > 0) {
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("--------------------------WITHHOLDING TAX DEDUCTIONS--------------------------");
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("------------------------------------------------------------------------------");
+                if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                    paWTaxDeductions.add( new CashflowControllers(poGRider,null).WithholdingTaxDeductions());
+                    poJSON = paWTaxDeductions.get(paWTaxDeductions.size() - 1).openRecord(loRS.getString("sTransNox"));
+                    if ("error".equals((String) poJSON.get("result"))){
+                        return poJSON;
+                    }
+                }  
+            }
+        }
+        MiscUtil.close(loRS);
+    
+        poJSON.put("result", "success");
         return poJSON;
     }
     
@@ -278,7 +328,7 @@ public class BIR2307Print {
 
             System.out.println("✅ Form filled successfully: " + finalOutput.getAbsolutePath());
         } catch (SecurityException | IllegalArgumentException ex) {
-            Logger.getLogger(BIR2307Print.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
     

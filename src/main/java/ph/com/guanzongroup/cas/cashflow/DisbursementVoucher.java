@@ -94,6 +94,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
@@ -978,7 +979,19 @@ public class DisbursementVoucher extends Transaction {
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
+            
+            JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId());
+            if ("error".equals((String) loJSON.get("result"))) {
+                if((boolean) loJSON.get("reverse")){
+                    return loJSON;
+                } else {
+                    row = (int) loJSON.get("row");
+                    WTaxDeduction(row).getModel().isReverse(true);
+                }
+            }
+            
             WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
+            WTaxDeduction(row).getModel().setBIRForm(object.getModel().getTaxType());
             System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxRateId());
             System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
         }
@@ -1063,7 +1076,11 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated){
         poJSON = new JSONObject();
         try {
+            int lnRow = 0;
             for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
+                if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                    lnRow++;
+                }
                 if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
                     //Check the tax rate
                     if(fsTaxRated.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
@@ -1075,10 +1092,18 @@ public class DisbursementVoucher extends Transaction {
                             if( getQuarter(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom()))) 
                                 == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) 
                                     ){
-                                poJSON.put("row", lnCtr);
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
-                                return poJSON;
+                                if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
+                                    poJSON.put("row", lnCtr);
+                                    poJSON.put("reverse", true);
+                                    return poJSON;
+                                } else {
+                                    poJSON.put("result", "error");
+                                    poJSON.put("reverse", false);
+                                    poJSON.put("row", lnCtr);
+                                    return poJSON;
+                                }
                             }
                         }
                     }
@@ -1489,7 +1514,10 @@ public class DisbursementVoucher extends Transaction {
                     + " AND  k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsSupplier)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
-                    + " ) ");
+                    + " ) "
+                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
+                    + " OR a.sTransNox IN (SELECT op.sSourceNo FROM Other_Payments op WHERE op.sSourceNo = a.sTransNox AND op.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+"  ) ) "
+                    );
         
         
         String lsCondition = "";
@@ -1603,13 +1631,13 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    public JSONObject removeWTaxDeduction() {
-        poJSON = new JSONObject();
-        Iterator<WithholdingTaxDeductions> detail = WTaxDeduction().iterator();
-        while (detail.hasNext()) {
-            WithholdingTaxDeductions item = detail.next();
-            detail.remove();
+    public JSONObject removeWTDeduction(int fnRow) {
+        if (WTaxDeduction(fnRow).getEditMode() == EditMode.ADDNEW) {
+            WTaxDeduction().remove(fnRow);
+        } else {
+            WTaxDeduction(fnRow).getModel().isReverse(false);
         }
+
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -1634,6 +1662,12 @@ public class DisbursementVoucher extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next();
             detail.remove();
+        }
+        
+        Iterator<WithholdingTaxDeductions> wtDeduction = WTaxDeduction().iterator();
+        while (wtDeduction.hasNext()) {
+            WithholdingTaxDeductions item = wtDeduction.next();
+            wtDeduction.remove();
         }
         
         //Reset Journal when all details was removed
@@ -2009,7 +2043,7 @@ public class DisbursementVoucher extends Transaction {
                 //Save Withholding Tax Deductions
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
                     if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-//                        WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
+                        WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
                         WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
                         WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
                         WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
@@ -2373,6 +2407,7 @@ public class DisbursementVoucher extends Transaction {
         poJSON = loPayee.getModel().openRecordByReference(loController.Master().getClientId());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
+            poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loController.Master().Client().getCompanyName() + "."));
             return poJSON;
         }
         
@@ -2518,6 +2553,7 @@ public class DisbursementVoucher extends Transaction {
                         poJSON = loPayee.getModel().openRecordByReference(loController.Master().getClientId());
                         if ("error".equals((String) poJSON.get("result"))) {
                             poJSON.put("row", 0);
+                            poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loCachePayable.Master().Client().getCompanyName() + "."));
                             return poJSON;
                         }
                         
@@ -3260,6 +3296,7 @@ public class DisbursementVoucher extends Transaction {
                 lsSQL = MiscUtil.addCondition(lsSQL,
                         " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                         + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+//                        + " AND cReversex = " + SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)
                 );
                 System.out.println("Executing SQL: " + lsSQL);
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -3413,7 +3450,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
+                + "AND IFNULL('',c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee)
                 + "GROUP BY a.sTransNox ";
     }
     
@@ -3464,7 +3501,7 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) 
+                + "AND IFNULL('',c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee) 
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }

@@ -10,11 +10,7 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.RecordStatus;
-import org.guanzon.cas.parameter.model.Model_Tax_Code;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
@@ -46,6 +42,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
             poEntity.updateNull("dModified");
             poEntity.updateObject("nBaseAmtx", 0.0000);
             poEntity.updateObject("nTaxAmtxx", 0.0000);
+            poEntity.updateObject("cReversex", "+");
             //end - assign default values
 
             poEntity.insertRow();
@@ -167,6 +164,14 @@ public class Model_Withholding_Tax_Deductions extends Model {
 
     public String getReferenceNo() {
         return (String) getValue("sReferNox");
+    }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
 
     public JSONObject setModifyingBy(String modified) {
