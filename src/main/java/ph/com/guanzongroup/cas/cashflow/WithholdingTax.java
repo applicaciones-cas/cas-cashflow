@@ -113,9 +113,9 @@ public class WithholdingTax extends Parameter{
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Tax Code»Account»Description",
-                "sTaxRteID»sATaxCode»xAccountx»sTaxDescr", 
-                "a.sTaxRteID»a.sATaxCode»IFNULL(b.sDescript, '')»a.sTaxDescr",
+                "ID»Account»Tax Code»Description",
+                "sTaxRteID»xAccountx»sATaxCode»sTaxDescr", 
+                "a.sTaxRteID»IFNULL(b.sDescript, '')»a.sATaxCode»a.sTaxDescr",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
