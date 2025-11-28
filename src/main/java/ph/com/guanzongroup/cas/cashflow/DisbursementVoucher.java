@@ -9,6 +9,8 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -1512,11 +1514,13 @@ public class DisbursementVoucher extends Transaction {
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                     "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                     + " AND  k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsSupplier)
-                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
+                    + " AND ( IFNULL('',d.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + fsSupplier)
+                    + " OR IFNULL('',e.sCompnyNm ) LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
                     + " ) "
-                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
+                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(DisbursementStatic.OPEN)+" ) "
                     + " OR a.sTransNox IN (SELECT op.sSourceNo FROM Other_Payments op WHERE op.sSourceNo = a.sTransNox AND op.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+"  ) ) "
+                    + " AND a.sTransNox IN (SELECT wtd.sSourceNo FROM Withholding_Tax_Deductions wtd WHERE wtd.sSourceNo = a.sTransNox AND wtd.cReversex = "+SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)+" ) "
+                    + " AND a.cPrintBIR = '0'"
                     );
         
         
@@ -1990,6 +1994,12 @@ public class DisbursementVoucher extends Transaction {
                         if(poBankAccount.getEditMode() == EditMode.UPDATE){
                             //get the latest check no existed in bank account
                             String lsCheckNo = poCheckPayments.getModel().getCheckNo();
+                            if(lsCheckNo == null || "".equals(lsCheckNo)){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Check No is not set.");
+                                return poJSON;
+                            }
+                            
                             String lsMaxCheckNo = getMaxCheckNo();
                             if (lsMaxCheckNo.matches("\\d+") && lsCheckNo.matches("\\d+")) {
                                 if(Long.parseLong(lsCheckNo) > Long.parseLong(lsMaxCheckNo)){
@@ -3104,7 +3114,7 @@ public class DisbursementVoucher extends Transaction {
                 }
             break;
             case EditMode.UPDATE:
-                if(poBankAccount.getEditMode() == EditMode.READY || poBankAccount.getEditMode() == EditMode.UNKNOWN){
+                if(poBankAccount.getEditMode() == EditMode.ADDNEW || poBankAccount.getEditMode() == EditMode.READY || poBankAccount.getEditMode() == EditMode.UNKNOWN){
                     poJSON = poBankAccount.openRecord(poCheckPayments.getModel().getBankAcountID());
                     if ("error".equals((String) poJSON.get("result"))){
                         return poJSON;
@@ -3135,6 +3145,7 @@ public class DisbursementVoucher extends Transaction {
             poCheckPayments.getModel().setAmount(Master().getNetTotal());
         }
 
+        poJSON.put("result", "success");
         return poJSON;
     }
     
@@ -3641,7 +3652,8 @@ public class DisbursementVoucher extends Transaction {
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             
             String bankCode = getDocumentCode(CheckPayments().getModel().getBankAcountID()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
-            if(bankCode.isEmpty()){
+            bankCode = "MBTDSChk";
+            if(bankCode == null || "".equals(bankCode)){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Please configure the document code for bank account.");
                 return poJSON;
@@ -4029,14 +4041,15 @@ public class DisbursementVoucher extends Transaction {
             if (masterPrint != null) {
                 CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
                 viewer.setVisible(true);
+                viewer.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        proceedAfterViewerClosed();
+                    }
+
+                });
             }
             
-            if("error".equals((String) poJSON.get("result"))){
-                ShowMessageFX.Warning(null, "Computerized Accounting System", (String) poJSON.get("message"));
-            } else {
-                System.out.println("message " +  (String) poJSON.get("message"));
-                ShowMessageFX.Information(null, "Computerized Accounting System","Transaction Printed Successfully");
-            }
         } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction print aborted!");
@@ -4045,6 +4058,33 @@ public class DisbursementVoucher extends Transaction {
 
         return poJSON;
     }
+    
+    private void proceedAfterViewerClosed() {
+        Platform.runLater(() -> {
+            if ("error".equals((String) poJSON.get("result"))) {
+                ShowMessageFX.Warning(
+                    null,
+                    "Computerized Accounting System",
+                    (String) poJSON.get("message")
+                );
+            } else {
+                if(pbIsPrinted){
+                    ShowMessageFX.Information(
+                        null,
+                        "Computerized Accounting System",
+                        "Transaction Printed Successfully"
+                    );
+                } else {
+                    ShowMessageFX.Warning(
+                        null,
+                        "Computerized Accounting System",
+                        "Printing was canceled by the user."
+                    );
+                }
+            }
+        });
+    }
+
 
     private void showViewerAndWait(JasperPrint print) {
         // create viewer on Swing thread
@@ -4098,7 +4138,8 @@ public class DisbursementVoucher extends Transaction {
             return nTotalAmount;
         }
     }
-
+    
+    private boolean pbIsPrinted = false;
     public class CustomJasperViewer extends JasperViewer {
 
         public CustomJasperViewer(final JasperPrint jasperPrint) {
@@ -4139,8 +4180,8 @@ public class DisbursementVoucher extends Transaction {
                                         @Override
                                         public void actionPerformed(ActionEvent e) {
                                             try {
-                                                boolean isPrinted = JasperPrintManager.printReport(jasperPrint, true);
-                                                if (isPrinted) {
+                                                pbIsPrinted = JasperPrintManager.printReport(jasperPrint, true);
+                                                if (pbIsPrinted) {
                                                     Master().isPrinted(true);
                                                     Master().setDatePrint(poGRider.getServerDate());
 

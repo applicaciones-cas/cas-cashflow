@@ -103,13 +103,8 @@ public class BIR2307Print {
                 List<WithholdingTaxDeductions> loThirdQuarter = new ArrayList<>();
                 List<WithholdingTaxDeductions> loFourthQuarter = new ArrayList<>();
                 
-                Model_Disbursement_Master loDVMaster = new CashflowModels(poGRider).DisbursementMaster();
-                poJSON = loDVMaster.openRecord(transNox.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                
-                poJSON = loDVMaster.updateRecord();
+                Model_Disbursement_Master loMaster = new CashflowModels(poGRider).DisbursementMaster();
+                poJSON = loMaster.openRecord(transNox.get(lnCtr));
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
@@ -119,21 +114,21 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 
-                if (paWTaxDeductions.size() == 0) {
+                if (paWTaxDeductions.isEmpty()) {
                     poJSON.put("result", "warning");
                     poJSON.put("message", "No detail records found for this transaction.");
                     return poJSON;
                 }
                 
                 //Set Value
-                payeeName = safeGet(loDVMaster.Payee().getPayeeName());
-                transactionNo =  safeGet(loDVMaster.getTransactionNo());
+                payeeName = safeGet(loMaster.Payee().getPayeeName());
+                transactionNo =  safeGet(loMaster.getTransactionNo());
                 payeeTin =  "00022233345609"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
                 payeeZip = "1241";
-                payeeAddress =  safeGet(loDVMaster.Payee().ClientAddress().getAddress());
-                payeeForeignAddress =  safeGet(loDVMaster.Payee().ClientAddress().getAddress());
-                company =  safeGet(loDVMaster.Company().getCompanyCode());
-                payorName = safeGet(loDVMaster.Company().getCompanyName());
+                payeeAddress =  safeGet(loMaster.Payee().ClientAddress().getAddress());
+                payeeForeignAddress =  safeGet(loMaster.Payee().ClientAddress().getAddress());
+                company =  safeGet(loMaster.Company().getCompanyCode());
+                payorName = safeGet(loMaster.Company().getCompanyName());
                 
                 //Group tax per quarter
                 for (int lnctr = 0; lnctr <= paWTaxDeductions.size() - 1; lnctr++) {
@@ -187,13 +182,23 @@ public class BIR2307Print {
                     fillForm(loFourthQuarter);
                 }
                 
-                System.out.println("EDIT MODE : " + loDVMaster.getEditMode());
-                loDVMaster.isBIRPrinted(true);
-                loDVMaster.setBIRPrintDate(poGRider.getServerDate());
-                poJSON = loDVMaster.saveRecord();
+                poGRider.beginTrans("UPDATE STATUS", "PrintBIRTransaction", DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER, transNox.get(lnCtr));
+                
+                poJSON = loMaster.updateRecord();
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                
+                loMaster.isBIRPrinted(true);
+                loMaster.setBIRPrintDate(poGRider.getServerDate());
+                loMaster.setModifyingId(poGRider.getUserID());
+                loMaster.setModifiedDate(poGRider.getServerDate());
+                poJSON = loMaster.saveRecord();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                poGRider.commitTrans();
 
             }
         } catch (SQLException | GuanzonException | CloneNotSupportedException | IOException | InvalidFormatException  ex) {
