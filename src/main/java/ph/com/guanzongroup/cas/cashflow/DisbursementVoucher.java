@@ -993,6 +993,7 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
         }
         
+        poJSON.put("result", "success");
         poJSON.put("row", row);
         return poJSON;
     }
