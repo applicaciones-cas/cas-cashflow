@@ -41,17 +41,17 @@ public class testWithholdingTax {
                 Assert.fail((String) loJSON.get("message"));
             }           
 
-            loJSON = record.getModel().setDescription("Tax Rate");
+            loJSON = record.getModel().setDescription("Purchases");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 
             
-            loJSON = record.getModel().setAccountCode("M001");
+            loJSON = record.getModel().setAccountCode("5100000");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 
             
-            loJSON = record.getModel().setTaxCode("508");
+            loJSON = record.getModel().setTaxCode("WC158");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 
@@ -61,7 +61,7 @@ public class testWithholdingTax {
                 Assert.fail((String) loJSON.get("message"));
             } 
             
-            loJSON = record.getModel().setTaxType("typeO");
+            loJSON = record.getModel().setTaxType("EWT");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             } 

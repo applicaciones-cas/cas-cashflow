@@ -942,12 +942,16 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        int lnRow = 1;
         for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+            if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                lnRow++;
+            }
             if(lnCtr != row){
                 if(WTaxDeduction(lnCtr).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())){
                     if(WTaxDeduction(lnCtr).getModel().getTaxRateId() == null || "".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
                         poJSON.put("result", "error");
-                        poJSON.put("message", "Particular at row "+(lnCtr+1)+" is not set.");
+                        poJSON.put("message", "Particular at row "+lnRow+" is not set.");
                         return poJSON;
                     }
                 }
@@ -999,7 +1003,6 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
         }
         
-        poJSON.put("result", "success");
         poJSON.put("row", row);
         return poJSON;
     }
@@ -1080,7 +1083,7 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
         JSONObject loJSON = new JSONObject();
         try {
-            int lnRow = 0;
+            int lnRow = 1;
             for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
                 if(WTaxDeduction(lnCtr).getModel().isReverse()){
                     lnRow++;
@@ -1106,7 +1109,7 @@ public class DisbursementVoucher extends Transaction {
                                     ){
                                 if(WTaxDeduction(lnCtr).getModel().isReverse()){
                                     loJSON.put("result", "error");
-                                    loJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
+                                    loJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnRow) + ".");
                                     loJSON.put("row", lnCtr);
                                     loJSON.put("reverse", true);
                                     return loJSON;
@@ -1192,23 +1195,6 @@ public class DisbursementVoucher extends Transaction {
         return branchVoucherNo;
     }
     
-//    public JSONObject validateTAXandVat() {
-//        JSONObject loJSON = new JSONObject();
-//            for (int x = 0; x < getDetailCount() - 1; x++) {
-//                boolean withVat = Detail(x).isWithVat();
-//                String taxCode = Detail(x).getTaxCode();
-//
-//                if ((!withVat && taxCode != null && !taxCode.isEmpty())
-//                        || (withVat && (taxCode == null || taxCode.isEmpty()))) {
-//                    poJSON.put("result", "error");
-//                    poJSON.put("message", "Detail no. " + (x + 1) + " : Has VAT but missing Tax Code, or has Tax Code without VAT.");
-//                    poJSON.put("pnDetailDV" , x);
-//                    return poJSON;
-//                }
-//            }
-//        loJSON.put("result", "success");
-//        return loJSON;
-//    }
     /**
      * Computation of vat and transaction total
      * @return JSON
@@ -1221,7 +1207,7 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATAmount = 0.0000;
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
-
+        computeTaxAmount();
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
             ldblVATSales += Detail(lnCntr).getDetailVatSales();
@@ -1269,20 +1255,22 @@ public class DisbursementVoucher extends Transaction {
         Double ldblDetTaxAmt = 0.0000;
         Double ldblTotalBaseAmount = 0.0000;
         for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-            if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
-                WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                try {
-                    ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
-                } catch (SQLException | GuanzonException ex) {
-                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                    poJSON.put("result", "error");
-                    poJSON.put("message", MiscUtil.getException(ex));
-                    return poJSON;
+            if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
+                    WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                    try {
+                        ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
+                    } catch (SQLException | GuanzonException ex) {
+                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                        poJSON.put("result", "error");
+                        poJSON.put("message", MiscUtil.getException(ex));
+                        return poJSON;
+                    }
+                    WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
                 }
-                WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
+                ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
+                ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
             }
-            ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
-            ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
         }
         
         if(ldblTotalBaseAmount > Master().getTransactionTotal()){
@@ -1333,10 +1321,6 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-//    public Double getDetailNetTotal(int row){
-//        return Detail(row).getAmount() - Detail(row).getTaxAmount();
-//    }
-    
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
      * @param fsIndustry pass the Industry Name
@@ -1386,11 +1370,6 @@ public class DisbursementVoucher extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-//        if(psIndustryId == null || "".equals(psIndustryId)){
-//            lsSQL = lsSQL + " AND (a.sIndstCdx = '' OR a.sIndstCdx = null) " ;
-//        } else {
-//            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
-//        }
         if(isBank){
             lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         } else {
@@ -1462,12 +1441,6 @@ public class DisbursementVoucher extends Transaction {
             }
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
-
-//        if(psIndustryId == null || "".equals(psIndustryId)){
-//            lsSQL = lsSQL + " AND (a.sIndstCdx = '' OR a.sIndstCdx = null) " ;
-//        } else {
-//            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
-//        }
         
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
@@ -1733,6 +1706,81 @@ public class DisbursementVoucher extends Transaction {
         setSearchPayee("");
     }
     
+    public void ReloadDetail() throws CloneNotSupportedException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getSourceNo() == null || "".equals(Detail(lnCtr).getSourceNo())) {
+                Detail().remove(lnCtr);
+            }
+            lnCtr--;
+        }
+
+        if ((getDetailCount() - 1) >= 0) {
+            if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
+                AddDetail();
+            }
+        }
+
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+        }
+    }
+    
+    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
+        int lnCtr = Journal().getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+                Journal().Detail().remove(lnCtr);
+            }
+            lnCtr--;
+        }
+        if ((Journal().getDetailCount() - 1) >= 0) {
+            if (Journal().Detail(Journal().getDetailCount() - 1).getAccountCode() != null
+                    && !"".equals(Journal().Detail(Journal().getDetailCount() - 1).getAccountCode())) {
+                Journal().AddDetail();
+                Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
+        }
+        if ((Journal().getDetailCount() - 1) < 0) {
+            Journal().AddDetail();
+            Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    }
+    
+    public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
+        int lnCtr = getWTaxDeductionsCount() - 1;
+        Date fromdate = null, todate = null;
+        boolean lbProceed = false;
+        while (lnCtr >= 0) {
+            if (!lbProceed) {
+                fromdate = null;
+                todate = null;
+            }
+            if (WTaxDeduction(lnCtr).getModel().getTaxCode() == null
+                    || "".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())) {
+                fromdate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodFrom();
+                todate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodTo();
+                WTaxDeduction().remove(lnCtr);
+                lbProceed = true;
+            }
+            lnCtr--;
+        }
+        if ((getWTaxDeductionsCount() - 1) >= 0) {
+            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode() != null
+                    && !"".equals(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode())) {
+                AddWTaxDeduction();
+            }
+        }
+
+        if ((getWTaxDeductionsCount() - 1) < 0) {
+            AddWTaxDeduction();
+        }
+        if (lbProceed) {
+            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(fromdate);
+            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(todate);
+        }
+    }
+    
     @Override
     public JSONObject initFields() {
         //Put initial model values here/
@@ -1849,7 +1897,6 @@ public class DisbursementVoucher extends Transaction {
             Model item = detail.next(); // Store the item before checking conditions
             String lsSourceNo = (String) item.getValue("sSourceNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-
             if (lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null) {
                 detail.remove(); // Correctly remove the item
             }
@@ -1868,8 +1915,8 @@ public class DisbursementVoucher extends Transaction {
         while (loObject.hasNext()) {
             WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
             String lsTaxRateId = (String) item.getModel().getTaxRateId();
-
-            if ("".equals(lsTaxRateId) || lsTaxRateId == null) {
+            double lsAmount = item.getModel().getBaseAmount();
+            if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
                 loObject.remove(); // Correctly remove the item
             }
         }
@@ -3921,7 +3968,12 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
-    public String particular(String fsSouceCode){
+    /**
+     * DV Printing Detail Source
+     * @param fsSouceCode
+     * @return 
+     */
+    private String particular(String fsSouceCode){
         switch(fsSouceCode){
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                 return "PAYMENT REQUEST";
@@ -3943,7 +3995,8 @@ public class DisbursementVoucher extends Transaction {
             String watermarkPath = "";
             String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/DisbursementVoucher.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
-            
+            List<JasperPrint> allPrints = new ArrayList<>();
+
             for (String txnNo : fsTransactionNos) {
                 watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
                 poJSON = OpenTransaction(txnNo);
@@ -4027,24 +4080,32 @@ public class DisbursementVoucher extends Transaction {
                         params,
                         new JRBeanCollectionDataSource(Details)
                 );
-                if (fsTransactionNos.size() == 1) {
-                    masterPrint = currentPrint;
-                } else {
-                    showViewerAndWait(currentPrint);
-                }
+                allPrints.add(currentPrint);
+
+//                if (fsTransactionNos.size() == 1) {
+//                    masterPrint = currentPrint;
+//                } else {
+//                    showViewerAndWait(currentPrint);
+//                }
+            }
+            
+            if (!allPrints.isEmpty()) {
+                showViewersSequentially(allPrints, 0);
             }
 
-            if (masterPrint != null) {
-                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
-                viewer.setVisible(true);
-                viewer.addWindowListener(new WindowAdapter() {
-                    @Override
-                    public void windowClosed(WindowEvent e) {
-                        proceedAfterViewerClosed();
-                    }
 
-                });
-            }
+
+//            if (masterPrint != null) {
+//                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
+//                viewer.setVisible(true);
+//                viewer.addWindowListener(new WindowAdapter() {
+//                    @Override
+//                    public void windowClosed(WindowEvent e) {
+//                        proceedAfterViewerClosed();
+//                    }
+//
+//                });
+//            }
             
         } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
             poJSON.put("result", "error");
@@ -4054,6 +4115,29 @@ public class DisbursementVoucher extends Transaction {
 
         return poJSON;
     }
+    
+    private void showViewersSequentially(List<JasperPrint> prints, int index) {
+        if (index >= prints.size()) {
+            // All viewers already shown
+            proceedAfterViewerClosed();
+            return;
+        }
+
+        JasperPrint print = prints.get(index);
+        CustomJasperViewer viewer = new CustomJasperViewer(print);
+        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+
+        // When this viewer closes, show the next one
+        viewer.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                showViewersSequentially(prints, index + 1);
+            }
+        });
+
+        viewer.setVisible(true);
+    }
+
     
     private void proceedAfterViewerClosed() {
         Platform.runLater(() -> {
@@ -4081,29 +4165,62 @@ public class DisbursementVoucher extends Transaction {
         });
     }
 
-
-    private void showViewerAndWait(JasperPrint print) {
-        // create viewer on Swing thread
-        final CustomJasperViewer viewer = new CustomJasperViewer(print);
+    private CountDownLatch viewerLatch;
+    private void showViewerAndWait(JasperPrint print, CountDownLatch latch) {
+        CustomJasperViewer viewer = new CustomJasperViewer(print);
         viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
+        viewer.addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosed(java.awt.event.WindowEvent e) {
-                latch.countDown();             // release when user closes
+            public void windowClosed(WindowEvent e) {
+                latch.countDown();     // 🔻 decrement shared latch
             }
         });
 
-        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
-
-        try {
-            latch.await();                     // 🔴 blocks here until viewer closes
-            proceedAfterViewerClosed();
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt(); // keep interruption status
-        }
+        SwingUtilities.invokeLater(() -> viewer.setVisible(true));
     }
+    
+    private void startAllViewers(List<JasperPrint> prints) {
+        int total = prints.size();
+        viewerLatch = new CountDownLatch(total);
+
+        for (JasperPrint print : prints) {
+            showViewerAndWait(print, viewerLatch);
+        }
+
+        new Thread(() -> {
+            try {
+                viewerLatch.await();      
+                proceedAfterViewerClosed();  
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }).start();
+    }
+
+
+//    private void showViewerAndWait(JasperPrint print) {
+//        // create viewer on Swing thread
+//        final CustomJasperViewer viewer = new CustomJasperViewer(print);
+//        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+//
+//        final CountDownLatch latch = new CountDownLatch(1);
+//        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
+//            @Override
+//            public void windowClosed(java.awt.event.WindowEvent e) {
+//                latch.countDown();             // release when user closes
+//            }
+//        });
+//
+//        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
+//
+//        try {
+//            latch.await();                     // 🔴 blocks here until viewer closes
+//            proceedAfterViewerClosed();
+//        } catch (InterruptedException ex) {
+//            Thread.currentThread().interrupt(); // keep interruption status
+//        }
+//    }
 
     public static class TransactionDetail {
 
