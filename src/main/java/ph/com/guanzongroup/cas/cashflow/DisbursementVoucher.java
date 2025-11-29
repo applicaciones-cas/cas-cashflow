@@ -966,6 +966,12 @@ public class DisbursementVoucher extends Transaction {
     }
 
     public JSONObject SearchParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Code is not set.");
+            return poJSON;
+        }
+        
         //validate period
         poJSON = checkPeriodDate(row);
         if ("error".equals((String) poJSON.get("result"))) {
@@ -977,7 +983,7 @@ public class DisbursementVoucher extends Transaction {
 
         poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
-            JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId());
+            JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId(),object.getModel().getTaxType());
             if ("error".equals((String) loJSON.get("result"))) {
                 if((boolean) loJSON.get("reverse")){
                     return loJSON;
@@ -1071,8 +1077,8 @@ public class DisbursementVoucher extends Transaction {
      * @param fsTaxRated
      * @return 
      */
-    private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated){
-        poJSON = new JSONObject();
+    private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
+        JSONObject loJSON = new JSONObject();
         try {
             int lnRow = 0;
             for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
@@ -1080,12 +1086,12 @@ public class DisbursementVoucher extends Transaction {
                     lnRow++;
                 }
                 if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                    if(WTaxDeduction(lnCtr).getModel().isReverse() && !WTaxDeduction(fnRow).getModel().WithholdingTax().getTaxType().equals(WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxType()) ){
-                        poJSON.put("result", "error");
-                        poJSON.put("reverse", true);
-                        poJSON.put("row", lnCtr);
-                        poJSON.put("Message", "Tax type must be equal to other withholding tax deductions.");
-                        return poJSON;
+                    if(WTaxDeduction(lnCtr).getModel().isReverse() && !fsTaxType.equals(WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxType()) ){
+                        loJSON.put("result", "error");
+                        loJSON.put("reverse", true);
+                        loJSON.put("row", lnCtr);
+                        loJSON.put("message", "Tax type must be equal to other withholding tax deductions.");
+                        return loJSON;
                     }
                     
                     //Check the tax rate
@@ -1099,16 +1105,16 @@ public class DisbursementVoucher extends Transaction {
                                 == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) 
                                     ){
                                 if(WTaxDeduction(lnCtr).getModel().isReverse()){
-                                    poJSON.put("result", "error");
-                                    poJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
-                                    poJSON.put("row", lnCtr);
-                                    poJSON.put("reverse", true);
-                                    return poJSON;
+                                    loJSON.put("result", "error");
+                                    loJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnCtr+1) + ".");
+                                    loJSON.put("row", lnCtr);
+                                    loJSON.put("reverse", true);
+                                    return loJSON;
                                 } else {
-                                    poJSON.put("result", "error");
-                                    poJSON.put("reverse", false);
-                                    poJSON.put("row", lnCtr);
-                                    return poJSON;
+                                    loJSON.put("result", "error");
+                                    loJSON.put("reverse", false);
+                                    loJSON.put("row", lnCtr);
+                                    return loJSON;
                                 }
                             }
                         }
@@ -1119,8 +1125,8 @@ public class DisbursementVoucher extends Transaction {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
     
-        poJSON.put("result", "success");
-        return poJSON;
+        loJSON.put("result", "success");
+        return loJSON;
     }
     
     /**
@@ -1215,17 +1221,15 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATAmount = 0.0000;
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
-        Double ldblTaxamount = 0.0000;
 
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
             ldblVATSales += Detail(lnCntr).getDetailVatSales();
             ldblVATAmount += Detail(lnCntr).getDetailVatAmount();
             ldblVATExempt += Detail(lnCntr).getDetailVatExempt();
-            ldblTaxamount += Detail(lnCntr).getTaxAmount();
         }
         
-        double lnNetAmountDue = ldblTransactionTotal - ( Master().getDiscountTotal() + ldblTaxamount);
+        double lnNetAmountDue = ldblTransactionTotal - ( Master().getDiscountTotal() + Master().getWithTaxTotal());
 
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
@@ -1300,14 +1304,12 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "Tax computed successfully");
         return poJSON;
     }
-    
+   
     public JSONObject computeDetailFields(){
-//        Double ldblTaxRate = 0.0000;
-//        Double ldblTaxAmount = 0.0000;
         Double ldblAmountApplied = 0.0000;
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
-        //Compute TAX Amount
+                
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             ldblAmountApplied = Detail(lnCtr).getAmountApplied();
             
@@ -1324,17 +1326,6 @@ public class DisbursementVoucher extends Transaction {
                         Detail(lnCtr).setDetailVatExempt(ldblAmountApplied);
                     }
             }
-            
-//            ldblTaxRate = Detail(lnCtr).getTaxRates();
-//            if(ldblTaxRate > 0.00){
-//                ldblTaxAmount = (ldblAmountApplied / 1.12) * (ldblTaxRate / 100);
-//            }
-//            
-//            //Set Amounts
-//            Detail(lnCtr).setTaxAmount(ldblTaxAmount);
-//            
-//            //Clear 
-//            ldblTaxAmount = 0.0000;
         }
         
         poJSON.put("result", "success");
@@ -1342,9 +1333,9 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    public Double getDetailNetTotal(int row){
-        return Detail(row).getAmount() - Detail(row).getTaxAmount();
-    }
+//    public Double getDetailNetTotal(int row){
+//        return Detail(row).getAmount() - Detail(row).getTaxAmount();
+//    }
     
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
@@ -1644,7 +1635,9 @@ public class DisbursementVoucher extends Transaction {
         } else {
             WTaxDeduction(fnRow).getModel().isReverse(false);
         }
-
+        //Compute Tax Amount
+        computeTaxAmount();
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -3928,7 +3921,7 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
-    private String particular(String fsSouceCode){
+    public String particular(String fsSouceCode){
         switch(fsSouceCode){
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                 return "PAYMENT REQUEST";
