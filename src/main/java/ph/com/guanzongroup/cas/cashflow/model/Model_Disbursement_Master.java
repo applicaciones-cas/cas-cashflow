@@ -60,6 +60,7 @@ public class Model_Disbursement_Master extends Model {
             poEntity.updateObject("nNetTotal", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
+            poEntity.updateNull("dPrintBIR");
 
 //            poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
 //            poEntity.updateString("cDisbrsTp", DisbursementStatic.DisbursementType.CHECK);
