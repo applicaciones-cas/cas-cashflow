@@ -3374,7 +3374,9 @@ public class DisbursementVoucher extends Transaction {
                             paWTaxDeductions.add( new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
                             poJSON = paWTaxDeductions.get(paWTaxDeductions.size() - 1).openRecord(loRS.getString("sTransNox"));
                             if ("error".equals((String) poJSON.get("result"))){
-                                return poJSON;
+                                if(Master().getWithTaxTotal() > 0.0000){
+                                    return poJSON;
+                                } 
                             }
                         }  
                     }
