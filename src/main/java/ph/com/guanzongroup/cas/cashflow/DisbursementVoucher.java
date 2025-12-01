@@ -1208,11 +1208,18 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
         computeTaxAmount();
+        
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
             ldblVATSales += Detail(lnCntr).getDetailVatSales();
             ldblVATAmount += Detail(lnCntr).getDetailVatAmount();
             ldblVATExempt += Detail(lnCntr).getDetailVatExempt();
+            
+            if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid Applied Amount.");
+                return poJSON;
+            }
         }
         
         double lnNetAmountDue = ldblTransactionTotal - ( Master().getDiscountTotal() + Master().getWithTaxTotal());
@@ -1484,7 +1491,7 @@ public class DisbursementVoucher extends Transaction {
                     + " AND ( IFNULL('',d.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + fsSupplier)
                     + " OR IFNULL('',e.sCompnyNm ) LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
                     + " ) "
-                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(DisbursementStatic.OPEN)+" ) "
+                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
                     + " OR a.sTransNox IN (SELECT op.sSourceNo FROM Other_Payments op WHERE op.sSourceNo = a.sTransNox AND op.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+"  ) ) "
                     + " AND a.sTransNox IN (SELECT wtd.sSourceNo FROM Withholding_Tax_Deductions wtd WHERE wtd.sSourceNo = a.sTransNox AND wtd.cReversex = "+SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)+" ) "
                     + " AND a.cPrintBIR = '0'"
@@ -2014,6 +2021,7 @@ public class DisbursementVoucher extends Transaction {
                     //Save Check Payment
                     if(poCheckPayments != null){
                         if(poCheckPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
+                            poCheckPayments.getModel().setIndustryID(Master().getIndustryID());
                             poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
                             poCheckPayments.getModel().setModifyingId(poGRider.getUserID());
                             poCheckPayments.getModel().setModifiedDate(poGRider.getServerDate());
@@ -3186,6 +3194,7 @@ public class DisbursementVoucher extends Transaction {
             
             //Set check amount
             poCheckPayments.getModel().setAmount(Master().getNetTotal());
+            poCheckPayments.getModel().setTransactionStatus(CheckStatus.OPEN); //Update check status in assign check
         }
 
         poJSON.put("result", "success");
@@ -3995,7 +4004,6 @@ public class DisbursementVoucher extends Transaction {
             String watermarkPath = "";
             String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/DisbursementVoucher.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
-            List<JasperPrint> allPrints = new ArrayList<>();
 
             for (String txnNo : fsTransactionNos) {
                 watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
@@ -4080,32 +4088,24 @@ public class DisbursementVoucher extends Transaction {
                         params,
                         new JRBeanCollectionDataSource(Details)
                 );
-                allPrints.add(currentPrint);
-
-//                if (fsTransactionNos.size() == 1) {
-//                    masterPrint = currentPrint;
-//                } else {
-//                    showViewerAndWait(currentPrint);
-//                }
-            }
-            
-            if (!allPrints.isEmpty()) {
-                showViewersSequentially(allPrints, 0);
+                if (fsTransactionNos.size() == 1) {
+                    masterPrint = currentPrint;
+                } else {
+                    showViewerAndWait(currentPrint);
+                }
             }
 
+            if (masterPrint != null) {
+                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
+                viewer.setVisible(true);
+                viewer.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        proceedAfterViewerClosed();
+                    }
 
-
-//            if (masterPrint != null) {
-//                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
-//                viewer.setVisible(true);
-//                viewer.addWindowListener(new WindowAdapter() {
-//                    @Override
-//                    public void windowClosed(WindowEvent e) {
-//                        proceedAfterViewerClosed();
-//                    }
-//
-//                });
-//            }
+                });
+            }
             
         } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
             poJSON.put("result", "error");
@@ -4116,111 +4116,54 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    private void showViewersSequentially(List<JasperPrint> prints, int index) {
-        if (index >= prints.size()) {
-            // All viewers already shown
-            proceedAfterViewerClosed();
-            return;
-        }
-
-        JasperPrint print = prints.get(index);
-        CustomJasperViewer viewer = new CustomJasperViewer(print);
-        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-
-        // When this viewer closes, show the next one
-        viewer.addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosed(WindowEvent e) {
-                showViewersSequentially(prints, index + 1);
-            }
-        });
-
-        viewer.setVisible(true);
-    }
-
-    
+    private boolean pbShowed = false;
     private void proceedAfterViewerClosed() {
         Platform.runLater(() -> {
-            if ("error".equals((String) poJSON.get("result"))) {
-                ShowMessageFX.Warning(
-                    null,
-                    "Computerized Accounting System",
-                    (String) poJSON.get("message")
-                );
+            System.out.println("SHOWED!!!!!!!!!!!");
+
+            if (pbShowed) {
+                return;
             } else {
-                if(pbIsPrinted){
-                    ShowMessageFX.Information(
-                        null,
-                        "Computerized Accounting System",
-                        "Transaction Printed Successfully"
-                    );
+                pbShowed = true;
+            }
+
+            if ("error".equals((String) poJSON.get("result"))) {
+                ShowMessageFX.Warning(null, "Computerized Accounting System",
+                    (String) poJSON.get("message"));
+            } else {
+                if (pbIsPrinted) {
+                    ShowMessageFX.Information(null, "Computerized Accounting System",
+                        "Transaction Printed Successfully");
                 } else {
-                    ShowMessageFX.Warning(
-                        null,
-                        "Computerized Accounting System",
-                        "Printing was canceled by the user."
-                    );
+                    ShowMessageFX.Warning(null, "Computerized Accounting System",
+                        "Printing was canceled by the user.");
                 }
             }
         });
     }
 
-    private CountDownLatch viewerLatch;
-    private void showViewerAndWait(JasperPrint print, CountDownLatch latch) {
-        CustomJasperViewer viewer = new CustomJasperViewer(print);
+    private void showViewerAndWait(JasperPrint print) {
+        // create viewer on Swing thread
+        final CustomJasperViewer viewer = new CustomJasperViewer(print);
         viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
-        viewer.addWindowListener(new WindowAdapter() {
+        final CountDownLatch latch = new CountDownLatch(1);
+        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
-            public void windowClosed(WindowEvent e) {
-                latch.countDown();     // 🔻 decrement shared latch
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                latch.countDown();             // release when user closes
+                proceedAfterViewerClosed();
             }
         });
 
-        SwingUtilities.invokeLater(() -> viewer.setVisible(true));
-    }
-    
-    private void startAllViewers(List<JasperPrint> prints) {
-        int total = prints.size();
-        viewerLatch = new CountDownLatch(total);
+        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
 
-        for (JasperPrint print : prints) {
-            showViewerAndWait(print, viewerLatch);
+        try {
+            latch.await();                     // 🔴 blocks here until viewer closes
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt(); // keep interruption status
         }
-
-        new Thread(() -> {
-            try {
-                viewerLatch.await();      
-                proceedAfterViewerClosed();  
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        }).start();
     }
-
-
-//    private void showViewerAndWait(JasperPrint print) {
-//        // create viewer on Swing thread
-//        final CustomJasperViewer viewer = new CustomJasperViewer(print);
-//        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-//
-//        final CountDownLatch latch = new CountDownLatch(1);
-//        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
-//            @Override
-//            public void windowClosed(java.awt.event.WindowEvent e) {
-//                latch.countDown();             // release when user closes
-//            }
-//        });
-//
-//        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
-//
-//        try {
-//            latch.await();                     // 🔴 blocks here until viewer closes
-//            proceedAfterViewerClosed();
-//        } catch (InterruptedException ex) {
-//            Thread.currentThread().interrupt(); // keep interruption status
-//        }
-//    }
 
     public static class TransactionDetail {
 
