@@ -2099,7 +2099,7 @@ public class DisbursementVoucher extends Transaction {
                     break;
             }
             
-            if(Master().getWithTaxTotal() > 0.0000){
+//            if(Master().getWithTaxTotal() > 0.0000){
                 System.out.println("--------------------------SAVE WITHHOLDING TAX DEDUCTION---------------------------------------------");
                 //Save Withholding Tax Deductions
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
@@ -2118,7 +2118,7 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
                 System.out.println("--------------------------SAVE BANK ACCOUNT---------------------------------------------");
-            }
+//            }
             
             System.out.println("--------------------------SAVE OTHER TRANSACTION---------------------------------------------");
             //Update other linked transaction in DV Detail
