@@ -57,7 +57,7 @@ public class BIR2307Print {
     JSONObject poJSON = new JSONObject();
     private XSSFSheet activeSheet;
     int pnQuarter = 1;
-    String payeeName, transactionNo, payeeTin,payeeAddress, payeeForeignAddress, payeeZip,payorName,payorAddress,payorZip,company,payorTin;
+    String payeeName, transactionNo, payeeTin,payeeAddress, payeeForeignAddress, payeeZip,payorName,payorAddress,payorZip,company,payorTin,payorForeignAddress;
     LocalDate minDate = null;
     LocalDate maxDate = null;
 
@@ -120,15 +120,78 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 
+                if(loMaster.Payee().Client().getTaxIdNumber() == null || "".equals(loMaster.Payee().Client().getTaxIdNumber())){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payee Tin cannot be empty.");
+                    return poJSON;
+                }
+                
+                if(loMaster.Payee().Client().getTaxIdNumber() == null || "".equals(loMaster.Payee().Client().getTaxIdNumber())){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payee Tin cannot be empty.");
+                    return poJSON;
+                }
+                
+//                if(loMaster.Company().getTaxIdNumber() == null || "".equals(loMaster.Company().getTaxIdNumber())){
+//                    poJSON.put("result", "warning");
+//                    poJSON.put("message", "Payor Tin cannot be empty.");
+//                    return poJSON;
+//                }
+                
+                System.out.println("Payee Address : " + loMaster.Branch().getAddress());
+                System.out.println("Payee Town : " + loMaster.Branch().TownCity().getDescription());
+                System.out.println("Payee Province " + loMaster.Branch().TownCity().Province().getDescription() );
+                System.out.println("Company Address : " + loMaster.Company().getCompanyAddress());
+                System.out.println("Company Town : " + loMaster.Company().TownCity().getDescription());
+                System.out.println("Company Province " + loMaster.Company().TownCity().Province().getDescription() );
+                
+                
+                String lsPayeeAddress = "";
+                if(loMaster.Payee().ClientAddress().getAddress() != null && !"".equals(loMaster.Payee().ClientAddress().getAddress())){
+                    lsPayeeAddress  = loMaster.Payee().ClientAddress().getAddress().trim();
+                }
+                if(loMaster.Payee().ClientAddress().Town().getDescription() != null && !"".equals(loMaster.Payee().ClientAddress().Town().getDescription())){
+                    lsPayeeAddress  = lsPayeeAddress + " " + loMaster.Payee().ClientAddress().Town().getDescription().trim();
+                }
+                if(loMaster.Payee().ClientAddress().Town().Province().getDescription() != null && !"".equals(loMaster.Payee().ClientAddress().Town().Province().getDescription())){
+                    lsPayeeAddress  = lsPayeeAddress + ", " + loMaster.Payee().ClientAddress().Town().Province().getDescription().trim();
+                }
+                
+                if(lsPayeeAddress == null || "".equals(lsPayeeAddress)){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payee Address cannot be empty.");
+                    return poJSON;
+                }
+                
+                String lsCompanyAddress = "";
+                if(loMaster.Company().getCompanyAddress() != null && !"".equals(loMaster.Company().getCompanyAddress())){
+                    lsCompanyAddress  = loMaster.Company().getCompanyAddress().trim();
+                }
+                if(loMaster.Company().TownCity().getDescription() != null && !"".equals(loMaster.Company().TownCity().getDescription())){
+                    lsCompanyAddress  = lsCompanyAddress + " " + loMaster.Company().TownCity().getDescription().trim();
+                }
+                if(loMaster.Company().TownCity().Province().getDescription() != null && !"".equals(loMaster.Company().TownCity().Province().getDescription())){
+                    lsCompanyAddress  = lsCompanyAddress + ", " + loMaster.Company().TownCity().Province().getDescription().trim();
+                }
+                
+                if(lsCompanyAddress == null || "".equals(lsCompanyAddress)){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payor Address cannot be empty.");
+                    return poJSON;
+                }
+                
                 //Set Value
                 payeeName = safeGet(loMaster.Payee().getPayeeName());
                 transactionNo =  safeGet(loMaster.getTransactionNo());
-                payeeTin =  "00022233345609"; //safeGet(poDisbursementController.Master().Payee().Client().getTaxIdNumber()).replace("-", "");
-                payeeZip = "1241";
-                payeeAddress =  safeGet(loMaster.Payee().ClientAddress().getAddress());
-                payeeForeignAddress =  safeGet(loMaster.Payee().ClientAddress().getAddress());
+                payeeTin =  safeGet(loMaster.Payee().Client().getTaxIdNumber()).replace("-", "");
+                payeeZip =  safeGet(loMaster.Payee().ClientAddress().Town().getZipCode());
+                payeeAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
+                payeeForeignAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
                 company =  safeGet(loMaster.Company().getCompanyCode());
                 payorName = safeGet(loMaster.Company().getCompanyName());
+                payorAddress =  lsCompanyAddress; //safeGet(loMaster.Company().getCompanyName());
+                payorForeignAddress =  lsCompanyAddress; //safeGet(loMaster.Company().getCompanyName());
+                payorTin = "";//safeGet(loMaster.Company().getTaxIdNumber()).replace("-", "");
                 
                 //Group tax per quarter
                 for (int lnctr = 0; lnctr <= paWTaxDeductions.size() - 1; lnctr++) {
