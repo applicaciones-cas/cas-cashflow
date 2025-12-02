@@ -241,6 +241,11 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        poJSON = populateWithholdingTaxDeduction();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
@@ -1765,6 +1770,7 @@ public class DisbursementVoucher extends Transaction {
             }
             if (WTaxDeduction(lnCtr).getModel().getTaxCode() == null
                     || "".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())) {
+                System.out.println("REMOVE WTAX : " + WTaxDeduction(lnCtr).getModel().getTransactionNo());
                 fromdate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodFrom();
                 todate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodTo();
                 WTaxDeduction().remove(lnCtr);
@@ -3377,6 +3383,9 @@ public class DisbursementVoucher extends Transaction {
                                 if(Master().getWithTaxTotal() > 0.0000){
                                     return poJSON;
                                 } 
+                            } else {
+                                //add tax code
+                                paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().setTaxCode(paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().WithholdingTax().getTaxCode());
                             }
                         }  
                     }
@@ -3393,6 +3402,7 @@ public class DisbursementVoucher extends Transaction {
             break;
             case EditMode.UPDATE:
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                    System.out.println("WTax : " + WTaxDeduction(lnCtr).getModel().getTransactionNo());
                     if(WTaxDeduction(lnCtr).getEditMode() == EditMode.READY){
                         poJSON = WTaxDeduction(lnCtr).updateRecord();
                         if ("error".equals((String) poJSON.get("result"))){
