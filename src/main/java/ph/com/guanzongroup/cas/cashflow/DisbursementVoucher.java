@@ -1856,6 +1856,48 @@ public class DisbursementVoucher extends Transaction {
 //        if (!"success".equals((String) poJSON.get("result"))) {
 //            return poJSON;
 //        }
+
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next(); // Store the item before checking conditions
+            String lsSourceNo = (String) item.getValue("sSourceNo");
+            double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
+            if (lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null) {
+                detail.remove(); // Correctly remove the item
+            }
+        }
+
+        if (getDetailCount() == 1) {
+            //do not allow a single item detail with no quantity order
+            if (Detail(0).getAmount() == 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Your order has zero quantity.");
+                return poJSON;
+            }
+        }
+        
+        Iterator<WithholdingTaxDeductions> loObject = WTaxDeduction().iterator();
+        while (loObject.hasNext()) {
+            WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
+            String lsTaxRateId = (String) item.getModel().getTaxRateId();
+            double lsAmount = item.getModel().getBaseAmount();
+            if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
+                loObject.remove(); // Correctly remove the item
+            }
+        }
+        
+        //Validate Withholding Tax Deductions
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                    //validate period
+                    poJSON = checkPeriodDate(lnCtr);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        }
         
         /*Put system validations and other assignments here*/
         boolean lbUpdated = false;
@@ -1903,48 +1945,6 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("result", "error");
                 poJSON.put("message", "No update has been made.");
                 return poJSON;
-            }
-        }
-
-        Iterator<Model> detail = Detail().iterator();
-        while (detail.hasNext()) {
-            Model item = detail.next(); // Store the item before checking conditions
-            String lsSourceNo = (String) item.getValue("sSourceNo");
-            double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if (lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null) {
-                detail.remove(); // Correctly remove the item
-            }
-        }
-
-        if (getDetailCount() == 1) {
-            //do not allow a single item detail with no quantity order
-            if (Detail(0).getAmount() == 0.0000) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Your order has zero quantity.");
-                return poJSON;
-            }
-        }
-        
-        Iterator<WithholdingTaxDeductions> loObject = WTaxDeduction().iterator();
-        while (loObject.hasNext()) {
-            WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
-            String lsTaxRateId = (String) item.getModel().getTaxRateId();
-            double lsAmount = item.getModel().getBaseAmount();
-            if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
-                loObject.remove(); // Correctly remove the item
-            }
-        }
-        
-        //Validate Withholding Tax Deductions
-        if(Master().getWithTaxTotal() > 0.0000){
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    //validate period
-                    poJSON = checkPeriodDate(lnCtr);
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                }
             }
         }
         
@@ -4016,7 +4016,24 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
         JasperPrint masterPrint = null;       
         JasperReport jasperReport = null;      
-        pbShowed = false;
+        pbShowed = false; 
+        pbIsPrinted = false;
+        
+        for (String txnNo : fsTransactionNos) {
+            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+            loObject.openRecord(txnNo);
+            if ("error".equals((String) poJSON.get("result"))){
+                ShowMessageFX.Warning(null, "Computerized Accounting System",(String) poJSON.get("message"));
+                return poJSON;
+            }
+                
+            if(loObject.CheckPayments().getCheckNo() == null || "".equals(loObject.CheckPayments().getCheckNo())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Check number must be assigned before printing the disbursement no. "+loObject.getVoucherNo()+".");
+                ShowMessageFX.Warning(null, "Computerized Accounting System",(String) poJSON.get("message"));
+                return poJSON;
+            }
+        }
         
         try {
             String watermarkPath = "";
@@ -4027,18 +4044,20 @@ public class DisbursementVoucher extends Transaction {
                 watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
                 poJSON = OpenTransaction(txnNo);
                 if ("error".equals((String) poJSON.get("result"))){
+                    proceedAfterViewerClosed();
                     return poJSON;
                 }
                 
-                if(Master().CheckPayments().getCheckNo() == null || "".equals(Master().CheckPayments().getCheckNo())){
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Check number must be assigned before printing the disbursement no"+Master().getVoucherNo()+".");
-                    ShowMessageFX.Warning(null, "Computerized Accounting System", (String) poJSON.get("message"));
-                    return poJSON;
-                }
+//                if(Master().CheckPayments().getCheckNo() == null || "".equals(Master().CheckPayments().getCheckNo())){
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "Check number must be assigned before printing the disbursement no. "+Master().getVoucherNo()+".");
+//                    proceedAfterViewerClosed();
+//                    return poJSON;
+//                }
                 
                 poJSON = UpdateTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
+                    proceedAfterViewerClosed();
                     return poJSON;
                 }
                 
