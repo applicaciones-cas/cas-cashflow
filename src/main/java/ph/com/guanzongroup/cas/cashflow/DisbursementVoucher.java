@@ -1432,8 +1432,9 @@ public class DisbursementVoucher extends Transaction {
                     "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                     + " AND a.cBankPrnt = '0' AND i.sBankName LIKE " + SQLUtil.toSQL("%" + fsBankName)
                     + " AND a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
-                    + " AND g.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
-                    + " AND g.cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
+                    + " AND ( g.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " OR g.cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+                    + " ) AND g.cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
                     + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsBankAccount)
                     + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
                     + " AND a.dTransact BETWEEN " + SQLUtil.toSQL(fsFromDate)
@@ -3402,7 +3403,6 @@ public class DisbursementVoucher extends Transaction {
             break;
             case EditMode.UPDATE:
                 for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                    System.out.println("WTax : " + WTaxDeduction(lnCtr).getModel().getTransactionNo());
                     if(WTaxDeduction(lnCtr).getEditMode() == EditMode.READY){
                         poJSON = WTaxDeduction(lnCtr).updateRecord();
                         if ("error".equals((String) poJSON.get("result"))){
@@ -4015,7 +4015,8 @@ public class DisbursementVoucher extends Transaction {
             throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         JasperPrint masterPrint = null;       
-        JasperReport jasperReport = null;       
+        JasperReport jasperReport = null;      
+        pbShowed = false;
         
         try {
             String watermarkPath = "";
@@ -4031,7 +4032,8 @@ public class DisbursementVoucher extends Transaction {
                 
                 if(Master().CheckPayments().getCheckNo() == null || "".equals(Master().CheckPayments().getCheckNo())){
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Check number must be assigned before printing the disbursement.");
+                    poJSON.put("message", "Check number must be assigned before printing the disbursement no"+Master().getVoucherNo()+".");
+                    ShowMessageFX.Warning(null, "Computerized Accounting System", (String) poJSON.get("message"));
                     return poJSON;
                 }
                 
