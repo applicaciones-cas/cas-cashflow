@@ -132,11 +132,11 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 
-//                if(loMaster.Company().getTaxIdNumber() == null || "".equals(loMaster.Company().getTaxIdNumber())){
-//                    poJSON.put("result", "warning");
-//                    poJSON.put("message", "Payor Tin cannot be empty.");
-//                    return poJSON;
-//                }
+                if(loMaster.Company().getTIN() == null || "".equals(loMaster.Company().getTIN())){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payor Tin cannot be empty.");
+                    return poJSON;
+                }
                 
                 System.out.println("Payee Address : " + loMaster.Branch().getAddress());
                 System.out.println("Payee Town : " + loMaster.Branch().TownCity().getDescription());
@@ -191,7 +191,8 @@ public class BIR2307Print {
                 payorName = safeGet(loMaster.Company().getCompanyName());
                 payorAddress =  lsCompanyAddress; //safeGet(loMaster.Company().getCompanyName());
                 payorForeignAddress =  lsCompanyAddress; //safeGet(loMaster.Company().getCompanyName());
-                payorTin = "";//safeGet(loMaster.Company().getTaxIdNumber()).replace("-", "");
+                payorZip = safeGet(loMaster.Company().TownCity().getZipCode());
+                payorTin = safeGet(loMaster.Company().getTIN()).replace("-", "");
                 
                 //Group tax per quarter
                 for (int lnctr = 0; lnctr <= paWTaxDeductions.size() - 1; lnctr++) {
@@ -571,39 +572,37 @@ public class BIR2307Print {
     private String replaceTextValue(String fsID) throws CloneNotSupportedException {
         System.out.println("ID : " + fsID);
         String lsGetText = "";
-        String payorRegAddress = "";
-        String payorZIP = "";
-        String payorTIN = "";
         switch (company) {
             case "LGK":
-                payorRegAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
-                payorZIP = "2401";
-                payorTIN = "000-252-794-000";
+                payorAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
+                payorZip = "2401";
+                payorTin = "000252794000";
                 break;
             case "GMC":
-                payorRegAddress = "PEREZ BLVD.DAGUPAN CITY";
-                payorZIP = "2401";
-                payorTIN = "000-251-793-000";
+                payorAddress = "PEREZ BLVD.DAGUPAN CITY";
+                payorZip = "2401";
+                payorTin = "000251793000";
                 break;
             case "UEMI":
-                payorRegAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
-                payorZIP = "2401";
-                payorTIN = "000-253-795-000";
+                payorAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
+                payorZip = "2401";
+                payorTin = "000253795000";
                 break;
             case "MCC":
-                payorRegAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
-                payorZIP = "2401";
-                payorTIN = "000-254-796-000";
+                payorAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
+                payorZip = "2401";
+                payorTin = "000254796000";
                 break;
             case "Monarch":
-                payorRegAddress = "BRGY. SAN MIGUEL, CALASIAO";
-                payorZIP = "2418";
-                payorTIN = "000-255-797-000";
+                payorAddress = "BRGY. SAN MIGUEL, CALASIAO";
+                payorZip = "2418";
+                payorTin = "000255797000";
                 break;
             default:
-                payorRegAddress = "";
+                payorAddress = "";
+                payorZip = "";
+                payorTin = "";
         }
-        payorTIN = payorTIN.replace("-", "");
         switch(fsID){
             case "223": //Period From Month
                 lsGetText = formatPeriodDate(minDate, true);
@@ -648,32 +647,32 @@ public class BIR2307Print {
                 System.out.println("Payee's ZIP Code = "+ lsGetText);
             break;
             case "377": //Payee's Foreign Address
-//                return payeeForeignAddress.toUpperCase();
-                return "TEST PAYEE FOREIGN ADDRESS";
+                return payeeForeignAddress.toUpperCase();
+//                return "TEST PAYEE FOREIGN ADDRESS";
                 
             case "403": //Payor's Name
                 return payorName.toUpperCase();
             case "404": //Payor's Registered Address
-                return payorRegAddress.toUpperCase();
+                return payorAddress.toUpperCase();
             case "406": //Payor's ZIP Code
-                lsGetText = formatZIPCode(payorZIP);
+                lsGetText = formatZIPCode(payorZip);
                 System.out.println("Payor's ZIP Code = "+ lsGetText);
             break;
             case "130": //Payor's TIN 1
-                lsGetText =  formatTIN(payorTIN, 1);
+                lsGetText =  formatTIN(payorTin, 1);
                 System.out.println("Payor's TIN 1 = "+ lsGetText);
             break;
             case "383": //Payor's TIN 2
-                lsGetText =  formatTIN(payorTIN, 2);
+                lsGetText =  formatTIN(payorTin, 2);
                 System.out.println("Payor's TIN 2 = "+ lsGetText);
             break;
             case "387": //Payor's TIN 3
-                if(payorTIN.length() < 10) return "";
-                lsGetText =  formatTIN(payorTIN, 3);
+                if(payorTin.length() < 10) return "";
+                lsGetText =  formatTIN(payorTin, 3);
                 System.out.println("Payor's TIN 3 = "+ lsGetText);
             break;
             case "391": //Payor's TIN 4
-                lsGetText =  formatTIN(payorTIN, 4);
+                lsGetText =  formatTIN(payorTin, 4);
                 System.out.println("Payor's TIN 4 = "+ lsGetText);
             break;
         }

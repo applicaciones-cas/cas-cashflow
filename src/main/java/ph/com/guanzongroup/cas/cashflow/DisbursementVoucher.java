@@ -3470,6 +3470,7 @@ public class DisbursementVoucher extends Transaction {
                 record.put("PayableType", loRS.getString("PayableType"));
                 record.put("Payee", loRS.getString("Payee"));
                 record.put("Reference", loRS.getString("Reference"));
+                record.put("SourceNo", loRS.getString("sSourceNo"));
                 dataArray.add(record);
                 lnctr++;
             }
@@ -3504,7 +3505,8 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sSourceCd AS TransactionType, "
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
-                + "a.sReferNox AS Reference "
+                + "a.sReferNox AS Reference, "
+                + "a.sSourceNo AS sSourceNo "
                 + "FROM Cache_Payable_Master a "
                 + "LEFT JOIN Payee c ON a.sClientID = c.sClientID, "
                 + "Branch b "
@@ -3530,7 +3532,8 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST) +" AS TransactionType, "
                 + SQLUtil.toSQL("Payment_Request_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
-                + "a.sSeriesNo AS Reference "
+                + "a.sSeriesNo AS Reference, "
+                + "a.sTransNox AS sSourceNo "
                 + "FROM Payment_Request_Master a "
                 + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx, "
                 + "Branch b "
@@ -3556,7 +3559,8 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE) +" AS TransactionType, "
                 + SQLUtil.toSQL("AP_Payment_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
-                + "a.sSOANoxxx AS Reference "
+                + "a.sSOANoxxx AS Reference, "
+                + "a.sTransNox AS sSourceNo "
                 + "FROM AP_Payment_Master a "
                 + "LEFT JOIN Payee c ON a.sClientID = c.sClientID, "
                 + "Branch b "
