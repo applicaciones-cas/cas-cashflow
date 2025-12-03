@@ -140,11 +140,11 @@ public class CachePayable extends Transaction{
                 detail.remove(); // Correctly remove the item
             }
         }
-
-        //assign other info on detail
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){            
-            Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
-            Detail(lnCtr).setEntryNumber(lnCtr + 1);
+        
+        if (getDetailCount() <= 0){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
         }
         
         if (getDetailCount() == 1){
@@ -154,6 +154,12 @@ public class CachePayable extends Transaction{
                 poJSON.put("message", "Your detail has zero gross amount.");
                 return poJSON;
             }
+        }
+
+        //assign other info on detail
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){   
+            Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
+            Detail(lnCtr).setEntryNumber(lnCtr + 1);
         }
         
         poJSON.put("result", "success");

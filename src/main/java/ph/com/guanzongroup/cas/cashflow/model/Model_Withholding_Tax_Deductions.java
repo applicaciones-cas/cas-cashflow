@@ -10,11 +10,7 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.RecordStatus;
-import org.guanzon.cas.parameter.model.Model_Tax_Code;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
@@ -26,6 +22,8 @@ public class Model_Withholding_Tax_Deductions extends Model {
 
     Model_Disbursement_Master poDisbursement_Master;
     Model_Withholding_Tax poWithholdingTax;
+    
+    String psTaxCode = "";
 
     @Override
     public void initialize() {
@@ -44,6 +42,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
             poEntity.updateNull("dModified");
             poEntity.updateObject("nBaseAmtx", 0.0000);
             poEntity.updateObject("nTaxAmtxx", 0.0000);
+            poEntity.updateObject("cReversex", "+");
             //end - assign default values
 
             poEntity.insertRow();
@@ -89,7 +88,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (getValue("nBaseAmtx") == null || "".equals(getValue("nBaseAmtx"))) {
             return 0.0000;
         }
-        return (Double) getValue("nBaseAmtx");
+        return Double.valueOf(getValue("nBaseAmtx").toString());
     }
 
     public JSONObject setTaxAmount(Double taxAmount) {
@@ -100,7 +99,7 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (getValue("nTaxAmtxx") == null || "".equals(getValue("nTaxAmtxx"))) {
             return 0.0000;
         }
-        return (Double) getValue("nTaxAmtxx");
+        return Double.valueOf(getValue("nTaxAmtxx").toString());
     }
 
     public JSONObject setBIRForm(String BIRForm) {
@@ -112,11 +111,11 @@ public class Model_Withholding_Tax_Deductions extends Model {
     }
 
     public JSONObject setSourceCode(String sourceCode) {
-        return setValue("sSourceCd", sourceCode);
+        return setValue("sSourceCD", sourceCode);
     }
 
     public String getSourceCode() {
-        return (String) getValue("sSourceCd");
+        return (String) getValue("sSourceCD");
     }
 
     public JSONObject setSourceNo(String sourceNo) {
@@ -166,6 +165,14 @@ public class Model_Withholding_Tax_Deductions extends Model {
     public String getReferenceNo() {
         return (String) getValue("sReferNox");
     }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
+    }
 
     public JSONObject setModifyingBy(String modified) {
         return setValue("sModified", modified);
@@ -183,6 +190,14 @@ public class Model_Withholding_Tax_Deductions extends Model {
         return (Date) getValue("dModified");
     }
 
+    public void setTaxCode(String taxCode) {
+       psTaxCode = taxCode ;
+    }
+
+    public String getTaxCode() {
+        return psTaxCode;
+    }
+
     @Override
     public String getNextCode() {
 //        return "";
@@ -194,10 +209,11 @@ public class Model_Withholding_Tax_Deductions extends Model {
         if (!"".equals((String) getValue("sTaxRteID"))) {
             if (poWithholdingTax.getEditMode() == EditMode.READY
                     && poWithholdingTax.getTaxRateId().equals((String) getValue("sTaxRteID"))) {
+                setTaxCode(poWithholdingTax.getTaxCode());
                 return poWithholdingTax;
             } else {
                 poJSON = poWithholdingTax.openRecord((String) getValue("sTaxRteID"));
-
+                setTaxCode(poWithholdingTax.getTaxCode());
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poWithholdingTax;
                 } else {

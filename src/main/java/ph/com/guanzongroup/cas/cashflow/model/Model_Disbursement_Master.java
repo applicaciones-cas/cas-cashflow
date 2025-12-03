@@ -60,6 +60,8 @@ public class Model_Disbursement_Master extends Model {
             poEntity.updateObject("nNetTotal", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
             poEntity.updateString("cPrintxxx", DisbursementStatic.OPEN);
+            poEntity.updateString("cPrintBIR", DisbursementStatic.OPEN);
+            poEntity.updateNull("dPrintBIR");
 
 //            poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
 //            poEntity.updateString("cDisbrsTp", DisbursementStatic.DisbursementType.CHECK);
@@ -288,6 +290,23 @@ public class Model_Disbursement_Master extends Model {
 
     public Date getDatePrint() {
         return (Date) getValue("dPrintxxx");
+    }
+    
+    public JSONObject isBIRPrinted(boolean replaced) {
+        return setValue("cPrintBIR", replaced ? "1" : "0");
+    }
+
+    public boolean isBIRPrinted() {
+        Object value = getValue("cPrintBIR");
+        return "1".equals(String.valueOf(value));
+    }
+
+    public JSONObject setBIRPrintDate(Date datePrint) {
+        return setValue("dPrintBIR", datePrint);
+    }
+
+    public Date getBIRPrintDate() {
+        return (Date) getValue("dPrintBIR");
     }
 
     public JSONObject setTransactionStatus(String transactionStatus) {

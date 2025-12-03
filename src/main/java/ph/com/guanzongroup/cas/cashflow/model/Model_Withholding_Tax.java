@@ -10,7 +10,6 @@ import java.sql.SQLException;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
@@ -20,7 +19,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 /**
  *
- * @author Arsiela 06/05/2025
+ * @author Arsiela 11/22/2025
  */
 public class Model_Withholding_Tax extends Model {
 
@@ -88,7 +87,7 @@ public class Model_Withholding_Tax extends Model {
         if (getValue("nTaxRatex") == null || "".equals(getValue("nTaxRatex"))) {
             return 0.0000;
         }
-        return (Double) getValue("nTaxRatex");
+        return Double.valueOf(getValue("nTaxRatex").toString());
     }
 
     public JSONObject setTaxType(String taxType) {
@@ -142,7 +141,7 @@ public class Model_Withholding_Tax extends Model {
     @Override
     public String getNextCode() {
 //        return "";
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+        return MiscUtil.getNextCode(getTable(), ID, false, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
 
     //reference object models

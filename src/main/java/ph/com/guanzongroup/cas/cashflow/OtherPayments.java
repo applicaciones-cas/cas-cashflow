@@ -18,6 +18,7 @@ import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
 public class OtherPayments extends Parameter {
 
@@ -114,6 +115,125 @@ public class OtherPayments extends Parameter {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    
+    
+    @Override
+    public JSONObject deactivateRecord() throws SQLException, GuanzonException  {
+        if (!pbInitRec){
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Object is not initialized.");
+            return poJSON;
+        }
+        
+        poJSON = new JSONObject();
+        
+        if (getModel().getEditMode() != EditMode.READY ||
+            getModel().getEditMode() != EditMode.UPDATE){
+        
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+        }
+        
+        
+        if (getModel().getEditMode() == EditMode.READY) {
+            poJSON = updateRecord();
+            if ("error".equals((String) poJSON.get("result"))) return poJSON;
+        } 
+
+        poJSON = getModel().setValue("cTranStat", OtherPaymentStatus.VOID);
+
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = getModel().setValue("sModified", poGRider.getUserID());
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }     
+
+        poJSON = getModel().setValue("dModified", poGRider.getServerDate());
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if (!pbWthParent) {
+            poGRider.beginTrans((String) poEvent.get("event"), 
+                        getModel().getTable(), 
+                        SOURCE_CODE, 
+                        String.valueOf(getModel().getValue(1)));
+        }
+
+        poJSON =  getModel().saveRecord();
+        
+        if ("success".equals((String) poJSON.get("result"))){
+            if (!pbWthParent) poGRider.commitTrans();
+        } else {
+            if (!pbWthParent) poGRider.rollbackTrans();
+        }
+        
+        return poJSON;
+    }
+
+    @Override
+    public JSONObject activateRecord() throws SQLException, GuanzonException  {
+        if (!pbInitRec){
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Object is not initialized.");
+            return poJSON;
+        }
+        
+        poJSON = new JSONObject();
+        
+        if (getModel().getEditMode() != EditMode.READY ||
+            getModel().getEditMode() != EditMode.UPDATE){
+        
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+        }
+        
+        
+        if (getModel().getEditMode() == EditMode.READY) {
+            poJSON = updateRecord();
+            if ("error".equals((String) poJSON.get("result"))) return poJSON;
+        } 
+
+        poJSON = getModel().setValue("cTranStat", OtherPaymentStatus.OPEN);
+
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = getModel().setValue("sModified", poGRider.getUserID());
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }     
+
+        poJSON = getModel().setValue("dModified", poGRider.getServerDate());
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if (!pbWthParent) {
+            poGRider.beginTrans((String) poEvent.get("event"), 
+                        getModel().getTable(), 
+                        SOURCE_CODE, 
+                        String.valueOf(getModel().getValue(1)));
+        }
+
+        poJSON =  getModel().saveRecord();
+        
+        if ("success".equals((String) poJSON.get("result"))){
+            if (!pbWthParent) poGRider.commitTrans();
+        } else {
+            if (!pbWthParent) poGRider.rollbackTrans();
+        }
+        
+        return poJSON;
     }
 
     @Override

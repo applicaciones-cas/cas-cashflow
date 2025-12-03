@@ -452,7 +452,7 @@ public class CashflowControllers {
 
         poWithholdingTax = new WithholdingTax();
         poWithholdingTax.setApplicationDriver(poGRider);
-        poWithholdingTax.setWithParentClass(true);
+        poWithholdingTax.setWithParentClass(false);
         poWithholdingTax.setLogWrapper(poLogWrapper);
         poWithholdingTax.initialize();
         poWithholdingTax.newRecord();
@@ -471,7 +471,7 @@ public class CashflowControllers {
 
         poWithholdingTaxDeductions = new WithholdingTaxDeductions();
         poWithholdingTaxDeductions.setApplicationDriver(poGRider);
-        poWithholdingTaxDeductions.setWithParentClass(true);
+        poWithholdingTaxDeductions.setWithParentClass(false);
         poWithholdingTaxDeductions.setLogWrapper(poLogWrapper);
         poWithholdingTaxDeductions.initialize();
         poWithholdingTaxDeductions.newRecord();
