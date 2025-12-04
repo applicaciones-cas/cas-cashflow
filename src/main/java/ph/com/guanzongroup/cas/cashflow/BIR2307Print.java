@@ -138,13 +138,14 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 
-                System.out.println("Payee Address : " + loMaster.Branch().getAddress());
-                System.out.println("Payee Town : " + loMaster.Branch().TownCity().getDescription());
-                System.out.println("Payee Province " + loMaster.Branch().TownCity().Province().getDescription() );
-                System.out.println("Company Address : " + loMaster.Company().getCompanyAddress());
-                System.out.println("Company Town : " + loMaster.Company().TownCity().getDescription());
-                System.out.println("Company Province " + loMaster.Company().TownCity().Province().getDescription() );
-                
+                System.out.println("Payee Address : " + loMaster.Payee().ClientAddress().getAddress());
+                System.out.println("Payee Town : " + loMaster.Payee().ClientAddress().Town().getDescription());
+                System.out.println("Payee ZIP Code : " + loMaster.Payee().ClientAddress().Town().getZipCode());
+                System.out.println("Payee Province " + loMaster.Payee().ClientAddress().Town().Province().getDescription());
+                System.out.println("Company Payor Address : " + loMaster.Company().getCompanyAddress());
+                System.out.println("Company Payor Town : " + loMaster.Company().TownCity().getDescription());
+                System.out.println("Company Payor ZIP Code : " + loMaster.Company().TownCity().getZipCode());
+                System.out.println("Company Payor Province " + loMaster.Company().TownCity().Province().getDescription() );
                 
                 String lsPayeeAddress = "";
                 if(loMaster.Payee().ClientAddress().getAddress() != null && !"".equals(loMaster.Payee().ClientAddress().getAddress())){
@@ -162,6 +163,12 @@ public class BIR2307Print {
                     poJSON.put("message", "Payee Address cannot be empty.");
                     return poJSON;
                 }
+                //TODO
+//                if(loMaster.Payee().ClientAddress().Town().getZipCode() == null || "".equals(loMaster.Payee().ClientAddress().Town().getZipCode())){
+//                    poJSON.put("result", "warning");
+//                    poJSON.put("message", "Payee Zip Code cannot be empty.");
+//                    return poJSON;
+//                }
                 
                 String lsCompanyAddress = "";
                 if(loMaster.Company().getCompanyAddress() != null && !"".equals(loMaster.Company().getCompanyAddress())){
@@ -180,11 +187,18 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 
+                //TODO
+//                if(loMaster.Company().TownCity().getZipCode() == null || "".equals(loMaster.Company().TownCity().getZipCode())){
+//                    poJSON.put("result", "warning");
+//                    poJSON.put("message", "Payor Zip Code cannot be empty.");
+//                    return poJSON;
+//                }
+                
                 //Set Value
                 payeeName = safeGet(loMaster.Payee().getPayeeName());
                 transactionNo =  safeGet(loMaster.getTransactionNo());
                 payeeTin =  safeGet(loMaster.Payee().Client().getTaxIdNumber()).replace("-", "");
-                payeeZip =  safeGet(loMaster.Payee().ClientAddress().Town().getZipCode());
+                payeeZip =  "0000"; //safeGet(loMaster.Payee().ClientAddress().Town().getZipCode()); TODO
                 payeeAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
                 payeeForeignAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
                 company =  safeGet(loMaster.Company().getCompanyCode());
@@ -273,7 +287,8 @@ public class BIR2307Print {
         }
         
         poJSON.put("result", "success");
-        poJSON.put("message", "BIR 2307 Printed Successfully");
+        poJSON.put("message", "BIR 2307 Export Successfully.\n"
+                + "PATH: " + System.getProperty("sys.default.path.temp") + "/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/PER QUARTER");
         return poJSON;
     }
     
@@ -356,8 +371,8 @@ public class BIR2307Print {
             }
 
             // ✅ Prepare folder
-//            String yearFolder = System.getProperty("sys.default.path.temp") + "/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/";
-            String yearFolder = "D:/temp/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/";
+            String yearFolder = System.getProperty("sys.default.path.temp") + "/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/";
+//            String yearFolder = "D:/temp/Export/BIR2307/" + java.time.LocalDate.now().getYear() + "/";
             File folder = new File(yearFolder);
             if (!folder.exists()) {
                 folder.mkdirs();
@@ -640,8 +655,8 @@ public class BIR2307Print {
             case "370": //Payee's Name
                 return payeeName.toUpperCase();
             case "371": //Payee's Registered Address
-//                return payeeAddress.toUpperCase();
-                return "TEST PAYEE ADDRESS";
+                return payeeAddress.toUpperCase();
+//                return "TEST PAYEE ADDRESS";
             case "373": //Payee's ZIP Code
                 lsGetText = formatZIPCode(payeeZip);
                 System.out.println("Payee's ZIP Code = "+ lsGetText);

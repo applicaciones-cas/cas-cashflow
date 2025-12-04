@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Transaction;
@@ -18,9 +19,11 @@ import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
@@ -339,6 +342,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(pbIsUpdateAmountPaid){
+            ldblAmountPaid = ldblAmountPaid + Detail(row).POReceiving().getAmountPaid().doubleValue();
             Detail(row).POReceiving().setAmountPaid(ldblAmountPaid);
         }
         poJSON = Detail(row).POReceiving().saveRecord();
@@ -350,6 +354,15 @@ public class Disbursement_LinkedTransactions extends Transaction {
         poJSON = saveCachePayableMaster(row, isAdd);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        
+            
+        //Tag Source Transaction as Paid
+        if(Objects.equals(Detail(row).POReceiving().getNetTotal(), ldblAmountPaid)){
+            poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
         }
         
         poJSON.put("result", "success");
@@ -434,10 +447,10 @@ public class Disbursement_LinkedTransactions extends Transaction {
             }
             
             //Tag Source Transaction as Paid
-            poJSON = paidLinkedTransaction(loModel.getSourceNo(), loModel.getSourceCode());
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
+//            poJSON = paidLinkedTransaction(loModel.getSourceNo(), loModel.getSourceCode());
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                }
         }
     
         poJSON.put("result", "success");
@@ -656,6 +669,27 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     
                     return poJSON;
                 }
+                break;
+                
+            case DisbursementStatic.SourceCode.CASH_PAYABLE: 
+//                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+//                poJSON = loCachePayable.InitTransaction();
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    
+//                    return poJSON;
+//                }
+//                poJSON = loCachePayable.OpenTransaction(fsSourceNo);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    
+//                    return poJSON;
+//                }
+//                loCachePayable.setWithParent(true);
+//                loCachePayable.setWithUI(false);
+//                poJSON = loCachePayable.PaidTransaction("");
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    
+//                    return poJSON;
+//                }
                 break;
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
                 APPaymentAdjustment loAPAdjustment = new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();
