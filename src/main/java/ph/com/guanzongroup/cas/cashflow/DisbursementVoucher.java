@@ -3640,8 +3640,8 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
 
-        poJSON.put("result", "success");
-        poJSON.put("message", "BIR 2307 printed successfully");
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "BIR 2307 printed successfully");
         return poJSON;
     }
     
