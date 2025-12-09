@@ -198,7 +198,7 @@ public class BIR2307Print {
                 payeeName = safeGet(loMaster.Payee().getPayeeName());
                 transactionNo =  safeGet(loMaster.getTransactionNo());
                 payeeTin =  safeGet(loMaster.Payee().Client().getTaxIdNumber()).replace("-", "");
-                payeeZip =  "0000"; //safeGet(loMaster.Payee().ClientAddress().Town().getZipCode()); TODO
+                payeeZip =  safeGet(loMaster.Payee().ClientAddress().Town().getZipCode()); 
                 payeeAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
                 payeeForeignAddress =  lsPayeeAddress; //safeGet(loMaster.Payee().ClientAddress().getAddress());
                 company =  safeGet(loMaster.Company().getCompanyCode());
