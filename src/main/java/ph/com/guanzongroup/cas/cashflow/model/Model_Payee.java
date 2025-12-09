@@ -190,7 +190,7 @@ public class Model_Payee extends Model {
                 poClientAddress.getClientId().equals((String) getValue("sClientID")))
                 return poClientAddress;
             else{
-                poJSON = poClientAddress.openRecord((String) getValue("sClientID"));
+                poJSON = poClientAddress.openRecord(OpenClientAddress((String) getValue("sClientID")) );
 
                 if ("success".equals((String) poJSON.get("result")))
                     return poClientAddress;
@@ -203,6 +203,27 @@ public class Model_Payee extends Model {
             poClientAddress.initialize();
             return poClientAddress;
         }
+    }
+    
+    public String OpenClientAddress(String fsValue) throws SQLException, GuanzonException {
+        String lsAddressId = "";
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(poClientAddress), " sClientID = " + SQLUtil.toSQL(fsValue) 
+                      + " AND cPrimaryx = '1' "
+                      + " GROUP BY sAddrssID");
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                lsAddressId = loRS.getString("sAddrssID");
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+        } 
+        return lsAddressId;
     }
     
     public JSONObject openRecordByReference(String Id1) throws SQLException, GuanzonException  {

@@ -164,11 +164,11 @@ public class BIR2307Print {
                     return poJSON;
                 }
                 //TODO
-//                if(loMaster.Payee().ClientAddress().Town().getZipCode() == null || "".equals(loMaster.Payee().ClientAddress().Town().getZipCode())){
-//                    poJSON.put("result", "warning");
-//                    poJSON.put("message", "Payee Zip Code cannot be empty.");
-//                    return poJSON;
-//                }
+                if(loMaster.Payee().ClientAddress().Town().getZipCode() == null || "".equals(loMaster.Payee().ClientAddress().Town().getZipCode())){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payee Zip Code cannot be empty.");
+                    return poJSON;
+                }
                 
                 String lsCompanyAddress = "";
                 if(loMaster.Company().getCompanyAddress() != null && !"".equals(loMaster.Company().getCompanyAddress())){
@@ -188,11 +188,11 @@ public class BIR2307Print {
                 }
                 
                 //TODO
-//                if(loMaster.Company().TownCity().getZipCode() == null || "".equals(loMaster.Company().TownCity().getZipCode())){
-//                    poJSON.put("result", "warning");
-//                    poJSON.put("message", "Payor Zip Code cannot be empty.");
-//                    return poJSON;
-//                }
+                if(loMaster.Company().TownCity().getZipCode() == null || "".equals(loMaster.Company().TownCity().getZipCode())){
+                    poJSON.put("result", "warning");
+                    poJSON.put("message", "Payor Zip Code cannot be empty.");
+                    return poJSON;
+                }
                 
                 //Set Value
                 payeeName = safeGet(loMaster.Payee().getPayeeName());
@@ -587,37 +587,37 @@ public class BIR2307Print {
     private String replaceTextValue(String fsID) throws CloneNotSupportedException {
         System.out.println("ID : " + fsID);
         String lsGetText = "";
-        switch (company) {
-            case "LGK":
-                payorAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
-                payorZip = "2401";
-                payorTin = "000252794000";
-                break;
-            case "GMC":
-                payorAddress = "PEREZ BLVD.DAGUPAN CITY";
-                payorZip = "2401";
-                payorTin = "000251793000";
-                break;
-            case "UEMI":
-                payorAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
-                payorZip = "2401";
-                payorTin = "000253795000";
-                break;
-            case "MCC":
-                payorAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
-                payorZip = "2401";
-                payorTin = "000254796000";
-                break;
-            case "Monarch":
-                payorAddress = "BRGY. SAN MIGUEL, CALASIAO";
-                payorZip = "2418";
-                payorTin = "000255797000";
-                break;
-            default:
-                payorAddress = "";
-                payorZip = "";
-                payorTin = "";
-        }
+//        switch (company) {
+//            case "LGK":
+//                payorAddress = "A.B. FERNANDEZ AVE.,DAGUPAN CITY";
+//                payorZip = "2401";
+//                payorTin = "000252794000";
+//                break;
+//            case "GMC":
+//                payorAddress = "PEREZ BLVD.DAGUPAN CITY";
+//                payorZip = "2401";
+//                payorTin = "000251793000";
+//                break;
+//            case "UEMI":
+//                payorAddress = "BLDG. YMCA, TAPUAC DISTRICT, DAGUPAN CITY";
+//                payorZip = "2401";
+//                payorTin = "000253795000";
+//                break;
+//            case "MCC":
+//                payorAddress = "BLDG GK, TAPUAC DISTRICT, DAGUPAC CITY";
+//                payorZip = "2401";
+//                payorTin = "000254796000";
+//                break;
+//            case "Monarch":
+//                payorAddress = "BRGY. SAN MIGUEL, CALASIAO";
+//                payorZip = "2418";
+//                payorTin = "000255797000";
+//                break;
+//            default:
+//                payorAddress = "";
+//                payorZip = "";
+//                payorTin = "";
+//        }
         switch(fsID){
             case "223": //Period From Month
                 lsGetText = formatPeriodDate(minDate, true);
