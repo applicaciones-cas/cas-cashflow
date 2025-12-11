@@ -2011,14 +2011,18 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     }
                 } else {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Invalid Update mode for Journal.");
-                    return poJSON;
+                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Update mode for Journal.");
+                        return poJSON;
+                    }
                 }
             } else {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Journal is not set.");
-                return poJSON;
+                if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Journal is not set.");
+                    return poJSON;
+                }
             }
             System.out.println("-----------------------------------------------------------------------");
             
@@ -2318,6 +2322,23 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    private void resetJournal(String fsSourceNo, String fsSourceCode){
+        boolean lbExist = false;
+        for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+            if(Detail(lnCtr).getSourceNo().equals(fsSourceNo)
+                && Detail(lnCtr).getSourceCode().equals(fsSourceCode)){
+                lbExist = true;
+                break;
+            }
+        }
+        
+        if(!lbExist){
+            if(Journal().getEditMode() == EditMode.ADDNEW){
+                resetJournal();
+            }
+        }
+    }
+    
     /**
      * Add payables to DV Detail
      * @param transactionNo PRF Transaction No / Cache Payable Transaction No
@@ -2405,6 +2426,9 @@ public class DisbursementVoucher extends Transaction {
      * @throws SQLException 
      */
     private JSONObject setPRFToDetail(String transactionNo) throws CloneNotSupportedException, GuanzonException, SQLException{
+        //Reset Journal
+        resetJournal(transactionNo, DisbursementStatic.SourceCode.PAYMENT_REQUEST);
+        
         PaymentRequest loController = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
         loController.setWithParent(true);
         loController.InitTransaction();
@@ -2470,6 +2494,9 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        //Reset Journal
+        resetJournal(loController.Master().getSourceNo(), loController.Master().getSourceCode());
+        
         Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
         loPayee.initialize();
         poJSON = loPayee.getModel().openRecordByReference(loController.Master().getClientId());
@@ -2500,7 +2527,7 @@ public class DisbursementVoucher extends Transaction {
 
         //Check if transaction already exists in the list
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            if (loController.Master().getTransactionNo().equals(Detail(lnCtr).getSourceNo())
+            if (loController.Master().getSourceNo().equals(Detail(lnCtr).getSourceNo())
                 && loController.Master().getSourceCode().equals(Detail(lnCtr).getSourceCode())) {
                 //If already exist break the loop to current row and it will be the basis for setting of value
                 lnRow = lnCtr; 
@@ -2533,6 +2560,9 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("row", 0);
             return poJSON;
         }
+        
+        //Reset Journal
+        resetJournal(transactionNo, loController.getSourceCode());
         
         poJSON = validateDetailSourceCode(loController.getSourceCode());
         if ("error".equals((String) poJSON.get("result"))) {
@@ -2951,67 +2981,134 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-                //retreiving using column index
-                JSONObject jsonmaster = new JSONObject();
-                for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
-                    System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
-                    jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
-                }
                 
-                JSONArray jsondetails = new JSONArray();
-                JSONObject jsondetail = new JSONObject();
-                
+                //get detail per category
+                List<String> laPerCategory = new ArrayList();
                 for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+                    switch(Detail(lnCtr).getSourceCode()){
+                        case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                            switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                                case SOATaggingStatic.APPaymentAdjustment:
+                                    //TODO
+                                break;
+                                case SOATaggingStatic.PaymentRequest:
+                                    //TODO
+                                break;
+                                case SOATaggingStatic.POReceiving:
+                                    if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
+                                        laPerCategory.add(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode());
+                                    }
+                                break;
+                            }
+                        break;
+                        case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                            //TODO
+                        break;
+                        case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                            //TODO
+                        break;
+                        case DisbursementStatic.SourceCode.PO_RECEIVING:
+                            if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
+                                laPerCategory.add(Detail(lnCtr).POReceiving().getCategoryCode());
+                            }
+                        break;
+                    }
+                }
+                
+                for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
+                    //retreiving using column index
+                    JSONObject jsonmaster = new JSONObject();
+                    for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
+                        System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
+                        jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
+                    }
+                    
+                    String lsCategory = "";
+                    JSONArray jsondetails = new JSONArray();
+                    JSONObject jsondetail = new JSONObject();
+                    for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+                        switch(Detail(lnCtr).getSourceCode()){
+                            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                                switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                                    case SOATaggingStatic.APPaymentAdjustment:
+                                        //TODO
+                                    break;
+                                    case SOATaggingStatic.PaymentRequest:
+                                        //TODO
+                                    break;
+                                    case SOATaggingStatic.POReceiving:
+                                        lsCategory = Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode();
+                                    break;
+                                }
+                            break;
+                            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                                //TODO
+                            break;
+                            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                                //TODO
+                            break;
+                            case DisbursementStatic.SourceCode.PO_RECEIVING:
+                               lsCategory = Detail(lnCtr).POReceiving().getCategoryCode();
+                            break;
+                        }
+
+                        if(laPerCategory.get(lnCategory).equals(lsCategory)){
+                            //store detail values per row that equal to category
+                            jsondetail = new JSONObject();
+                            for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
+                                System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
+                                jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
+                            }
+                            jsondetails.add(jsondetail);
+                        }
+                    }
+
                     jsondetail = new JSONObject();
-                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
-                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
-                        jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
+                    jsondetail.put("Disbursement_Master", jsonmaster);
+                    jsondetail.put("Disbursement_Detail", jsondetails);
+
+                    TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,psIndustryId, laPerCategory.get(lnCategory)); //Master().getIndustryID()
+                    tbj.setGRiderCAS(poGRider);
+                    tbj.setData(jsondetail);
+                    jsonmaster = tbj.processRequest();
+
+                    if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
+                        List<TBJEntry> xlist = tbj.getJournalEntries();
+                        for (TBJEntry xlist1 : xlist) {
+                            System.out.println("Account:" + xlist1.getAccount() );
+                            System.out.println("Debit:" + xlist1.getDebit());
+                            System.out.println("Credit:" + xlist1.getCredit());
+                            poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
+                            poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
+                            poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
+                            poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
+                            poJournal.AddDetail();
+                        }
+                    } else {
+                        System.out.println(jsonmaster.toJSONString());
                     }
-                    jsondetails.add(jsondetail);
+
+                    //Journa Entry Master
+                    poJournal.Master().setAccountPerId("");
+                    poJournal.Master().setIndustryCode(Master().getIndustryID());
+                    poJournal.Master().setBranchCode(Master().getBranchCode());
+                    poJournal.Master().setDepartmentId(poGRider.getDepartment());
+                    poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
+                    poJournal.Master().setCompanyId(Master().getCompanyID());
+                    poJournal.Master().setSourceCode(getSourceCode());
+                    poJournal.Master().setSourceNo(Master().getTransactionNo());
+
                 }
-
-                jsondetail = new JSONObject();
-                jsondetail.put("Disbursement_Master", jsonmaster);
-                jsondetail.put("Disbursement_Detail", jsondetails);
-
-                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,"", "");
-                tbj.setGRiderCAS(poGRider);
-                tbj.setData(jsondetail);
-                jsonmaster = tbj.processRequest();
-
-                if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
-                    List<TBJEntry> xlist = tbj.getJournalEntries();
-                    for (TBJEntry xlist1 : xlist) {
-                        System.out.println("Account:" + xlist1.getAccount() );
-                        System.out.println("Debit:" + xlist1.getDebit());
-                        System.out.println("Credit:" + xlist1.getCredit());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
-                        poJournal.AddDetail();
-                    }
-                } else {
-                    System.out.println(jsonmaster.toJSONString());
-                }
-
-                //Journa Entry Master
-                poJournal.Master().setAccountPerId("");
-                poJournal.Master().setIndustryCode(Master().getIndustryID());
-                poJournal.Master().setBranchCode(Master().getBranchCode());
-                poJournal.Master().setDepartmentId(poGRider.getDepartment());
-                poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
-                poJournal.Master().setCompanyId(Master().getCompanyID());
-                poJournal.Master().setSourceCode(getSourceCode());
-                poJournal.Master().setSourceNo(Master().getTransactionNo());
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
-            } else {
-                poJSON.put("result", "error");
-                poJSON.put("message", "No record to load");
-                return poJSON;
-            }
+            } 
+//            else {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            }
+            
         
         }
         
