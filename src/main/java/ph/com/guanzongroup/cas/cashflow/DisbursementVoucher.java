@@ -197,16 +197,19 @@ public class DisbursementVoucher extends Transaction {
         
         poJSON = openTransaction(transactionNo);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -214,6 +217,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message", "System error while loading check payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -221,6 +225,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                     poJSON = populateOtherPayment();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -233,16 +238,19 @@ public class DisbursementVoucher extends Transaction {
         
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -250,6 +258,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message", "System error while loading check payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -257,6 +266,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                     poJSON = populateOtherPayment();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
