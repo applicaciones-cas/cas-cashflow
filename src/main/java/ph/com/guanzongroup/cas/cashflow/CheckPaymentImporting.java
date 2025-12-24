@@ -385,18 +385,17 @@ public class CheckPaymentImporting extends Parameter {
                 + " a.sSourceNo, "
                 + " d.cDisbrsTp, "
                 + " a.cTranStat "
-                + " FROM check_payments a "
-                + " LEFT JOIN banks b ON a.sBankIDxx = b.sBankIDxx "
-                + " LEFT JOIN bank_account_master c ON a.sBnkActID = c.sBnkActID "
-                + " LEFT JOIN disbursement_master d ON a.sSourceNo = d.sTransNox "
-                + " LEFT JOIN payee e ON d.sPayeeIDx = e.sPayeeIDx";
+                + " FROM Check_Payments a "
+                + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
+                + " LEFT JOIN Disbursement_Master d ON a.sSourceNo = d.sTransNox "
+                + " LEFT JOIN Payee e ON d.sPayeeIDx = e.sPayeeIDx";
         String lsFilterCondition = String.join(" AND ",
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT),
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sIndstCdx = " + SQLUtil.toSQL(poGRider.getIndustry()),
                 " d.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId()),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
                 " d.sVouchrNo = '" + VoucherNo + "'");
@@ -447,7 +446,7 @@ public class CheckPaymentImporting extends Parameter {
     
     public String getCheckTransaction(String sourceNo, String sourceCd) throws SQLException {
         String sSeries = "";
-        String lsSQL = "SELECT sTransNox FROM check_payments";
+        String lsSQL = "SELECT sTransNox FROM Check_Payments";
         lsSQL = MiscUtil.addCondition(lsSQL,
                 " sSourceNo = " + SQLUtil.toSQL(sourceNo)
                 + " AND sSourceCd = " + SQLUtil.toSQL(sourceCd)
