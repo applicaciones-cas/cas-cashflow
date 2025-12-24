@@ -118,6 +118,63 @@ public class Journal extends Transaction {
         return poJSON;
     }
 
+    public JSONObject ReturnTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = JournalStatus.RETURNED;
+        boolean lbConfirm = true;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+        
+        //Do not re-update to return when it is already returned
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "success");
+            poJSON.put("message", "Transaction was already returned.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+//        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+//
+//        //change status
+//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+//        if (!"success".equals((String) poJSON.get("result"))) {
+//            poGRider.rollbackTrans();
+//            return poJSON;
+//        }
+//
+//        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        if (lbConfirm) {
+            poJSON.put("message", "Transaction returned successfully.");
+        } else {
+            poJSON.put("message", "Transaction returning request submitted successfully.");
+        }
+
+        return poJSON;
+    }
+    
     public JSONObject CancelTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -366,6 +423,12 @@ public class Journal extends Transaction {
     public JSONObject willSave() throws SQLException, GuanzonException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
+        
+        if(Master().getEditMode() == EditMode.ADDNEW){
+            System.out.println("Will Save : " + Master().getNextCode());
+            Master().setTransactionNo(Master().getNextCode());
+        }
+        
         String lsDebitAmt = "";
         String lsCreditAmt = "";
         //remove items with no stockid or quantity order

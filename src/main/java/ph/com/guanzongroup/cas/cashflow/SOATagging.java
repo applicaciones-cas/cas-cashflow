@@ -2535,9 +2535,8 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-//                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
-                + " a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
+                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -2560,9 +2559,8 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-//                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
-                + " a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
@@ -2588,9 +2586,8 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-//                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
-                + " a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
+                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -2616,9 +2613,8 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-//                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
-                + " a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
