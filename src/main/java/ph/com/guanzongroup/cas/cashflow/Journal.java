@@ -133,9 +133,10 @@ public class Journal extends Transaction {
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-
+        
+        //Do not re-update to return when it is already returned
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
+            poJSON.put("result", "success");
             poJSON.put("message", "Transaction was already returned.");
             return poJSON;
         }
