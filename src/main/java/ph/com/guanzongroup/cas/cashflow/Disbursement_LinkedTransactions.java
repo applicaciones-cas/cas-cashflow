@@ -19,11 +19,9 @@ import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
-import org.guanzon.cas.purchasing.model.Model_POR_Master;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
-import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
@@ -129,6 +127,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     //Save PRF and update connected PO / Transaction
                     poJSON = savePRFMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while updating PRF.\n\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                     break;
@@ -136,6 +135,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     //Save PO Receiving and update connected cache payable
                     poJSON = savePOReceivingMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while updating PO Receiving.\n\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                     break;
@@ -147,6 +147,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     //Save SOA Detail and update connected transactions ex. PO Receiving, Cache Payable, PRF
                     poJSON = saveSOADetail(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while updating SOA Detail.\n\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                     
@@ -163,6 +164,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         for(int lnCtr = 0;lnCtr <= paSOATaggingMaster.size() - 1;lnCtr++){
             poJSON = saveSOAMaster(paSOATaggingMaster.get(lnCtr),lbAdd);
             if ("error".equals((String) poJSON.get("result"))) {
+                poJSON.put("message", "System error while updating SOA Master.\n\n" + (String) poJSON.get("message"));
                 return poJSON;
             }
         }
@@ -205,7 +207,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > Detail(row).PRF().getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
             return poJSON;
         }
         
@@ -277,7 +279,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the Purchase Order Net Total of PRF transaction no "+Detail(row).getSourceNo()+".");
+            poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Purchase Order Net Total of PRF transaction no "+Detail(row).getSourceNo()+".");
             return poJSON;
         }
         
@@ -331,7 +333,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > Detail(row).POReceiving().getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            poJSON.put("message", "PO Receiving is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
             return poJSON;
         }
         
@@ -407,7 +409,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            poJSON.put("message", "Cache Payable source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
             return poJSON;
         }
         System.out.println("Cache Payable Before Update Mode : " + loModel.getEditMode());
@@ -480,7 +482,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getAppliedAmount().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
+            poJSON.put("message", "SOA Detail source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
             return poJSON;
         }
         
@@ -568,7 +570,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loMaster.getNetTotal().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Amount paid cannot be exceed to the SOA Net Total of transaction no "+fsTransactioNo+".");
+            poJSON.put("message", "SOA is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the SOA Net Total of transaction no "+fsTransactioNo+".");
             return poJSON;
         }
         
@@ -713,7 +715,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return poJSON;
     }
     
-    
+    private String psDVNo = "";
     /**
      * Get the paid amount from OTHER DV Transaction
      * @param sourceNo the source no of DV Detail
@@ -723,6 +725,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
     private double getOtherPayment(String sourceNo, String sourceCode, String detailSource) {
         String lsSQL = "";
         double ldPayment = 0.0000;
+        psDVNo = "";
         try {
             lsSQL = MiscUtil.addCondition(getDVPaymentSQL(),
                     " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
@@ -745,6 +748,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("------------------------------------------------------------------------------");
                     ldPayment = ldPayment + loRS.getDouble("nAppliedx");
+                    if(psDVNo.isEmpty()){
+                        psDVNo = loRS.getString("sTransNox");
+                    } else {
+                        psDVNo = psDVNo + ", " + loRS.getString("sTransNox");
+                    }
                 }
             }
             MiscUtil.close(loRS);
@@ -801,7 +809,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
      */
     public String getTransactionType(String fsParticularId){
         try {
-            String lsSQL = "SELECT sPrtclrID, sDescript, sTranType FROM particular ";
+            String lsSQL = "SELECT sPrtclrID, sDescript, sTranType FROM Particular ";
             lsSQL = MiscUtil.addCondition(lsSQL, " sPrtclrID = " + SQLUtil.toSQL(fsParticularId));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -916,16 +924,17 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , sum(b.nAppliedx) AS nAppliedx"
-                + " FROM ap_payment_master a "
-                + " LEFT JOIN ap_payment_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM AP_Payment_Master a "
+                + " LEFT JOIN AP_Payment_Detail b ON b.sTransNox = a.sTransNox ";
     }
 
     public String getDVPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
+                + " , a.sVouchrNo "
                 + " , sum(b.nAmtAppld) AS nAppliedx"
-                + " FROM disbursement_master a "
-                + " LEFT JOIN disbursement_detail b ON b.sTransNox = a.sTransNox ";
+                + " FROM Disbursement_Master a "
+                + " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox ";
     }
     
 }

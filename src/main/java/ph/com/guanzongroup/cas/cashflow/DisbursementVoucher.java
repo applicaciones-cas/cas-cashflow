@@ -197,16 +197,19 @@ public class DisbursementVoucher extends Transaction {
         
         poJSON = openTransaction(transactionNo);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -214,6 +217,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message", "System error while loading check payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -221,6 +225,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                     poJSON = populateOtherPayment();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -233,16 +238,19 @@ public class DisbursementVoucher extends Transaction {
         
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -250,6 +258,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message", "System error while loading check payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -257,6 +266,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                     poJSON = populateOtherPayment();
                     if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                 break;
@@ -1088,7 +1098,7 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
         JSONObject loJSON = new JSONObject();
         try {
-            int lnRow = 1;
+            int lnRow = 0;
             for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
                 if(WTaxDeduction(lnCtr).getModel().isReverse()){
                     lnRow++;
@@ -1131,6 +1141,9 @@ public class DisbursementVoucher extends Transaction {
             }
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            loJSON.put("result", "error");
+            loJSON.put("message", MiscUtil.getException(ex));
+            return loJSON;
         }
     
         loJSON.put("result", "success");
@@ -2140,6 +2153,9 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("-----------------------------------------------------------------------");
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
         }
             
         poJSON.put("result", "success");
@@ -2207,6 +2223,7 @@ public class DisbursementVoucher extends Transaction {
                 
                 break;
             case DisbursementStatic.CANCELLED:
+            case DisbursementStatic.DISAPPROVED:
                 //Cancel Journal
                 poJournal.setWithParent(true);
                 poJournal.setWithUI(false);
@@ -2215,9 +2232,14 @@ public class DisbursementVoucher extends Transaction {
                     return poJSON;
                 }
                 break;
-                
-            case DisbursementStatic.DISAPPROVED:
             case DisbursementStatic.RETURNED:
+                //Return Journal
+                poJournal.setWithParent(true);
+                poJournal.setWithUI(false);
+                poJSON = poJournal.ReturnTransaction("");
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
                 break;
         }
         
@@ -2740,9 +2762,11 @@ public class DisbursementVoucher extends Transaction {
                 MiscUtil.close(loRS);
             } catch (SQLException e) {
                 System.out.println("No record loaded.");
+                return "";
             }
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return "";
         }
             
         return  "";
@@ -2773,6 +2797,7 @@ public class DisbursementVoucher extends Transaction {
             }
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return false;
         }
             
         return  false;
@@ -2836,9 +2861,11 @@ public class DisbursementVoucher extends Transaction {
                 MiscUtil.close(loRS);
             } catch (SQLException e) {
                 System.out.println("No record loaded.");
+                return "";
             }
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return "";
         }
             
         return  lsDescript;
@@ -2864,9 +2891,11 @@ public class DisbursementVoucher extends Transaction {
                 MiscUtil.close(loRS);
             } catch (SQLException e) {
                 System.out.println("No record loaded.");
+                return  "";
             }
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return  "";
         }
             
         return  "";
@@ -2927,6 +2956,10 @@ public class DisbursementVoucher extends Transaction {
             }
         } catch (GuanzonException | SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("row", 0);
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
         }
         
         poJSON.put("result", "success");
@@ -3623,8 +3656,8 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee)
+                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
@@ -3651,8 +3684,8 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee)
+                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
                 + "GROUP BY a.sTransNox ";
     }
     
@@ -3677,8 +3710,8 @@ public class DisbursementVoucher extends Transaction {
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch)
-                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee)
+                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
@@ -3886,9 +3919,11 @@ public class DisbursementVoucher extends Transaction {
                 MiscUtil.close(loRS);
             } catch (SQLException e) {
                 System.out.println("No record loaded.");
+                return  "";
             }
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return  "";
         }
             
         return  "";
@@ -4161,6 +4196,7 @@ public class DisbursementVoucher extends Transaction {
                 Map<String, Object> params = new HashMap<>();
                 System.out.println("voucher No : " + Master().getVoucherNo());
                 System.out.println("transaction No : " + Master().getTransactionNo());
+                System.out.println("payee : " + Master().CheckPayments().Payee().getPayeeName());
                 params.put("voucherNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
                 params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
