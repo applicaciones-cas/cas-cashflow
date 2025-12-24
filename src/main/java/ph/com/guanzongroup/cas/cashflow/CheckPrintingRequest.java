@@ -543,14 +543,14 @@ public class CheckPrintingRequest extends Transaction {
                 + "  a.cTranStat, "
                 + "  a.sBranchCd "
                 + " FROM "
-                + "  check_printing_request_master a "
-                + "  LEFT JOIN check_printing_request_detail b "
+                + "  Check_Printing_Request_Master a "
+                + "  LEFT JOIN Check_Printing_Request_Detail b "
                 + "    ON a.sTransNox = b.sTransNox "
-                + "  LEFT JOIN banks c ON a.sBankIDxx = c.sBankIDxx "
-                + "  LEFT JOIN bank_account_master d ON a.sBankIDxx = d.sBankIDxx "
-                + "  LEFT JOIN check_payments e ON b.sSourceNo = e.sTransNox "
-                + "  LEFT JOIN disbursement_detail f ON e.sSourceNo = f.sTransNox "
-                + "  LEFT JOIN disbursement_master g ON f.sTransNox = g.sTransNox";
+                + "  LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx "
+                + "  LEFT JOIN Bank_Account_Master d ON a.sBankIDxx = d.sBankIDxx "
+                + "  LEFT JOIN Check_Payments e ON b.sSourceNo = e.sTransNox "
+                + "  LEFT JOIN Disbursement_Detail f ON e.sSourceNo = f.sTransNox "
+                + "  LEFT JOIN Disbursement_Master g ON f.sTransNox = g.sTransNox";
 
     }
 
@@ -581,11 +581,11 @@ public class CheckPrintingRequest extends Transaction {
                 + " a.sSourceNo, "
                 + " d.cDisbrsTp, "
                 + " a.cTranStat "
-                + " FROM check_payments a "
-                + " LEFT JOIN banks b ON a.sBankIDxx = b.sBankIDxx "
-                + " LEFT JOIN bank_account_master c ON a.sBnkActID = c.sBnkActID "
-                + " LEFT JOIN disbursement_master d ON a.sSourceNo = d.sTransNox "
-                + " LEFT JOIN payee e ON d.sPayeeIDx = e.sPayeeIDx";
+                + " FROM Check_Payments a "
+                + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
+                + " LEFT JOIN Disbursement_Master d ON a.sSourceNo = d.sTransNox "
+                + " LEFT JOIN Payee e ON d.sPayeeIDx = e.sPayeeIDx";
 
         String lsFilterCondition = String.join(" AND ",
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
@@ -645,18 +645,17 @@ public class CheckPrintingRequest extends Transaction {
                 + " a.sSourceNo, "
                 + " d.cDisbrsTp, "
                 + " a.cTranStat "
-                + " FROM check_payments a "
-                + " LEFT JOIN banks b ON a.sBankIDxx = b.sBankIDxx "
-                + " LEFT JOIN bank_account_master c ON a.sBnkActID = c.sBnkActID "
-                + " LEFT JOIN disbursement_master d ON a.sSourceNo = d.sTransNox "
-                + " LEFT JOIN payee e ON d.sPayeeIDx = e.sPayeeIDx";
+                + " FROM Check_Payments a "
+                + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
+                + " LEFT JOIN Disbursement_Master d ON a.sSourceNo = d.sTransNox "
+                + " LEFT JOIN P ayee e ON d.sPayeeIDx = e.sPayeeIDx";
         String lsFilterCondition = String.join(" AND ",
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT),
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN),
@@ -872,7 +871,6 @@ public class CheckPrintingRequest extends Transaction {
 
         initSQL();
         String lsFilterCondition = String.join(" AND ",
-                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " g.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
@@ -1262,7 +1260,7 @@ public class CheckPrintingRequest extends Transaction {
     }
     
     public JSONObject searchCheck(String lsValue) throws SQLException {
-        String lsSQL = "SELECT sTransNox FROM check_payments";
+        String lsSQL = "SELECT sTransNox FROM Check_Payments";
         lsSQL = MiscUtil.addCondition(lsSQL,
                 " sSourceNo = " + SQLUtil.toSQL(lsValue)
                 + " AND sSourceCd = 'DISb' "
@@ -1284,7 +1282,7 @@ public class CheckPrintingRequest extends Transaction {
     }
     
     public JSONObject searchDV(String lsValue) throws SQLException {
-    String lsSQL = "SELECT sTransNox FROM disbursement_master";
+    String lsSQL = "SELECT sTransNox FROM Disbursement_Master";
     lsSQL = MiscUtil.addCondition(lsSQL,
             " sSourceNo = " + SQLUtil.toSQL(lsValue)
             + " AND sSourceCd = 'DISb' " 
