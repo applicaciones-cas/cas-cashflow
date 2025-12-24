@@ -588,7 +588,6 @@ public class CheckImporting extends Transaction {
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sIndstCdx = " + SQLUtil.toSQL(psIndustryId),
                 " d.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
                 " d.sVouchrNo = " + VoucherNo );

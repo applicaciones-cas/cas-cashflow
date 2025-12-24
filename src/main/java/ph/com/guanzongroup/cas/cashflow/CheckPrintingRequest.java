@@ -936,8 +936,7 @@ public class CheckPrintingRequest extends Transaction {
         }
         initSQL();
         String lsFilterCondition = String.join(" AND ",
-                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
-                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()));
+                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         if (!psTranStat.isEmpty()) {
             lsSQL = lsSQL + lsTransStat;
@@ -975,7 +974,6 @@ public class CheckPrintingRequest extends Transaction {
         }
         initSQL();
         String lsFilterCondition = String.join(" AND ",
-                " a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
                 " g.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 
@@ -1007,6 +1005,7 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject ExportTransaction(String fsValue)
             throws GuanzonException, SQLException, CloneNotSupportedException {
 
+        
         poJSON = new JSONObject();
         this.OpenTransaction(fsValue);
         this.UpdateTransaction();
@@ -1134,7 +1133,7 @@ public class CheckPrintingRequest extends Transaction {
 
 //
 //
-//
+//  
 //        String taxtPeriodFrom    = "";
 //        String taxtPeriodTo    = "";
 //        String payeetin    = Optional.ofNullable(
