@@ -38,7 +38,6 @@ public class Model_Payment_Request_Detail extends Model {
             poEntity.updateObject("nDiscount", 0.0000);
             poEntity.updateObject("nAddDiscx", 0.0000);
             poEntity.updateObject("nTWithHld", 0.0000);
-            poEntity.updateObject("nAmtPaidx", 0.0000);
             poEntity.updateObject("cVATaxabl", "0");
 
             //end - assign default values
@@ -139,16 +138,6 @@ public class Model_Payment_Request_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nTWithHld")));
     }
     
-    public JSONObject setAmountPaid(double amountPaid) {
-        return setValue("nAmtPaidx", amountPaid);
-    }
-
-    public Double getAmountPaid() {
-        if (getValue("nAmtPaidx") == null || "".equals(getValue("nAmtPaidx"))) {
-            return 0.00;
-        }
-        return Double.valueOf(getValue("nAmtPaidx").toString());
-    }
 
     public JSONObject setModifiedDate(Date modifiedDate) {
         return setValue("dModified", modifiedDate);
