@@ -988,6 +988,7 @@ public class DisbursementVoucher extends Transaction {
         if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
             poJSON.put("result", "error");
             poJSON.put("message", "Tax Code is not set.");
+            poJSON.put("row", row);
             return poJSON;
         }
         
@@ -3644,7 +3645,7 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.CASH_PAYABLE) +" AS PayableType, "
                 + "a.sSourceCd AS TransactionType, "
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
-                + "IFNULL(cc.sCompnyNm,c.sPayeeNme) AS Payee, "
+                + "IFNULL(c.sPayeeNme,cc.sCompnyNm) AS Payee, "
                 + "a.sReferNox AS Reference, "
                 + "a.sSourceNo AS sSourceNo "
                 + "FROM Cache_Payable_Master a "
@@ -3657,7 +3658,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
@@ -3699,7 +3700,7 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE) +" AS PayableType, "
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE) +" AS TransactionType, "
                 + SQLUtil.toSQL("AP_Payment_Master") +" AS SourceTable, "
-                + "IFNULL(cc.sCompnyNm,c.sPayeeNme) AS Payee, "
+                + "IFNULL(c.sPayeeNme,cc.sCompnyNm) AS Payee, "
                 + "a.sSOANoxxx AS Reference, "
                 + "a.sTransNox AS sSourceNo "
                 + "FROM AP_Payment_Master a "
@@ -3711,7 +3712,7 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
