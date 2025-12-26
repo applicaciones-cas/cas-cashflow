@@ -988,6 +988,7 @@ public class DisbursementVoucher extends Transaction {
         if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
             poJSON.put("result", "error");
             poJSON.put("message", "Tax Code is not set.");
+            poJSON.put("row", row);
             return poJSON;
         }
         
