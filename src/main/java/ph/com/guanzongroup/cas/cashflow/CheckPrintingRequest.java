@@ -649,7 +649,7 @@ public class CheckPrintingRequest extends Transaction {
                 + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
                 + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
                 + " LEFT JOIN Disbursement_Master d ON a.sSourceNo = d.sTransNox "
-                + " LEFT JOIN P ayee e ON d.sPayeeIDx = e.sPayeeIDx";
+                + " LEFT JOIN Payee e ON d.sPayeeIDx = e.sPayeeIDx";
         String lsFilterCondition = String.join(" AND ",
                 " d.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK),
                 " a.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT),
