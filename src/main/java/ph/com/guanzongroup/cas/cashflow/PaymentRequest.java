@@ -15,6 +15,7 @@ import org.guanzon.appdriver.agent.systables.TransactionAttachment;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
@@ -444,6 +445,32 @@ public class PaymentRequest extends Transaction {
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
+            }
+            //Download Attachments
+            poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
+                    , "0032" //Constant
+                    , "" //Empty
+                    , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
+                    , SOURCE_CODE
+                    , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
+                    , "");
+            if ("success".equals((String) poJSON.get("result"))) {
+                
+                poJSON = (JSONObject) poJSON.get("payload");
+                if(WebFile.Base64ToFile((String) poJSON.get("data")
+                        , (String) poJSON.get("hash")
+                        , System.getProperty("sys.default.path.temp.attachments") + "/"
+                        , (String) poJSON.get("filename"))){
+                    System.out.println("poJSON success: " +  poJSON.toJSONString());
+                    System.out.println("File downloaded succesfully.");
+                } else {
+                    System.out.println("poJSON error: " + poJSON.toJSONString());
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Unable to download file.");
+                }
+                
+            } else {
+                System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
             }
         }
         return poJSON;
