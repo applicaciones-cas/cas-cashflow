@@ -15,6 +15,8 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 public class BankAccountMaster extends Parameter{
     Model_Bank_Account_Master poModel;
     
+    String psCompany = "";
+    
     @Override
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
@@ -23,6 +25,10 @@ public class BankAccountMaster extends Parameter{
         poModel = model.Bank_Account_Master();
         
         super.initialize();
+    }
+    
+    public void setCompanyId(String fsCompanyId){
+        psCompany = fsCompanyId;
     }
     
     @Override
@@ -98,9 +104,9 @@ public class BankAccountMaster extends Parameter{
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Bank»Account No.»Account Name",
-                "sBnkActID»xBankName»sActNumbr»sActNamex",
-                "a.sBnkActID»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
+                "ID»Branch Name»Bank»Account No.»Account Name",
+                "sBnkActID»sBranchNm»xBankName»sActNumbr»sActNamex",
+                "a.sBnkActID»c.sBranchNm»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
@@ -127,14 +133,25 @@ public class BankAccountMaster extends Parameter{
             lsCondition = "a.cRecdStat = " + SQLUtil.toSQL(psRecdStat);
         }
         
+        if(psCompany != null && !"".equals(psCompany)){
+            if(lsCondition != null && !"".equals(lsCondition)){
+                lsCondition = lsCondition + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompany);
+            } else {
+                lsCondition = " a.sCompnyID = " + SQLUtil.toSQL(psCompany);
+            }
+        }
+        
         String lsSQL = "SELECT" +
                             "  a.sBnkActID" +
                             ", a.sBankIDxx" +
                             ", a.sActNumbr" +
                             ", a.sActNamex" +
+                            ", c.sBranchNm" +
+                            ", a.sCompnyID" +
                             ", IFNULL(b.sBankName, '') xBankName" +
                         " FROM Bank_Account_Master a" +
-                            " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx";
+                            " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx" +
+                            " LEFT JOIN Branch c ON c.sBranchCd = a.sBranchCd";
         
         
         return MiscUtil.addCondition(lsSQL, lsCondition);
@@ -155,9 +172,9 @@ public class BankAccountMaster extends Parameter{
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Bank»Account No.»Account Name",
-                "sBnkActID»xBankName»sActNumbr»sActNamex",
-                "a.sBnkActID»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
+                "ID»Branch Name»Bank»Account No.»Account Name",
+                "sBnkActID»sBranchNm»xBankName»sActNumbr»sActNamex",
+                "a.sBnkActID»c.sBranchNm»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {

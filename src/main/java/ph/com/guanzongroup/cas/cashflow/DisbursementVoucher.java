@@ -99,6 +99,7 @@ import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
+import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
@@ -791,9 +792,9 @@ public class DisbursementVoucher extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Branch»Supplier",
-                "a.sTransNox»a.dTransact»c.sBranchNm»supplier",
-                "a.sTransNox»a.dTransact»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
+                "Transaction No»Transaction Date»DV No»Branch»Supplier",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
                 0);
 
         if (poJSON != null) {
@@ -839,9 +840,9 @@ public class DisbursementVoucher extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Branch»Supplier",
-                "a.sTransNox»a.dTransact»c.sBranchNm»supplier",
-                "a.sTransNox»a.dTransact»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
+                "Transaction No»Transaction Date»DV No»Branch»Supplier",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
                 0);
 
         if (poJSON != null) {
@@ -1026,6 +1027,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject SearchBankAccount(String value, String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
+        object.setCompanyId(Master().getCompanyID());
         
         if(Banks == null || "".equals(Banks)){
             poJSON = object.searchRecord(value, byCode);
@@ -3548,6 +3550,50 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    public String getLinkedPayment(String sourceNo, String sourceCode, String client){
+        String lsTransactionNo = "";
+        try {
+            ResultSet loRS;
+            String lsSQL;
+            
+            //Check if transaction is already linked to DV
+            lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                    " b.sSourceNo = " + SQLUtil.toSQL(sourceNo)
+                    + " AND b.sSourceCd = " + SQLUtil.toSQL(sourceCode)
+                    + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
+                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+                    + " AND ( e.sCompnyNm LIKE " + SQLUtil.toSQL("%"+client + "%") 
+                    + "    OR d.sPayeeNme LIKE "+ SQLUtil.toSQL("%"+client+"%")+" )"
+            );
+            System.out.println("Executing SQL: " + lsSQL);
+            loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------DV--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        if(lsTransactionNo.isEmpty()){
+                            lsTransactionNo = loRS.getString("sVouchrNo");
+                        } else {
+                            lsTransactionNo = lsTransactionNo + ", " + loRS.getString("sVouchrNo");
+                        }
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+        return lsTransactionNo;
+    }
+    
     /**
      * Load Payables
      * @param payableType the transaction type selected
@@ -3574,7 +3620,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             }
 
-            lsSQL = lsSQL + " ORDER BY dTransact DESC ";
+            lsSQL = lsSQL + " ORDER BY dDueDatex ASC ";
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (loRS == null) {
@@ -3605,13 +3651,14 @@ public class DisbursementVoucher extends Transaction {
                 JSONObject record = new JSONObject();
                 record.put("sTransNox", loRS.getString("sTransNox"));
                 record.put("sBranchNme", loRS.getString("Branch"));
-                record.put("dTransact", loRS.getDate("dTransact"));
+                record.put("dTransact", loRS.getDate("dDueDatex"));
                 record.put("Balance", loRS.getDouble("Balance"));
                 record.put("TransactionType", lsTransactionType);
                 record.put("PayableType", loRS.getString("PayableType"));
                 record.put("Payee", loRS.getString("Payee"));
                 record.put("Reference", loRS.getString("Reference"));
                 record.put("SourceNo", loRS.getString("sSourceNo"));
+                record.put("SourceCd", loRS.getString("TransactionType"));
                 dataArray.add(record);
                 lnctr++;
             }
@@ -3647,7 +3694,8 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
                 + "IFNULL(c.sPayeeNme,cc.sCompnyNm) AS Payee, "
                 + "a.sReferNox AS Reference, "
-                + "a.sSourceNo AS sSourceNo "
+                + "a.sSourceNo AS sSourceNo, "
+                + "IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
                 + "FROM Cache_Payable_Master a "
                 + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
                 + "Branch b "
@@ -3675,7 +3723,8 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL("Payment_Request_Master") +" AS SourceTable, "
                 + "c.sPayeeNme AS Payee, "
                 + "a.sSeriesNo AS Reference, "
-                + "a.sTransNox AS sSourceNo "
+                + "a.sTransNox AS sSourceNo, "
+                + "a.dTransact AS dDueDatex "
                 + "FROM Payment_Request_Master a "
                 + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx, "
                 + "Branch b "
@@ -3702,7 +3751,8 @@ public class DisbursementVoucher extends Transaction {
                 + SQLUtil.toSQL("AP_Payment_Master") +" AS SourceTable, "
                 + "IFNULL(c.sPayeeNme,cc.sCompnyNm) AS Payee, "
                 + "a.sSOANoxxx AS Reference, "
-                + "a.sTransNox AS sSourceNo "
+                + "a.sTransNox AS sSourceNo, "
+                + "a.dTransact AS dDueDatex "
                 + "FROM AP_Payment_Master a "
                 + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
                 + "Branch b "
