@@ -56,7 +56,7 @@ public class Model_Disbursement_Detail extends Model {
             poEntity.updateObject("nTaxAmtxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             
             poEntity.updateObject("nDetailNo", DisbursementStatic.DefaultValues.default_value_integer);
-            poEntity.updateObject("cReversex", "+");
+//            poEntity.updateObject("cReversex", "+");
 
             //end - assign default values
             poEntity.insertRow();
@@ -230,13 +230,13 @@ public class Model_Disbursement_Detail extends Model {
         return setValue("nTaxAmtxx", taxamount);
     }
     
-    public JSONObject isReverse(boolean isReverse) {
-        return setValue("cReversex", isReverse ? "+" : "-");
-    }
-
-    public boolean isReverse() {
-        return ((String) getValue("cReversex")).equals("+");
-    }
+//    public JSONObject isReverse(boolean isReverse) {
+//        return setValue("cReversex", isReverse ? "+" : "-");
+//    }
+//
+//    public boolean isReverse() {
+//        return ((String) getValue("cReversex")).equals("+");
+//    }
 
     public double getTaxAmount() {
         return Double.parseDouble(String.valueOf(getValue("nTaxAmtxx")));

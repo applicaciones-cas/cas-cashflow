@@ -3,10 +3,13 @@ package ph.com.guanzongroup.cas.cashflow;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.appdriver.constant.UserRight;
@@ -340,11 +343,54 @@ public class Journal extends Transaction {
         poJSON = object.searchRecord(value, byCode, industryCode, glCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
+            //TODO 
+//            poJSON = checkExistingAcctCode(row,object.getModel().getAccountCode());
+//            if ("error".equals((String) poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//            row = (int) poJSON.get("row");
             Detail(row).setAccountCode(object.getModel().getAccountCode());
         }
 
         return poJSON;
     }
+    
+    //TODO
+//    public JSONObject checkExistingAcctCode(int fnRow, String fsAcctCode){
+//        poJSON = new JSONObject();
+//        poJSON.put("row", fnRow);
+//        try {
+//            int lnRow = 0;
+//            for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
+//                if(Detail(lnCtr).isReverse()){
+//                    lnRow++;
+//                }
+//                if (lnCtr != fnRow) {
+//                    if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
+//                        if(!Detail(lnCtr).isReverse()){
+//                            Detail(lnCtr).isReverse(true);
+//                            poJSON.put("row", lnCtr);
+//                            break;
+//                        } else {
+//                            poJSON.put("result", "error");
+//                            poJSON.put("message", Detail(lnCtr).Account_Chart().getDescription() + " already exists at row "+ lnRow );
+//                            poJSON.put("row", lnCtr);
+//                            return poJSON;
+//                        }
+//                    }
+//                }
+//            }
+//        } catch (SQLException | GuanzonException ex) {
+//            Logger.getLogger(Journal.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//            poJSON.put("result", "error");
+//            poJSON.put("message", MiscUtil.getException(ex));
+//            return poJSON;
+//        }
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
 
     /*Search Master References*/
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
