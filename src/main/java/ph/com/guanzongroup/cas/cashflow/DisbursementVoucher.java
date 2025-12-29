@@ -1746,12 +1746,19 @@ public class DisbursementVoucher extends Transaction {
         while (lnCtr >= 0) {
             if (Detail(lnCtr).getSourceNo() == null || "".equals(Detail(lnCtr).getSourceNo())) {
                 Detail().remove(lnCtr);
+            } else {
+                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(!Detail(lnCtr).isReverse()){
+                        Detail().remove(lnCtr);
+                    }
+                }
             }
             lnCtr--;
         }
 
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
+            if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())
+                && Detail(lnCtr).isReverse()) {
                 AddDetail();
             }
         }
