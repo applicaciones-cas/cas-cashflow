@@ -237,6 +237,21 @@ public class Model_Disbursement_Detail extends Model {
 //    public boolean isReverse() {
 //        return ((String) getValue("cReversex")).equals("+");
 //    }
+    
+    public JSONObject isReverse(boolean fIsZeroOutAmount){
+        poJSON = new JSONObject();
+        if(fIsZeroOutAmount){
+            setAmountApplied(0.0000);
+        } else {
+            setAmountApplied(getAmount());
+        }
+        
+        return poJSON;
+    }
+    
+    public boolean isReverse() {
+        return (getAmountApplied() > 0.0000);
+    }
 
     public double getTaxAmount() {
         return Double.parseDouble(String.valueOf(getValue("nTaxAmtxx")));
