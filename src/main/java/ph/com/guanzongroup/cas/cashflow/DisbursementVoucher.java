@@ -1334,13 +1334,27 @@ public class DisbursementVoucher extends Transaction {
             //Compute VAT
             switch(Detail(lnCtr).getSourceCode()){
                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    if(Detail(lnCtr).getDetailVatExempt() > ldblAmountApplied){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount");
+                        Detail(lnCtr).setDetailVatExempt(0.0000);
+                        return poJSON;
+                    }
+                    
+                    if(Detail(lnCtr).getDetailVatExempt() == ldblAmountApplied){
+                        Detail(lnCtr).isWithVat(false);
+                    }
+                    
                     if(Detail(lnCtr).isWithVat()){
+                        ldblAmountApplied = ldblAmountApplied - Detail(lnCtr).getDetailVatExempt();
                         ldblVATAmount = ldblAmountApplied - (ldblAmountApplied / 1.12);
                         ldblVATSales = ldblAmountApplied - ldblVATAmount;
 
                         Detail(lnCtr).setDetailVatAmount(ldblVATAmount);
                         Detail(lnCtr).setDetailVatSales(ldblVATSales);
                     } else {
+                        Detail(lnCtr).setDetailVatAmount(0.0000);
+                        Detail(lnCtr).setDetailVatSales(0.0000);
                         Detail(lnCtr).setDetailVatExempt(ldblAmountApplied);
                     }
             }
@@ -1748,7 +1762,7 @@ public class DisbursementVoucher extends Transaction {
                 Detail().remove(lnCtr);
             } else {
                 if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(!Detail(lnCtr).isReverse()){
+                    if(Detail(lnCtr).getAmountApplied() <= 0.0000){
                         Detail().remove(lnCtr);
                     }
                 }
@@ -1758,7 +1772,7 @@ public class DisbursementVoucher extends Transaction {
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())
-                && Detail(getDetailCount() - 1).isReverse()) {
+                && Detail(getDetailCount() - 1).getAmountApplied() > 0.0000) {
                 AddDetail();
             }
         }
