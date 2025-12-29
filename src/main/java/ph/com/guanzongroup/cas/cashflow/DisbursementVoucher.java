@@ -1337,11 +1337,14 @@ public class DisbursementVoucher extends Transaction {
                     if(Detail(lnCtr).getDetailVatExempt() > ldblAmountApplied){
                         poJSON.put("result", "error");
                         poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount");
-                        Detail(lnCtr).setDetailVatExempt(0.0000);
+                        Detail(lnCtr).setDetailVatAmount(0.0000);
+                        Detail(lnCtr).setDetailVatSales(0.0000);
+                        Detail(lnCtr).setDetailVatExempt(ldblAmountApplied);
+                        Detail(lnCtr).isWithVat(false);
                         return poJSON;
-                    }
-                    
-                    if(Detail(lnCtr).getDetailVatExempt() == ldblAmountApplied){
+                    } else if(Detail(lnCtr).getDetailVatExempt() < ldblAmountApplied){
+                        Detail(lnCtr).isWithVat(true);
+                    } else if (Detail(lnCtr).getDetailVatExempt() == ldblAmountApplied){
                         Detail(lnCtr).isWithVat(false);
                     }
                     
@@ -2523,6 +2526,7 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setSourceCode(loController.getSourceCode());
         Detail(lnRow).setAmount(ldblBalance);
         Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
+        Detail(lnRow).setDetailVatExempt(ldblBalance);
         AddDetail();
     
         poJSON.put("result", "success");
