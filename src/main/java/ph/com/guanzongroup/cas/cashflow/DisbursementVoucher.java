@@ -1758,7 +1758,7 @@ public class DisbursementVoucher extends Transaction {
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())
-                && Detail(lnCtr).isReverse()) {
+                && Detail(getDetailCount() - 1).isReverse()) {
                 AddDetail();
             }
         }
@@ -2424,12 +2424,14 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject validateDetailSourceCode(String fsSourceCode){
         for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
             if(Detail(lnCtr).getSourceCode() != null && !"".equals(Detail(lnCtr).getSourceCode())){
-                if(!fsSourceCode.equals(Detail(lnCtr).getSourceCode())
-                    && !fsSourceCode.equals(DisbursementStatic.SourceCode.AP_ADJUSTMENT)){
+                if(!DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(Detail(lnCtr).getSourceCode())){
+                    if(!fsSourceCode.equals(Detail(lnCtr).getSourceCode())
+                        && !fsSourceCode.equals(DisbursementStatic.SourceCode.AP_ADJUSTMENT)){
 
-                    poJSON.put("result", "error");
-                    poJSON.put("message", getSourceCodeDescription(fsSourceCode) + " cannot be mix with " + getSourceCodeDescription(Detail(lnCtr).getSourceCode()));
-                    return poJSON;
+                        poJSON.put("result", "error");
+                        poJSON.put("message", getSourceCodeDescription(fsSourceCode) + " cannot be mix with " + getSourceCodeDescription(Detail(lnCtr).getSourceCode()));
+                        return poJSON;
+                    }
                 }
             }
         }
