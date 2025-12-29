@@ -915,6 +915,8 @@ public class DisbursementVoucher extends Transaction {
                 setSearchPayee(object.getModel().getPayeeName());
                 setSearchClient(object.getModel().Client().getCompanyName());
             } else {
+                setSearchPayee(object.getModel().getPayeeName());
+                setSearchClient(object.getModel().Client().getCompanyName());
                 Master().setPayeeID(object.getModel().getPayeeID());
                 Master().setSupplierClientID(object.getModel().getClientID());
                 if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
@@ -1674,6 +1676,10 @@ public class DisbursementVoucher extends Transaction {
         
         //Reset Journal when all details was removed
         resetJournal();
+        setSearchPayee("");
+        setSearchClient("");
+        Master().setIndustryID("");
+        initFields();
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
@@ -2918,7 +2924,7 @@ public class DisbursementVoucher extends Transaction {
             } else {
                 if (!Master().getIndustryID().equals(fsIndustryId)) {
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Selected transaction industry must be equal to current industry in dv.");
+                    poJSON.put("message", "Selected transaction industry must be equal to current industry in disbursement.");
                     poJSON.put("row", 0);
                     return poJSON;
                 }
@@ -3638,7 +3644,7 @@ public class DisbursementVoucher extends Transaction {
                         lsTransactionType = "SOA";
                         break;
                     case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                        lsTransactionType = "PRF";
+                        lsTransactionType = "Payment Request";
                         break;
                     case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         lsTransactionType = "AP Adjustment";
@@ -3704,7 +3710,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
+                + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
                 + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
@@ -3732,7 +3738,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
-                + "AND a.cWithSOAx = '0'" //Retrieve only transaction without SOA
+                + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
                 + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
