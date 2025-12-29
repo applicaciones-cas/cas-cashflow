@@ -101,6 +101,7 @@ public class BankAccountMaster extends Parameter{
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException{
         String lsSQL = getSQ_Browse();
         
+        System.out.println("SQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
@@ -168,7 +169,7 @@ public class BankAccountMaster extends Parameter{
         }
 
          lsSQL = MiscUtil.addCondition(getSQ_Browse(), lsCondition);
-        
+        System.out.println("SQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
