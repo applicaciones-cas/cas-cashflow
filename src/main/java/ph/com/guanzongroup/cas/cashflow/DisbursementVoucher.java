@@ -3814,7 +3814,7 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
                 + "FROM AP_Payment_Master a "
-                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
+                + "LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
                 + "Branch b "
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
