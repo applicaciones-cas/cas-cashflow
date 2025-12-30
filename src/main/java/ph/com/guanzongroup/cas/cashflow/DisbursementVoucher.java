@@ -1324,45 +1324,72 @@ public class DisbursementVoucher extends Transaction {
     }
    
     public JSONObject computeDetailFields(){
-        Double ldblAmountApplied = 0.0000;
-        Double ldblVATSales = 0.0000;
-        Double ldblVATAmount = 0.0000;
                 
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            ldblAmountApplied = Detail(lnCtr).getAmountApplied();
-            
-            //Compute VAT
-            switch(Detail(lnCtr).getSourceCode()){
-                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                    if(Detail(lnCtr).getDetailVatExempt() > ldblAmountApplied){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount");
-                        Detail(lnCtr).setDetailVatAmount(0.0000);
-                        Detail(lnCtr).setDetailVatSales(0.0000);
-                        Detail(lnCtr).setDetailVatExempt(ldblAmountApplied);
-                        Detail(lnCtr).isWithVat(false);
-                        return poJSON;
-                    } else if(Detail(lnCtr).getDetailVatExempt() < ldblAmountApplied){
-                        Detail(lnCtr).isWithVat(true);
-                    } else if (Detail(lnCtr).getDetailVatExempt() == ldblAmountApplied){
-                        Detail(lnCtr).isWithVat(false);
-                    }
-                    
-                    if(Detail(lnCtr).isWithVat()){
-                        ldblAmountApplied = ldblAmountApplied - Detail(lnCtr).getDetailVatExempt();
-                        ldblVATAmount = ldblAmountApplied - (ldblAmountApplied / 1.12);
-                        ldblVATSales = ldblAmountApplied - ldblVATAmount;
-
-                        Detail(lnCtr).setDetailVatAmount(ldblVATAmount);
-                        Detail(lnCtr).setDetailVatSales(ldblVATSales);
-                    } else {
-                        Detail(lnCtr).setDetailVatAmount(0.0000);
-                        Detail(lnCtr).setDetailVatSales(0.0000);
-                        Detail(lnCtr).setDetailVatExempt(ldblAmountApplied);
-                    }
+        try {
+            for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+                //Compute VAT
+                switch(Detail(lnCtr).getSourceCode()){
+                    case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                        if(SOATaggingStatic.PaymentRequest.equals(Detail(lnCtr).SOADetail().getSourceCode())){
+                            poJSON = computeDetail(lnCtr);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }
+                        }
+                    break;
+                    case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                        poJSON = computeDetail(lnCtr);
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    break;
+                }
             }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "success");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
         }
         
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject computeDetail(int fnRow){
+        poJSON = new JSONObject();
+        Double ldblAmountApplied = Detail(fnRow).getAmountApplied();
+        Double ldblVATSales = 0.0000;
+        Double ldblVATAmount = 0.0000;
+        
+        if(Detail(fnRow).getDetailVatExempt() > ldblAmountApplied){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount");
+            Detail(fnRow).setDetailVatAmount(0.0000);
+            Detail(fnRow).setDetailVatSales(0.0000);
+            Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
+            Detail(fnRow).isWithVat(false);
+            return poJSON;
+        } else if(Detail(fnRow).getDetailVatExempt() < ldblAmountApplied){
+            Detail(fnRow).isWithVat(true);
+        } else if (Detail(fnRow).getDetailVatExempt() == ldblAmountApplied){
+            Detail(fnRow).isWithVat(false);
+        }
+
+        if(Detail(fnRow).isWithVat()){
+            ldblAmountApplied = ldblAmountApplied - Detail(fnRow).getDetailVatExempt();
+            ldblVATAmount = ldblAmountApplied - (ldblAmountApplied / 1.12);
+            ldblVATSales = ldblAmountApplied - ldblVATAmount;
+
+            Detail(fnRow).setDetailVatAmount(ldblVATAmount);
+            Detail(fnRow).setDetailVatSales(ldblVATSales);
+        } else {
+            Detail(fnRow).setDetailVatAmount(0.0000);
+            Detail(fnRow).setDetailVatSales(0.0000);
+            Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
+        }
+    
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
