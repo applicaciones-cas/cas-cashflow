@@ -207,7 +207,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > Detail(row).PRF().getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            }
             return poJSON;
         }
         
@@ -279,7 +283,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Purchase Order Net Total of PRF transaction no "+Detail(row).getSourceNo()+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            }
             return poJSON;
         }
         
@@ -333,7 +341,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > Detail(row).POReceiving().getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "PO Receiving is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "PO Receiving is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            }
             return poJSON;
         }
         
@@ -409,7 +421,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Cache Payable source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "Cache Payable source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+            }
             return poJSON;
         }
         System.out.println("Cache Payable Before Update Mode : " + loModel.getEditMode());
@@ -482,7 +498,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getAppliedAmount().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "SOA Detail source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "SOA Detail source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
+            }
             return poJSON;
         }
         
@@ -570,7 +590,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loMaster.getNetTotal().doubleValue()){
             poJSON.put("result", "error");
-            poJSON.put("message", "SOA is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the SOA Net Total of transaction no "+fsTransactioNo+".");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "SOA is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the SOA Net Total of transaction no "+fsTransactioNo+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the SOA Net Total of transaction no "+fsTransactioNo+".");
+            }
             return poJSON;
         }
         

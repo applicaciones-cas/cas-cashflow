@@ -1803,14 +1803,18 @@ public class DisbursementVoucher extends Transaction {
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())
                 && Detail(getDetailCount() - 1).getAmountApplied() > 0.0000) {
-                Master().setIndustryID("");
                 AddDetail();
             }
         }
 
         if ((getDetailCount() - 1) < 0) {
-            Master().setIndustryID("");
             AddDetail();
+        }
+        
+        if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
+            && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+            && getDetailCount() <= 1){
+            Master().setIndustryID("");
         }
     }
     
