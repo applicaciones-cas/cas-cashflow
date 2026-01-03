@@ -278,7 +278,7 @@ public class CheckPayments extends Parameter {
                 + ", IFNULL(c.sPayeeNme, '') xPayeeNme"
                 + ", IFNULL(d.sBranchNm, '') xBranchNm"
                 + //             ", IFNULL(e.sBankAcct, '') xBankAcct" +
-                " FROM check_payments a"
+                " FROM Check_Payments a"
                 + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx"
                 + " LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx"
                 + " LEFT JOIN Branch d ON a.sBranchCD = d.sBranchCd";
@@ -363,7 +363,7 @@ public class CheckPayments extends Parameter {
 
     public String getTransactionNoOfCheckPayment(String sourceNo, String sourceCd) throws SQLException, GuanzonException {
         String sql = "SELECT sTransNox "
-                + "FROM check_payments "
+                + "FROM Check_Payments "
                 + "WHERE sSourceNo = " + SQLUtil.toSQL(sourceNo)
                 + " AND sSourceCd = " + SQLUtil.toSQL(sourceCd);
 

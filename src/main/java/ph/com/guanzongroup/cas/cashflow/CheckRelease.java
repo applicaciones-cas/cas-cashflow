@@ -37,46 +37,44 @@ import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 /**
  *
  * @author Guillier
- * 
+ *
  * Note: Following variables are declared already on Transaction:
- * 
- * poMaster
- * poDetail
- * paDetail
- * 
+ *
+ * poMaster poDetail paDetail
+ *
  * Above are parameters and should not be declared again in class.
  */
-public class CheckRelease extends Transaction{
-    
+public class CheckRelease extends Transaction {
+
     private String psIndustryCode = "";
     private String psApprovalUser = "";
     private List<Model> paCheckList;
-    
+
     public void setIndustryID(String industryId) {
         psIndustryCode = industryId;
     }
-    
-    public Model_Check_Release_Master GetMaster(){
+
+    public Model_Check_Release_Master GetMaster() {
         return (Model_Check_Release_Master) poMaster;
     }
-    
-    public Model_Check_Release_Detail GetDetail(){
+
+    public Model_Check_Release_Detail GetDetail() {
         return (Model_Check_Release_Detail) poDetail;
     }
-    
-    public List<Model_Check_Release_Detail> GetDetailList(){
+
+    public List<Model_Check_Release_Detail> GetDetailList() {
         return (List<Model_Check_Release_Detail>) (List<?>) paDetail;
     }
-    
-    public Model_Check_Release_Detail GetDetail(int fnRow){
+
+    public Model_Check_Release_Detail GetDetail(int fnRow) {
         return (Model_Check_Release_Detail) paDetail.get(fnRow);
     }
-    
+
     @SuppressWarnings("unchecked")
     public List<Model_Check_Payments> GetCheckPaymentList() {
         return (List<Model_Check_Payments>) (List<?>) paCheckList;
     }
-    
+
     @Override
     protected JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
@@ -88,21 +86,21 @@ public class CheckRelease extends Transaction{
 
         //remove detail based on ff conditions
         for (int lnCtr = paDetail.size() - 1; lnCtr >= 0; lnCtr--) {
-            
+
             Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
-            
+
             //if null, remove from saving
             if (loDetail == null) {
                 paDetail.remove(lnCtr);
                 continue;
             } else {
-                
+
                 //if source no is empty, remove from saving
                 if (loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
                     paDetail.remove(lnCtr);
                     continue;
                 }
-                
+
                 //if amount is less than zero, remove from saving
                 if (loDetail.CheckPayment().getAmount() <= 0.0) {
                     paDetail.remove(lnCtr);
@@ -110,17 +108,17 @@ public class CheckRelease extends Transaction{
                 }
             }
         }
-        
+
         int lnDetailCount = 0;
         double lnTotalAmount = 0;
-        
+
         //re assign values with new properties after clearing list
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-            
+
             Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
-            
+
             lnDetailCount++;
-                
+
             //assign values to model
             loDetail.setTransactionNo(GetMaster().getTransactionNo());
             loDetail.setEntryNo(lnDetailCount);
@@ -131,15 +129,20 @@ public class CheckRelease extends Transaction{
 
         GetMaster().setEntryNo(lnDetailCount);
         GetMaster().setTransactionTotal(lnTotalAmount);
-        
+
         //initialize date modified
         pdModified = poGRider.getServerDate();
 
+        if (GetDetail(0).CheckPayment().getIndustryID() != null
+                && !GetDetail(0).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = GetDetail(0).CheckPayment().getIndustryID();
+            GetMaster().setIndustryId(psIndustryCode);
+        }
         poJSON.put("result", "success");
         return poJSON;
 
     }
-    
+
     @Override
     protected JSONObject isEntryOkay(String status) {
         psApprovalUser = "";
@@ -151,31 +154,31 @@ public class CheckRelease extends Transaction{
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
         loValidator.setMaster(poMaster);
-        
+
         ArrayList laDetailList = new ArrayList<>(GetDetailList());
         loValidator.setDetail(laDetailList);
 
         poJSON = loValidator.validate();
-        
+
         //if validator requires approval
         if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
-            
+
             //check user rights for approval
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                
+
                 //get approval from approving officer
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 } else {
-                    
+
                     //if not authorized, show message
                     if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
                         poJSON.put("result", "error");
                         poJSON.put("message", "User is not an authorized approving officer.");
                         return poJSON;
                     }
-                    
+
                     //if success, return approving officer user id
                     psApprovalUser = poJSON.get("sUserIDxx") != null
                             ? poJSON.get("sUserIDxx").toString()
@@ -187,18 +190,18 @@ public class CheckRelease extends Transaction{
         }
         return poJSON;
     }
-    
-    public JSONObject initTransaction() throws GuanzonException, SQLException{
+
+    public JSONObject initTransaction() throws GuanzonException, SQLException {
         SOURCE_CODE = "Dlvr";
-        
+
         poMaster = new CheckModels(poGRider).CheckReleaseMaster();
         poDetail = new CheckModels(poGRider).CheckReleaseDetail();
         paDetail = new ArrayList<>();
         paCheckList = new ArrayList<>();
-        
+
         return super.initialize();
     }
-    
+
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }
@@ -209,21 +212,21 @@ public class CheckRelease extends Transaction{
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
- 
+
         GetMaster().setIndustryId(psIndustryCode);
         return poJSON;
     }
-    
+
     public JSONObject UpdateTransaction() {
         poJSON = new JSONObject();
-        
+
         //validate status if already released
         if (CheckReleaseStatus.RELEASED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already released.");
             return poJSON;
         }
-        
+
         //validate tranaction if already void
         if (CheckReleaseStatus.VOID.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
@@ -237,7 +240,7 @@ public class CheckRelease extends Transaction{
             poJSON.put("message", "Transaction was already cancelled.");
             return poJSON;
         }
-        
+
         //add new record, as extra row
         Model_Check_Release_Detail newDetail = new CheckModels(poGRider).CheckReleaseDetail();
         newDetail.newRecord();
@@ -251,10 +254,10 @@ public class CheckRelease extends Transaction{
 
         return updateTransaction();
     }
-    
+
     public JSONObject CloseTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        
+
         //edit mode should be in ready, for update of transaction
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -284,13 +287,13 @@ public class CheckRelease extends Transaction{
                 "ConfirmTransaction",
                 CheckReleaseStatus.CONFIRMED,
                 false, true);
-        
+
         //check result, return if error
         if ("error".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        
+
         //if success, get details
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
@@ -298,7 +301,7 @@ public class CheckRelease extends Transaction{
             //get source no, if not empty
             if (loDetail.getSourceNo() != null) {
                 if (!loDetail.getSourceNo().isEmpty()) {
-                    
+
                     //update detail's check payment
                     poJSON = new JSONObject();
                     poJSON = ReleaseCheckPaymentTransaction(lnCtr);
@@ -315,32 +318,32 @@ public class CheckRelease extends Transaction{
 
         //reload transaction
         openTransaction(GetMaster().getTransactionNo());
-        
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction confirmed successfully.");
         return poJSON;
     }
-    
+
     public JSONObject ReleaseCheckPaymentTransaction(int EntryNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        
+
         //initialize check payment detail properties
         Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(EntryNo);
         Model_Check_Payments loCheckPayment = loDetail.CheckPayment();
-        
+
         //allow to update properties, if transaction is ready for update
         if (loCheckPayment.getEditMode() == EditMode.READY) {
-            
+
             //set transaction on update
             loCheckPayment.updateRecord();
-            
+
             //set properties for record
             loCheckPayment.setLocation("3");
             loCheckPayment.setReleased("1");
             loCheckPayment.setModifiedDate(poGRider.getServerDate());
             loCheckPayment.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-            
+
             //save record
             poJSON = loCheckPayment.saveRecord();
 
@@ -352,7 +355,7 @@ public class CheckRelease extends Transaction{
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     public JSONObject VoidTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
@@ -396,7 +399,7 @@ public class CheckRelease extends Transaction{
             poGRider.rollbackTrans();
             return poJSON;
         }
-        
+
         //get detail
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
@@ -404,7 +407,7 @@ public class CheckRelease extends Transaction{
             //validate detail's source no
             if (loDetail.getSourceNo() != null) {
                 if (!loDetail.getSourceNo().isEmpty()) {
-                    
+
                     //update detail's check payment transaction
                     poJSON = new JSONObject();
                     poJSON = ReturnCheckPaymentTransaction(lnCtr);
@@ -420,31 +423,31 @@ public class CheckRelease extends Transaction{
 
         //reload transaction
         openTransaction(GetMaster().getTransactionNo());
-        
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction voided successfully.");
 
         return poJSON;
     }
-    
+
     public JSONObject ReturnCheckPaymentTransaction(int EntryNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        
+
         //get check detail
         Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(EntryNo);
         Model_Check_Payments loCheckPayment = loDetail.CheckPayment();
-        
+
         //update transaction, if in ready mode
         if (loCheckPayment.getEditMode() == EditMode.READY) {
-            
+
             //initialize record update
             loCheckPayment.updateRecord();
-            
+
             //set check payment properties
             loCheckPayment.setBranchCode(poGRider.getBranchCode());
             loCheckPayment.setLocation("1");
-            
+
             //save transaction
             poJSON = loCheckPayment.saveRecord();
 
@@ -508,7 +511,7 @@ public class CheckRelease extends Transaction{
             //validate detail's source no
             if (loDetail.getSourceNo() != null) {
                 if (!loDetail.getSourceNo().isEmpty()) {
-                    
+
                     //update detail's check payment transaction
                     poJSON = new JSONObject();
                     poJSON = ReturnCheckPaymentTransaction(lnCtr);
@@ -528,30 +531,30 @@ public class CheckRelease extends Transaction{
 
         return poJSON;
     }
-    
-    public JSONObject SaveTransaction()  throws SQLException, GuanzonException, CloneNotSupportedException{
+
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         poJSON = saveTransaction();
-    
+
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         OpenTransaction(GetMaster().getTransactionNo());
         return poJSON;
     }
-    
+
     public JSONObject SaveCheckPaymentTransaction(int EntryNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        
+
         Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(EntryNo);
         Model_Check_Payments loCheckPayment = (Model_Check_Payments) loDetail.CheckPayment();
-        
+
         if (loCheckPayment.getEditMode() == EditMode.READY) {
             loCheckPayment.updateRecord();
             loCheckPayment.setLocation("3");
             loCheckPayment.setModifiedDate(poGRider.getServerDate());
             loCheckPayment.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-            
+
             poJSON = loCheckPayment.saveRecord();
 
             if (!"success".equals((String) poJSON.get("result"))) {
@@ -562,7 +565,7 @@ public class CheckRelease extends Transaction{
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
     public JSONObject ReleaseTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
@@ -580,7 +583,7 @@ public class CheckRelease extends Transaction{
             poJSON.put("message", "Transaction was already released.");
             return poJSON;
         }
-        
+
         //check status if not confirmed
         if (!CheckReleaseStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
@@ -603,7 +606,7 @@ public class CheckRelease extends Transaction{
                 "PostTransaction",
                 CheckReleaseStatus.RELEASED,
                 false, true);
-        
+
         //check result
         if ("error".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
@@ -613,41 +616,41 @@ public class CheckRelease extends Transaction{
 
         //open transactino record
         openTransaction(GetMaster().getTransactionNo());
-        
+
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction posted successfully.");
 
         return poJSON;
     }
-    
-    public JSONObject SearchTransaction(String value, boolean byExact){
-        
-        try{
+
+    public JSONObject SearchTransaction(String value, boolean byExact) {
+
+        try {
             String lsSQL = CheckReleaseRecords.CheckReleaseMaster();
-            
+
             //filter search with industry, if set
             if (!psIndustryCode.isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, "sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
             }
-            
+
             //filter search with branchcode, using transaction no code
             lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(sTransNox,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-            
+
             //filter search with uncancelled transactions only
             lsSQL = MiscUtil.addCondition(lsSQL, "cTranStat = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN) + " OR cTranStat = " + SQLUtil.toSQL(CheckReleaseStatus.CONFIRMED));
-            
+
             System.out.print(lsSQL);
-            
+
             poJSON = new JSONObject();
-            poJSON = ShowDialogFX.Search(poGRider, 
-                    lsSQL, 
-                    value, 
-                    "Transaction No»Transaction Date»Received By", 
-                    "sTransNox»dTransact»sReceived", 
-                    "sTransNox»sReceived", 
+            poJSON = ShowDialogFX.Browse(poGRider,
+                    lsSQL,
+                    value,
+                    "Transaction No»Transaction Date»Received By",
+                    "sTransNox»dTransact»sReceived",
+                    "sTransNox»sReceived",
                     byExact ? 0 : 1);
-            
+
             if (poJSON != null) {
                 return openTransaction((String) poJSON.get("sTransNox"));
             } else {
@@ -657,8 +660,8 @@ public class CheckRelease extends Transaction{
                 return poJSON;
 
             }
-            
-        }catch(SQLException | GuanzonException | CloneNotSupportedException ex){
+
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckRelease.class
                     .getName()).log(Level.SEVERE, null, ex);
             poJSON = new JSONObject();
@@ -667,31 +670,31 @@ public class CheckRelease extends Transaction{
             return poJSON;
         }
     }
-    
-    public JSONObject SearchTransactionPosting(String value, boolean byExact){
-        
-        try{
+
+    public JSONObject SearchTransactionPosting(String value, boolean byExact) {
+
+        try {
             String lsSQL = CheckReleaseRecords.CheckReleaseMaster();
-            
+
             //filter search with industry, if set
             if (!psIndustryCode.isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, "sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
             }
-            
+
             //filter search with branchcode, using transaction no code
             lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(sTransNox,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
-            
+
             System.out.print(lsSQL);
-            
+
             poJSON = new JSONObject();
-            poJSON = ShowDialogFX.Search(poGRider, 
-                    lsSQL, 
-                    value, 
-                    "Transaction No»Transaction Date»Received By", 
-                    "sTransNox»dTransact»sReceived", 
-                    "sTransNox»sReceived", 
+            poJSON = ShowDialogFX.Search(poGRider,
+                    lsSQL,
+                    value,
+                    "Transaction No»Transaction Date»Received By",
+                    "sTransNox»dTransact»sReceived",
+                    "sTransNox»sReceived",
                     byExact ? 0 : 1);
-            
+
             if (poJSON != null) {
                 return openTransaction((String) poJSON.get("sTransNox"));
             } else {
@@ -701,8 +704,8 @@ public class CheckRelease extends Transaction{
                 return poJSON;
 
             }
-            
-        }catch(SQLException | GuanzonException | CloneNotSupportedException ex){
+
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
             Logger.getLogger(CheckRelease.class
                     .getName()).log(Level.SEVERE, null, ex);
             poJSON = new JSONObject();
@@ -711,41 +714,46 @@ public class CheckRelease extends Transaction{
             return poJSON;
         }
     }
-    
-    public JSONObject SearchCheckTransaction(String fsValue, boolean byExact, boolean byCode){
-        
-        try{
+
+    public JSONObject SearchCheckTransaction(String fsValue, boolean byExact, boolean byCode) {
+
+        try {
             String lsSQL = CheckReleaseRecords.CheckPaymentRecord();
 
-            if (!psIndustryCode.isEmpty()) {
-                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//            if (!psIndustryCode.isEmpty()) {
+//                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//            }
+            if (GetDetail(1).CheckPayment().getIndustryID() != null
+                    && !GetDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(GetDetail(1).CheckPayment().getIndustryID()));
+                psIndustryCode = GetDetail(1).CheckPayment().getIndustryID();
+                GetMaster().setIndustryId(psIndustryCode);
             }
-
             //filter search with unreleased checks
             lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN));
-            
+
             //filter search with check that has active location
             lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-            
+
             //filter search with uncancelled checks
             lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat <> " + SQLUtil.toSQL(CheckReleaseStatus.CANCELLED));
-            
+
             poJSON = new JSONObject();
-            poJSON = ShowDialogFX.Search(poGRider, 
-                    lsSQL, 
-                    fsValue, 
-                    "Transaction No»Transaction Date»Check No»Check Amt", 
-                    "a.sTransNox»a.dTransact»a.sCheckNox»a.nAmountxx", 
-                    "a.sTransNox»e.sPayeeNme»a.sCheckNox", 
+            poJSON = ShowDialogFX.Browse(poGRider,
+                    lsSQL,
+                    fsValue,
+                    "Transaction No»Transaction Date»Check No»Check Amt",
+                    "a.sTransNox»a.dTransact»a.sCheckNox»a.nAmountxx",
+                    "a.sTransNox»e.sPayeeNme»a.sCheckNox",
                     byExact ? (byCode ? 0 : 1) : 2);
-            
+
             if (poJSON != null) {
-                
+
                 paCheckList.clear();
-                
+
                 Model_Check_Payments loBrowseChecks
-                    = new CashflowModels(poGRider).CheckPayments();
-                
+                        = new CashflowModels(poGRider).CheckPayments();
+
                 poJSON = loBrowseChecks.openRecord((String) poJSON.get("sTransNox"));
                 if ("success".equals((String) poJSON.get("result"))) {
                     paCheckList.add((Model) loBrowseChecks);
@@ -758,8 +766,8 @@ public class CheckRelease extends Transaction{
                 return poJSON;
 
             }
-        
-        }catch(SQLException | GuanzonException ex){
+
+        } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(CheckRelease.class
                     .getName()).log(Level.SEVERE, null, ex);
             poJSON = new JSONObject();
@@ -768,41 +776,47 @@ public class CheckRelease extends Transaction{
             return poJSON;
         }
     }
-    
+
     public JSONObject LoadCheckListByDate(String fsDateFrom, String fsDateThru)
             throws SQLException, GuanzonException, CloneNotSupportedException {
 
         String lsSQL = CheckReleaseRecords.CheckPaymentRecord();
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
+//    
+        if (GetDetail(0).CheckPayment().getIndustryID() != null
+                && !GetDetail(0).CheckPayment().getIndustryID().isEmpty()) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(GetDetail(0).CheckPayment().getIndustryID()));
+            psIndustryCode = GetDetail(0).CheckPayment().getIndustryID();
+            GetMaster().setIndustryId(psIndustryCode);
         }
-    
         //filter search with unreleased checks
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN));
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN));
 
         //filter search with check that has active location
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
 
         //filter search with uncancelled checks
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat <> " + SQLUtil.toSQL(CheckReleaseStatus.CANCELLED));
-            
+
         //filter with date range
         if (!fsDateFrom.isEmpty() && !fsDateThru.isEmpty()) {
             lsSQL = MiscUtil.addCondition(lsSQL, " a.dCheckDte BETWEEN " + SQLUtil.toSQL(fsDateFrom) + "AND "
                     + SQLUtil.toSQL(fsDateThru));
-        }else{
-            
+        } else {
+
             if (!fsDateFrom.isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, " a.dCheckDte = " + SQLUtil.toSQL(fsDateFrom));
             }
-            
+
             if (!fsDateThru.isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, " a.dCheckDte = " + SQLUtil.toSQL(fsDateThru));
             }
-            
+
         }
-        
+
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         System.out.println("Load Transaction list query is " + lsSQL);
 
@@ -822,7 +836,7 @@ public class CheckRelease extends Transaction{
             if (processedTrans.contains(transNo)) {
                 continue;
             }
-            
+
             Model_Check_Payments loBrowseChecks
                     = new CashflowModels(poGRider).CheckPayments();
 
@@ -841,19 +855,18 @@ public class CheckRelease extends Transaction{
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    public JSONObject LoadCheckTransaction(String fsTransNox, int fnEntryNo){
-        
-        try{
-            
+
+    public JSONObject LoadCheckTransaction(String fsTransNox, int fnEntryNo) {
+        try {
+
             //do not allow empty transaction no
-            if(fsTransNox.isEmpty()){
+            if (fsTransNox.isEmpty()) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Transaction no is empty!");
 
                 return poJSON;
             }
-            
+
             //do not allow negative number
             if (fnEntryNo < 0) {
                 poJSON.put("result", "error");
@@ -861,10 +874,10 @@ public class CheckRelease extends Transaction{
 
                 return poJSON;
             }
-            
+
             //if no entries from list, add new entry
             if (paDetail.size() <= 0 || fnEntryNo == paDetail.size()) {
-                
+
                 //add new record, as extra row
                 Model_Check_Release_Detail newDetail = new CheckModels(poGRider).CheckReleaseDetail();
                 newDetail.newRecord();
@@ -877,22 +890,22 @@ public class CheckRelease extends Transaction{
                 paDetail.add(newDetail);
 
             }
-            
+
             Model_Check_Payments loBrowseChecks
-                        = new CashflowModels(poGRider).CheckPayments();
+                    = new CashflowModels(poGRider).CheckPayments();
 
             poJSON = loBrowseChecks.openRecord(fsTransNox);
 
             //if record successfully loaded
             if ("success".equals((String) poJSON.get("result"))) {
-                
+
                 //check array stream if check's transaction number already exists
                 for (int lnExist = 0; lnExist < paDetail.size(); lnExist++) {
-                    
+
                     //get details record from list
                     Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnExist);
                     if (loDetail.getSourceNo() != null) {
-                        
+
                         //validate check added by source no, do not allow
                         if (loDetail.getSourceNo().equals(fsTransNox)) {
                             poJSON = new JSONObject();
@@ -902,10 +915,10 @@ public class CheckRelease extends Transaction{
                             return poJSON;
                         }
                     }
-                    
+
                     //if entry no of detail matches the selected row index
                     if (loDetail.getEntryNo() == fnEntryNo) {
-                        
+
                         //update source no and source code for detail
                         loDetail.setSourceCD(loBrowseChecks.getSourceCode());
                         loDetail.setSourceNo(loBrowseChecks.getTransactionNo());
@@ -915,16 +928,16 @@ public class CheckRelease extends Transaction{
                         return poJSON;
                     }
                 }
-                
+
                 poJSON = new JSONObject();
-                        poJSON.put("result", "success");
-                        return poJSON;
+                poJSON.put("result", "success");
+                return poJSON;
 
             } else {
                 return poJSON;
             }
-            
-        }catch(SQLException | GuanzonException ex){
+
+        } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(CheckRelease.class
                     .getName()).log(Level.SEVERE, null, ex);
             poJSON = new JSONObject();
@@ -933,8 +946,8 @@ public class CheckRelease extends Transaction{
             return poJSON;
         }
     }
-    
-   public JSONObject PrintRecord() throws SQLException, JRException, CloneNotSupportedException, GuanzonException {
+
+    public JSONObject PrintRecord() throws SQLException, JRException, CloneNotSupportedException, GuanzonException {
 
         poJSON = new JSONObject();
 
@@ -944,7 +957,7 @@ public class CheckRelease extends Transaction{
             poJSON.put("message", "Transaction was not confirmed.");
             return poJSON;
         }
-        
+
         if (CheckReleaseStatus.RELEASED.equals((String) poMaster.getValue("cTranStat"))) { //should be unreleased
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already released.");
@@ -973,7 +986,7 @@ public class CheckRelease extends Transaction{
             return poJSON;
 
         }
-        
+
         //open transaction record
         poJSON = OpenTransaction(GetMaster().getTransactionNo());
         if ("error".equals((String) poJSON.get("result"))) {
@@ -983,7 +996,7 @@ public class CheckRelease extends Transaction{
 
         //check print status if active
         if (((Model_Check_Release_Master) poMaster).isPrintedStatus()) {
-            
+
             //check entry
             poJSON = isEntryOkay(CheckReleaseStatus.CONFIRMED);
             if ("error".equals((String) poJSON.get("result"))) {
@@ -1008,23 +1021,23 @@ public class CheckRelease extends Transaction{
             public void onReportPrint() {
                 System.out.println("Report printing...");
                 try {
-                    
+
                     //open transaction record
                     poJSON = OpenTransaction(GetMaster().getTransactionNo());
                     if ("error".equals((String) poJSON.get("result"))) {
                         System.out.println("Print Record open transaction : " + (String) poJSON.get("message"));
                         return;
                     }
-                    
+
                     //check print status
                     if (!GetMaster().isPrintedStatus()) {
-                        
+
                         //if not active, print transaction
-                        if (!isJSONSuccess(PrintTransaction(), "Print Record","Initialize Record Print! ")) {
+                        if (!isJSONSuccess(PrintTransaction(), "Print Record", "Initialize Record Print! ")) {
                             return;
                         }
                     }
-                    
+
                     //if status is open, close transaction
                     if (GetMaster().getTransactionStatus().equals(CheckTransferStatus.OPEN)) {
                         if (!isJSONSuccess(CloseTransaction(), "Print Record",
@@ -1042,7 +1055,7 @@ public class CheckRelease extends Transaction{
 
             @Override
             public void onReportExport() {
-                
+
                 System.out.println("Report exported.");
                 if (!isJSONSuccess(poReportJasper.exportReportbyExcel(), "Export Record",
                         "Initialize Record Export! ")) {
@@ -1057,7 +1070,7 @@ public class CheckRelease extends Transaction{
 
         }
         );
-        
+
         //add Jasper Parameter
         poReportJasper.addParameter("BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
@@ -1067,7 +1080,7 @@ public class CheckRelease extends Transaction{
         poReportJasper.addParameter("Remarks", GetMaster().getRemarks());
         poReportJasper.addParameter("ReceivedBy", "Sheryl Rabanal");
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
-        
+
         //set watermark based on print status, "Print" or "Reprint"
         if (GetMaster().isPrintedStatus()) {
             poReportJasper.addParameter("watermarkImagePath", poGRider.getReportPath() + "images\\reprint.png");
@@ -1082,7 +1095,7 @@ public class CheckRelease extends Transaction{
         //process by ResultSet
         String lsSQL = CheckReleaseRecords.PrintRecord();
         lsSQL = MiscUtil.addCondition(lsSQL, "a.sTransNox = " + SQLUtil.toSQL(GetMaster().getTransactionNo()));
-        
+
         System.out.println(
                 "Print Data Query :" + lsSQL);
 
@@ -1093,12 +1106,12 @@ public class CheckRelease extends Transaction{
         poReportJasper.isWithExport(false);
         poReportJasper.isWithExportPDF(false);
         poReportJasper.willExport(true);
-        
+
         return poReportJasper.generateReport();
 
     }
-   
-   private JSONObject PrintTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+
+    private JSONObject PrintTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
         //open transaction
@@ -1128,7 +1141,7 @@ public class CheckRelease extends Transaction{
         Long lnResult = poGRider.executeQuery(lsSQL,
                 poMaster.getTable(),
                 poGRider.getBranchCode(), "", "");
-        
+
         //check result 
         if (lnResult <= 0L) {
             poGRider.rollbackTrans();
@@ -1147,8 +1160,8 @@ public class CheckRelease extends Transaction{
 
         return poJSON;
     }
-   
-   private boolean isJSONSuccess(JSONObject loJSON, String module, String fsModule) {
+
+    private boolean isJSONSuccess(JSONObject loJSON, String module, String fsModule) {
         String result = (String) loJSON.get("result");
         if ("error".equals(result)) {
             String message = (String) loJSON.get("message");
@@ -1169,5 +1182,5 @@ public class CheckRelease extends Transaction{
         return true;
 
     }
-   
+
 }
