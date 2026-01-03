@@ -343,54 +343,60 @@ public class Journal extends Transaction {
         poJSON = object.searchRecord(value, byCode, industryCode, glCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-            //TODO 
-//            poJSON = checkExistingAcctCode(row,object.getModel().getAccountCode());
-//            if ("error".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
-//            row = (int) poJSON.get("row");
+            poJSON = checkExistingAcctCode(row,object.getModel().getAccountCode());
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            row = (int) poJSON.get("row");
             Detail(row).setAccountCode(object.getModel().getAccountCode());
         }
 
         return poJSON;
     }
     
-    //TODO
-//    public JSONObject checkExistingAcctCode(int fnRow, String fsAcctCode){
-//        poJSON = new JSONObject();
-//        poJSON.put("row", fnRow);
-//        try {
-//            int lnRow = 0;
-//            for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
-//                if(Detail(lnCtr).isReverse()){
-//                    lnRow++;
-//                }
-//                if (lnCtr != fnRow) {
-//                    if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
-//                        if(!Detail(lnCtr).isReverse()){
-//                            Detail(lnCtr).isReverse(true);
-//                            poJSON.put("row", lnCtr);
-//                            break;
-//                        } else {
-//                            poJSON.put("result", "error");
-//                            poJSON.put("message", Detail(lnCtr).Account_Chart().getDescription() + " already exists at row "+ lnRow );
-//                            poJSON.put("row", lnCtr);
-//                            return poJSON;
-//                        }
-//                    }
-//                }
-//            }
-//        } catch (SQLException | GuanzonException ex) {
-//            Logger.getLogger(Journal.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-//            poJSON.put("result", "error");
-//            poJSON.put("message", MiscUtil.getException(ex));
-//            return poJSON;
-//        }
-//        
-//        poJSON.put("result", "success");
-//        poJSON.put("message", "success");
-//        return poJSON;
-//    }
+    public JSONObject checkExistingAcctCode(int fnRow, String fsAcctCode){
+        poJSON = new JSONObject();
+        poJSON.put("row", fnRow);
+        try {
+            int lnRow = 0;
+            for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
+                if(Detail(lnCtr).getCreditAmount() > 0.0000 || Detail(lnCtr).getDebitAmount() > 0.0000){
+                    lnRow++;
+                }
+                if (lnCtr != fnRow) {
+                    if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
+                        if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){
+                            Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
+                            loObject.initialize();
+                            poJSON = loObject.openRecord(Detail(lnCtr).getTransactionNo(), lnCtr);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                poJSON.put("row", fnRow);
+                                return poJSON;
+                            }
+                            Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
+                            Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
+                            poJSON.put("row", lnCtr);
+                            break;
+                        } else {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", Detail(lnCtr).Account_Chart().getDescription() + " already exists at row "+ lnRow );
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
 
     /*Search Master References*/
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
@@ -471,21 +477,26 @@ public class Journal extends Transaction {
             if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
                 Detail().remove(lnCtr);
             } else {
-                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
-                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
-                        Detail().remove(lnCtr);
-                    }
-                }
+//                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
+//                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
+//                        Detail().remove(lnCtr);
+//                    }
+//                }
             }
             lnCtr--;
         }
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())
-                && (Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-                AddDetail();
-                Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-            }
+            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())){
+                if(((Detail(getDetailCount() - 1).getDebitAmount() <= 0.0000 && Detail(getDetailCount() - 1).getCreditAmount() <= 0.0000)
+                    && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || 
+                    ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
+                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW) || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)){
+                    AddDetail();
+                    Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+                } 
+            }  
         }
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
