@@ -464,6 +464,35 @@ public class Journal extends Transaction {
 
         return paDetail.size();
     }
+    
+    public void ReloadDetail() throws CloneNotSupportedException, SQLException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
+                Detail().remove(lnCtr);
+            } else {
+                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
+                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
+                        Detail().remove(lnCtr);
+                    }
+                }
+            }
+            lnCtr--;
+        }
+        if ((getDetailCount() - 1) >= 0) {
+            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())
+                && (Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+                AddDetail();
+                Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
+        }
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+            Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    
+    }
 
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException {
