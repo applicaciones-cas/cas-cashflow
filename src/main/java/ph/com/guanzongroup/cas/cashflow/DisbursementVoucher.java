@@ -1818,25 +1818,55 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+//    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
+//        int lnCtr = Journal().getDetailCount() - 1;
+//        while (lnCtr >= 0) {
+//            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+//                Journal().Detail().remove(lnCtr);
+//            }
+//            lnCtr--;
+//        }
+//        if ((Journal().getDetailCount() - 1) >= 0) {
+//            if (Journal().Detail(Journal().getDetailCount() - 1).getAccountCode() != null
+//                    && !"".equals(Journal().Detail(Journal().getDetailCount() - 1).getAccountCode())) {
+//                Journal().AddDetail();
+//                Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//            }
+//        }
+//        if ((Journal().getDetailCount() - 1) < 0) {
+//            Journal().AddDetail();
+//            Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//        }
+//    }
+//    
+//    
     public void ReloadJournal() throws CloneNotSupportedException, SQLException{
         int lnCtr = Journal().getDetailCount() - 1;
         while (lnCtr >= 0) {
             if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
                 Journal().Detail().remove(lnCtr);
+            } else {
+                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
+                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
+                        Journal().Detail().remove(lnCtr);
+                    }
+                }
             }
             lnCtr--;
         }
         if ((Journal().getDetailCount() - 1) >= 0) {
-            if (Journal().Detail(Journal().getDetailCount() - 1).getAccountCode() != null
-                    && !"".equals(Journal().Detail(Journal().getDetailCount() - 1).getAccountCode())) {
+            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
+                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
                 Journal().AddDetail();
-                Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
             }
         }
         if ((Journal().getDetailCount() - 1) < 0) {
             Journal().AddDetail();
-            Journal().Detail(Journal().getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
         }
+    
     }
     
     public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
@@ -2982,11 +3012,17 @@ public class DisbursementVoucher extends Transaction {
             if(Master().getIndustryID() == null || "".equals(Master().getIndustryID())){
                 Master().setIndustryID(fsIndustryId);
             } else {
-                if (!Master().getIndustryID().equals(fsIndustryId)) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Selected transaction industry must be equal to current industry in disbursement.");
-                    poJSON.put("row", 0);
-                    return poJSON;
+                if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
+                    && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+                    && getDetailCount() <= 1){
+                    Master().setIndustryID(fsIndustryId);
+                } else {
+                    if (!Master().getIndustryID().equals(fsIndustryId)) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Selected transaction industry must be equal to current industry in disbursement.");
+                        poJSON.put("row", 0);
+                        return poJSON;
+                    }
                 }
             }
             System.out.println("Industry ID : " + Master().getIndustryID());
@@ -3189,18 +3225,18 @@ public class DisbursementVoucher extends Transaction {
                     } else {
                         System.out.println(jsonmaster.toJSONString());
                     }
-
-                    //Journa Entry Master
-                    poJournal.Master().setAccountPerId("");
-                    poJournal.Master().setIndustryCode(Master().getIndustryID());
-                    poJournal.Master().setBranchCode(Master().getBranchCode());
-                    poJournal.Master().setDepartmentId(poGRider.getDepartment());
-                    poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
-                    poJournal.Master().setCompanyId(Master().getCompanyID());
-                    poJournal.Master().setSourceCode(getSourceCode());
-                    poJournal.Master().setSourceNo(Master().getTransactionNo());
-
                 }
+
+                //Journa Entry Master
+                poJournal.Master().setAccountPerId("");
+                poJournal.Master().setIndustryCode(Master().getIndustryID());
+                poJournal.Master().setBranchCode(Master().getBranchCode());
+                poJournal.Master().setDepartmentId(poGRider.getDepartment());
+                poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
+                poJournal.Master().setCompanyId(Master().getCompanyID());
+                poJournal.Master().setSourceCode(getSourceCode());
+                poJournal.Master().setSourceNo(Master().getTransactionNo());
+                
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
@@ -3767,7 +3803,8 @@ public class DisbursementVoucher extends Transaction {
                 + "Branch b "
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
-                + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
+                + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' "
+                + "AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
@@ -3797,6 +3834,7 @@ public class DisbursementVoucher extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
+                + "AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
@@ -3825,6 +3863,7 @@ public class DisbursementVoucher extends Transaction {
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
+                + "AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
