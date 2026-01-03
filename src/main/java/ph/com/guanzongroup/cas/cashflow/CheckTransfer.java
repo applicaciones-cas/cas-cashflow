@@ -224,6 +224,11 @@ public class CheckTransfer extends Transaction {
             getMaster().setTransactionStatus(CheckTransferStatus.OPEN);
         }
         pdModified = poGRider.getServerDate();
+        if (getDetail(1).CheckPayment().getIndustryID() != null
+                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+            getMaster().setIndustryId(psIndustryCode);
+        }
 
         poJSON.put("result", "success");
         return poJSON;
@@ -738,22 +743,22 @@ public class CheckTransfer extends Transaction {
         Model_Check_Payments loBrowse = new CashflowModels(poGRider).CheckPayments();
         loBrowse.initialize();
         String lsSQL = CheckTransferRecords.CheckPaymentRecord();
-
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-        }
+//
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
 
         lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckTransferStatus.OPEN));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat = " + SQLUtil.toSQL(CheckTransferStatus.CONFIRMED));
 
         poJSON = new JSONObject();
-        poJSON = ShowDialogFX.Search(poGRider,
+        poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 value,
                 "Transaction No»Date»Check No.»sActNumbr»sActNamex»sBankName",
                 "sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
-                "sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
+                "a.sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
                 byCode ? 0 : 2);
 
         if (poJSON != null) {
@@ -905,15 +910,23 @@ public class CheckTransfer extends Transaction {
         initSQL();
         String lsSQL = CheckTransferRecords.CheckPaymentRecord();
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+        //only retrieve current selected Industry 
+        if (getDetail(1).CheckPayment().getIndustryID() != null
+                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(getDetail(1).CheckPayment().getIndustryID()));
+            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+            getMaster().setIndustryId(psIndustryCode);
         }
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
+
         if (poBank.getBankID() != null) {
             if (!poBank.getBankID().isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, " a.sBankIDxx = " + SQLUtil.toSQL(poBank.getBankID()));
             }
         }
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckTransferStatus.OPEN));
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckTransferStatus.OPEN));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat = " + SQLUtil.toSQL(CheckTransferStatus.CONFIRMED));
         if (!fsDateFrom.isEmpty()) {
@@ -983,10 +996,9 @@ public class CheckTransfer extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-        }
-
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
         lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(a.sTransNox,4) =" + SQLUtil.toSQL(poGRider.getBranchCode()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         System.out.println("Load Transaction list query is " + lsSQL);

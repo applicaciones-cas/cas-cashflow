@@ -39,7 +39,8 @@ public class CheckDepositRecords {
                 + "  c.sActNamex sActNamex"
                 + " FROM Check_Payments a"
                 + "  LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx"
-                + "  LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID";
+                + "  LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID"
+                + "  LEFT JOIN Disbursement_Master d ON a.sTransNox = d.sSourceNo";
 
         return lsSQL;
     }

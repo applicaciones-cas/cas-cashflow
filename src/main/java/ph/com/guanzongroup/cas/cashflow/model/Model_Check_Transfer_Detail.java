@@ -38,7 +38,7 @@ public class Model_Check_Transfer_Detail extends Model {
             poEntity.updateObject("nEntryNox", 1);
             poEntity.updateNull("sSourceNo");
             poEntity.updateNull("sSourceCd");
-            poEntity.updateString("cRecieved", "0");
+            poEntity.updateString("cReceived", "0");
             ID = poEntity.getMetaData().getColumnLabel(1);
             ID2 = poEntity.getMetaData().getColumnLabel(2);
 
@@ -105,19 +105,19 @@ public class Model_Check_Transfer_Detail extends Model {
 
     //cReceived
     public JSONObject setReceived(String received) {
-        return setValue("cRecieved", received);
+        return setValue("cReceived", received);
     }
 
     public String getReceived() {
-        return (String) getValue("cRecieved");
+        return (String) getValue("cReceived");
     }
 
     public boolean isReceived() {
-        return RecordStatus.ACTIVE.equals(getValue("cRecieved"));
+        return RecordStatus.ACTIVE.equals(getValue("cReceived"));
     }
 
     public JSONObject setReceived(boolean received) {
-        return setValue("cRecieved", received == true ? "1" : "0");
+        return setValue("cReceived", received == true ? "1" : "0");
     }
 
     //dModified

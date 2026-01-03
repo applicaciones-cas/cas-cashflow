@@ -233,6 +233,13 @@ public class CheckDeposit extends Transaction {
             getMaster().setTransactionStatus(CheckDepositStatus.OPEN);
         }
         pdModified = poGRider.getServerDate();
+        
+        //set the industry based on detail
+        if (getDetail(1).CheckPayment().getIndustryID() != null
+                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+            getMaster().setIndustryId(psIndustryCode);
+        }
 
         poJSON.put("result", "success");
         return poJSON;
@@ -631,7 +638,7 @@ public class CheckDeposit extends Transaction {
             }
 
             System.out.println("Search Query is = " + lsSQL);
-            poJSON = ShowDialogFX.Search(poGRider,
+            poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     value,
                     "Transaction No»Bank Account No»Date",
@@ -718,21 +725,21 @@ public class CheckDeposit extends Transaction {
         loBrowse.initialize();
         String lsSQL = CheckDepositRecords.CheckPaymentRecord();
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-        }
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
 
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckDepositStatus.OPEN));
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckDepositStatus.OPEN));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat <> " + SQLUtil.toSQL(CheckDepositStatus.CANCELLED));
 
         poJSON = new JSONObject();
-        poJSON = ShowDialogFX.Search(poGRider,
+        poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 value,
                 "Transaction No»Date»Check No.»sActNumbr»sActNamex»sBankName",
                 "sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
-                "sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
+                "a.sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
                 byCode ? 0 : 2);
 
         if (poJSON != null) {
@@ -905,15 +912,22 @@ public class CheckDeposit extends Transaction {
         initSQL();
         String lsSQL = CheckDepositRecords.CheckPaymentRecord();
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
+        //only retrieve current selected Industry 
+        if (getDetail(1).CheckPayment().getIndustryID() != null
+                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(getDetail(1).CheckPayment().getIndustryID()));
+            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+            getMaster().setIndustryId(psIndustryCode);
         }
         if (poBank.getBankID() != null) {
             if (!poBank.getBankID().isEmpty()) {
                 lsSQL = MiscUtil.addCondition(lsSQL, " a.sBankIDxx = " + SQLUtil.toSQL(poBank.getBankID()));
             }
         }
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.cReleased = " + SQLUtil.toSQL(CheckDepositStatus.OPEN));
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckDepositStatus.OPEN));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat = " + SQLUtil.toSQL(CheckDepositStatus.CONFIRMED));
         if (!fsDateFrom.isEmpty()) {
@@ -983,10 +997,9 @@ public class CheckDeposit extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-        }
-
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
         lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(a.sTransNox,4) =" + SQLUtil.toSQL(poGRider.getBranchCode()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         System.out.println("Load Transaction list query is " + lsSQL);
@@ -1257,6 +1270,7 @@ public class CheckDeposit extends Transaction {
         DocumentMapping loDocumentMapping;
         loDocumentMapping = new CashflowControllers(poGRider, null).DocumentMapping();
         loDocumentMapping.InitTransaction();
+        System.out.println("Mapping Doc Code = " + getMaster().BankAccount().Banks().getBankCode() + "ChkDS");
         loDocumentMapping.OpenTransaction(getMaster().BankAccount().Banks().getBankCode() + "ChkDS");
 
         // Root container for all voucher text nodes

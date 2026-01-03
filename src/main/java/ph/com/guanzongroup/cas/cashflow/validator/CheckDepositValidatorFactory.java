@@ -6,23 +6,28 @@ public class CheckDepositValidatorFactory {
 
     public static GValidator make(String industryId) {
         switch (industryId) {
-            case "01": //Mobile Phone
+            case "00": //Mobile Phone
                 return new CheckDeposit_MP();
-            case "02": //Motorcycle
+            case "01": //Motorcycle
                 return new CheckDeposit_MC();
-            case "03": //Vehicle
+            case "02": //Vehicle
+            case "05":
+            case "06":
                 return new CheckDeposit_Car();
-            case "04": //Monarch
+            case "03": //Monarch
                 return new CheckDeposit_Monarch();
-            case "05": //Los Pedritos
+            case "04": //Los Pedritos
                 return new CheckDeposit_LP();
-            case "06": //General
+            case "07": //Guanzon Services Office
+            case "08": //Main Office
+            case "09": //General Purchases
+            case "10": //Engineering
                 return new CheckDeposit_General();
-            case "07": //Appliances
+            case "11": //Appliances
                 return new CheckDeposit_Appliance();
 
-            case "": //Main Office
-                return new CheckDeposit_General();
+//            case "": //Main Office
+//                return new CheckDeposit_General();
             default:
                 return null;
         }
