@@ -4304,20 +4304,24 @@ public class DisbursementVoucher extends Transaction {
     
     //TODO
     public String getReferenceNo(int fnRow){
-//        switch(Detail(fnRow).getSourceCode()){
-//            case DisbursementStatic.SourceCode.PO_RECEIVING:
-//                return Detail(fnRow).POReceiving().getReferenceNo();
-//            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-//                return Detail(fnRow).PRF().getSeriesNo();
+        try {
+            switch(Detail(fnRow).getSourceCode()){
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    return Detail(fnRow).POReceiving().getReferenceNo();
+                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    return Detail(fnRow).PRF().getSeriesNo();
 //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
 //                return Detail(fnRow).
 //            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
 //                return Detail(fnRow).SOADetail().
-//
-//        }
-        
-        return "";
+
+            }
+            
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+        }
     
+        return "";
     }
     
     /**
