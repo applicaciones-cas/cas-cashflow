@@ -1233,15 +1233,17 @@ public class DisbursementVoucher extends Transaction {
         computeTaxAmount();
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-            ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
-            ldblVATSales += Detail(lnCntr).getDetailVatSales();
-            ldblVATAmount += Detail(lnCntr).getDetailVatAmount();
-            ldblVATExempt += Detail(lnCntr).getDetailVatExempt();
-            
-            if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid Applied Amount.");
-                return poJSON;
+            if(Detail(lnCntr).getAmountApplied() > 0.0000){
+                ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
+                ldblVATSales += Detail(lnCntr).getDetailVatSales();
+                ldblVATAmount += Detail(lnCntr).getDetailVatAmount();
+                ldblVATExempt += Detail(lnCntr).getDetailVatExempt();
+
+                if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid Applied Amount.");
+                    return poJSON;
+                }
             }
         }
         
@@ -3017,7 +3019,8 @@ public class DisbursementVoucher extends Transaction {
             } else {
                 if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
                     && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
-                    && getDetailCount() <= 1){
+                    && getDetailCount() <= 1
+                    && getEditMode() == EditMode.ADDNEW){
                     Master().setIndustryID(fsIndustryId);
                 } else {
                     if (!Master().getIndustryID().equals(fsIndustryId)) {
@@ -3037,17 +3040,24 @@ public class DisbursementVoucher extends Transaction {
             }
 
             if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
-                    Master().setPayeeID(fsPayeeId);
-                    setSearchPayee(Master().Payee().getPayeeName());
-                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
-                        CheckPayments().getModel().setPayeeID(Master().getPayeeID());
-                    }
+                Master().setPayeeID(fsPayeeId);
+                setSearchPayee(Master().Payee().getPayeeName());
+                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                    CheckPayments().getModel().setPayeeID(Master().getPayeeID());
+                }
             } else {
-                if (!Master().getPayeeID().equals(fsPayeeId)) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
-                    poJSON.put("row", 0);
-                    return poJSON;
+                if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
+                    && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+                    && getDetailCount() <= 1
+                    && getEditMode() == EditMode.ADDNEW){
+                    Master().setPayeeID(fsPayeeId);
+                } else {
+                    if (!Master().getPayeeID().equals(fsPayeeId)) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+                        poJSON.put("row", 0);
+                        return poJSON;
+                    }
                 }
             }
 
@@ -3055,11 +3065,18 @@ public class DisbursementVoucher extends Transaction {
                 Master().setSupplierClientID(fsClientId);
                 setSearchClient(Master().Payee().Client().getCompanyName());
             } else {
-                if (!Master().getSupplierClientID().equals(fsClientId)) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
-                    poJSON.put("row", 0);
-                    return poJSON;
+                if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
+                    && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+                    && getDetailCount() <= 1
+                    && getEditMode() == EditMode.ADDNEW){
+                    Master().setSupplierClientID(fsClientId);
+                } else {
+                    if (!Master().getSupplierClientID().equals(fsClientId)) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Selected Supplier of payables is not equal to transaction supplier.");
+                        poJSON.put("row", 0);
+                        return poJSON;
+                    }
                 }
             }
         } catch (GuanzonException | SQLException ex) {
