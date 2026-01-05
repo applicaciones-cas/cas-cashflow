@@ -341,7 +341,7 @@ public class Journal extends Transaction {
         object.setRecordStatus("1");
 
         poJSON = object.searchRecord(value, byCode, industryCode, glCode);
-
+        poJSON.put("row", row);
         if ("success".equals((String) poJSON.get("result"))) {
             poJSON = checkExistingAcctCode(row,object.getModel().getAccountCode());
             if ("error".equals((String) poJSON.get("result"))) {
@@ -368,7 +368,7 @@ public class Journal extends Transaction {
                         if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){
                             Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
                             loObject.initialize();
-                            poJSON = loObject.openRecord(Detail(lnCtr).getTransactionNo(), lnCtr);
+                            poJSON = loObject.openRecord(Master().getTransactionNo(), lnCtr + 1);
                             if ("error".equals((String) poJSON.get("result"))) {
                                 poJSON.put("row", fnRow);
                                 return poJSON;
