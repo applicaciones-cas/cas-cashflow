@@ -1801,9 +1801,11 @@ public class DisbursementVoucher extends Transaction {
         }
 
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())
-                && Detail(getDetailCount() - 1).getAmountApplied() > 0.0000) {
-                AddDetail();
+            if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
+                if((Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || (Detail(getDetailCount() - 1).getAmountApplied() > 0.0000 && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+                    AddDetail();
+                }
             }
         }
 
@@ -1971,7 +1973,8 @@ public class DisbursementVoucher extends Transaction {
             Model item = detail.next(); // Store the item before checking conditions
             String lsSourceNo = (String) item.getValue("sSourceNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if (lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null) {
+            if ((lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
+                && item.getEditMode() == EditMode.ADDNEW ){
                 detail.remove(); // Correctly remove the item
             }
         }

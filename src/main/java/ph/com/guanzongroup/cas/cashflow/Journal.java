@@ -492,7 +492,7 @@ public class Journal extends Transaction {
                     && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
                     || 
                     ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
-                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW) || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)){
+                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
                     AddDetail();
                     Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
                 } 
@@ -529,8 +529,9 @@ public class Journal extends Transaction {
                 lsCreditAmt = item.getValue("nCredtAmt").toString();
             }
 
-            if (("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null)
-                    || (Double.valueOf(lsDebitAmt) <= 0.00 && Double.valueOf(lsCreditAmt) <= 0.00)) {
+            if ((("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null)
+                    || (Double.valueOf(lsDebitAmt) <= 0.00 && Double.valueOf(lsCreditAmt) <= 0.00))
+                && item.getEditMode() == EditMode.ADDNEW){
                 detail.remove(); // Correctly remove the item
             }
         }

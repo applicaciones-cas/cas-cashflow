@@ -224,7 +224,15 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Update process
         if(!lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
             if(lbIsProcessed){
-                Detail(row).PRF().setProcess("1");
+                if(!lbIsProcessed){
+                    if(Detail(row).getAmountApplied() > 0.0000){
+                        Detail(row).PRF().setProcess("1");
+                    } else {
+                        Detail(row).PRF().setProcess("0");
+                    }
+                } else {
+                    Detail(row).PRF().setProcess("1");
+                }   
             } else {
                 Detail(row).PRF().setProcess("0");
             }
@@ -443,7 +451,15 @@ public class Disbursement_LinkedTransactions extends Transaction {
         
         if(!lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
             if(isAdd){ 
-                loModel.setProcessed(true);
+                if(!lbIsProcessed){
+                    if(Detail(row).getAmountApplied() > 0.0000){
+                        loModel.setProcessed(true);
+                    } else {
+                        loModel.setProcessed(false);
+                    }
+                } else {
+                    loModel.setProcessed(true);
+                }   
             } else { 
                 loModel.setProcessed(lbIsProcessed);
             }
@@ -582,7 +598,15 @@ public class Disbursement_LinkedTransactions extends Transaction {
         
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
             ldblAmountPaid = ldblOtherPayment + ldblTotalAppliedAmt; 
-            loMaster.isProcessed(true);
+            if(!lbIsProcessed){
+                if(ldblTotalAppliedAmt > 0.0000){
+                    loMaster.isProcessed(true);
+                } else {
+                    loMaster.isProcessed(false);
+                }
+            } else {
+                loMaster.isProcessed(true);
+            }   
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
             loMaster.isProcessed(lbIsProcessed);
