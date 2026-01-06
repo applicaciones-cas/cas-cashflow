@@ -218,10 +218,40 @@ public class APPaymentAdjustment extends Parameter {
         return poJSON;
     }
     
+    private String getInvTypeCode(String fsValue){
+        try {
+            String lsSQL = "SELECT sInvTypCd, sDescript FROM Inv_Type ";
+            lsSQL = MiscUtil.addCondition(lsSQL, " cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
+                                                + " AND lower(sDescript) LIKE " + SQLUtil.toSQL("%"+fsValue+"%"));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return  loRS.getString("sInvTypCd");
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+            
+        return  "";
+    }
+    
     private JSONObject populateCachePayable(boolean isSave, String status) throws SQLException, GuanzonException, CloneNotSupportedException{
         poJSON = new JSONObject();
         poCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
         poCachePayable.InitTransaction();
+        String lsTranType = getInvTypeCode("adjustment");
+        if("".equals(lsTranType) || lsTranType == null){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Adjustment transaction type not found in database.\nContact System Administrator to address the issue.");
+            return poJSON;
+        }
         
         if(isSave){
             //Update cache payables
@@ -275,7 +305,7 @@ public class APPaymentAdjustment extends Parameter {
                 poCachePayable.AddDetail();
             }
 
-            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(APPaymentAdjustmentStatus.TRANSTYPE);
+            poCachePayable.Detail(poCachePayable.getDetailCount()-1).setTransactionType(lsTranType);
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setEntryNumber(1);
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setGrossAmount(getModel().getTransactionTotal().doubleValue());
             poCachePayable.Detail(poCachePayable.getDetailCount()-1).setPayables(getModel().getDebitAmount().doubleValue());
