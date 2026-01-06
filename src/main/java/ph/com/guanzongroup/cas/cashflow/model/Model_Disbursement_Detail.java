@@ -30,6 +30,8 @@ public class Model_Disbursement_Detail extends Model {
     Model_Tax_Code poTaxCode;
     Model_Payment_Request_Master poPRF;
     Model_POR_Master poPOR;
+    Model_AP_Payment_Adjustment poAPAdjustment;
+    Model_AP_Payment_Master poAPMaster;
     Model_AP_Payment_Detail poAPDetail;
     String InvType = "";
 
@@ -70,7 +72,9 @@ public class Model_Disbursement_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
             poPRF = cashFlow.PaymentRequestMaster();
+            poAPMaster = cashFlow.SOATaggingMaster();
             poAPDetail = cashFlow.SOATaggingDetails();
+            poAPAdjustment = cashFlow.APPaymentAdjustment();
             ParamModels model = new ParamModels(poGRider);
             poTaxCode = model.TaxCode();
             poInvType = model.InventoryType();
@@ -384,10 +388,10 @@ public class Model_Disbursement_Detail extends Model {
         if (!"".equals((String) getValue("sSourceNo"))) {
             if ((poAPDetail.getEditMode() == EditMode.READY || poPOR.getEditMode() == EditMode.UPDATE)
                     && poAPDetail.getTransactionNo().equals((String) getValue("sSourceNo"))
-                    && poAPDetail.getEntryNo().equals((int) getValue("nDetailNo"))) {
+                    && poAPDetail.getEntryNo().equals( getValue("nDetailNo"))) {
                 return poAPDetail;
             } else {
-                poJSON = poAPDetail.openRecord((String) getValue("sSourceNo"), (int) getValue("nDetailNo"));
+                poJSON = poAPDetail.openRecord((String) getValue("sSourceNo"),  getValue("nDetailNo"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poAPDetail;
@@ -399,6 +403,54 @@ public class Model_Disbursement_Detail extends Model {
         } else {
             poAPDetail.initialize();
             return poAPDetail;
+        }
+    }
+    
+    public Model_AP_Payment_Master SOAMaster() throws SQLException, GuanzonException {
+        String lsSourceNo = (String) getValue("sSourceNo");
+        if (!"".equals(lsSourceNo)) {
+            if ((poAPMaster.getEditMode() == EditMode.READY || poAPMaster.getEditMode() == EditMode.UPDATE)
+                    && poAPMaster.getTransactionNo().equals(lsSourceNo)) {
+                return poAPMaster;
+            } else {
+                poJSON = poAPMaster.openRecord(lsSourceNo);
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poAPMaster;
+                } else {
+                    poAPMaster.initialize();
+                    return poAPMaster;
+                }
+            }
+        } else {
+            poAPMaster.initialize();
+            return poAPMaster;
+        }
+    }
+    
+    public Model_AP_Payment_Adjustment APAdjustment() throws SQLException, GuanzonException {
+        String lsSourceNo = (String) getValue("sSourceNo");
+        if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals((String) getValue("sSourceCd"))){
+            lsSourceNo = (String) getValue("sDetlSrce");
+        }
+        
+        if (!"".equals(lsSourceNo)) {
+            if ((poAPAdjustment.getEditMode() == EditMode.READY || poAPAdjustment.getEditMode() == EditMode.UPDATE)
+                    && poAPAdjustment.getTransactionNo().equals(lsSourceNo)) {
+                return poAPAdjustment;
+            } else {
+                poJSON = poAPAdjustment.openRecord(lsSourceNo);
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poAPAdjustment;
+                } else {
+                    poAPAdjustment.initialize();
+                    return poAPAdjustment;
+                }
+            }
+        } else {
+            poAPAdjustment.initialize();
+            return poAPAdjustment;
         }
     }
 }

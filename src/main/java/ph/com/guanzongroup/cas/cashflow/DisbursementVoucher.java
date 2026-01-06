@@ -4312,15 +4312,16 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                 return Detail(fnRow).APAdjustment().getReferenceNo();
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                switch(Detail(fnRow).SOADetail().getSourceCode()){
-                    case SOATaggingStatic.POReceiving:
-                        return Detail(fnRow).SOADetail().PurchasOrderReceivingMaster().getReferenceNo();
-                    case SOATaggingStatic.PaymentRequest:
-                        return Detail(fnRow).SOADetail().PaymentRequestMaster().getSeriesNo();
-                    case SOATaggingStatic.APPaymentAdjustment:
-                        return Detail(fnRow).SOADetail().APPaymentAdjustmentMaster().getReferenceNo();
-                }
-                break;
+                return Detail(fnRow).SOAMaster().getSOANumber();
+//                switch(Detail(fnRow).SOADetail().getSourceCode()){
+//                    case SOATaggingStatic.POReceiving:
+//                        return Detail(fnRow).POReceiving().getReferenceNo();
+//                    case SOATaggingStatic.PaymentRequest:
+//                        return Detail(fnRow).PRF().getSeriesNo();
+//                    case SOATaggingStatic.APPaymentAdjustment:
+//                        return Detail(fnRow).APAdjustment().getReferenceNo();
+//                }
+//                break;
             }
             
         } catch (SQLException | GuanzonException ex) {
