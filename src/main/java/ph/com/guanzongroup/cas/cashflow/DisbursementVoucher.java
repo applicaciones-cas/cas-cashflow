@@ -168,6 +168,7 @@ public class DisbursementVoucher extends Transaction {
         resetJournal();
         resetCheckPayment();
         resetOtherPayment();
+        WTaxDeduction().clear();
         
         poJSON = newTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
