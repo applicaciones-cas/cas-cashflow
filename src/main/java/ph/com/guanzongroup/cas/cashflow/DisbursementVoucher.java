@@ -4302,7 +4302,6 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
-    //TODO
     public String getReferenceNo(int fnRow){
         try {
             switch(Detail(fnRow).getSourceCode()){
@@ -4310,11 +4309,18 @@ public class DisbursementVoucher extends Transaction {
                     return Detail(fnRow).POReceiving().getReferenceNo();
                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                     return Detail(fnRow).PRF().getSeriesNo();
-//            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-//                return Detail(fnRow).
-//            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-//                return Detail(fnRow).SOADetail().
-
+            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                return Detail(fnRow).APAdjustment().getReferenceNo();
+            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                switch(Detail(fnRow).SOADetail().getSourceCode()){
+                    case SOATaggingStatic.POReceiving:
+                        return Detail(fnRow).SOADetail().PurchasOrderReceivingMaster().getReferenceNo();
+                    case SOATaggingStatic.PaymentRequest:
+                        return Detail(fnRow).SOADetail().PaymentRequestMaster().getSeriesNo();
+                    case SOATaggingStatic.APPaymentAdjustment:
+                        return Detail(fnRow).SOADetail().APPaymentAdjustmentMaster().getReferenceNo();
+                }
+                break;
             }
             
         } catch (SQLException | GuanzonException ex) {
