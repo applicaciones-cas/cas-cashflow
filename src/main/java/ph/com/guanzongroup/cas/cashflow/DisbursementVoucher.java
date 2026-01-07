@@ -2750,7 +2750,12 @@ public class DisbursementVoucher extends Transaction {
             Double ldblVatZeroRated = 0.0000;   
             Double ldblVatRate = 0.0000;  
             
-            ldblBalance = loController.Detail(lnCtr).getAppliedAmount().doubleValue() - loController.Detail(lnCtr).getAmountPaid().doubleValue();
+            ldblBalance = loController.Detail(lnCtr).getAppliedAmount().doubleValue();
+            if(ldblBalance < 0.0000){
+                ldblBalance = ldblBalance * -1;
+            }
+            
+            ldblBalance = ldblBalance - loController.Detail(lnCtr).getAmountPaid().doubleValue();
             //skip detail that is already paid
             if(ldblBalance <= 0.0000){
                 continue;

@@ -785,6 +785,12 @@ public class SOATagging extends Transaction {
                 ldblTransactionTotal = ldblTransactionTotal + Detail(lnCtr).getAppliedAmount().doubleValue();
             }
         }
+        
+        if(ldblTransactionTotal < 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Total Amount.");
+            return poJSON;
+        }
 
         Master().setTransactionTotal(ldblTransactionTotal);
         ldblNetTotal = ldblTransactionTotal - ldblDiscountAmount;
@@ -1364,6 +1370,10 @@ public class SOATagging extends Transaction {
         if (Master().getClientId() == null || "".equals(Master().getClientId())) {
             Master().setClientId(lsClientId);
         }
+        
+        if(ldblCreditAmt.doubleValue() > 0.0000){
+            ldblBalance = -ldblBalance;
+        }
 
         Detail(lnRow).isReverse(true);
         Detail(lnRow).setSourceNo(lsTransNo);
@@ -1372,6 +1382,15 @@ public class SOATagging extends Transaction {
         Detail(lnRow).setAppliedAmount(ldblBalance); //Set transaction balance as default applied amount
         Detail(lnRow).setDebitAmount(ldblDebitAmt);
         Detail(lnRow).setCreditAmount(ldblCreditAmt);
+        
+        JSONObject loJSON = computeFields();
+        if ("error".equals((String) loJSON.get("result"))) {
+            loJSON.put("row", lnRow);
+            Detail().remove(lnRow);
+            AddDetail();
+            return loJSON;
+        }
+        
         AddDetail();
 
         poJSON.put("result", "success");
@@ -1642,7 +1661,7 @@ public class SOATagging extends Transaction {
             if (item.getValue("nAppliedx") != null && !"".equals(item.getValue("nAppliedx"))) {
                 lsAppliedAmount = item.getValue("nAppliedx").toString();
             }
-            if (Double.valueOf(lsAppliedAmount) <= 0.0000) {
+            if (Double.valueOf(lsAppliedAmount) == 0.0000) {
                 if (item.getEditMode() == EditMode.ADDNEW) {
                     detail.remove();
                 } else if (item.getEditMode() == EditMode.UPDATE) {

@@ -98,7 +98,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
 //            case DisbursementStatic.AUTHORIZED:
             case DisbursementStatic.DISAPPROVED:
             case DisbursementStatic.CANCELLED:
-            case DisbursementStatic.RETURNED:
+//            case DisbursementStatic.RETURNED:
             case DisbursementStatic.VOID:
             return false;
         }
@@ -619,14 +619,22 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+        if(Detail(row).getAmountApplied() < 0.0000){
+            ldblAppliedAmount = ldblAppliedAmount * -1;
+        }
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
             ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
+        
+        Double ldblSOAAppliedAmt = loModel.getAppliedAmount().doubleValue();
+        if(ldblSOAAppliedAmt < 0.0000){
+            ldblSOAAppliedAmt = ldblSOAAppliedAmt * -1;
+        }
+        
         //Validate Amount paid do not allow when payment is greater than the transaction net total
-        if(ldblAmountPaid > loModel.getAppliedAmount().doubleValue()){
+        if(ldblAmountPaid > ldblSOAAppliedAmt){
             poJSON.put("result", "error");
             if(psDVNo != null && !"".equals(psDVNo)){
                 poJSON.put("message", "SOA Detail source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the applied in SOA detail of transaction no "+Detail(row).getSourceNo()+".");
@@ -899,7 +907,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
                     + " AND a.sPayeeIDx = " + SQLUtil.toSQL(Master().getPayeeID())
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND b.nAmtAppld != 0.0000 "
@@ -1010,7 +1018,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
-                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+//                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
                         + " AND b.nAmtAppld != 0.0000 "
                 );
                 System.out.println("Executing SQL: " + lsSQL);
@@ -1062,7 +1070,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
-                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+//                        + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
                         + " AND b.nAmtAppld != 0.0000 "
                 );
                 System.out.println("Executing SQL: " + lsSQL);
