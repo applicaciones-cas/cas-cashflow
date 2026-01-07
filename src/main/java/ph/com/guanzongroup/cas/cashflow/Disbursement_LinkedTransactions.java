@@ -141,7 +141,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     break;
                     
                 case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
-                    //TODO
+                    //Save AP Adjustment and update connected cache payable
+                    poJSON = saveAPPaymentAdjustment(lnCtr, lbAdd);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while updating AP Adjustment.\n\n" + (String) poJSON.get("message"));
+                        return poJSON;
+                    }
                     break;
                 case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: 
                     //Save SOA Detail and update connected transactions ex. PO Receiving, Cache Payable, PRF
@@ -208,9 +213,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if(ldblAmountPaid > Detail(row).PRF().getNetTotal()){
             poJSON.put("result", "error");
             if(psDVNo != null && !"".equals(psDVNo)){
-                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of reference no "+Detail(row).PRF().getSeriesNo()+".");
             } else {
-                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of reference no "+Detail(row).PRF().getSeriesNo()+".");
             }
             return poJSON;
         }
@@ -292,9 +297,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if(ldblAmountPaid > loModel.getNetTotal().doubleValue()){
             poJSON.put("result", "error");
             if(psDVNo != null && !"".equals(psDVNo)){
-                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "PRF is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PRF Net Total of reference no "+Detail(row).PRF().getSeriesNo()+".");
             } else {
-                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "Amount paid cannot be exceed to the PRF Net Total of reference no "+Detail(row).PRF().getSeriesNo()+".");
             }
             return poJSON;
         }
@@ -320,7 +325,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return poJSON;
     }
     /**
-     * SAVE PRF Transaction 
+     * SAVE PO Receiving Transaction 
      * @param loMaster
      * @param isAdd
      * @return
@@ -350,9 +355,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if(ldblAmountPaid > Detail(row).POReceiving().getNetTotal()){
             poJSON.put("result", "error");
             if(psDVNo != null && !"".equals(psDVNo)){
-                poJSON.put("message", "PO Receiving is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "PO Receiving is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the PO Receiving Net Total of reference no "+Detail(row).POReceiving().getReferenceNo()+".");
             } else {
-                poJSON.put("message", "Amount paid cannot be exceed to the PO Receiving Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "Amount paid cannot be exceed to the PO Receiving Net Total of reference no "+Detail(row).POReceiving().getReferenceNo()+".");
             }
             return poJSON;
         }
@@ -421,6 +426,10 @@ public class Disbursement_LinkedTransactions extends Transaction {
             return poJSON;
         }
         
+        if(Detail(row).getAmountApplied() < 0.0000){
+            ldblAppliedAmount = ldblAppliedAmount * -1;
+        }
+        
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
             ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
         } else { //Get only the other paid amount from OTHER DV
@@ -429,10 +438,19 @@ public class Disbursement_LinkedTransactions extends Transaction {
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal()){
             poJSON.put("result", "error");
+            String lsSourceRefNo = "";
+            switch(loModel.getSourceCode()){
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    lsSourceRefNo = Detail(row).POReceiving().getReferenceNo();
+                    break;
+                case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                    lsSourceRefNo = Detail(row).APAdjustment().getReferenceNo();
+                    break;
+            }
             if(psDVNo != null && !"".equals(psDVNo)){
-                poJSON.put("message", "Cache Payable source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "Cache Payable source is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the Cache Payable Net Total of reference no "+lsSourceRefNo+".");
             } else {
-                poJSON.put("message", "Amount paid cannot be exceed to the Cache Payable Net Total of transaction no "+Detail(row).getSourceNo()+".");
+                poJSON.put("message", "Amount paid cannot be exceed to the Cache Payable Net Total of reference no "+lsSourceRefNo+".");
             }
             return poJSON;
         }
@@ -452,7 +470,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if(!lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
             if(isAdd){ 
                 if(!lbIsProcessed){
-                    if(Detail(row).getAmountApplied() > 0.0000){
+                    if(Detail(row).getAmountApplied() > 0.0000 || Detail(row).getAmountApplied() < 0.0000){
                         loModel.setProcessed(true);
                     } else {
                         loModel.setProcessed(false);
@@ -491,7 +509,103 @@ public class Disbursement_LinkedTransactions extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
-    
+    /**
+     * SAVE AP Payment Adjustment Transaction 
+     * @param loMaster
+     * @param isAdd
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ParseException 
+     */
+    private JSONObject saveAPPaymentAdjustment(int row, boolean isAdd) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
+        String lsSourceNo = Detail(row).getSourceNo();
+        String lsSourceCode = Detail(row).getSourceCode();
+        Double ldblAppliedAmount = Detail(row).getAmountApplied();
+        Double ldblAmountPaid = 0.0000;
+        Double ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, "");
+        boolean lbIsProcessed = getLinkedPayment(lsSourceNo,lsSourceCode, false);
+        if(lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
+            lsSourceNo = Detail(row).getDetailSource();
+            lsSourceCode = Detail(row).SOADetail().getSourceCode();
+            ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, "");
+        } 
+        
+        if(Detail(row).getAmountApplied() < 0.0000){
+            ldblAppliedAmount = ldblAppliedAmount * -1;
+        }
+        
+        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
+            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
+        } else { //Get only the other paid amount from OTHER DV
+            ldblAmountPaid = ldblOtherPayment; 
+        }
+        //Validate Amount paid do not allow when payment is greater than the transaction net total
+        if(ldblAmountPaid > Detail(row).APAdjustment().getNetTotal().doubleValue()){
+            poJSON.put("result", "error");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "AP Adjustment is already linked to DV No. "+ psDVNo +".\nAmount paid cannot be exceed to the AP Adjustment Net Total of reference no "+Detail(row).APAdjustment().getReferenceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid cannot be exceed to the AP Adjustment Transaction Total of reference no "+Detail(row).APAdjustment().getReferenceNo()+".");
+            }
+            return poJSON;
+        }
+        
+        //Save PRF Master
+        Detail(row).APAdjustment().updateRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(!lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
+            if(isAdd){ 
+                if(!lbIsProcessed){
+                    if(Detail(row).getAmountApplied() > 0.0000 || Detail(row).getAmountApplied() < 0.0000){
+                        Detail(row).APAdjustment().isProcessed(true);
+                    } else {
+                        Detail(row).APAdjustment().isProcessed(false);
+                    }
+                } else {
+                    Detail(row).APAdjustment().isProcessed(true);
+                }   
+            } else { 
+                Detail(row).APAdjustment().isProcessed(lbIsProcessed);
+            }
+        }
+        
+        if(pbIsUpdateAmountPaid){
+            Double ldblAppliedAmt = Detail(row).APAdjustment().getAppliedAmount().doubleValue();
+            if(Detail(row).APAdjustment().getAppliedAmount().doubleValue() < 0.0000){
+                ldblAppliedAmt = ldblAppliedAmt * -1;
+            }
+            ldblAmountPaid = ldblAmountPaid + ldblAppliedAmt;
+            Detail(row).APAdjustment().setAppliedAmount(ldblAmountPaid);
+        }
+        poJSON = Detail(row).APAdjustment().saveRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //Update cache payable
+        poJSON = saveCachePayableMaster(row, isAdd);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+            
+        //Tag Source Transaction as Paid
+        if(Objects.equals(Detail(row).APAdjustment().getNetTotal(), Detail(row).APAdjustment().getAppliedAmount())){
+            poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
     
     private JSONObject saveSOADetail(int row, boolean isAdd)  throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
         String lsSourceNo = Detail(row).getSourceNo();
@@ -546,7 +660,10 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 }
                 break;
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
-                //TODO
+                poJSON = saveAPPaymentAdjustment(row, isAdd);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
                 break;
         }
         
@@ -785,7 +902,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
                     + " AND a.sPayeeIDx = " + SQLUtil.toSQL(Master().getPayeeID())
                     + " AND a.sTransNox <> " + SQLUtil.toSQL(Master().getTransactionNo())
-                    + " AND b.nAmtAppld > 0.0000 "
+                    + " AND b.nAmtAppld != 0.0000 "
             );
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -894,7 +1011,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
-                        + " AND b.nAmtAppld > 0.0000 "
+                        + " AND b.nAmtAppld != 0.0000 "
                 );
                 System.out.println("Executing SQL: " + lsSQL);
                 loRS = poGRider.executeQuery(lsSQL);
@@ -946,7 +1063,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
                         + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
-                        + " AND b.nAmtAppld > 0.0000 "
+                        + " AND b.nAmtAppld != 0.0000 "
                 );
                 System.out.println("Executing SQL: " + lsSQL);
                 loRS = poGRider.executeQuery(lsSQL);
@@ -974,7 +1091,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
     public String getAPPaymentSQL() {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
-                + " , sum(b.nAppliedx) AS nAppliedx"
+                + " , SUM(ABS(b.nAppliedx)) AS nAppliedx"
                 + " FROM AP_Payment_Master a "
                 + " LEFT JOIN AP_Payment_Detail b ON b.sTransNox = a.sTransNox ";
     }
@@ -983,7 +1100,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return " SELECT "
                 + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "
                 + " , a.sVouchrNo "
-                + " , sum(b.nAmtAppld) AS nAppliedx"
+                + " , SUM(ABS(b.nAmtAppld)) AS nAppliedx"
                 + " FROM Disbursement_Master a "
                 + " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox ";
     }

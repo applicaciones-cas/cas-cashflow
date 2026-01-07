@@ -1055,14 +1055,14 @@ public class SOATagging extends Transaction {
                 referenceNo = "";
             }
 
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
             switch(payableType){
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dTransact DESC ";
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dDueDatex ASC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
                     break;
             }
             System.out.println("Executing SQL: " + lsSQL);
@@ -2523,6 +2523,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
+                + " , IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2546,6 +2547,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
+                + " , a.dTransact AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2574,6 +2576,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
+                + " , IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2600,6 +2603,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
+                + " , a.dTransact AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "

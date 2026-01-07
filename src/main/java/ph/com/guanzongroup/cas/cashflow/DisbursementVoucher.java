@@ -1231,6 +1231,7 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATAmount = 0.0000;
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
+        Double ldblAppliedAmt = 0.0000;
         computeTaxAmount();
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
@@ -1244,6 +1245,20 @@ public class DisbursementVoucher extends Transaction {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid Applied Amount.");
                     return poJSON;
+                }
+            } else {
+                ldblAppliedAmt = Detail(lnCntr).getAmountApplied();
+                if(ldblAppliedAmt < 0){
+                    ldblAppliedAmt = ldblAppliedAmt * -1;
+                }
+                if(Detail(lnCntr).getAmountApplied() < 0){
+                    if(ldblAppliedAmt > ldblTransactionTotal){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Total Amount.");
+                        return poJSON;
+                    } else {
+                        ldblTransactionTotal = ldblTransactionTotal - ldblAppliedAmt;
+                    }
                 }
             }
         }
@@ -1795,7 +1810,7 @@ public class DisbursementVoucher extends Transaction {
                 Detail().remove(lnCtr);
             } else {
                 if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Detail(lnCtr).getAmountApplied() <= 0.0000){
+                    if(Detail(lnCtr).getAmountApplied() == 0.0000){
                         Detail().remove(lnCtr);
                     }
                 }
@@ -1805,8 +1820,8 @@ public class DisbursementVoucher extends Transaction {
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
-                if((Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
-                    || (Detail(getDetailCount() - 1).getAmountApplied() > 0.0000 && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+                if((Detail(getDetailCount() - 1).getAmountApplied() == 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || ((Detail(getDetailCount() - 1).getAmountApplied() < 0.0000 || Detail(getDetailCount() - 1).getAmountApplied() > 0.0000) && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
                     AddDetail();
                 }
             }
@@ -1817,7 +1832,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
-            && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+            && Detail(getDetailCount() - 1).getAmountApplied() == 0.0000
             && getDetailCount() <= 1){
             Master().setIndustryID("");
         }
@@ -1976,7 +1991,7 @@ public class DisbursementVoucher extends Transaction {
             Model item = detail.next(); // Store the item before checking conditions
             String lsSourceNo = (String) item.getValue("sSourceNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if ((lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
+            if ((lsAmount == 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
                 && item.getEditMode() == EditMode.ADDNEW ){
                 detail.remove(); // Correctly remove the item
             }
@@ -2662,6 +2677,12 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
+        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode())){
+            if(loController.Master().getReceivables() > 0.0000){
+                ldblBalance = -ldblBalance;
+            }
+        }
+        
         Detail(lnRow).setSourceNo(loController.Master().getSourceNo());
         Detail(lnRow).setSourceCode(loController.Master().getSourceCode());
         Detail(lnRow).setAmount(ldblBalance);
@@ -2672,6 +2693,15 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt());
         Detail(lnRow).setDetailVatRates(loController.Master().getVATRates());
         Detail(lnRow).setDetailZeroVat(loController.Master().getZeroRated());
+        
+        JSONObject loJSON = computeFields();
+        if ("error".equals((String) loJSON.get("result"))) {
+            Detail().remove(lnRow);
+            AddDetail();
+            loJSON.put("row", lnRow);
+            return loJSON;
+        }
+        
         AddDetail();
     
         poJSON.put("result", "success");
@@ -2795,6 +2825,12 @@ public class DisbursementVoucher extends Transaction {
                         ldblVatExempt = loCachePayable.Master().getVATExempt();
                         ldblVatZeroRated = loCachePayable.Master().getZeroRated();   
                         ldblVatRate = loCachePayable.Master().getVATRates();
+                        
+                        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loCachePayable.Master().getSourceCode())){
+                            if(loCachePayable.Master().getReceivables() > 0.0000){
+                                ldblBalance = -ldblBalance;
+                            }
+                        }
                     }
                     break;
             }
@@ -3811,7 +3847,8 @@ public class DisbursementVoucher extends Transaction {
                 + "b.sBranchNm AS Branch, "
                 + "a.sTransNox, "
                 + "a.dTransact, "
-                + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                //+ "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + "CASE WHEN a.nRecvbles > 0 THEN -(a.nNetTotal - a.nAmtPaidx) ELSE (a.nNetTotal - a.nAmtPaidx) END AS Balance, "
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.CASH_PAYABLE) +" AS PayableType, "
                 + "a.sSourceCd AS TransactionType, "
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
