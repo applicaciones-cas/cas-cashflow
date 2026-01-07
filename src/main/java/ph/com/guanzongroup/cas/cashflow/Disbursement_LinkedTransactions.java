@@ -239,7 +239,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     Detail(row).PRF().setProcess("1");
                 }   
             } else {
-                Detail(row).PRF().setProcess("0");
+                Detail(row).PRF().setProcess("1");
             }
         }
         
