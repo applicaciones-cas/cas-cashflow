@@ -2089,7 +2089,7 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
         
-        Master().setModifyingId(poGRider.getUserID());
+        Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
         System.out.println("--------------------------WILL SAVE---------------------------------------------");

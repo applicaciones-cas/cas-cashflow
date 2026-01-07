@@ -255,6 +255,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
             
             Detail(row).PRF().setAmountPaid(ldblAmountPaid);
         }
+        Detail(row).PRF().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+        Detail(row).PRF().setModifiedDate(poGRider.getServerDate());
         poJSON = Detail(row).PRF().saveRecord();
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
