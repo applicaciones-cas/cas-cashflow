@@ -3,10 +3,13 @@ package ph.com.guanzongroup.cas.cashflow;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.appdriver.constant.UserRight;
@@ -338,11 +341,60 @@ public class Journal extends Transaction {
         object.setRecordStatus("1");
 
         poJSON = object.searchRecord(value, byCode, industryCode, glCode);
-
+        poJSON.put("row", row);
         if ("success".equals((String) poJSON.get("result"))) {
+            poJSON = checkExistingAcctCode(row,object.getModel().getAccountCode());
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            row = (int) poJSON.get("row");
             Detail(row).setAccountCode(object.getModel().getAccountCode());
         }
 
+        return poJSON;
+    }
+    
+    public JSONObject checkExistingAcctCode(int fnRow, String fsAcctCode){
+        poJSON = new JSONObject();
+        poJSON.put("row", fnRow);
+        try {
+            int lnRow = 0;
+            for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
+                if(Detail(lnCtr).getCreditAmount() > 0.0000 || Detail(lnCtr).getDebitAmount() > 0.0000){
+                    lnRow++;
+                }
+                if (lnCtr != fnRow) {
+                    if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
+                        if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){
+                            Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
+                            loObject.initialize();
+                            poJSON = loObject.openRecord(Master().getTransactionNo(), lnCtr + 1);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                poJSON.put("row", fnRow);
+                                return poJSON;
+                            }
+                            Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
+                            Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
+                            poJSON.put("row", lnCtr);
+                            break;
+                        } else {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", Detail(lnCtr).Account_Chart().getDescription() + " already exists at row "+ lnRow );
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
 
@@ -418,6 +470,40 @@ public class Journal extends Transaction {
 
         return paDetail.size();
     }
+    
+    public void ReloadDetail() throws CloneNotSupportedException, SQLException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
+                Detail().remove(lnCtr);
+            } else {
+//                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
+//                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
+//                        Detail().remove(lnCtr);
+//                    }
+//                }
+            }
+            lnCtr--;
+        }
+        if ((getDetailCount() - 1) >= 0) {
+            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())){
+                if(((Detail(getDetailCount() - 1).getDebitAmount() <= 0.0000 && Detail(getDetailCount() - 1).getCreditAmount() <= 0.0000)
+                    && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || 
+                    ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
+                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+                    AddDetail();
+                    Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+                } 
+            }  
+        }
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+            Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    
+    }
 
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException {
@@ -443,8 +529,9 @@ public class Journal extends Transaction {
                 lsCreditAmt = item.getValue("nCredtAmt").toString();
             }
 
-            if (("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null)
-                    || (Double.valueOf(lsDebitAmt) <= 0.00 && Double.valueOf(lsCreditAmt) <= 0.00)) {
+            if ((("".equals((String) item.getValue("sAcctCode")) || (String) item.getValue("sAcctCode") == null)
+                    || (Double.valueOf(lsDebitAmt) <= 0.00 && Double.valueOf(lsCreditAmt) <= 0.00))
+                && item.getEditMode() == EditMode.ADDNEW){
                 detail.remove(); // Correctly remove the item
             }
         }
