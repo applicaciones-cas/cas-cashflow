@@ -26,6 +26,7 @@ import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.SOATagging;
 import ph.com.guanzongroup.cas.cashflow.SubClass.Disbursement_PRF;
+import ph.com.guanzongroup.cas.cashflow.TransactionAccountChart;
 import ph.com.guanzongroup.cas.cashflow.WithholdingTax;
 import ph.com.guanzongroup.cas.cashflow.WithholdingTaxDeductions;
 
@@ -149,6 +150,7 @@ public class CashflowControllers {
         poPaymentRequest.setWithParent(false);
         return poPaymentRequest;
     }
+
     public Disbursement DisbursementBase() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.DisbursementBase: Application driver is not set.");
@@ -168,7 +170,6 @@ public class CashflowControllers {
         return poDisbursementBase;
     }
 
-
     public Disbursement Disbursement() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.Disbursement: Application driver is not set.");
@@ -187,6 +188,7 @@ public class CashflowControllers {
         poDisbursement.setWithParent(false);
         return poDisbursement;
     }
+
     public DisbursementVoucher DisbursementVoucher() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.DisbursementVoucher: Application driver is not set.");
@@ -223,6 +225,7 @@ public class CashflowControllers {
         poCheckPayments.initialize();
         return poCheckPayments;
     }
+
     public CheckPaymentImporting CheckPaymentImporting() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckPaymentImporting: Application driver is not set.");
@@ -316,6 +319,25 @@ public class CashflowControllers {
         return poAccountChart;
     }
 
+    public TransactionAccountChart TransactionAccountChart() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.TransactionAccountChart: Application driver is not set.");
+            return null;
+        }
+
+        if (poTransactionAccountChart != null) {
+            return poTransactionAccountChart;
+        }
+
+        poTransactionAccountChart = new TransactionAccountChart();
+        poTransactionAccountChart.setApplicationDriver(poGRider);
+        poTransactionAccountChart.setWithParentClass(true);
+        poTransactionAccountChart.setLogWrapper(poLogWrapper);
+        poTransactionAccountChart.initialize();
+        poTransactionAccountChart.newRecord();
+        return poTransactionAccountChart;
+    }
+
     public Journal Journal() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.Journal: Application driver is not set.");
@@ -390,8 +412,8 @@ public class CashflowControllers {
         poCheckStatusUpdate.setWithParent(false);
         return poCheckStatusUpdate;
     }
-    
-        public CheckImporting CheckImporting() throws SQLException, GuanzonException {
+
+    public CheckImporting CheckImporting() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
             return null;
@@ -408,7 +430,7 @@ public class CashflowControllers {
         poCheckImporting.setWithParent(false);
         return poCheckImporting;
     }
-    
+
     public OtherPayments OtherPayments() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.OtherPayments: Application driver is not set.");
@@ -426,7 +448,7 @@ public class CashflowControllers {
         poOtherPayments.initialize();
         return poOtherPayments;
     }
-    
+
     public BIR2307Filler BIR2307Filler() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.BIR2307Filler: Application driver is not set.");
@@ -436,10 +458,10 @@ public class CashflowControllers {
         if (poBIR2307Filler != null) {
             return poBIR2307Filler;
         }
-         poOtherPayments = new OtherPayments();
+        poOtherPayments = new OtherPayments();
         return poBIR2307Filler;
     }
-    
+
     public WithholdingTax WithholdingTax() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.WithholdingTax: Application driver is not set.");
@@ -458,7 +480,7 @@ public class CashflowControllers {
         poWithholdingTax.newRecord();
         return poWithholdingTax;
     }
-    
+
     public WithholdingTaxDeductions WithholdingTaxDeductions() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.WithholdingTaxDeductions: Application driver is not set.");
@@ -477,7 +499,7 @@ public class CashflowControllers {
         poWithholdingTaxDeductions.newRecord();
         return poWithholdingTaxDeductions;
     }
-    
+
     @Override
     protected void finalize() throws Throwable {
         try {
@@ -499,6 +521,7 @@ public class CashflowControllers {
             poPaymentRequest = null;
             poCheckPrintingRequest = null;
             poAccountChart = null;
+            poTransactionAccountChart = null;
             poCheckPrinting = null;
             poDocummentMapping = null;
             poCheckStatusUpdate = null;
@@ -531,12 +554,13 @@ public class CashflowControllers {
     private APPaymentAdjustment poAPPaymentAdjustment;
     private CheckPrintingRequest poCheckPrintingRequest;
     private AccountChart poAccountChart;
+    private TransactionAccountChart poTransactionAccountChart;
     private Journal poJournal;
     private CheckPrinting poCheckPrinting;
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;
-    private OtherPayments poOtherPayments;    
+    private OtherPayments poOtherPayments;
     private CheckPaymentImporting poCheckPaymentImports;
     private BIR2307Filler poBIR2307Filler;
     private WithholdingTax poWithholdingTax;

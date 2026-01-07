@@ -16,11 +16,12 @@ import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Payee extends Model {
+
     Model_Client_Master poClient;
     Model_Client_Address poClientAddress;
     Model_Client_Master poAPClient;
     Model_Particular poParticular;
-    
+
     @Override
     public void initialize() {
         try {
@@ -30,23 +31,22 @@ public class Model_Payee extends Model {
             poEntity.moveToInsertRow();
 
             MiscUtil.initRowSet(poEntity);
-
-            //assign default values
-            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
-            //end - assign default values
-
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
             poEntity.absolute(1);
 
+            //assign default values
+            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            //end - assign default values
+
             ID = poEntity.getMetaData().getColumnLabel(1);
-            
+
             ClientModels model = new ClientModels(poGRider);
             poClient = model.ClientMaster();
             poClientAddress = model.ClientAddress();
             poAPClient = model.ClientMaster();
-            
+
             CashflowModels gl = new CashflowModels(poGRider);
             poParticular = gl.Particular();
 
@@ -64,40 +64,40 @@ public class Model_Payee extends Model {
     public String getPayeeID() {
         return (String) getValue("sPayeeIDx");
     }
-       
-    public JSONObject setPayeeName(String payeeName){
+
+    public JSONObject setPayeeName(String payeeName) {
         return setValue("sPayeeNme", payeeName);
     }
 
     public String getPayeeName() {
         return (String) getValue("sPayeeNme");
     }
-    
-    public JSONObject setParticularID(String particularId){
+
+    public JSONObject setParticularID(String particularId) {
         return setValue("sPrtclrID", particularId);
     }
 
     public String getParticularID() {
         return (String) getValue("sPrtclrID");
     }
-    
-    public JSONObject setAPClientID(String apClientId){
+
+    public JSONObject setAPClientID(String apClientId) {
         return setValue("sAPClntID", apClientId);
     }
 
     public String getAPClientID() {
         return (String) getValue("sAPClntID");
     }
-    
-    public JSONObject setClientID(String clientId){
+
+    public JSONObject setClientID(String clientId) {
         return setValue("sClientID", clientId);
     }
 
     public String getClientID() {
         return (String) getValue("sClientID");
     }
-        
-    public JSONObject setRecordStatus(String recordStatus){
+
+    public JSONObject setRecordStatus(String recordStatus) {
         return setValue("cRecdStat", recordStatus);
     }
 
@@ -120,18 +120,18 @@ public class Model_Payee extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-    
-    public Model_Particular Particular() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sPrtclrID"))){
-            if (poParticular.getEditMode() == EditMode.READY && 
-                poParticular.getParticularID().equals((String) getValue("sPrtclrID")))
+
+    public Model_Particular Particular() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPrtclrID"))) {
+            if (poParticular.getEditMode() == EditMode.READY
+                    && poParticular.getParticularID().equals((String) getValue("sPrtclrID"))) {
                 return poParticular;
-            else{
+            } else {
                 poJSON = poParticular.openRecord((String) getValue("sPrtclrID"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poParticular;
-                else {
+                } else {
                     poParticular.initialize();
                     return poParticular;
                 }
@@ -141,18 +141,18 @@ public class Model_Payee extends Model {
             return poParticular;
         }
     }
-    
-    public Model_Client_Master APClient() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sAPClntID"))){
-            if (poAPClient.getEditMode() == EditMode.READY && 
-                poAPClient.getClientId().equals((String) getValue("sAPClntID")))
+
+    public Model_Client_Master APClient() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sAPClntID"))) {
+            if (poAPClient.getEditMode() == EditMode.READY
+                    && poAPClient.getClientId().equals((String) getValue("sAPClntID"))) {
                 return poAPClient;
-            else{
+            } else {
                 poJSON = poAPClient.openRecord((String) getValue("sAPClntID"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poAPClient;
-                else {
+                } else {
                     poAPClient.initialize();
                     return poAPClient;
                 }
@@ -162,19 +162,19 @@ public class Model_Payee extends Model {
             return poAPClient;
         }
     }
-    
-    public Model_Client_Master Client() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sClientID"))){
-            if (poClient.getEditMode() == EditMode.READY && 
-                poClient.getClientId().equals((String) getValue("sClientID")))
+
+    public Model_Client_Master Client() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sClientID"))) {
+            if (poClient.getEditMode() == EditMode.READY
+                    && poClient.getClientId().equals((String) getValue("sClientID"))) {
                 return poClient;
-            else{
+            } else {
                 poJSON = poClient.openRecord((String) getValue("sClientID"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poClient;
-                else {
-                    poAPClient.initialize();
+                } else {
+                    poClient.initialize();
                     return poClient;
                 }
             }
@@ -183,18 +183,18 @@ public class Model_Payee extends Model {
             return poClient;
         }
     }
-    
-    public Model_Client_Address ClientAddress() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sClientID"))){
-            if (poClientAddress.getEditMode() == EditMode.READY && 
-                poClientAddress.getClientId().equals((String) getValue("sClientID")))
-                return poClientAddress;
-            else{
-                poJSON = poClientAddress.openRecord(OpenClientAddress((String) getValue("sClientID")) );
 
-                if ("success".equals((String) poJSON.get("result")))
+    public Model_Client_Address ClientAddress() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sClientID"))) {
+            if (poClientAddress.getEditMode() == EditMode.READY
+                    && poClientAddress.getClientId().equals((String) getValue("sClientID"))) {
+                return poClientAddress;
+            } else {
+                poJSON = poClientAddress.openRecord(OpenClientAddress((String) getValue("sClientID")));
+
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poClientAddress;
-                else {
+                } else {
                     poClientAddress.initialize();
                     return poClientAddress;
                 }
@@ -204,29 +204,29 @@ public class Model_Payee extends Model {
             return poClientAddress;
         }
     }
-    
+
     public String OpenClientAddress(String fsValue) throws SQLException, GuanzonException {
         String lsAddressId = "";
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(poClientAddress), " sClientID = " + SQLUtil.toSQL(fsValue) 
-                      + " AND cPrimaryx = '1' "
-                      + " GROUP BY sAddrssID");
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(poClientAddress), " sClientID = " + SQLUtil.toSQL(fsValue)
+                + " AND cPrimaryx = '1' "
+                + " GROUP BY sAddrssID");
         System.out.println("SQL " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                lsAddressId = loRS.getString("sAddrssID");
-            } 
-          }
-          MiscUtil.close(loRS);
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    lsAddressId = loRS.getString("sAddrssID");
+                }
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
-          poJSON.put("result", "error");
-          poJSON.put("message", e.getMessage());
-        } 
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
         return lsAddressId;
     }
-    
-    public JSONObject openRecordByReference(String Id1) throws SQLException, GuanzonException  {
+
+    public JSONObject openRecordByReference(String Id1) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
         String lsSQL = MiscUtil.makeSelect(this);
@@ -241,7 +241,7 @@ public class Model_Payee extends Model {
                 for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++) {
                     setValue(lnCtr, loRS.getObject(lnCtr));
                 }
-                
+
                 MiscUtil.close(loRS);
 
                 pnEditMode = EditMode.READY;

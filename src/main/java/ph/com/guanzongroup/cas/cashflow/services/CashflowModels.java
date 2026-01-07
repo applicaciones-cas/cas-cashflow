@@ -5,6 +5,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Adjustment;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Account_Chart;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Account_ChartX;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Ledger;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
@@ -133,6 +134,23 @@ public class CashflowModels {
         }
 
         return poAccountChart;
+    }
+    
+     public Model_Account_ChartX Account_ChartX(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Account_ChartX: Application driver is not set.");
+            return null;
+        }
+        
+        if (poAccountChartX == null){
+            poAccountChartX = new Model_Account_ChartX();
+            poAccountChartX.setApplicationDriver(poGRider);
+            poAccountChartX.setXML("Model_Account_Chart");
+            poAccountChartX.setTableName("Account_Chart");
+            poAccountChartX.initialize();
+        }
+
+        return poAccountChartX;
     }
     
     public Model_Transaction_Account_Chart Transaction_Account_Chart(){
@@ -483,6 +501,7 @@ public class CashflowModels {
             poCachePayableMaster = null;
             poRecurringIssuance = null;
             poAccountChart = null;
+            poAccountChartX = null;
             poGeneralLedger = null;
             poJournalMaster = null;
             poJournalDetail = null;
@@ -503,6 +522,7 @@ public class CashflowModels {
     private GRiderCAS poGRider;
 
     private Model_Account_Chart poAccountChart;
+    private Model_Account_ChartX poAccountChartX;
     private Model_Bank_Account_Master poBankAccountMaster;
     private Model_Bank_Account_Ledger poBankAccountLedger;
     private Model_Cache_Payable_Detail poCachePayableDetail;
