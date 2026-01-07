@@ -556,6 +556,12 @@ public class DisbursementVoucher extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
+        //Update Linked transaction to DV
+        poJSON = updateLinkedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -2091,7 +2097,8 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("COUNTER : " + lnCtr);
             System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
             System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
-            System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+            System.out.println("Detail Source : " + Detail(lnCtr).getDetailSource());
+            System.out.println("Detail Source No : " + Detail(lnCtr).getDetailNo());
             System.out.println("Amount : " + Detail(lnCtr).getAmount());
             System.out.println("-----------------------------------------------------------------------");
         }
@@ -2116,45 +2123,11 @@ public class DisbursementVoucher extends Transaction {
                 System.out.println("COUNTER : " + lnCtr);
                 System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
                 System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
-                System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+                System.out.println("Detail Source : " + Detail(lnCtr).getDetailSource());
+                System.out.println("Detail Source No : " + Detail(lnCtr).getDetailNo());
                 System.out.println("Amount : " + Detail(lnCtr).getAmount());
                 System.out.println("-----------------------------------------------------------------------");
             }
-            
-            //Save Journal
-            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
-            if(poJournal != null){
-                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
-                    poJSON = validateJournal();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", poJSON.get("message").toString());
-                        return poJSON;
-                    }
-                    poJournal.Master().setSourceNo(Master().getTransactionNo());
-                    poJournal.Master().setModifyingId(poGRider.getUserID());
-                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                    poJournal.setWithParent(true);
-                    poJSON = poJournal.SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        System.out.println("Save Journal : " + poJSON.get("message"));
-                        return poJSON;
-                    }
-                } else {
-                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid Update mode for Journal.");
-                        return poJSON;
-                    }
-                }
-            } else {
-                if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Journal is not set.");
-                    return poJSON;
-                }
-            }
-            System.out.println("-----------------------------------------------------------------------");
             
             switch(Master().getDisbursementType()){
                 case DisbursementStatic.DisbursementType.CHECK:
@@ -2258,7 +2231,6 @@ public class DisbursementVoucher extends Transaction {
                         }
                     }
                 }
-                System.out.println("--------------------------SAVE BANK ACCOUNT---------------------------------------------");
 //            }
             
             System.out.println("--------------------------SAVE OTHER TRANSACTION---------------------------------------------");
@@ -2268,6 +2240,42 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
             System.out.println("-----------------------------------------------------------------------");
+            
+            //Save Journal
+            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
+            if(poJournal != null){
+                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
+                    poJSON = validateJournal();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        return poJSON;
+                    }
+                    poJournal.Master().setSourceNo(Master().getTransactionNo());
+                    poJournal.Master().setModifyingId(poGRider.getUserID());
+                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                    poJournal.setWithParent(true);
+                    poJSON = poJournal.SaveTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("Save Journal : " + poJSON.get("message"));
+                        return poJSON;
+                    }
+                } else {
+                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Update mode for Journal.");
+                        return poJSON;
+                    }
+                }
+            } else {
+                if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Journal is not set.");
+                    return poJSON;
+                }
+            }
+            System.out.println("-----------------------------------------------------------------------");
+            
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
