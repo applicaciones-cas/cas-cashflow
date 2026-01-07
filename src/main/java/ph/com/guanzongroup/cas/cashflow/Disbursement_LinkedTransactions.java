@@ -228,7 +228,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         
         //Update process
         if(!lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
-            if(lbIsProcessed){
+            if(isAdd){
                 if(!lbIsProcessed){
                     if(Detail(row).getAmountApplied() > 0.0000){
                         Detail(row).PRF().setProcess("1");
@@ -239,7 +239,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     Detail(row).PRF().setProcess("1");
                 }   
             } else {
-                Detail(row).PRF().setProcess("1");
+                Detail(row).PRF().setProcess("0");
             }
         }
         
