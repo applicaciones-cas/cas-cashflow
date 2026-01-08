@@ -49,21 +49,34 @@ public class AccountChart extends Parameter {
                 return poJSON;
             }
 
-            if (poModel.getGLCode() == null || poModel.getGLCode().isEmpty()) {
+//            if (poModel.getGLCode() == null || poModel.getGLCode().isEmpty()) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "GL code must not be empty.");
+//                return poJSON;
+//            }
+            if (poModel.getBaseAccount() == null || poModel.getBaseAccount().isEmpty()) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "GL code must not be empty.");
+                poJSON.put("message", "Base Account must not be empty.");
                 return poJSON;
             }
 
-            if (poModel.getIndustryId() == null || poModel.getIndustryId().isEmpty()) {
+            if (poModel.getAccountType() == null || poModel.getAccountType().isEmpty()) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Industry code must not be empty.");
+                poJSON.put("message", "Account Type must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getBalanceType() == null || poModel.getBalanceType().isEmpty()) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Balance Type must not be empty.");
                 return poJSON;
             }
         }
 
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());
+
+        poModel.setIndustryId(poGRider.getIndustry());
 
         poJSON.put("result", "success");
         return poJSON;
@@ -81,7 +94,7 @@ public class AccountChart extends Parameter {
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Description»Account",
+                "ID»Description»Account»Industry",
                 "sAcctCode»sDescript»sGLCodexx»xIndustry",
                 "a.sAcctCode»a.sDescript»a.sGLCodexx»IFNULL(b.sDescript, '')",
                 byCode ? 0 : 1);
@@ -167,7 +180,7 @@ public class AccountChart extends Parameter {
         String lsSQL = "SELECT"
                 + "  a.sAcctCode"
                 + ", a.sDescript"
-                + ", a.sGLCodexx"
+                + ", IFNULL(a.sGLCodexx,'') sGLCodexx"
                 + ", a.cRecdStat"
                 + ", IFNULL(b.sDescript, '') xIndustry"
                 + " FROM Account_Chart a"

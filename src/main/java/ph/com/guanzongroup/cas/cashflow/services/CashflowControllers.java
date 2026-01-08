@@ -312,7 +312,7 @@ public class CashflowControllers {
 
         poAccountChart = new AccountChart();
         poAccountChart.setApplicationDriver(poGRider);
-        poAccountChart.setWithParentClass(true);
+        poAccountChart.setWithParentClass(false);
         poAccountChart.setLogWrapper(poLogWrapper);
         poAccountChart.initialize();
         poAccountChart.newRecord();
@@ -331,7 +331,7 @@ public class CashflowControllers {
 
         poTransactionAccountChart = new TransactionAccountChart();
         poTransactionAccountChart.setApplicationDriver(poGRider);
-        poTransactionAccountChart.setWithParentClass(true);
+        poTransactionAccountChart.setWithParentClass(false);
         poTransactionAccountChart.setLogWrapper(poLogWrapper);
         poTransactionAccountChart.initialize();
         poTransactionAccountChart.newRecord();

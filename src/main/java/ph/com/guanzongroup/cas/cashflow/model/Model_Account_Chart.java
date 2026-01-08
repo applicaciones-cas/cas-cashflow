@@ -184,7 +184,7 @@ public class Model_Account_Chart extends Model {
     public Model_Account_ChartX ParentAccountChart() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sParentCd"))) {
             if (poAccountParent.getEditMode() == EditMode.READY
-                    && poAccountParent.getGLCode().equals((String) getValue("sParentCd"))) {
+                    && poAccountParent.getAccountCode().equals((String) getValue("sParentCd"))) {
                 return poAccountParent;
             } else {
                 poJSON = poAccountParent.openRecord((String) getValue("sParentCd"));

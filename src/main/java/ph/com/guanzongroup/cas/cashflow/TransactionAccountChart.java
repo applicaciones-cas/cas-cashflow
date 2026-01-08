@@ -76,7 +76,7 @@ public class TransactionAccountChart extends Parameter {
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
-            return poModel.openRecord((String) poJSON.get("sPrtclrID"));
+            return poModel.openRecord((String) poJSON.get("sGLCodexx"));
         } else {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
