@@ -785,6 +785,12 @@ public class SOATagging extends Transaction {
                 ldblTransactionTotal = ldblTransactionTotal + Detail(lnCtr).getAppliedAmount().doubleValue();
             }
         }
+        
+        if(ldblTransactionTotal < 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Total Amount.");
+            return poJSON;
+        }
 
         Master().setTransactionTotal(ldblTransactionTotal);
         ldblNetTotal = ldblTransactionTotal - ldblDiscountAmount;
@@ -1055,14 +1061,14 @@ public class SOATagging extends Transaction {
                 referenceNo = "";
             }
 
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
             switch(payableType){
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dTransact DESC ";
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dDueDatex ASC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dTransact DESC ";
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
                     break;
             }
             System.out.println("Executing SQL: " + lsSQL);
@@ -1364,6 +1370,10 @@ public class SOATagging extends Transaction {
         if (Master().getClientId() == null || "".equals(Master().getClientId())) {
             Master().setClientId(lsClientId);
         }
+        
+        if(ldblCreditAmt.doubleValue() > 0.0000){
+            ldblBalance = -ldblBalance;
+        }
 
         Detail(lnRow).isReverse(true);
         Detail(lnRow).setSourceNo(lsTransNo);
@@ -1372,6 +1382,15 @@ public class SOATagging extends Transaction {
         Detail(lnRow).setAppliedAmount(ldblBalance); //Set transaction balance as default applied amount
         Detail(lnRow).setDebitAmount(ldblDebitAmt);
         Detail(lnRow).setCreditAmount(ldblCreditAmt);
+        
+        JSONObject loJSON = computeFields();
+        if ("error".equals((String) loJSON.get("result"))) {
+            loJSON.put("row", lnRow);
+            Detail().remove(lnRow);
+            AddDetail();
+            return loJSON;
+        }
+        
         AddDetail();
 
         poJSON.put("result", "success");
@@ -1642,7 +1661,7 @@ public class SOATagging extends Transaction {
             if (item.getValue("nAppliedx") != null && !"".equals(item.getValue("nAppliedx"))) {
                 lsAppliedAmount = item.getValue("nAppliedx").toString();
             }
-            if (Double.valueOf(lsAppliedAmount) <= 0.0000) {
+            if (Double.valueOf(lsAppliedAmount) == 0.0000) {
                 if (item.getEditMode() == EditMode.ADDNEW) {
                     detail.remove();
                 } else if (item.getEditMode() == EditMode.UPDATE) {
@@ -2523,6 +2542,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
+                + " , IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2546,6 +2566,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
+                + " , a.dTransact AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2574,6 +2595,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
+                + " , IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "
@@ -2600,6 +2622,7 @@ public class SOATagging extends Transaction {
                 + "   a.sTransNox "
                 + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
+                + " , a.dTransact AS dDueDatex "
                 + " , a.sIndstCdx "
                 + " , a.cTranStat "
                 + " , a.nAmtPaidx "

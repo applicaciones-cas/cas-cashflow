@@ -556,6 +556,12 @@ public class DisbursementVoucher extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
+        //Update Linked transaction to DV
+        poJSON = updateLinkedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -1231,6 +1237,7 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATAmount = 0.0000;
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
+        Double ldblAppliedAmt = 0.0000;
         computeTaxAmount();
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
@@ -1244,6 +1251,20 @@ public class DisbursementVoucher extends Transaction {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid Applied Amount.");
                     return poJSON;
+                }
+            } else {
+                ldblAppliedAmt = Detail(lnCntr).getAmountApplied();
+                if(ldblAppliedAmt < 0){
+                    ldblAppliedAmt = ldblAppliedAmt * -1;
+                }
+                if(Detail(lnCntr).getAmountApplied() < 0){
+                    if(ldblAppliedAmt > ldblTransactionTotal){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Total Amount.");
+                        return poJSON;
+                    } else {
+                        ldblTransactionTotal = ldblTransactionTotal - ldblAppliedAmt;
+                    }
                 }
             }
         }
@@ -1795,7 +1816,7 @@ public class DisbursementVoucher extends Transaction {
                 Detail().remove(lnCtr);
             } else {
                 if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Detail(lnCtr).getAmountApplied() <= 0.0000){
+                    if(Detail(lnCtr).getAmountApplied() == 0.0000){
                         Detail().remove(lnCtr);
                     }
                 }
@@ -1805,8 +1826,8 @@ public class DisbursementVoucher extends Transaction {
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getSourceNo() != null && !"".equals(Detail(getDetailCount() - 1).getSourceNo())) {
-                if((Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
-                    || (Detail(getDetailCount() - 1).getAmountApplied() > 0.0000 && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+                if((Detail(getDetailCount() - 1).getAmountApplied() == 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || ((Detail(getDetailCount() - 1).getAmountApplied() < 0.0000 || Detail(getDetailCount() - 1).getAmountApplied() > 0.0000) && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
                     AddDetail();
                 }
             }
@@ -1817,7 +1838,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
-            && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
+            && Detail(getDetailCount() - 1).getAmountApplied() == 0.0000
             && getDetailCount() <= 1){
             Master().setIndustryID("");
         }
@@ -1976,7 +1997,7 @@ public class DisbursementVoucher extends Transaction {
             Model item = detail.next(); // Store the item before checking conditions
             String lsSourceNo = (String) item.getValue("sSourceNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if ((lsAmount <= 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
+            if ((lsAmount == 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
                 && item.getEditMode() == EditMode.ADDNEW ){
                 detail.remove(); // Correctly remove the item
             }
@@ -2068,7 +2089,7 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
         
-        Master().setModifyingId(poGRider.getUserID());
+        Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
         System.out.println("--------------------------WILL SAVE---------------------------------------------");
@@ -2076,7 +2097,8 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("COUNTER : " + lnCtr);
             System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
             System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
-            System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+            System.out.println("Detail Source : " + Detail(lnCtr).getDetailSource());
+            System.out.println("Detail Source No : " + Detail(lnCtr).getDetailNo());
             System.out.println("Amount : " + Detail(lnCtr).getAmount());
             System.out.println("-----------------------------------------------------------------------");
         }
@@ -2101,45 +2123,11 @@ public class DisbursementVoucher extends Transaction {
                 System.out.println("COUNTER : " + lnCtr);
                 System.out.println("Source No : " + Detail(lnCtr).getSourceNo());
                 System.out.println("Source Code : " + Detail(lnCtr).getSourceCode());
-                System.out.println("Particular : " + Detail(lnCtr).getParticularID());
+                System.out.println("Detail Source : " + Detail(lnCtr).getDetailSource());
+                System.out.println("Detail Source No : " + Detail(lnCtr).getDetailNo());
                 System.out.println("Amount : " + Detail(lnCtr).getAmount());
                 System.out.println("-----------------------------------------------------------------------");
             }
-            
-            //Save Journal
-            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
-            if(poJournal != null){
-                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
-                    poJSON = validateJournal();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", poJSON.get("message").toString());
-                        return poJSON;
-                    }
-                    poJournal.Master().setSourceNo(Master().getTransactionNo());
-                    poJournal.Master().setModifyingId(poGRider.getUserID());
-                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                    poJournal.setWithParent(true);
-                    poJSON = poJournal.SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        System.out.println("Save Journal : " + poJSON.get("message"));
-                        return poJSON;
-                    }
-                } else {
-                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid Update mode for Journal.");
-                        return poJSON;
-                    }
-                }
-            } else {
-                if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Journal is not set.");
-                    return poJSON;
-                }
-            }
-            System.out.println("-----------------------------------------------------------------------");
             
             switch(Master().getDisbursementType()){
                 case DisbursementStatic.DisbursementType.CHECK:
@@ -2243,7 +2231,6 @@ public class DisbursementVoucher extends Transaction {
                         }
                     }
                 }
-                System.out.println("--------------------------SAVE BANK ACCOUNT---------------------------------------------");
 //            }
             
             System.out.println("--------------------------SAVE OTHER TRANSACTION---------------------------------------------");
@@ -2253,6 +2240,42 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
             System.out.println("-----------------------------------------------------------------------");
+            
+            //Save Journal
+            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
+            if(poJournal != null){
+                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
+                    poJSON = validateJournal();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        return poJSON;
+                    }
+                    poJournal.Master().setSourceNo(Master().getTransactionNo());
+                    poJournal.Master().setModifyingId(poGRider.getUserID());
+                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                    poJournal.setWithParent(true);
+                    poJSON = poJournal.SaveTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("Save Journal : " + poJSON.get("message"));
+                        return poJSON;
+                    }
+                } else {
+                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Update mode for Journal.");
+                        return poJSON;
+                    }
+                }
+            } else {
+                if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Journal is not set.");
+                    return poJSON;
+                }
+            }
+            System.out.println("-----------------------------------------------------------------------");
+            
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
@@ -2662,6 +2685,12 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
+        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode())){
+            if(loController.Master().getReceivables() > 0.0000){
+                ldblBalance = -ldblBalance;
+            }
+        }
+        
         Detail(lnRow).setSourceNo(loController.Master().getSourceNo());
         Detail(lnRow).setSourceCode(loController.Master().getSourceCode());
         Detail(lnRow).setAmount(ldblBalance);
@@ -2672,6 +2701,15 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt());
         Detail(lnRow).setDetailVatRates(loController.Master().getVATRates());
         Detail(lnRow).setDetailZeroVat(loController.Master().getZeroRated());
+        
+        JSONObject loJSON = computeFields();
+        if ("error".equals((String) loJSON.get("result"))) {
+            Detail().remove(lnRow);
+            AddDetail();
+            loJSON.put("row", lnRow);
+            return loJSON;
+        }
+        
         AddDetail();
     
         poJSON.put("result", "success");
@@ -2720,7 +2758,12 @@ public class DisbursementVoucher extends Transaction {
             Double ldblVatZeroRated = 0.0000;   
             Double ldblVatRate = 0.0000;  
             
-            ldblBalance = loController.Detail(lnCtr).getAppliedAmount().doubleValue() - loController.Detail(lnCtr).getAmountPaid().doubleValue();
+            ldblBalance = loController.Detail(lnCtr).getAppliedAmount().doubleValue();
+            if(ldblBalance < 0.0000){
+                ldblBalance = ldblBalance * -1;
+            }
+            
+            ldblBalance = ldblBalance - loController.Detail(lnCtr).getAmountPaid().doubleValue();
             //skip detail that is already paid
             if(ldblBalance <= 0.0000){
                 continue;
@@ -2795,6 +2838,12 @@ public class DisbursementVoucher extends Transaction {
                         ldblVatExempt = loCachePayable.Master().getVATExempt();
                         ldblVatZeroRated = loCachePayable.Master().getZeroRated();   
                         ldblVatRate = loCachePayable.Master().getVATRates();
+                        
+                        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loCachePayable.Master().getSourceCode())){
+                            if(loCachePayable.Master().getReceivables() > 0.0000){
+                                ldblBalance = -ldblBalance;
+                            }
+                        }
                     }
                     break;
             }
@@ -3811,7 +3860,8 @@ public class DisbursementVoucher extends Transaction {
                 + "b.sBranchNm AS Branch, "
                 + "a.sTransNox, "
                 + "a.dTransact, "
-                + "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                //+ "(a.nNetTotal - a.nAmtPaidx) AS Balance, "
+                + "CASE WHEN a.nRecvbles > 0 THEN -(a.nNetTotal - a.nAmtPaidx) ELSE (a.nNetTotal - a.nAmtPaidx) END AS Balance, "
                 + SQLUtil.toSQL(DisbursementStatic.SourceCode.CASH_PAYABLE) +" AS PayableType, "
                 + "a.sSourceCd AS TransactionType, "
                 + SQLUtil.toSQL("Cache_Payable_Master") +" AS SourceTable, "
