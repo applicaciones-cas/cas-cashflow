@@ -11,8 +11,9 @@ import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Particular extends Model {
+
     Model_Account_Chart poAccountChart;
-    
+
     @Override
     public void initialize() {
         try {
@@ -22,18 +23,17 @@ public class Model_Particular extends Model {
             poEntity.moveToInsertRow();
 
             MiscUtil.initRowSet(poEntity);
-
-            //assign default values
-            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
-            //end - assign default values
-
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
             poEntity.absolute(1);
 
+            //assign default values
+            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            //end - assign default values
+
             ID = poEntity.getMetaData().getColumnLabel(1);
-            
+
             CashflowModels model = new CashflowModels(poGRider);
             poAccountChart = model.Account_Chart();
 
@@ -59,7 +59,7 @@ public class Model_Particular extends Model {
     public String getDescription() {
         return (String) getValue("sDescript");
     }
-    
+
     public JSONObject setAccountCode(String accountCode) {
         return setValue("sAcctCode", accountCode);
     }
@@ -67,7 +67,7 @@ public class Model_Particular extends Model {
     public String getAccountCode() {
         return (String) getValue("sAcctCode");
     }
-    
+
     public JSONObject setTransactionType(String transactionType) {
         return setValue("sTranType", transactionType);
     }
@@ -75,8 +75,8 @@ public class Model_Particular extends Model {
     public String getTransactionType() {
         return (String) getValue("sTranType");
     }
-                
-    public JSONObject setRecordStatus(String recordStatus){
+
+    public JSONObject setRecordStatus(String recordStatus) {
         return setValue("cRecdStat", recordStatus);
     }
 
@@ -99,18 +99,18 @@ public class Model_Particular extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
-    
-    public Model_Account_Chart Account_Chart() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sAcctCode"))){
-            if (poAccountChart.getEditMode() == EditMode.READY && 
-                poAccountChart.getAccountCode().equals((String) getValue("sAcctCode")))
+
+    public Model_Account_Chart Account_Chart() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sAcctCode"))) {
+            if (poAccountChart.getEditMode() == EditMode.READY
+                    && poAccountChart.getAccountCode().equals((String) getValue("sAcctCode"))) {
                 return poAccountChart;
-            else{
+            } else {
                 poJSON = poAccountChart.openRecord((String) getValue("sAcctCode"));
 
-                if ("success".equals((String) poJSON.get("result")))
+                if ("success".equals((String) poJSON.get("result"))) {
                     return poAccountChart;
-                else {
+                } else {
                     poAccountChart.initialize();
                     return poAccountChart;
                 }
