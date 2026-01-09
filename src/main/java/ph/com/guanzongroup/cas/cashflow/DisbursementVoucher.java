@@ -237,7 +237,7 @@ public class DisbursementVoucher extends Transaction {
     }
 
     public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
-        
+       
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
@@ -295,8 +295,94 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+    
+    public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+        
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        switch(loObject.getTransactionStatus()){
+            case DisbursementStatic.VOID:
+            case DisbursementStatic.CANCELLED:
+            case DisbursementStatic.DISAPPROVED:
+            case DisbursementStatic.CERTIFIED:
+            case DisbursementStatic.AUTHORIZED:
+                poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
+                poJSON.put("result", "error");
+                return poJSON;
+            case DisbursementStatic.VERIFIED:
+                if(isEntry){
+                    poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+                break;
+        }
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    public String getStatus(String lsStatus){
+        switch(lsStatus){
+            case DisbursementStatic.VOID:
+                return "Voided";
+            case DisbursementStatic.CANCELLED:
+                return "Cancelled";
+            case DisbursementStatic.DISAPPROVED:
+                return "Dis-approved";
+            case DisbursementStatic.VERIFIED:
+                return "Verified";
+            case DisbursementStatic.CERTIFIED:
+                return "Certified";
+            case DisbursementStatic.AUTHORIZED:
+                return "Authorized";
+            case DisbursementStatic.RETURNED:
+                return "Returned";
+            default:
+                return "Open";
+        }
+    }
+    
+    private boolean isAllowed(String current, String target) {
+        switch (target) {
+            case DisbursementStatic.RETURNED:
+                return current.equals(DisbursementStatic.VERIFIED)
+                    || current.equals(DisbursementStatic.CERTIFIED);
+
+            case DisbursementStatic.CANCELLED:
+                return current.equals(DisbursementStatic.VERIFIED)
+                    || current.equals(DisbursementStatic.RETURNED);
+
+            case DisbursementStatic.VOID:
+                return current.equals(DisbursementStatic.OPEN);
+
+            case DisbursementStatic.DISAPPROVED:
+                return current.equals(DisbursementStatic.VERIFIED)
+                    || current.equals(DisbursementStatic.RETURNED)
+                    || current.equals(DisbursementStatic.CERTIFIED);
+
+            case DisbursementStatic.VERIFIED:
+                return current.equals(DisbursementStatic.OPEN)
+                    || current.equals(DisbursementStatic.RETURNED);
+
+            case DisbursementStatic.CERTIFIED:
+                return current.equals(DisbursementStatic.VERIFIED);
+
+            case DisbursementStatic.AUTHORIZED:
+                return current.equals(DisbursementStatic.CERTIFIED);
+
+            default:
+                return false;
+        }
+    }
     /*Update Transaction Status*/
-    public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = DisbursementStatic.VERIFIED;
 
@@ -305,10 +391,17 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+        
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already verified.");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
         
@@ -338,7 +431,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject CertifyTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-
+        
         String lsStatus = DisbursementStatic.CERTIFIED;
         
         poJSON = callApproval();
@@ -357,13 +450,13 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "No transacton was loaded.");
                 return poJSON;
             }
-
-            if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            
+            if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Transaction was already certified.");
+                poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
                 return poJSON;
             }
-        
+
             //validator
             poJSON = isEntryOkay(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
@@ -417,10 +510,10 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "No transacton was loaded.");
                 return poJSON;
             }
-
-            if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            
+            if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Transaction was already authorize.");
+                poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
                 return poJSON;
             }
         
@@ -483,10 +576,10 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "No transacton was loaded.");
                 return poJSON;
             }
-
-            if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            
+            if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Transaction was already disapproved.");
+                poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
                 return poJSON;
             }
         
@@ -537,10 +630,17 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already voided.");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -600,6 +700,19 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "Transaction was already cancelled.");
             return poJSON;
         }
+        
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
@@ -652,10 +765,17 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "No transacton was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+        
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already returned.");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -722,10 +842,10 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "No transacton was loaded.");
                 return poJSON;
             }
-
-            if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            
+            if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Transaction was already returned.");
+                poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
                 return poJSON;
             }
         

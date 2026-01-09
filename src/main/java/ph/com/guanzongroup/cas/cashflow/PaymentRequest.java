@@ -164,7 +164,7 @@ public class PaymentRequest extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
