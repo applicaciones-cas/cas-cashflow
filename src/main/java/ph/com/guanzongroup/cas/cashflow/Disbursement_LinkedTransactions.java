@@ -248,11 +248,6 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(pbIsUpdateAmountPaid){
-            poJSON = savePOMaster(row, isAdd);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-            
             Detail(row).PRF().setAmountPaid(ldblAmountPaid);
         }
         Detail(row).PRF().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
@@ -260,6 +255,15 @@ public class Disbursement_LinkedTransactions extends Transaction {
         poJSON = Detail(row).PRF().saveRecord();
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        
+        if(pbIsUpdateAmountPaid){
+            if(Detail(row).PRF().getSourceNo() != null && !"".equals(Detail(row).PRF().getSourceNo())){
+                poJSON = savePOMaster(row, isAdd);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
         }
         
         //PAID Transaction
@@ -599,9 +603,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
             return poJSON;
         }
         
-            
         //Tag Source Transaction as Paid
-        if(Objects.equals(Detail(row).APAdjustment().getNetTotal(), Detail(row).APAdjustment().getAppliedAmount())){
+        if(Objects.equals(String.format("%.4f", Detail(row).APAdjustment().getNetTotal()), String.format("%.4f", Detail(row).APAdjustment().getAppliedAmount()))){
             poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -800,14 +803,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 }
                 poJSON = loPRF.OpenTransaction(fsSourceNo);
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 loPRF.setWithParent(true);
                 loPRF.setWithUI(false);
                 poJSON = loPRF.PaidTransaction("");
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 break;
@@ -827,7 +828,6 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 loSOA.setWithUI(false);
                 poJSON = loSOA.PaidTransaction("");
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 break;
@@ -835,19 +835,16 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 PurchaseOrderReceiving loPOReceiving = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
                 poJSON = loPOReceiving.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 poJSON = loPOReceiving.OpenTransaction(fsSourceNo);
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 loPOReceiving.setWithParent(true);
                 loPOReceiving.setWithUI(false);
                 poJSON = loPOReceiving.PaidTransaction("");
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 break;
@@ -883,7 +880,6 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 loAPAdjustment.setWithUI(false);
                 poJSON = loAPAdjustment.PaidTransaction("");
                 if ("error".equals((String) poJSON.get("result"))) {
-                    
                     return poJSON;
                 }
                 break;
