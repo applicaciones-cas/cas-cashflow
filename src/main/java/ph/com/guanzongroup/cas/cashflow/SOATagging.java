@@ -2739,7 +2739,7 @@ public class SOATagging extends Transaction {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM PO_Receiving_Master a "
+                        + " FROM AP_Payment_Master a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
