@@ -2,11 +2,14 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
@@ -1301,6 +1304,138 @@ public class PaymentRequest extends Transaction {
         }
 
         return status;
+    }
+    
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+        CachedRowSet crs = getStatusHistory();
+        
+        crs.beforeFirst(); 
+	
+        while(crs.next()){
+            switch (crs.getString("cRefrStat")){
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case PaymentRequestStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case PaymentRequestStatus.CONFIRMED:
+                    crs.updateString("cRefrStat", "CONFIRMED");
+                    break;
+                case PaymentRequestStatus.PAID:
+                    crs.updateString("cRefrStat", "PAID");
+                    break;
+                case PaymentRequestStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
+                    break;
+                case PaymentRequestStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                case PaymentRequestStatus.POSTED:
+                    crs.updateString("cRefrStat", "POSTED");
+                    break;
+                case PaymentRequestStatus.RETURNED:
+                    crs.updateString("cRefrStat", "RETURNED");
+                    break;
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+                    
+                    switch (stat){
+                    case PaymentRequestStatus.OPEN:
+                        crs.updateString("cRefrStat", "OPEN");
+                        break;
+                    case PaymentRequestStatus.CONFIRMED:
+                        crs.updateString("cRefrStat", "CONFIRMED");
+                        break;
+                    case PaymentRequestStatus.PAID:
+                        crs.updateString("cRefrStat", "PAID");
+                        break;
+                    case PaymentRequestStatus.CANCELLED:
+                        crs.updateString("cRefrStat", "CANCELLED");
+                        break;
+                    case PaymentRequestStatus.VOID:
+                        crs.updateString("cRefrStat", "VOID");
+                        break;
+                    case PaymentRequestStatus.POSTED:
+                        crs.updateString("cRefrStat", "POSTED");
+                        break;
+                    case PaymentRequestStatus.RETURNED:
+                        crs.updateString("cRefrStat", "RETURNED");
+                        break;
+                    }
+            }
+            crs.updateRow(); 
+        }
+        
+        JSONObject loJSON  = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+        
+        if ("success".equals((String) loJSON.get("result"))){
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        
+        showStatusHistoryUI("Purchase Order", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+    }
+    public JSONObject getEntryBy() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL =  " SELECT b.sModified, b.dModified " 
+                        + " FROM PO_Master a "
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+                    if(loRS.getString("sModified").length() > 10){
+                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+                    } else {
+                        lsEntry = getSysUser(loRS.getString("sModified")); 
+                    }
+                    // Get the LocalDateTime from your result set
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsEntryDate =  dModified.format(formatter);
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return poJSON;
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
+                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                lsEntry = loRS.getString("sCompnyNm");
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+        } 
+        return lsEntry;
     }
 
 }
