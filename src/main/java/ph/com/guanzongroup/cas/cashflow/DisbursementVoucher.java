@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -1355,6 +1356,9 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
 
         Double ldblTransactionTotal = 0.0000;
+        Double ldblVATSalesTotal = 0.0000;
+        Double ldblVATAmountTotal = 0.0000;
+        Double ldblVATExemptTotal = 0.0000;
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
         Double ldblVATExempt = 0.0000;
@@ -1365,9 +1369,9 @@ public class DisbursementVoucher extends Transaction {
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             if(Detail(lnCntr).getAmountApplied() > 0.0000){
                 ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
-                ldblVATSales += Detail(lnCntr).getDetailVatSales();
-                ldblVATAmount += Detail(lnCntr).getDetailVatAmount();
-                ldblVATExempt += Detail(lnCntr).getDetailVatExempt();
+                ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
+                ldblVATAmountTotal += Detail(lnCntr).getDetailVatAmount();
+                ldblVATExemptTotal += Detail(lnCntr).getDetailVatExempt();
 
                 if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
                     poJSON.put("result", "error");
@@ -1376,8 +1380,20 @@ public class DisbursementVoucher extends Transaction {
                 }
             } else {
                 ldblAppliedAmt = Detail(lnCntr).getAmountApplied();
+                ldblVATSales = Detail(lnCntr).getDetailVatSales();
+                ldblVATAmount = Detail(lnCntr).getDetailVatAmount();
+                ldblVATExempt = Detail(lnCntr).getDetailVatExempt();
                 if(ldblAppliedAmt < 0){
                     ldblAppliedAmt = ldblAppliedAmt * -1;
+                }
+                if(ldblVATSales < 0){
+                    ldblVATSales = ldblVATSales * -1;
+                }
+                if(ldblVATAmount < 0){
+                    ldblVATAmount = ldblVATAmount * -1;
+                }
+                if(ldblVATExempt < 0){
+                    ldblVATExempt = ldblVATExempt * -1;
                 }
                 if(Detail(lnCntr).getAmountApplied() < 0){
                     if(ldblAppliedAmt > ldblTransactionTotal){
@@ -1386,7 +1402,25 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     } else {
                         ldblTransactionTotal = ldblTransactionTotal - ldblAppliedAmt;
+                        ldblVATSalesTotal = ldblVATSalesTotal - ldblVATSales;
+                        ldblVATAmountTotal = ldblVATAmountTotal - ldblVATAmount;
+                        ldblVATExemptTotal = ldblVATExemptTotal - ldblVATExempt;
                     }
+                }
+                if(ldblVATSalesTotal < 0 ){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid Vat Sales Total.");
+                    return poJSON;
+                }
+                if(ldblVATAmountTotal < 0 ){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid Vat Amount Total.");
+                    return poJSON;
+                }
+                if(ldblVATExemptTotal < 0 ){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid Vat Exempt Total.");
+                    return poJSON;
                 }
             }
         }
@@ -1400,9 +1434,9 @@ public class DisbursementVoucher extends Transaction {
         }
 
         Master().setTransactionTotal(ldblTransactionTotal);
-        Master().setVATSale(ldblVATSales);
-        Master().setVATAmount(ldblVATAmount);
-        Master().setVATExmpt(ldblVATExempt);
+        Master().setVATSale(ldblVATSalesTotal);
+        Master().setVATAmount(ldblVATAmountTotal);
+        Master().setVATExmpt(ldblVATExemptTotal);
         Master().setZeroVATSales(ldblZeroVATSales);
         Master().setNetTotal(lnNetAmountDue);
 
@@ -1476,14 +1510,17 @@ public class DisbursementVoucher extends Transaction {
                 //Compute VAT
                 switch(Detail(lnCtr).getSourceCode()){
                     case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                        if(SOATaggingStatic.PaymentRequest.equals(Detail(lnCtr).SOADetail().getSourceCode())){
-                            poJSON = computeDetail(lnCtr);
-                            if ("error".equals((String) poJSON.get("result"))) {
-                                return poJSON;
-                            }
+                        switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                            case SOATaggingStatic.PaymentRequest:
+                            case SOATaggingStatic.APPaymentAdjustment:
+                                poJSON = computeDetail(lnCtr);
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }
                         }
                     break;
                     case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         poJSON = computeDetail(lnCtr);
                         if ("error".equals((String) poJSON.get("result"))) {
                             return poJSON;
@@ -1506,10 +1543,17 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject computeDetail(int fnRow){
         poJSON = new JSONObject();
         Double ldblAmountApplied = Detail(fnRow).getAmountApplied();
+        Double ldblVATExempt = Detail(fnRow).getDetailVatExempt();
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
         
-        if(Detail(fnRow).getDetailVatExempt() > ldblAmountApplied){
+        if(ldblAmountApplied < 0){
+            ldblAmountApplied = ldblAmountApplied * -1;
+        } 
+        if(ldblVATExempt < 0){
+            ldblVATExempt = ldblVATExempt * -1;
+        } 
+        if(ldblVATExempt > ldblAmountApplied){
             poJSON.put("result", "error");
             poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount");
             Detail(fnRow).setDetailVatAmount(0.0000);
@@ -1517,20 +1561,28 @@ public class DisbursementVoucher extends Transaction {
             Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
             Detail(fnRow).isWithVat(false);
             return poJSON;
-        } else if(Detail(fnRow).getDetailVatExempt() < ldblAmountApplied){
+        } else if(ldblVATExempt < ldblAmountApplied){
             Detail(fnRow).isWithVat(true);
-        } else if (Detail(fnRow).getDetailVatExempt() == ldblAmountApplied){
+        } else if (Objects.equals(ldblVATExempt, ldblAmountApplied)){
             Detail(fnRow).isWithVat(false);
         }
 
         if(Detail(fnRow).isWithVat()){
-            ldblAmountApplied = ldblAmountApplied - Detail(fnRow).getDetailVatExempt();
+            ldblAmountApplied = ldblAmountApplied - ldblVATExempt;
             ldblVATAmount = ldblAmountApplied - (ldblAmountApplied / 1.12);
             ldblVATSales = ldblAmountApplied - ldblVATAmount;
+            
+            if(Detail(fnRow).getAmountApplied() < 0){
+                ldblVATAmount = -ldblVATAmount;
+                ldblVATSales = -ldblVATSales;
+            } 
 
             Detail(fnRow).setDetailVatAmount(ldblVATAmount);
             Detail(fnRow).setDetailVatSales(ldblVATSales);
         } else {
+            if(Detail(fnRow).getAmountApplied() < 0){
+                ldblAmountApplied = -ldblAmountApplied;
+            } 
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
             Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
@@ -2817,10 +2869,31 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setSourceCode(loController.Master().getSourceCode());
         Detail(lnRow).setAmount(ldblBalance);
         Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
+        
+        //TODO
+        Detail(lnRow).setDetailVatAmount(ldblBalance);
         //Apply Vat
-        Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount());
-        Detail(lnRow).setDetailVatSales(loController.Master().getVATSales());
-        Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt());
+        if(ldblBalance < 0){
+            if(loController.Master().getVATAmount() > 0){
+                Detail(lnRow).setDetailVatAmount(-loController.Master().getVATAmount());
+            } else {
+                Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount());
+            }
+            if(loController.Master().getVATSales() > 0){
+                Detail(lnRow).setDetailVatAmount(-loController.Master().getVATSales());
+            } else {
+                Detail(lnRow).setDetailVatAmount(loController.Master().getVATSales());
+            }
+            if(loController.Master().getVATExempt() > 0){
+                Detail(lnRow).setDetailVatAmount(-loController.Master().getVATExempt());
+            } else {
+                Detail(lnRow).setDetailVatAmount(loController.Master().getVATExempt());
+            }
+        } else {
+            Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount());
+            Detail(lnRow).setDetailVatSales(loController.Master().getVATSales());
+            Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt());
+        }
         Detail(lnRow).setDetailVatRates(loController.Master().getVATRates());
         Detail(lnRow).setDetailZeroVat(loController.Master().getZeroRated());
         
