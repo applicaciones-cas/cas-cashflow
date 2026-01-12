@@ -427,7 +427,7 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
         
-        poGRider.beginTrans("UPDATE STATUS", "PaidTransaction", SOURCE_CODE, poModel.getTransactionNo());
+//        poGRider.beginTrans("UPDATE STATUS", "PaidTransaction", SOURCE_CODE, poModel.getTransactionNo());
 
         //change status
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
@@ -436,7 +436,7 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
 
-        poGRider.commitTrans();
+//        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
