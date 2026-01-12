@@ -88,6 +88,12 @@ public class APPaymentAdjustment extends Parameter {
             getModel().setTransactionNo(getModel().getNextCode());
         }
         
+        getModel().setModifyingBy(poGRider.getUserID());
+        getModel().setModifiedDate(poGRider.getServerDate());
+        
+        System.out.println("Modified By : " + getModel().getModifyingBy());
+        System.out.println("Modified Date : " + getModel().getModifiedDate());
+        
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
             if(!pbWithParent){
                 if (poGRider.getUserLevel() <= UserRight.ENCODER) {
@@ -147,7 +153,6 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
 
         String lsStatus = APPaymentAdjustmentStatus.CONFIRMED;
-        boolean lbConfirm = true;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -162,62 +167,52 @@ public class APPaymentAdjustment extends Parameter {
         }
 
         //validator
-        poJSON = isEntryOkay(APPaymentAdjustmentStatus.CONFIRMED);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
-//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-//            poJSON = ShowDialogFX.getUserApproval(poGRider);
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
-//        }
+        
+        if(!pbWithParent){
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
         
         //Populate cache payables
-//        poJSON = populateCachePayable(false, APPaymentAdjustmentStatus.CONFIRMED);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-
-        poJSON = UpdateTransaction();
+        poJSON = populateCachePayable(true, lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
-        poModel.setTransactionStatus(APPaymentAdjustmentStatus.CONFIRMED);
-        poJSON = SaveTransaction();
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, poModel.getTransactionNo());
+        
+        poCachePayable.setWithParent(true);
+        poJSON = poCachePayable.SaveTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
-//        if(poCachePayable.getEditMode() == EditMode.ADDNEW || poCachePayable.getEditMode() == EditMode.UPDATE){
-//            poJSON = poCachePayable.SaveTransaction();
-//            if (!"success".equals((String) poJSON.get("result"))) {
-//                return poJSON;
-//            }
-//        }
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
 
-//        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, poModel.getTransactionNo());
-//
-//        //change status
-////        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        //Create Cache_Payables TODO
-//        poGRider.commitTrans();
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction confirmed successfully.");
-        } else {
-            poJSON.put("message", "Transaction confirmation request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction confirmed successfully.");
         return poJSON;
     }
     
@@ -257,8 +252,9 @@ public class APPaymentAdjustment extends Parameter {
         }
         
         if(isSave){
+            String lsCachePayable = getCachePayable();
             //Update cache payables
-            if(getCachePayable().isEmpty()){
+            if(lsCachePayable.isEmpty()){
                 if(status.equals(APPaymentAdjustmentStatus.CONFIRMED)){
                     poJSON = poCachePayable.NewTransaction();
                     if ("error".equals((String) poJSON.get("result"))){
@@ -266,7 +262,7 @@ public class APPaymentAdjustment extends Parameter {
                     }
                 }
             } else {
-                poJSON = poCachePayable.OpenTransaction(getCachePayable());
+                poJSON = poCachePayable.OpenTransaction(lsCachePayable);
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
@@ -302,6 +298,8 @@ public class APPaymentAdjustment extends Parameter {
             poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
             poCachePayable.Master().setTransactionStatus(CachePayableStatus.CONFIRMED);
+            poCachePayable.Master().setModifyingId(poGRider.getUserID());
+            poCachePayable.Master().setModifiedDate(poGRider.getServerDate());
 
             //Cache Payable Detail
             if(poCachePayable.getDetailCount() < 0){
@@ -356,7 +354,6 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
 
         String lsStatus = APPaymentAdjustmentStatus.RETURNED;
-        boolean lbReturn = true;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -371,52 +368,43 @@ public class APPaymentAdjustment extends Parameter {
         }
 
         //validator
-        poJSON = isEntryOkay(APPaymentAdjustmentStatus.RETURNED);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
-//        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-//                poJSON = ShowDialogFX.getUserApproval(poGRider);
-//                if (!"success".equals((String) poJSON.get("result"))) {
-//                    return poJSON;
-//                }
-//            }
-//        }
-        
-        poJSON = UpdateTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
+        if(!pbWithParent){
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
         }
-        
-        poModel.setTransactionStatus(APPaymentAdjustmentStatus.RETURNED);
-        
-        poJSON = SaveTransaction();
+
+        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, poModel.getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
-//        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, poModel.getTransactionNo());
-//
-//        //change status
-////        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, !lbReturn, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        //Update Cache Payables?
-//        poGRider.commitTrans();
+        //TODO
+        //Update Cache Payables?
+        
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbReturn) {
-            poJSON.put("message", "Transaction returned successfully.");
-        } else {
-            poJSON.put("message", "Transaction return request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction returned successfully.");
         return poJSON;
     }
 
@@ -428,7 +416,6 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
 
         String lsStatus = APPaymentAdjustmentStatus.PAID;
-        boolean lbPaid = true;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -448,59 +435,20 @@ public class APPaymentAdjustment extends Parameter {
             return poJSON;
         }
         
-        poJSON = UpdateTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        poModel.setTransactionStatus(APPaymentAdjustmentStatus.PAID);
-        poModel.isProcessed(true);
-        
-        poJSON = SaveTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-//
 //        poGRider.beginTrans("UPDATE STATUS", "PaidTransaction", SOURCE_CODE, poModel.getTransactionNo());
-//
-//        //change status
-////        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, !lbPaid, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
 
-        //Update Cache Payables?
-//        poJSON = poModel.openRecord(poModel.getTransactionNo());
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
 
-//        poJSON = poModel.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        poModel.isProcessed(true);
-//
-//        poJSON = poModel.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
 //        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbPaid) {
-            poJSON.put("message", "Transaction paid successfully.");
-        } else {
-            poJSON.put("message", "Transaction paid request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction paid successfully.");
         return poJSON;
     }
 
@@ -512,7 +460,6 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
 
         String lsStatus = APPaymentAdjustmentStatus.CANCELLED;
-        boolean lbCancelled = true;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -547,41 +494,26 @@ public class APPaymentAdjustment extends Parameter {
             }
         }
         
-        poJSON = UpdateTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        poModel.setTransactionStatus(APPaymentAdjustmentStatus.CANCELLED);
-        poJSON = SaveTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
+        //Update Cache Payables
+        poJSON = populateCachePayable(true, lsStatus);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
-//        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, poModel.getTransactionNo());
-//
-//        //change status
-////        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, !lbCancelled, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-//            //Update Cache Payables
-//
-//        }
-//
-//        poGRider.commitTrans();
+        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, poModel.getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbCancelled) {
-            poJSON.put("message", "Transaction cancelled successfully.");
-        } else {
-            poJSON.put("message", "Transaction cancellation request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction cancelled successfully.");
         return poJSON;
     }
 
@@ -593,7 +525,6 @@ public class APPaymentAdjustment extends Parameter {
         poJSON = new JSONObject();
 
         String lsStatus = APPaymentAdjustmentStatus.VOID;
-        boolean lbVoid = true;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -627,41 +558,21 @@ public class APPaymentAdjustment extends Parameter {
                 }
             }
         }
-        
-        poJSON = UpdateTransaction();
+
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, poModel.getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        poModel.setTransactionStatus(APPaymentAdjustmentStatus.VOID);
-        poJSON = SaveTransaction();
-        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
             return poJSON;
         }
 
-//        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, poModel.getTransactionNo());
-//
-//        //change status
-////        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, !lbVoid, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        if (APPaymentAdjustmentStatus.CONFIRMED.equals(poModel.getTransactionStatus())) {
-//            //Update Cache Payables
-//        }
-//
-//        poGRider.commitTrans();
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbVoid) {
-            poJSON.put("message", "Transaction voided successfully.");
-        } else {
-            poJSON.put("message", "Transaction voiding request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction voided successfully.");
         return poJSON;
     }
 
