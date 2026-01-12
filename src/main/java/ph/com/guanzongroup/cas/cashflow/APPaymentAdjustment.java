@@ -88,6 +88,12 @@ public class APPaymentAdjustment extends Parameter {
             getModel().setTransactionNo(getModel().getNextCode());
         }
         
+        getModel().setModifyingBy(poGRider.getUserID());
+        getModel().setModifiedDate(poGRider.getServerDate());
+        
+        System.out.println("Modified By : " + getModel().getModifyingBy());
+        System.out.println("Modified Date : " + getModel().getModifiedDate());
+        
         if(getModel().getTransactionStatus().equals(APPaymentAdjustmentStatus.CONFIRMED)) {
             if(!pbWithParent){
                 if (poGRider.getUserLevel() <= UserRight.ENCODER) {
@@ -292,6 +298,8 @@ public class APPaymentAdjustment extends Parameter {
             poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
             poCachePayable.Master().setTransactionStatus(CachePayableStatus.CONFIRMED);
+            poCachePayable.Master().setModifyingId(poGRider.getUserID());
+            poCachePayable.Master().setModifiedDate(poGRider.getServerDate());
 
             //Cache Payable Detail
             if(poCachePayable.getDetailCount() < 0){
