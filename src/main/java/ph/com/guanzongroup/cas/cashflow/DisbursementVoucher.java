@@ -1434,21 +1434,27 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
         }
-//        if(ldblVATSalesTotal < 0 ){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Invalid Vat Sales Total.");
-//            return poJSON;
-//        }
-//        if(ldblVATAmountTotal < 0 ){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Invalid Vat Amount Total.");
-//            return poJSON;
-//        }
-//        if(ldblVATExemptTotal < 0 ){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Invalid Vat Exempt Total.");
-//            return poJSON;
-//        }
+        if(ldblVATSalesTotal < 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Vat Sales Total.");
+            if(!isProceed){
+                return poJSON;
+            }
+        }
+        if(ldblVATAmountTotal < 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Vat Amount Total.");
+            if(!isProceed){
+                return poJSON;
+            }
+        }
+        if(ldblVATExemptTotal < 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid Vat Exempt Total.");
+            if(!isProceed){
+                return poJSON;
+            }
+        }
         
         double lnNetAmountDue = ldblTransactionTotal - ( Master().getDiscountTotal() + Master().getWithTaxTotal());
 
