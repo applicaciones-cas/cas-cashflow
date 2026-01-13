@@ -1355,7 +1355,8 @@ public class DisbursementVoucher extends Transaction {
      */
     public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
-
+        poJSON.put("column", "");
+        
         Double ldblTransactionTotal = 0.0000;
         Double ldblVATSalesTotal = 0.0000;
         Double ldblVATAmountTotal = 0.0000;
@@ -1493,6 +1494,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
         }
         
+        poJSON.put("column", "");
         poJSON.put("result", "success");
         poJSON.put("message", "computed successfully");
         return poJSON;
