@@ -1377,6 +1377,7 @@ public class DisbursementVoucher extends Transaction {
                 
                 if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
                     poJSON.put("result", "error");
+                    poJSON.put("column", "nAmtAppld");
                     poJSON.put("message", "Invalid Applied Amount.");
                     if(isValidate){
                         return poJSON;
@@ -1431,6 +1432,7 @@ public class DisbursementVoucher extends Transaction {
         
         if(ldblTransactionTotal < 0.0000) {
             poJSON.put("result", "error");
+            poJSON.put("column", "nTranTotl");
             poJSON.put("message", "Invalid Transaction Total.");
             if(isValidate){
                 return poJSON;
@@ -1438,6 +1440,7 @@ public class DisbursementVoucher extends Transaction {
         }
         if(ldblVATSalesTotal < 0.0000) {
             poJSON.put("result", "error");
+            poJSON.put("column", "nVATSales");
             poJSON.put("message", "Invalid Vat Sales Total.");
             if(isValidate){
                 return poJSON;
@@ -1445,6 +1448,7 @@ public class DisbursementVoucher extends Transaction {
         }
         if(ldblVATAmountTotal < 0.0000) {
             poJSON.put("result", "error");
+            poJSON.put("column", "nVATAmtxx");
             poJSON.put("message", "Invalid Vat Amount Total.");
             if(isValidate){
                 return poJSON;
@@ -1452,6 +1456,7 @@ public class DisbursementVoucher extends Transaction {
         }
         if(ldblVATExemptTotal < 0.0000) {
             poJSON.put("result", "error");
+            poJSON.put("column", "nVatExmpt");
             poJSON.put("message", "Invalid Vat Exempt Total.");
             if(isValidate){
                 return poJSON;
@@ -1462,6 +1467,7 @@ public class DisbursementVoucher extends Transaction {
 
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
+            poJSON.put("column", "nNetTotal");
             poJSON.put("message", "Invalid Net Total Amount.");
             if(isValidate){
                 return poJSON;
