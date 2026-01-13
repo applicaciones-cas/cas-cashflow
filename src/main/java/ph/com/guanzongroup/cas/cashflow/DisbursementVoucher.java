@@ -1350,6 +1350,7 @@ public class DisbursementVoucher extends Transaction {
     
     /**
      * Computation of vat and transaction total
+     * @param isValidate
      * @return JSON
      */
     public JSONObject computeFields(boolean isValidate) {
@@ -1376,7 +1377,7 @@ public class DisbursementVoucher extends Transaction {
                 if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid Applied Amount.");
-                    if(!isValidate){
+                    if(isValidate){
                         return poJSON;
                     }
                 }
@@ -1430,28 +1431,28 @@ public class DisbursementVoucher extends Transaction {
         if(ldblTransactionTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Transaction Total.");
-            if(!isValidate){
+            if(isValidate){
                 return poJSON;
             }
         }
         if(ldblVATSalesTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Sales Total.");
-            if(!isValidate){
+            if(isValidate){
                 return poJSON;
             }
         }
         if(ldblVATAmountTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Amount Total.");
-            if(!isValidate){
+            if(isValidate){
                 return poJSON;
             }
         }
         if(ldblVATExemptTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Exempt Total.");
-            if(!isValidate){
+            if(isValidate){
                 return poJSON;
             }
         }
@@ -1461,7 +1462,7 @@ public class DisbursementVoucher extends Transaction {
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Net Total Amount.");
-            if(!isValidate){
+            if(isValidate){
                 return poJSON;
             }
         }
@@ -1548,7 +1549,7 @@ public class DisbursementVoucher extends Transaction {
                             case SOATaggingStatic.APPaymentAdjustment:
                                 poJSON = computeDetail(lnCtr);
                                 if ("error".equals((String) poJSON.get("result"))) {
-                                    if(!isValidate){
+                                    if(isValidate){
                                         return poJSON;
                                     }
                                 }
@@ -1558,7 +1559,7 @@ public class DisbursementVoucher extends Transaction {
                     case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         poJSON = computeDetail(lnCtr);
                         if ("error".equals((String) poJSON.get("result"))) {
-                            if(!isValidate){
+                            if(isValidate){
                                 return poJSON;
                             }
                         }
