@@ -2932,7 +2932,7 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setDetailVatRates(loController.Master().getVATRates());
         Detail(lnRow).setDetailZeroVat(loController.Master().getZeroRated());
         
-        JSONObject loJSON = computeFields();
+        JSONObject loJSON = computeFields(true);
         if ("error".equals((String) loJSON.get("result"))) {
             Detail().remove(lnRow);
             AddDetail();
