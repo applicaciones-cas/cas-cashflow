@@ -1366,6 +1366,7 @@ public class DisbursementVoucher extends Transaction {
         Double ldblZeroVATSales = 0.0000;
         Double ldblAppliedAmt = 0.0000;
         computeTaxAmount();
+        computeDetailFields(isValidate);
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
 //            if(Detail(lnCntr).getAmountApplied() > 0.0000){
