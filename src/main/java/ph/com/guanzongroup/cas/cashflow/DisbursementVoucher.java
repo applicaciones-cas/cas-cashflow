@@ -1352,7 +1352,7 @@ public class DisbursementVoucher extends Transaction {
      * Computation of vat and transaction total
      * @return JSON
      */
-    public JSONObject computeFields(boolean isProceed) {
+    public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
 
         Double ldblTransactionTotal = 0.0000;
@@ -1376,7 +1376,7 @@ public class DisbursementVoucher extends Transaction {
                 if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
                     poJSON.put("result", "error");
                     poJSON.put("message", "Invalid Applied Amount.");
-                    if(!isProceed){
+                    if(!isValidate){
                         return poJSON;
                     }
                 }
@@ -1430,28 +1430,28 @@ public class DisbursementVoucher extends Transaction {
         if(ldblTransactionTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Transaction Total.");
-            if(!isProceed){
+            if(!isValidate){
                 return poJSON;
             }
         }
         if(ldblVATSalesTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Sales Total.");
-            if(!isProceed){
+            if(!isValidate){
                 return poJSON;
             }
         }
         if(ldblVATAmountTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Amount Total.");
-            if(!isProceed){
+            if(!isValidate){
                 return poJSON;
             }
         }
         if(ldblVATExemptTotal < 0 ){
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Exempt Total.");
-            if(!isProceed){
+            if(!isValidate){
                 return poJSON;
             }
         }
@@ -1461,7 +1461,7 @@ public class DisbursementVoucher extends Transaction {
         if (lnNetAmountDue < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Net Total Amount.");
-            if(!isProceed){
+            if(!isValidate){
                 return poJSON;
             }
         }
@@ -1536,7 +1536,7 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
    
-    public JSONObject computeDetailFields(boolean isProceed){
+    public JSONObject computeDetailFields(boolean isValidate){
                 
         try {
             for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
@@ -1548,7 +1548,7 @@ public class DisbursementVoucher extends Transaction {
                             case SOATaggingStatic.APPaymentAdjustment:
                                 poJSON = computeDetail(lnCtr);
                                 if ("error".equals((String) poJSON.get("result"))) {
-                                    if(!isProceed){
+                                    if(!isValidate){
                                         return poJSON;
                                     }
                                 }
@@ -1558,7 +1558,7 @@ public class DisbursementVoucher extends Transaction {
                     case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         poJSON = computeDetail(lnCtr);
                         if ("error".equals((String) poJSON.get("result"))) {
-                            if(!isProceed){
+                            if(!isValidate){
                                 return poJSON;
                             }
                         }
