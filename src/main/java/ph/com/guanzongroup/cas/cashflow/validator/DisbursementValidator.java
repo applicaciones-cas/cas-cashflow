@@ -6,6 +6,7 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 public class DisbursementValidator implements GValidator{
@@ -47,20 +48,22 @@ public class DisbursementValidator implements GValidator{
     @Override
     public JSONObject validate() {
         switch (psTranStat){
-            case PaymentRequestStatus.OPEN:
+            case DisbursementStatic.OPEN:
                 return validateNew();
-            case PaymentRequestStatus.CONFIRMED:
+            case DisbursementStatic.VERIFIED:
                 return validateConfirmed();
-            case PaymentRequestStatus.PAID:
-                return validatePaid();
-            case PaymentRequestStatus.CANCELLED:
-                return validateCancelled();
-            case PaymentRequestStatus.VOID:
-                return validateVoid();
-            case PaymentRequestStatus.POSTED:
+            case DisbursementStatic.CERTIFIED:
+                return validateCertified();
+            case DisbursementStatic.AUTHORIZED:
                 return validatePosted();
-            case PaymentRequestStatus.RETURNED:
+            case DisbursementStatic.RETURNED:
                 return validateReturned();
+            case DisbursementStatic.DISAPPROVED:
+                return validateDisapproved();
+            case DisbursementStatic.CANCELLED:
+                return validateCancelled();
+            case DisbursementStatic.VOID:
+                return validateVoid();
             default:
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
@@ -72,7 +75,6 @@ public class DisbursementValidator implements GValidator{
     private JSONObject validateNew(){
         poJSON = new JSONObject();
         
-//        
         if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
             poJSON.put("message", "Industry is missing or not set.");
             return poJSON;
@@ -108,12 +110,31 @@ public class DisbursementValidator implements GValidator{
             return poJSON;
         }
         
-        
         if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
             poJSON.put("message", "Payee is missing or not set.");
             return poJSON;
         }
          
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if(poMaster.getVATSale() > 0.0000 && poMaster.getWithTaxTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Amount is not set.");
+            return poJSON;
+        }
         
         poJSON.put("result", "success");
         return poJSON;
@@ -121,11 +142,73 @@ public class DisbursementValidator implements GValidator{
     
     private JSONObject validateConfirmed(){
         poJSON = new JSONObject();
+        
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
+            poJSON.put("message", "Invalid Branch");
+            return poJSON;
+        }
+
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getCompanyID()== null || poMaster.getCompanyID().isEmpty()) {
+            poJSON.put("message", "Company is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVoucherNo()== null || poMaster.getVoucherNo().isEmpty()) {
+            poJSON.put("message", "Voucher No is missing or not set.");
+            return poJSON;
+        }        
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+            poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+         
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getNetTotal()) {
+            poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if(poMaster.getVATSale() > 0.0000 && poMaster.getWithTaxTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Amount is not set.");
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
     
-    private JSONObject validatePaid(){
+    private JSONObject validateCertified(){
         poJSON = new JSONObject();
                 
         poJSON.put("result", "success");
@@ -155,6 +238,13 @@ public class DisbursementValidator implements GValidator{
     }
     
     private JSONObject validateReturned(){
+        poJSON = new JSONObject();
+                
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    private JSONObject validateDisapproved(){
         poJSON = new JSONObject();
                 
         poJSON.put("result", "success");
