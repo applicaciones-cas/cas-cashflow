@@ -1429,28 +1429,28 @@ public class DisbursementVoucher extends Transaction {
 //            }
         }
         
-        if(ldblTransactionTotal < 0 ){
+        if(ldblTransactionTotal < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Transaction Total.");
             if(isValidate){
                 return poJSON;
             }
         }
-        if(ldblVATSalesTotal < 0 ){
+        if(ldblVATSalesTotal < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Sales Total.");
             if(isValidate){
                 return poJSON;
             }
         }
-        if(ldblVATAmountTotal < 0 ){
+        if(ldblVATAmountTotal < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Amount Total.");
             if(isValidate){
                 return poJSON;
             }
         }
-        if(ldblVATExemptTotal < 0 ){
+        if(ldblVATExemptTotal < 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Invalid Vat Exempt Total.");
             if(isValidate){
