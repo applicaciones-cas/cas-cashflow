@@ -115,17 +115,17 @@ public class DisbursementValidator implements GValidator{
             return poJSON;
         }
          
-        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getNetTotal()) {
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
         
-        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getNetTotal()) {
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
         
-        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getNetTotal()) {
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
@@ -183,17 +183,17 @@ public class DisbursementValidator implements GValidator{
             return poJSON;
         }
          
-        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getNetTotal()) {
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
         
-        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getNetTotal()) {
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
         
-        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getNetTotal()) {
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
             return poJSON;
         }
