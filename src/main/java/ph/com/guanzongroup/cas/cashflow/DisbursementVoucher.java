@@ -1594,7 +1594,7 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
         
-        if(ldblAmountApplied < 0){
+        if(ldblAmountApplied < 0.0000){
             if(ldblVATExempt > 0.0000){
                 Detail(fnRow).setDetailVatAmount(0.0000);
                 Detail(fnRow).setDetailVatSales(0.0000);
@@ -1607,7 +1607,13 @@ public class DisbursementVoucher extends Transaction {
             }
             
             ldblAmountApplied = ldblAmountApplied * -1;
-        } 
+        } else {
+            if(ldblVATExempt < 0.0000){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Vat Exempt amount cannot be negative.");
+                return poJSON;
+            }
+        }
         if(ldblVATExempt < 0){
             ldblVATExempt = ldblVATExempt * -1;
         } 
@@ -2476,19 +2482,22 @@ public class DisbursementVoucher extends Transaction {
             if(poJournal != null){
                 if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
                     poJSON = validateJournal();
+                    boolean lbContinue = (boolean) poJSON.get("continue");
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("result", "error");
                         poJSON.put("message", poJSON.get("message").toString());
                         return poJSON;
-                    }
-                    poJournal.Master().setSourceNo(Master().getTransactionNo());
-                    poJournal.Master().setModifyingId(poGRider.getUserID());
-                    poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                    poJournal.setWithParent(true);
-                    poJSON = poJournal.SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        System.out.println("Save Journal : " + poJSON.get("message"));
-                        return poJSON;
+                    } 
+                    if(lbContinue){
+                        poJournal.Master().setSourceNo(Master().getTransactionNo());
+                        poJournal.Master().setModifyingId(poGRider.getUserID());
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJournal.setWithParent(true);
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal : " + poJSON.get("message"));
+                            return poJSON;
+                        }
                     }
                 } else {
                     if (poGRider.getUserLevel() > UserRight.ENCODER) {
@@ -2654,8 +2663,11 @@ public class DisbursementVoucher extends Transaction {
     
     private JSONObject validateJournal(){
         poJSON = new JSONObject();
+        poJSON.put("continue", false);
+        
         double ldblCreditAmt = 0.0000;
         double ldblDebitAmt = 0.0000;
+        boolean lbHasJournal = false;
         for(int lnCtr = 0; lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
             ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
             ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
@@ -2669,33 +2681,42 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
             }
+            
+            if(!lbHasJournal){
+                lbHasJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+            }   
         }
         
-        if(ldblDebitAmt == 0.0000 ){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Invalid journal entry debit amount.");
-            return poJSON;
+        if(lbHasJournal || poGRider.getUserLevel() > UserRight.ENCODER){
+            if(ldblDebitAmt == 0.0000 ){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry debit amount.");
+                return poJSON;
+            }
+
+            if(ldblCreditAmt == 0.0000){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry credit amount.");
+                return poJSON;
+            }
+
+            if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Debit should be equal to credit amount.");
+                return poJSON;
+            }
+
+    //        if(ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()){
+    //            poJSON.put("result", "error");
+    //            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
+    //            return poJSON;
+    //        }
         }
         
-        if(ldblCreditAmt == 0.0000){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Invalid journal entry credit amount.");
-            return poJSON;
-        }
         
-        if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Debit should be equal to credit amount.");
-            return poJSON;
-        }
-        
-//        if(ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
-//            return poJSON;
-//        }
-        
-        
+        poJSON.put("result", "sucess");
+        poJSON.put("message", "sucess");
+        poJSON.put("continue", lbHasJournal);
         return poJSON;
     }
     
@@ -2928,11 +2949,11 @@ public class DisbursementVoucher extends Transaction {
         
         
         //Apply Vat
-        if(ldblBalance < 0){
-            if(Master().getVATExmpt() > 0.0000){
-                Detail(lnRow).setDetailVatExempt(ldblBalance);
-            } else {
+        if(ldblBalance < 0 || DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode())){
+            if(Master().getVATAmount() > 0.0000){
                 computeDetail(lnRow);
+            } else {
+                Detail(lnRow).setDetailVatExempt(ldblBalance);
             }
         } else {
             Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount());
