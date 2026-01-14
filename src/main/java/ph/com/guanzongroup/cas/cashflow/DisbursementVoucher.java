@@ -4092,6 +4092,7 @@ public class DisbursementVoucher extends Transaction {
                 record.put("Reference", loRS.getString("Reference"));
                 record.put("SourceNo", loRS.getString("sSourceNo"));
                 record.put("SourceCd", loRS.getString("TransactionType"));
+                record.put("Industry", loRS.getString("IndstryD"));
                 dataArray.add(record);
                 lnctr++;
             }
@@ -4129,9 +4130,10 @@ public class DisbursementVoucher extends Transaction {
                 + "IFNULL(c.sPayeeNme,cc.sCompnyNm) AS Payee, "
                 + "a.sReferNox AS Reference, "
                 + "a.sSourceNo AS sSourceNo, "
-                + "IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex "
+                + "IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex"
+                + ", d.sDescript AS IndstryD "
                 + "FROM Cache_Payable_Master a "
-                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
+                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + "Branch b "
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
@@ -4160,8 +4162,9 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sSeriesNo AS Reference, "
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
+                + ", d.sDescript AS IndstryD "
                 + "FROM Payment_Request_Master a "
-                + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx, "
+                + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + "Branch b "
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
@@ -4189,8 +4192,9 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sSOANoxxx AS Reference, "
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
+                + ", d.sDescript AS IndstryD "
                 + "FROM AP_Payment_Master a "
-                + "LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID, "
+                + "LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + "Branch b "
                 + "WHERE a.sBranchCd = b.sBranchCd "
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
