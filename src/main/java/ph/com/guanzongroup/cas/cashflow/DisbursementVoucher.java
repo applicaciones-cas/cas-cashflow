@@ -4117,6 +4117,10 @@ public class DisbursementVoucher extends Transaction {
     
     //QUERY LIST
     private String getCachePayables(){
+        String lsIndustry = "";
+        if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
+            lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
+        }
         return  "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
@@ -4139,7 +4143,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' "
                 + "AND a.cProcessd = '0' " 
-//                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+                +  lsIndustry
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
@@ -4149,6 +4153,10 @@ public class DisbursementVoucher extends Transaction {
     }
     
     private String getPaymentRequest(){
+        String lsIndustry = "";
+        if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
+            lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
+        }
         return  "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
@@ -4171,6 +4179,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
                 + "AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+                + lsIndustry
                 + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
@@ -4179,6 +4188,10 @@ public class DisbursementVoucher extends Transaction {
     }
     
     private String getSOA(){
+        String lsIndustry = "";
+        if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
+            lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
+        }
         return  "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
@@ -4201,6 +4214,7 @@ public class DisbursementVoucher extends Transaction {
                 + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
                 + "AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
+                + lsIndustry
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
                 + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
