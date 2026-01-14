@@ -326,6 +326,15 @@ public class DisbursementVoucher extends Transaction {
                 }
                 break;
         }
+        
+        if(!loObject.getTransactionStatus().equals(Master().getTransactionStatus())){
+            poJSON = OpenTransaction(Master().getTransactionNo());
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+                return poJSON;
+            }
+        }
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -2274,48 +2283,88 @@ public class DisbursementVoucher extends Transaction {
         /*Put system validations and other assignments here*/
         boolean lbUpdated = false;
         if (DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())) {
-            Disbursement loRecord = new CashflowControllers(poGRider, null).Disbursement();
-            poJSON = loRecord.InitTransaction();
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-            poJSON = loRecord.OpenTransaction(Master().getTransactionNo());
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-
-            lbUpdated = loRecord.getDetailCount() == getDetailCount();
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
-            }
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
-            }
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getNetTotal() == Master().getNetTotal();
-            }
-            if (lbUpdated) {
-                lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
-            }
-
-            if (lbUpdated) {
-                for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
-                    lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
-                    if (lbUpdated) {
-                        lbUpdated = loRecord.Detail(lnCtr).getAmount() == Detail(lnCtr).getAmount();
-                    }
-                    if (lbUpdated) {
-                        lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
-                    }
-                    if (!lbUpdated) {
-                        break;
+            try {
+                DisbursementVoucher loRecord = new CashflowControllers(poGRider, null).DisbursementVoucher();
+                poJSON = loRecord.InitTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                poJSON = loRecord.OpenTransaction(Master().getTransactionNo());
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                lbUpdated = loRecord.getDetailCount() == getDetailCount();
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
+                }
+                if (lbUpdated) {
+                    lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Master().getNetTotal()), String.format("%.4f", Master().getNetTotal())));
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.getDetailCount() == getDetailCount();
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Journal().getDetailCount() == Journal().getDetailCount()-1;
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.getWTaxDeductionsCount() == getWTaxDeductionsCount();
+                }
+                
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Detail(lnCtr).getAmount()), String.format("%.4f", Detail(lnCtr).getAmount())));
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
                     }
                 }
-            }
-
-            if (lbUpdated) {
+                //Check Journal
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.Journal().getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getDebitAmount()), String.format("%.4f", Journal().Detail(lnCtr).getDebitAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getCreditAmount()), String.format("%.4f", Journal().Detail(lnCtr).getCreditAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+                //Check Witholding Tax
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.getWTaxDeductionsCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.2f", loRecord.WTaxDeduction(lnCtr).getModel().getTaxAmount()), String.format("%.2f", WTaxDeduction(lnCtr).getModel().getTaxAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.2f", loRecord.WTaxDeduction(lnCtr).getModel().getBaseAmount()), String.format("%.2f", WTaxDeduction(lnCtr).getModel().getBaseAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+                
+                if (lbUpdated) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "No update has been made.");
+                    return poJSON;
+                }
+            } catch (ScriptException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
                 poJSON.put("result", "error");
-                poJSON.put("message", "No update has been made.");
+                poJSON.put("message", MiscUtil.getException(ex));
                 return poJSON;
             }
         }
