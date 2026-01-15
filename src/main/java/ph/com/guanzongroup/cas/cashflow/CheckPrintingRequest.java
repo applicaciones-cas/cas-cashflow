@@ -430,14 +430,6 @@ public class CheckPrintingRequest extends Transaction {
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
         }
 
-//        if (getDetailCount() == 1) {
-//            //do not allow a single item detail with no quantity order
-//            if (Detail(0).getQuantity().doubleValue() == 0.00) {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Your order has zero quantity.");
-//                return poJSON;
-//            }
-//        }
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -450,7 +442,8 @@ public class CheckPrintingRequest extends Transaction {
 
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             String sourceno = Detail(lnCtr).getSourceNo();
-            updateDV(sourceno);
+            String remarks = Detail(lnCtr).DisbursementMaster().CheckPayments().getRemarks();
+            updateDV(sourceno,remarks);
         }
 
         poJSON.put("result", "success");
@@ -476,7 +469,7 @@ public class CheckPrintingRequest extends Transaction {
         return new CashflowControllers(poGRider, logwrapr).CheckPayments();
     }
 
-    private void updateDV(String sourceno) //transaction no ito ng check
+    private void updateDV(String sourceno,  String remarks) //transaction no ito ng check
             throws GuanzonException, SQLException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
@@ -485,13 +478,12 @@ public class CheckPrintingRequest extends Transaction {
         poCheckPayments.get(poCheckPayments.size() - 1).initialize();
         poCheckPayments.get(poCheckPayments.size() - 1).openRecord(sourceno);
         poJSON = poCheckPayments.get(poCheckPayments.size() - 1).updateRecord();
-        System.out.println("POJSON " + poJSON.toJSONString());
-        System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
 
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
         poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifyingId(poGRider.getUserID());
-        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifiedDate(poGRider.getServerDate());
-        System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
+        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setModifiedDate(poGRider.getServerDate()); 
+        poCheckPayments.get(poCheckPayments.size() - 1).getModel().setRemarks(remarks); 
+        
     }
 
     @Override
@@ -505,7 +497,6 @@ public class CheckPrintingRequest extends Transaction {
         try {
             /*Only modify this if there are other tables to modify except the master and detail tables*/
             poJSON = new JSONObject();
-            System.out.println("Edit Mode (after): " + poCheckPayments.get(poCheckPayments.size() - 1).getEditMode());
             poJSON = saveUpdates(CheckStatus.PrintStatus.PRINTED);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
@@ -768,7 +759,14 @@ public class CheckPrintingRequest extends Transaction {
         // Add new check payment detail
             Master().setBankID(poDV.CheckPayments().getModel().Banks().getBankID());
             Detail(getDetailCount() - 1).setSourceNo(poDV.CheckPayments().getModel().getTransactionNo());
-
+            
+            int detailCount = getDetailCount();
+            double totalNetAmount = 0.0;
+            for (int lnCtr = detailCount - 1; lnCtr >= 0; lnCtr--) {
+                double checkAmt = Detail(lnCtr).DisbursementMaster().getNetTotal();
+                totalNetAmount += checkAmt;
+            }
+            Master().setTotalAmount(totalNetAmount);
         
         // Return success
         poJSON.put("result", "success");
