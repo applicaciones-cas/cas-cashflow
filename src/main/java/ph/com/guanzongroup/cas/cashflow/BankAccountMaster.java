@@ -8,6 +8,9 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
+import org.guanzon.cas.parameter.Banks;
+import org.guanzon.cas.parameter.BanksBranch;
+import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -119,6 +122,27 @@ public class BankAccountMaster extends Parameter{
             return poJSON;
         }
     }
+    public JSONObject searchRecordbyAccount(String value, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = getSQ_Browse();
+        
+        System.out.println("SQL : " + lsSQL);
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Branch Name»Bank»Account No.»Account Name",
+                "sBnkActID»sBranchNm»xBankName»sActNumbr»sActNamex",
+                "a.sBnkActID»c.sBranchNm»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
+                byCode ? 2 : 3);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sBnkActID"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
     
     @Override
     public String getSQ_Browse(){
@@ -186,5 +210,31 @@ public class BankAccountMaster extends Parameter{
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
-    }    
+    }  
+    public JSONObject SearchBanks(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Banks object = new ParamControllers(poGRider, logwrapr).Banks();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setBankId(object.getModel().getBankID());
+        } else {
+            poModel.setBankId(null);
+        }
+
+        return poJSON;
+    }
+    public JSONObject SearchBanksBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        BanksBranch object = new ParamControllers(poGRider, logwrapr).BanksBranch();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value,poModel.getBankId(), byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setBranch(object.getModel().getBranchBankName());
+        }
+
+        return poJSON;
+    }
 }

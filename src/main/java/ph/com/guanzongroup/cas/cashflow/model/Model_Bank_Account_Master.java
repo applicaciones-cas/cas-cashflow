@@ -9,6 +9,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Banks;
+import org.guanzon.cas.parameter.model.Model_Banks_Branch;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
@@ -21,6 +22,7 @@ public class Model_Bank_Account_Master extends Model {
     Model_Branch poBranch;
     Model_Company poCompany;
     Model_Banks poBanks;
+    Model_Banks_Branch poBanksBranch;
 
     @Override
     public void initialize() {
@@ -38,6 +40,8 @@ public class Model_Bank_Account_Master extends Model {
             poEntity.updateNull("dDueDatex");
             poEntity.updateNull("dLastTran");
             poEntity.updateNull("dLastPost");
+            poEntity.updateNull("sAcctCode");
+            poEntity.updateObject("sBranchCd", poGRider.getBranchCode());
             poEntity.updateObject("nOBegBalx", 0.00);
             poEntity.updateObject("nABegBalx", 0.00);
             poEntity.updateObject("nOBalance", 0.00);
@@ -63,6 +67,7 @@ public class Model_Bank_Account_Master extends Model {
             poBranch = param.Branch();
             poCompany = param.Company();
             poBanks = param.Banks();
+            poBanksBranch = param.BanksBranch();
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -366,6 +371,25 @@ public class Model_Bank_Account_Master extends Model {
         } else {
             poBanks.initialize();
             return poBanks;
+        }
+    }public Model_Banks_Branch BanksBranh() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sBankIDxx"))) {
+            if (poBanksBranch.getEditMode() == EditMode.READY
+                    && poBanksBranch.getBankID().equals((String) getValue("sBankIDxx"))) {
+                return poBanksBranch;
+            } else {
+                poJSON = poBanksBranch.openRecord((String) getValue("sBankIDxx"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBanksBranch;
+                } else {
+                    poBanksBranch.initialize();
+                    return poBanksBranch;
+                }
+            }
+        } else {
+            poBanksBranch.initialize();
+            return poBanksBranch;
         }
     }
 
