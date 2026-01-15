@@ -68,9 +68,12 @@ import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
+import org.guanzon.appdriver.agent.systables.SysTableContollers;
+import org.guanzon.appdriver.agent.systables.TransactionAttachment;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
@@ -129,6 +132,7 @@ public class DisbursementVoucher extends Transaction {
     private List<WithholdingTaxDeductions> paWTaxDeductions;
     
     private List<Model> paMaster;
+    List<TransactionAttachment> paAttachments;
     
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
@@ -142,6 +146,7 @@ public class DisbursementVoucher extends Transaction {
         
         paMaster = new ArrayList<Model>();
         paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
+        paAttachments = new ArrayList<>();
         
         return initialize();
     }
@@ -1871,6 +1876,86 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    public JSONObject loadAttachments()
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+        paAttachments = new ArrayList<>();
+        String lsSourceNo = "";
+        TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
+        for(int lnRow = 0; lnRow <= getDetailCount() - 1;lnRow++){
+            lsSourceNo = Detail(lnRow).getSourceNo();
+            if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
+                lsSourceNo = Detail(lnRow).getDetailSource();
+            }
+            
+            List loList = loAttachment.getAttachments(SOURCE_CODE, lsSourceNo);
+            for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
+                paAttachments.add(TransactionAttachment());
+                poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    if(Master().getEditMode() == EditMode.UPDATE){
+                       poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
+                    }
+                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getTransactionNo());
+                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
+                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
+                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
+
+                    //Download Attachments
+                    poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
+                            , "0032" //Constant
+                            , "" //Empty
+                            , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
+                            , SOURCE_CODE
+                            , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
+                            , "");
+                    if ("success".equals((String) poJSON.get("result"))) {
+
+                        poJSON = (JSONObject) poJSON.get("payload");
+                        if(WebFile.Base64ToFile((String) poJSON.get("data")
+                                , (String) poJSON.get("hash")
+                                , System.getProperty("sys.default.path.temp.attachments") + "/"
+                                , (String) poJSON.get("filename"))){
+                            System.out.println("poJSON success: " +  poJSON.toJSONString());
+                            System.out.println("File downloaded succesfully.");
+                        } else {
+                            System.out.println("poJSON error: " + poJSON.toJSONString());
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Unable to download file.");
+                        }
+
+                    } else {
+                        System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+                    }
+                }
+            }
+        }
+        return poJSON;
+    }
+
+    private TransactionAttachment TransactionAttachment()
+            throws SQLException,
+            GuanzonException {
+        return new SysTableContollers(poGRider, null).TransactionAttachment();
+    }
+
+    private List<TransactionAttachment> TransactionAttachmentList() {
+        return paAttachments;
+    }
+
+    public TransactionAttachment TransactionAttachmentList(int row) {
+        return (TransactionAttachment) paAttachments.get(row);
+    }
+
+    public int getTransactionAttachmentCount() {
+        if (paAttachments == null) {
+            paAttachments = new ArrayList<>();
+        }
+
+        return paAttachments.size();
+    }
+    
     @Override
     public Model_Disbursement_Master Master() { 
         return (Model_Disbursement_Master) poMaster; 
@@ -1990,6 +2075,7 @@ public class DisbursementVoucher extends Transaction {
         
         //Reset Journal when all details was removed
         resetJournal();
+        paAttachments = new ArrayList<>();
         setSearchPayee("");
         setSearchClient("");
         Master().setIndustryID("");
@@ -2047,6 +2133,7 @@ public class DisbursementVoucher extends Transaction {
         resetOtherPayment();
         Detail().clear();
         WTaxDeduction().clear();
+        paAttachments = new ArrayList<>();
         
         setSearchIndustry("");
         setSearchBranch("");
