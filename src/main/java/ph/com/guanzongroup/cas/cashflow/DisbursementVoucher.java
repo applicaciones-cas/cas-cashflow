@@ -1875,58 +1875,62 @@ public class DisbursementVoucher extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
-    
+    List<String> paAttachmentsSource;
     public JSONObject loadAttachments()
             throws SQLException,
             GuanzonException {
         poJSON = new JSONObject();
         paAttachments = new ArrayList<>();
+        paAttachmentsSource = new ArrayList<>();
         String lsSourceNo = "";
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
         for(int lnRow = 0; lnRow <= getDetailCount() - 1;lnRow++){
-            lsSourceNo = Detail(lnRow).getSourceNo();
-            if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
-                lsSourceNo = Detail(lnRow).getDetailSource();
-            }
-            
-            List loList = loAttachment.getAttachments(SOURCE_CODE, lsSourceNo);
-            for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
-                paAttachments.add(TransactionAttachment());
-                poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
-                if ("success".equals((String) poJSON.get("result"))) {
-                    if(Master().getEditMode() == EditMode.UPDATE){
-                       poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
-                    }
-                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getTransactionNo());
-                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
-                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
-                    System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
+            if(Detail(lnRow).getAmountApplied() != 0.0000){
+                paAttachmentsSource.add(getSourceCodeDescription(Detail(lnRow).getSourceCode()) + " - " + getReferenceNo(lnRow));
+                lsSourceNo = Detail(lnRow).getSourceNo();
+                if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
+                    lsSourceNo = Detail(lnRow).getDetailSource();
+                }
 
-                    //Download Attachments
-                    poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
-                            , "0032" //Constant
-                            , "" //Empty
-                            , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
-                            , SOURCE_CODE
-                            , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
-                            , "");
+                List loList = loAttachment.getAttachments(SOURCE_CODE, lsSourceNo);
+                for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
+                    paAttachments.add(TransactionAttachment());
+                    poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
                     if ("success".equals((String) poJSON.get("result"))) {
-
-                        poJSON = (JSONObject) poJSON.get("payload");
-                        if(WebFile.Base64ToFile((String) poJSON.get("data")
-                                , (String) poJSON.get("hash")
-                                , System.getProperty("sys.default.path.temp.attachments") + "/"
-                                , (String) poJSON.get("filename"))){
-                            System.out.println("poJSON success: " +  poJSON.toJSONString());
-                            System.out.println("File downloaded succesfully.");
-                        } else {
-                            System.out.println("poJSON error: " + poJSON.toJSONString());
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Unable to download file.");
+                        if(Master().getEditMode() == EditMode.UPDATE){
+                           poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
                         }
+                        System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getTransactionNo());
+                        System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
+                        System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
+                        System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
 
-                    } else {
-                        System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+                        //Download Attachments
+                        poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
+                                , "0032" //Constant
+                                , "" //Empty
+                                , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
+                                , SOURCE_CODE
+                                , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
+                                , "");
+                        if ("success".equals((String) poJSON.get("result"))) {
+
+                            poJSON = (JSONObject) poJSON.get("payload");
+                            if(WebFile.Base64ToFile((String) poJSON.get("data")
+                                    , (String) poJSON.get("hash")
+                                    , System.getProperty("sys.default.path.temp.attachments") + "/"
+                                    , (String) poJSON.get("filename"))){
+                                System.out.println("poJSON success: " +  poJSON.toJSONString());
+                                System.out.println("File downloaded succesfully.");
+                            } else {
+                                System.out.println("poJSON error: " + poJSON.toJSONString());
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Unable to download file.");
+                            }
+
+                        } else {
+                            System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+                        }
                     }
                 }
             }
@@ -1946,6 +1950,10 @@ public class DisbursementVoucher extends Transaction {
 
     public TransactionAttachment TransactionAttachmentList(int row) {
         return (TransactionAttachment) paAttachments.get(row);
+    }
+    
+    public String TransactionAttachmentSource(int row) {
+        return (String) paAttachmentsSource.get(row);
     }
 
     public int getTransactionAttachmentCount() {
