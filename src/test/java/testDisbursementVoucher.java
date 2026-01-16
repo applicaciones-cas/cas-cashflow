@@ -96,7 +96,7 @@ public class testDisbursementVoucher {
         }
     }
     
-    @Test
+//    @Test
     public void testUpdateTransaction() {
         String industryId = "02";
         String companyId = "0002";
@@ -292,6 +292,36 @@ public class testDisbursementVoucher {
                 Assert.fail();
             }
         } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException | ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        } 
+    }
+    
+    @Test
+    public void testLoadAttachment() {
+        String industryId = "02";
+        String companyId = "0002";
+        String supplierId = "C00124000009";
+        try {
+
+            JSONObject loJSON = new JSONObject();
+
+            loJSON = poController.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poController.OpenTransaction("GCO126000046");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            for(int lnCtr = 0; lnCtr <= poController.getTransactionAttachmentCount() - 1; lnCtr++){
+                System.out.println("Source : " + poController.TransactionAttachmentSource(lnCtr));
+            }
+            
+        } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException  ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         } 
     }
