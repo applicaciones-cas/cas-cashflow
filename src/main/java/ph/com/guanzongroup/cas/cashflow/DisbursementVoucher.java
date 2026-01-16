@@ -1886,7 +1886,6 @@ public class DisbursementVoucher extends Transaction {
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
         for(int lnRow = 0; lnRow <= getDetailCount() - 1;lnRow++){
             if(Detail(lnRow).getAmountApplied() != 0.0000){
-                paAttachmentsSource.add(getSourceCodeDescription(Detail(lnRow).getSourceCode()) + " - " + getReferenceNo(lnRow));
                 lsSourceNo = Detail(lnRow).getSourceNo();
                 if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
                     lsSourceNo = Detail(lnRow).getDetailSource();
@@ -1894,6 +1893,7 @@ public class DisbursementVoucher extends Transaction {
 
                 List loList = loAttachment.getAttachments(SOURCE_CODE, lsSourceNo);
                 for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
+                    paAttachmentsSource.add(getSourceCodeDescription(Detail(lnRow).getSourceCode()) + " - " + getReferenceNo(lnRow));
                     paAttachments.add(TransactionAttachment());
                     poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
                     if ("success".equals((String) poJSON.get("result"))) {
