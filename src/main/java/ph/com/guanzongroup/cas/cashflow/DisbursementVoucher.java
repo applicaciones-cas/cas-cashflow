@@ -223,6 +223,12 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        poJSON = loadAttachments();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading transaction attachments.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
                     poJSON = populateCheck();
@@ -1883,15 +1889,18 @@ public class DisbursementVoucher extends Transaction {
         paAttachments = new ArrayList<>();
         paAttachmentsSource = new ArrayList<>();
         String lsSourceNo = "";
+        String lsSourceCode = "";
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
         for(int lnRow = 0; lnRow <= getDetailCount() - 1;lnRow++){
             if(Detail(lnRow).getAmountApplied() != 0.0000){
                 lsSourceNo = Detail(lnRow).getSourceNo();
+                lsSourceCode = Detail(lnRow).getSourceCode();
                 if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
                     lsSourceNo = Detail(lnRow).getDetailSource();
+                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
                 }
 
-                List loList = loAttachment.getAttachments(SOURCE_CODE, lsSourceNo);
+                List loList = loAttachment.getAttachments(Detail(lnRow).getSourceCode(), lsSourceNo);
                 for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
                     paAttachmentsSource.add(getSourceCodeDescription(Detail(lnRow).getSourceCode()) + " - " + getReferenceNo(lnRow));
                     paAttachments.add(TransactionAttachment());
