@@ -1919,7 +1919,7 @@ public class DisbursementVoucher extends Transaction {
                                 , "0032" //Constant
                                 , "" //Empty
                                 , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
-                                , SOURCE_CODE
+                                , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode()
                                 , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
                                 , "");
                         if ("success".equals((String) poJSON.get("result"))) {
@@ -1938,12 +1938,19 @@ public class DisbursementVoucher extends Transaction {
                             }
 
                         } else {
+                            poJSON = (JSONObject) poJSON.get("error");
+                            poJSON.put("result", "error");
+                            System.out.println("ERROR WebFile.DownloadFile: " + poJSON.get("message"));
                             System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+                            System.out.println("SKIP THE FILE TO LOAD");
                         }
                     }
                 }
             }
         }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
 
