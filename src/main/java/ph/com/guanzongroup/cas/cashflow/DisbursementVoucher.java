@@ -1510,7 +1510,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
             case DisbursementStatic.DisbursementType.WIRED:
-                poOtherPayments.getModel().setAmountPaid(Master().getNetTotal());
+                poOtherPayments.getModel().setTotalAmount(Master().getNetTotal());
                 break;
         }
         
@@ -3857,6 +3857,10 @@ public class DisbursementVoucher extends Transaction {
         lsSQL = MiscUtil.addCondition(lsSQL,
                 " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                 + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+                + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.POSTED)
+                + " ) "
         );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -4005,7 +4009,7 @@ public class DisbursementVoucher extends Transaction {
                     }
                 break;
                 case EditMode.UPDATE:
-                    if(poOtherPayments.getEditMode() == EditMode.READY || poCheckPayments.getEditMode() == EditMode.UNKNOWN){
+                    if(poOtherPayments.getEditMode() == EditMode.READY || poOtherPayments.getEditMode() == EditMode.UNKNOWN){
                         poJSON = poOtherPayments.openRecord(lsCheck);
                         if ("error".equals((String) poJSON.get("result"))){
                             return poJSON;
@@ -4015,12 +4019,21 @@ public class DisbursementVoucher extends Transaction {
                 break;
             }
         } else {
-            if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() != EditMode.ADDNEW){
+            if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poOtherPayments.getEditMode() != EditMode.ADDNEW){
                 poJSON = poOtherPayments.newRecord();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() == EditMode.ADDNEW) {
+                
+                //Set initial value for other payment
+                poOtherPayments.getModel().setSourceNo(Master().getTransactionNo());
+                poOtherPayments.getModel().setBranchCode(Master().getBranchCode());
+                poOtherPayments.getModel().setIndustryID(Master().getIndustryID());
+                poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.FLOAT);
+                poOtherPayments.getModel().setSourceCode(getSourceCode());
+                poOtherPayments.getModel().setTotalAmount(Master().getNetTotal());
+                
+            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poOtherPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
                 return poJSON;
             } 
@@ -4047,7 +4060,10 @@ public class DisbursementVoucher extends Transaction {
         lsSQL = MiscUtil.addCondition(lsSQL,
                 " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                 + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                + " AND cTranStat = " +  SQLUtil.toSQL(RecordStatus.ACTIVE)
+                + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+                + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+                + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
+                + " ) "
         );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -4055,7 +4071,7 @@ public class DisbursementVoucher extends Transaction {
         if (MiscUtil.RecordCount(loRS) > 0) {
             while (loRS.next()) {
                 // Print the result set
-                System.out.println("--------------------------CHECK PAYMENT--------------------------");
+                System.out.println("--------------------------OTHER PAYMENT--------------------------");
                 System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                 System.out.println("------------------------------------------------------------------------------");
                 if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
