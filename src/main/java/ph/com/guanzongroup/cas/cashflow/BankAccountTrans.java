@@ -2,7 +2,6 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import org.guanzon.appdriver.base.CommonUtils;
@@ -10,12 +9,10 @@ import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
-import org.guanzon.appdriver.base.StringHelper;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 
 public class BankAccountTrans {
-    private final String LEDGERNOPICT = "000000";
     private final String MASTER_TABLE = "Bank_Account_Master";
     private final String DETAIL_TABLE = "Bank_Account_Ledger";
     
@@ -27,7 +24,7 @@ public class BankAccountTrans {
     private String psBranchCd; 
     private String psSourceCd; 
     private String psSourceNo; 
-    private String pcReferNox; 
+    private String psReferNox; 
     private String psCheckNox; 
     private String psSerialNo; 
     
@@ -474,51 +471,37 @@ public class BankAccountTrans {
         return poJSON;
     }
     
-    private JSONObject saveDetail() throws SQLException{
+    private JSONObject saveDetail() throws SQLException, GuanzonException{
         String lsSQL;
-        String lsALedgerNo;
-        String lsOLedgerNo;
-        double lnABalance;
-        double lnOBalance;
         
-        if (CommonUtils.dateDiff(CommonUtils.toLocalDate(pdTransact), 
-                CommonUtils.toLocalDate(poMaster.getDate("dLastTran")), ChronoUnit.DAYS) > 0){
-            
-            poJSON = getOBalance(psBnkActID, pdTransact);
-            if ("error".equals((String) poJSON.get("result"))) return poJSON;
-            lnOBalance = (double) poJSON.get("balance");
-            lsOLedgerNo = (String) poJSON.get("ledger");
-            
-            if (lsOLedgerNo.isEmpty()){ //no old transaction
-                lnABalance = poMaster.getDouble("nABegBalx");
-                lnOBalance = poMaster.getDouble("nOBegBalx");
-                lsOLedgerNo = StringHelper.prepad("1", LEDGERNOPICT.length(), '0');
-                lsALedgerNo = StringHelper.prepad("1", LEDGERNOPICT.length(), '0');
-            } else {
-                poJSON = getABalance(psBnkActID, pdTransact);
-                if ("error".equals((String) poJSON.get("result"))) return poJSON;
-                
-                lnABalance = (double) poJSON.get("balance");
-                lsALedgerNo = (String) poJSON.get("ledger");
-                
-                lsSQL = "INSERT INTO Bank_Account_Ledger SET" +
-                        "  sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
-                        ", nLedgerNo = " + SQLUtil.toSQL(StringHelper.prepad(String.valueOf(Integer.parseInt(lsOLedgerNo) + 1), LEDGERNOPICT.length(), '0')) +
-                        ", sBranchCd = " + SQLUtil.toSQL(psBranchCd) +
-                        ", dTransact = " + SQLUtil.toSQL(pdTransact) +
-                        ", sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
-                        ", sSourceNo = " + SQLUtil.toSQL(psSourceNo) +
-                        ", nAmountIn = " + pnAmountIn +
-                        ", nAmountOt = " + pnAmountOt +
-                        ", nOBalance = " + lnOBalance + pnOTranAmt +
-                        ", nABalance = " + lnABalance + pnATranAmt +
-                        ", dPostedxx = " + SQLUtil.toSQL(pdPostedxx) +
-                        ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate());
-            }
-        } else {
-            //todo;
+        lsSQL = "INSERT INTO " + DETAIL_TABLE + " SET" +
+                "  sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
+                ", nLedgerNo = " +
+                " IF(ISNULL(@xLedgerNo := (SELECT nLedgerNo + 1" +
+                    "  FROM Bank_Account_Ledger a" +
+                    "  WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
+                    "  ORDER BY nLedgerNo DESC LIMIT 1))" +
+                    ", 1, @xLedgerNo)" +
+                ", sBranchCd = " + SQLUtil.toSQL(psBranchCd) +
+                ", dTransact = " + SQLUtil.toSQL(pdTransact) + 
+                ", sSourceCd = " + SQLUtil.toSQL(psSourceCd) + 
+                ", sSourceNo = " + SQLUtil.toSQL(psSourceNo) + 
+                ", nAmountIn = " + SQLUtil.toSQL(pnAmountIn) + 
+                ", nAmountOt = " + SQLUtil.toSQL(pnAmountOt) + 
+                ", nOBalance = " + SQLUtil.toSQL(poMaster.getDouble("xOBalance") + pnOTranAmt) + 
+                ", nABalance = " + SQLUtil.toSQL(poMaster.getDouble("xABalance") + pnATranAmt) + 
+                ", dPostedxx = " + SQLUtil.toSQL(pdPostedxx) + 
+                ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate());
+        
+        if (poGRider.executeQuery(lsSQL, DETAIL_TABLE, psBranchCd, "", "") <= 0){
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Unable to Update Transaction Ledger!");
+            return poJSON;
         }
         
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
         return null;
     }
     
@@ -620,17 +603,6 @@ public class BankAccountTrans {
     }
     
     private JSONObject delDetail() throws SQLException, GuanzonException{
-//        String lsLedgerNo;
-//        
-//        if (poMaster.getDate("dPostedxx") != null) {
-//            if (CommonUtils.dateDiff(CommonUtils.toLocalDate(getEmptyDate()), CommonUtils.toLocalDate(poMaster.getDate("dPostedxx")), ChronoUnit.DAYS) > 0){
-//                pnATranAmt = pnOTranAmt;
-//                loJSON = getABalance(psBnkActID, pdPostedxx);
-//                
-//                lsLedgerNo = (String) loJSON.get("ledger");
-//            }
-//        }
-        
         String lsSQL = "DELETE FROM " + DETAIL_TABLE +
                         " WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
                             " AND sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
@@ -643,68 +615,9 @@ public class BankAccountTrans {
             return poJSON;
         }
         
-        //realign ledger/outstanding balance : no need because ledger table has no balance field
-        //realign available balance :no need because ledger table has no balance field
-        
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
-    }
-    
-    private JSONObject getABalance(String bankAcountId, Date date) throws SQLException{        
-        String lsSQL = "SELECT" +
-                            "  b.nABalance" +
-                            ", a.nLedgerNo" + 
-                        " FROM " + DETAIL_TABLE + " a" +
-                            ", " + MASTER_TABLE + " b" + 
-                        " WHERE a.sBnkActID = b.sBnkActID" +
-                            " AND a.sBnkActID = " + SQLUtil.toSQL(bankAcountId) +
-                            " AND a.dPostedxx <= " + SQLUtil.toSQL(date) +
-                        " ORDER BY dPostedxx DESC, nLedgerNo DESC LIMIT 1";
-        
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        
-        JSONObject loJSON = new JSONObject();
-        
-        if (!loRS.next()){
-            loJSON.put("result", "success");
-            loJSON.put("balance", (double) 0.00);
-            loJSON.put("ledger", LEDGERNOPICT);
-            return loJSON;
-        }
-        
-        loJSON.put("result", "success");
-        loJSON.put("balance", loRS.getDouble("nABalance"));
-        loJSON.put("ledger", loRS.getString("nLedgerNo"));
-        return loJSON;
-    }
-    
-    private JSONObject getOBalance(String bankAcountId, Date date) throws SQLException{        
-        String lsSQL = "SELECT" +
-                            "  b.nOBalance" +
-                            ", a.nLedgerNo" + 
-                        " FROM " + DETAIL_TABLE + " a" +
-                            ", " + MASTER_TABLE + " b" + 
-                        " WHERE a.sBnkActID = b.sBnkActID" +
-                            " AND a.sBnkActID = " + SQLUtil.toSQL(bankAcountId) +
-                            " AND a.dTransact <= " + SQLUtil.toSQL(date) +
-                        " ORDER BY dTransact DESC, nLedgerNo DESC LIMIT 1";
-        
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        
-        JSONObject loJSON = new JSONObject();
-        
-        if (!loRS.next()){
-            loJSON.put("result", "success");
-            loJSON.put("balance", (double) 0.00);
-            loJSON.put("ledger", LEDGERNOPICT);
-            return loJSON;
-        }
-        
-        loJSON.put("result", "success");
-        loJSON.put("balance", loRS.getDouble("nOBalance"));
-        loJSON.put("ledger", loRS.getString("nLedgerNo"));
-        return loJSON;
     }
     
     private Date getEmptyDate(){
