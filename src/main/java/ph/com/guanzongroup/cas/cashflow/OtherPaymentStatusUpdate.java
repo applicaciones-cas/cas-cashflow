@@ -17,6 +17,9 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.parameter.Banks;
+import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
@@ -31,6 +34,9 @@ import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
  * 01/19/2026 15:25
  */
 public class OtherPaymentStatusUpdate extends DisbursementVoucher {
+    public String psBankId = "";
+    public String psBank = "";
+    public String psBankAccount = "";
     
     public List<Model> paOtherPayment;
 
@@ -83,6 +89,43 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
                 break;
         }
         
+        return poJSON;
+    }
+    public void setSearchBankId(String bankId) { psBankId = bankId; }
+    public void setSearchBank(String bank) { psBank = bank; }
+    public void setSearchBankAccount(String bankAccount) { psBankAccount = bankAccount; }
+    public String getSearchBankId() { return psBankId; }
+    public String getSearchBank() { return psBank; }
+    public String getSearchBankAccount() { return psBankAccount; }
+    
+    public JSONObject SearchBankAccount(String value, String Banks) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        object.setCompanyId(psCompanyId);
+        
+        if(Banks == null || "".equals(Banks)){
+            poJSON = object.searchRecord(value, false);
+        } else {
+            poJSON = object.searchRecordbyBanks(value, Banks, false);
+        }
+        
+        if ("success".equals((String) poJSON.get("result"))) {
+            setSearchBank(object.getModel().Banks().getBankName());
+            setSearchBankAccount(object.getModel().getAccountNo());
+        }
+        return poJSON;
+    }
+
+    public JSONObject SearchBanks(String value) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Banks object = new ParamControllers(poGRider, logwrapr).Banks();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, false);
+        if ("success".equals((String) poJSON.get("result"))) {
+            setSearchBank(object.getModel().getBankName());
+            setSearchBankId(object.getModel().getBankID());
+        }
+
         return poJSON;
     }
     
