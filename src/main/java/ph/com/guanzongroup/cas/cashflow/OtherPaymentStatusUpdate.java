@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.script.ScriptException;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -50,14 +51,52 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
     }
 
     @Override
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
-        return openTransaction(transactionNo);
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
+        //Reset Transaction
+        resetTransaction();
+        
+        poJSON = openTransaction(transactionNo);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        switch(Master().getDisbursementType()){
+            case DisbursementStatic.DisbursementType.WIRED:
+            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                    poJSON = populateOtherPayment();
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+                        return poJSON;
+                    }
+                break;
+        }
+        
+        return poJSON;
     }
 
     @Override
-    public JSONObject UpdateTransaction() {
-        return updateTransaction();
+    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = updateTransaction();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        switch(Master().getDisbursementType()){
+            case DisbursementStatic.DisbursementType.WIRED:
+            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                    poJSON = populateOtherPayment();
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+                        return poJSON;
+                    }
+                break;
+        }
+        
+        return poJSON;
     }
+    
     
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
