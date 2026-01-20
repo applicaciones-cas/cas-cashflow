@@ -115,24 +115,24 @@ import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
  * @author TJ; Arsiela 10-17-2025 
  */
 public class DisbursementVoucher extends Transaction {
-    private String psIndustryId = "";
-    private String psCompanyId = "";
-    private String psCategorCd = "";
-    private String psBranch = "";
-    private String psIndustry = "";
-    private String psClient = "";
-    private String psPayee = "";
-    private String psParticular = "";
-    private boolean pbIsUpdateAmountPaid = false;
+    public String psIndustryId = "";
+    public String psCompanyId = "";
+    public String psCategorCd = "";
+    public String psBranch = "";
+    public String psIndustry = "";
+    public String psClient = "";
+    public String psPayee = "";
+    public String psParticular = "";
+    public boolean pbIsUpdateAmountPaid = false;
     
-    private OtherPayments poOtherPayments;
-    private CheckPayments poCheckPayments;
-    private BankAccountMaster poBankAccount;
-    private Journal poJournal;
-    private List<WithholdingTaxDeductions> paWTaxDeductions;
+    public OtherPayments poOtherPayments;
+    public CheckPayments poCheckPayments;
+    public BankAccountMaster poBankAccount;
+    public Journal poJournal;
+    public List<WithholdingTaxDeductions> paWTaxDeductions;
     
-    private List<Model> paMaster;
-    List<TransactionAttachment> paAttachments;
+    public List<Model> paMaster;
+    public List<TransactionAttachment> paAttachments;
     
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
@@ -2695,7 +2695,7 @@ public class DisbursementVoucher extends Transaction {
                     //Save Other Payment
                     if(poOtherPayments != null){
                         System.out.println("--------------------------SAVE OTHER PAYMENT---------------------------------------------");
-                        if(poOtherPayments.getEditMode() == EditMode.ADDNEW || poCheckPayments.getEditMode() == EditMode.UPDATE){
+                        if(poOtherPayments.getEditMode() == EditMode.ADDNEW || poOtherPayments.getEditMode() == EditMode.UPDATE){
                             if(OtherPaymentStatus.POSTED.equals(poOtherPayments.getModel().getTransactionStatus())){
                                 poOtherPayments.getModel().setAmountPaid(poOtherPayments.getModel().getTotalAmount());
                                 pbIsUpdateAmountPaid = true;
@@ -2816,7 +2816,7 @@ public class DisbursementVoucher extends Transaction {
      * @throws CloneNotSupportedException
      * @throws ParseException 
      */
-    private JSONObject updateLinkedTransactions(String fsStatus) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
+    public JSONObject updateLinkedTransactions(String fsStatus) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
         poJSON = new JSONObject();
         //Call Class for updating of linked transactions in DV Details
         Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
