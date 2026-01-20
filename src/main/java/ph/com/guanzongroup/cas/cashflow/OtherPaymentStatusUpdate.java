@@ -8,6 +8,7 @@ package ph.com.guanzongroup.cas.cashflow;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.script.ScriptException;
@@ -18,7 +19,7 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -31,6 +32,8 @@ import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
  */
 public class OtherPaymentStatusUpdate extends DisbursementVoucher {
     
+    public List<Model> paOtherPayment;
+    
     @Override
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
@@ -40,7 +43,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
         poOtherPayments = new CashflowControllers(poGRider, logwrapr).OtherPayments();
         
-        paMaster = new ArrayList<>();
+        paOtherPayment = new ArrayList<>();
         
         return initialize();
     }
@@ -97,7 +100,6 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         return poJSON;
     }
     
-    
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
      * @param fsIndustry pass the Industry Name
@@ -110,7 +112,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
      */
     public JSONObject loadTransactionList(String fsIndustry, String fsBank, String fsBankAccount, String fsDVNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        paMaster = new ArrayList<>();
+        paOtherPayment = new ArrayList<>();
         if (fsIndustry == null || "".equals(fsIndustry)) { 
             poJSON.put("result", "error");
             poJSON.put("message", "Industry cannot be empty.");
@@ -141,16 +143,24 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         }
 
         while (loRS.next()) {
-            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
-            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+            Model_Other_Payments loObject = new CashflowModels(poGRider).OtherPayments();
+            poJSON = loObject.openRecord(loRS.getString("sOtherPay"));
             if ("success".equals((String) poJSON.get("result"))) {
-                paMaster.add((Model) loObject);
+                paOtherPayment.add((Model) loObject);
             } else {
                 return poJSON;
             }
         }
         MiscUtil.close(loRS);
         return poJSON;
+    }
+    
+    public List<Model_Other_Payments> getOtherPaymentList() {
+        return (List<Model_Other_Payments>) (List<?>) paOtherPayment;
+    }
+
+    public Model_Other_Payments getOtherPayment(int masterRow) {
+        return (Model_Other_Payments) paOtherPayment.get(masterRow);
     }
     
     @Override

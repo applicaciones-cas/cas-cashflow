@@ -41,6 +41,7 @@ public class Model_Other_Payments extends Model {
     Model_Banks poBanks;
     Model_Industry poIndustry;
     Model_Transaction_Status_History poTransactionStatusHistory;
+    Model_Disbursement_Master poDisbursementMaster;
 
     @Override
     public void initialize() {
@@ -70,6 +71,7 @@ public class Model_Other_Payments extends Model {
             poIndustry = model.Industry();
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
+            poDisbursementMaster = cashFlow.DisbursementMaster();
             poBankAccountMaster = cashFlow.Bank_Account_Master();
             ClientModels clientModel = new ClientModels(poGRider);
             poSupplier = clientModel.ClientMaster();
@@ -220,6 +222,26 @@ public class Model_Other_Payments extends Model {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
 
+    public Model_Disbursement_Master DisbursementMaster() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poDisbursementMaster.getEditMode() == EditMode.READY
+                    && poDisbursementMaster.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poDisbursementMaster;
+            } else {
+                poJSON = poDisbursementMaster.openRecord((String) getValue("sSourceNo"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poDisbursementMaster;
+                } else {
+                    poDisbursementMaster.initialize();
+                    return poDisbursementMaster;
+                }
+            }
+        } else {
+            poDisbursementMaster.initialize();
+            return poDisbursementMaster;
+        }
+    }
+    
     public Model_Payee Payee() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sPayeeIDx"))) {
             if (poPayee.getEditMode() == EditMode.READY
@@ -239,7 +261,7 @@ public class Model_Other_Payments extends Model {
             return poPayee;
         }
     }
-
+    
     public Model_Client_Master Supplier() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sSupplier"))) {
             if (poSupplier.getEditMode() == EditMode.READY

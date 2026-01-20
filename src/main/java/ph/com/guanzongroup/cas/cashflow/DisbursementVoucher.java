@@ -372,7 +372,7 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
-    private boolean isAllowed(String current, String target) {
+    public boolean isAllowed(String current, String target) {
         switch (target) {
             case DisbursementStatic.RETURNED:
                 return current.equals(DisbursementStatic.VERIFIED)
@@ -2833,7 +2833,7 @@ public class DisbursementVoucher extends Transaction {
                         if(poCheckPayments != null){
                             poCheckPayments.setWithParentClass(true);
                             poCheckPayments.setWithUI(false);
-                            poJSON = poCheckPayments.deactivateRecord();
+                            poJSON = poCheckPayments.VoidTransaction("");
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
                             }
@@ -2845,9 +2845,40 @@ public class DisbursementVoucher extends Transaction {
                         if(poOtherPayments != null){
                             poOtherPayments.setWithParentClass(true);
                             poOtherPayments.setWithUI(false);
-                            poJSON = poOtherPayments.deactivateRecord();
+                            poJSON = poOtherPayments.VoidTransaction("");
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
+                            }
+                        }
+                        break;
+                }
+                break;
+            case DisbursementStatic.RETURNED:
+                switch(Master().getDisbursementType()){
+                    case DisbursementStatic.DisbursementType.CHECK:
+                        if(CheckStatus.CANCELLED.equals(poCheckPayments.getModel().getTransactionStatus())){
+                            //Save Check Payment
+                            if(poCheckPayments != null){
+                                poCheckPayments.setWithParentClass(true);
+                                poCheckPayments.setWithUI(false);
+                                poJSON = poCheckPayments.CancelTransaction("");
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }
+                            }
+                        }
+                        break;
+                    case DisbursementStatic.DisbursementType.WIRED:
+                    case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                        if(OtherPaymentStatus.CANCELLED.equals(poOtherPayments.getModel().getTransactionStatus())){
+                            //Save Other Payment
+                            if(poOtherPayments != null){
+                                poOtherPayments.setWithParentClass(true);
+                                poOtherPayments.setWithUI(false);
+                                poJSON = poOtherPayments.CancelTransaction("");
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }
                             }
                         }
                         break;
@@ -4499,7 +4530,9 @@ public class DisbursementVoucher extends Transaction {
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp, "
                 + " a.cBankPrnt, "
-                + " k.sDescript AS sIndustry "
+                + " k.sDescript AS sIndustry, "
+                + " g.sTransNox AS sCheckPay, "
+                + " h.sTransNox AS sOtherPay "
                 + " FROM Disbursement_Master a "
                 + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
