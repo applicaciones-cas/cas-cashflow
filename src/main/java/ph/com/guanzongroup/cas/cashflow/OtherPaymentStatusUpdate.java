@@ -22,9 +22,11 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
@@ -56,25 +58,9 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             return poJSON;
         }
         
-        switch(Master().getDisbursementType()){
-            case DisbursementStatic.DisbursementType.WIRED:
-            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
-                    poJSON = populateOtherPayment();
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
-                        return poJSON;
-                    }
-                break;
-        }
-        
-        return poJSON;
-    }
-
-    @Override
-    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
-        poJSON = updateTransaction();
+        poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -91,6 +77,184 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         
         return poJSON;
     }
+
+    @Override
+    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        
+        poJSON = updateTransaction();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = populateJournal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        switch(Master().getDisbursementType()){
+            case DisbursementStatic.DisbursementType.CHECK:
+                break;
+            case DisbursementStatic.DisbursementType.WIRED:
+            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                    poJSON = populateOtherPayment();
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+                        return poJSON;
+                    }
+                break;
+        }
+        
+        return poJSON;
+    }
+    
+    @Override
+    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+
+        String lsStatus = DisbursementStatic.RETURNED;
+        
+        poJSON = OpenTransaction(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(Master().getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(Master().getTransactionStatus())+".");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        //Update Linked transaction to DV
+        poJSON = updateLinkedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+            
+        poOtherPayments.setWithParentClass(true);
+        poOtherPayments.setWithUI(false);
+        poJSON = poOtherPayments.CancelTransaction("");
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Other Payment Cancelled Successfully.");
+
+        return poJSON;
+    }
+    
+    @Override
+    public JSONObject ReturnTransaction(String remarks,List<String> fasTransactionNo)
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+
+        String lsStatus = DisbursementStatic.RETURNED;
+        
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        for(int lnCtr = 0; lnCtr <= fasTransactionNo.size() - 1; lnCtr++){
+            poJSON = OpenTransaction(fasTransactionNo.get(lnCtr));
+            if (!"success".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+            
+            if (getEditMode() != EditMode.READY) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No transacton was loaded.");
+                return poJSON;
+            }
+            
+            if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
+                return poJSON;
+            }
+        
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+            //Update Related transaction to DV
+            poJSON = updateLinkedTransactions(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            //Update Related transaction to DV
+            poJSON = updateRelatedTransactions(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+            
+            poOtherPayments.setWithParentClass(true);
+            poOtherPayments.setWithUI(false);
+            poJSON = poOtherPayments.CancelTransaction("");
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            //change status
+            poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+
+            poGRider.commitTrans();
+        }
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Other Payment Cancelled Successfully.");
+        return poJSON;
+    }
+    
     public void setSearchBankId(String bankId) { psBankId = bankId; }
     public void setSearchBank(String bank) { psBank = bank; }
     public void setSearchBankAccount(String bankAccount) { psBankAccount = bankAccount; }

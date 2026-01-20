@@ -310,16 +310,12 @@ public class OtherPayments extends Parameter {
             return poJSON;
         }
 
-        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, poModel.getTransactionNo());
-
         //change status
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
         }
-
-        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");

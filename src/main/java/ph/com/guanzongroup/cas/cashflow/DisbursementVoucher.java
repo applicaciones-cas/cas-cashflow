@@ -2789,7 +2789,7 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    private JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         
         //Update Journal
@@ -2860,37 +2860,6 @@ public class DisbursementVoucher extends Transaction {
                             poJSON = poOtherPayments.VoidTransaction("");
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
-                            }
-                        }
-                        break;
-                }
-                break;
-            case DisbursementStatic.RETURNED:
-                switch(Master().getDisbursementType()){
-                    case DisbursementStatic.DisbursementType.CHECK:
-                        if(CheckStatus.CANCELLED.equals(poCheckPayments.getModel().getTransactionStatus())){
-                            //Save Check Payment
-                            if(poCheckPayments != null){
-                                poCheckPayments.setWithParentClass(true);
-                                poCheckPayments.setWithUI(false);
-                                poJSON = poCheckPayments.CancelTransaction("");
-                                if ("error".equals((String) poJSON.get("result"))) {
-                                    return poJSON;
-                                }
-                            }
-                        }
-                        break;
-                    case DisbursementStatic.DisbursementType.WIRED:
-                    case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
-                        if(OtherPaymentStatus.CANCELLED.equals(poOtherPayments.getModel().getTransactionStatus())){
-                            //Save Other Payment
-                            if(poOtherPayments != null){
-                                poOtherPayments.setWithParentClass(true);
-                                poOtherPayments.setWithUI(false);
-                                poJSON = poOtherPayments.CancelTransaction("");
-                                if ("error".equals((String) poJSON.get("result"))) {
-                                    return poJSON;
-                                }
                             }
                         }
                         break;
