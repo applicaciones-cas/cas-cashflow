@@ -404,6 +404,57 @@ public class DisbursementVoucher extends Transaction {
                 return false;
         }
     }
+    
+    /**
+     * Update Disbursement Linked Payment Status
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws ParseException
+     * @throws CloneNotSupportedException 
+     */
+    public JSONObject updatePaymentsStatus() throws SQLException, GuanzonException, ParseException, CloneNotSupportedException{
+        poJSON = new JSONObject();
+        String lsCheck = "";
+        //If DV Type is Check : VOID linked OTHER PAYMENT
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+            lsCheck = existOtherPayments();
+            if(lsCheck != null && !"".equals(lsCheck)){
+                OtherPayments loObject = new CashflowControllers(poGRider, logwrapr).OtherPayments();
+                loObject.initialize();
+                poJSON = loObject.openRecord(lsCheck);
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+                
+                poJSON = loObject.VoidTransaction("");
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            }
+        } else {
+            //Else DV Type is OYHER Payment : VOID linked CHECK PAYMENT
+            lsCheck = existCheckPayments();
+            if(lsCheck != null && !"".equals(lsCheck)){
+                CheckPayments loObject = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+                loObject.initialize();
+                poJSON = loObject.openRecord(lsCheck);
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+                
+                poJSON = loObject.VoidTransaction("");
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            }
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "Payment Update Status Successfully.");
+        return poJSON;
+    }
+    
     /*Update Transaction Status*/
     public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -2598,6 +2649,7 @@ public class DisbursementVoucher extends Transaction {
                                 return poJSON;
                             }
                         }
+                        
                     } else {
                         poJSON.put("result", "error");
                         poJSON.put("message", "Check info is not set.");
@@ -3912,14 +3964,25 @@ public class DisbursementVoucher extends Transaction {
     private String existCheckPayments() throws SQLException{
         Model_Check_Payments loMaster = new CashflowModels(poGRider).CheckPayments();
         String lsSQL = MiscUtil.makeSelect(loMaster);
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
-                + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
-                + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.POSTED)
-                + " ) "
-        );
+        
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                    + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+                    + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.POSTED)
+                    + " ) "
+            );
+        } else {
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                    + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+                    + " ) "
+            );
+        }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();
@@ -4116,14 +4179,25 @@ public class DisbursementVoucher extends Transaction {
     private String existOtherPayments() throws SQLException{
         Model_Other_Payments loMaster = new CashflowModels(poGRider).OtherPayments();
         String lsSQL = MiscUtil.makeSelect(loMaster);
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
-                + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
-                + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
-                + " ) "
-        );
+        
+        if(!DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
+                    + " ) "
+            );
+        } else {
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+                    + " ) "
+            );
+        }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();

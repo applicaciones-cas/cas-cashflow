@@ -4,16 +4,16 @@ import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
-public class CheckPaymentValidator implements GValidator{
+public class OtherPaymentValidator implements GValidator{
     GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
     
-    Model_Check_Payments poMaster;
-    
+    Model_Other_Payments poMaster;
+
     @Override
     public void setApplicationDriver(Object applicationDriver) {
         poGrider = (GRiderCAS) applicationDriver;
@@ -26,7 +26,7 @@ public class CheckPaymentValidator implements GValidator{
 
     @Override
     public void setMaster(Object value) {
-        poMaster = (Model_Check_Payments) value;
+        poMaster = (Model_Other_Payments) value;
     }
 
     @Override
@@ -75,10 +75,10 @@ public class CheckPaymentValidator implements GValidator{
 //            }
 //        }
         
-        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
-            poJSON.put("message", "Payee information is missing or not set.");
-            return poJSON;
-        }
+//        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+//            poJSON.put("message", "Payee information is missing or not set.");
+//            return poJSON;
+//        }
         
 //        if (!poGrider.isMainOffice() || !poGrider.isWarehouse()){
 //            if (poMaster.getSeriesNo()== null || poMaster.getSeriesNo().isEmpty()) {
