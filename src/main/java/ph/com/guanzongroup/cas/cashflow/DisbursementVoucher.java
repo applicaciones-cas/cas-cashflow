@@ -1804,61 +1804,6 @@ public class DisbursementVoucher extends Transaction {
     
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
-     * @param fsIndustry pass the Industry Name
-     * @param fsBank if isUpdateTransactionStatus is false pass the supplier else bank
-     * @param fsBankAccount if isUpdateTransactionStatus is false pass the reference no else bankAccount
-     * @param fsDVNo if isUpdateTransactionStatus is false pass empty string else check no
-     * @return JSON
-     * @throws SQLException
-     * @throws GuanzonException 
-     */
-    public JSONObject loadCertifiedOtherPaymentList(String fsIndustry, String fsBank, String fsBankAccount, String fsDVNo) throws SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        paMaster = new ArrayList<>();
-        if (fsIndustry == null || "".equals(fsIndustry)) { 
-            poJSON.put("result", "error");
-            poJSON.put("message", "Industry cannot be empty.");
-            return poJSON;
-        }
-        
-        if (fsBank == null) { fsBank = ""; }
-        if (fsBankAccount == null) { fsBankAccount = ""; }
-        if (fsDVNo == null) { fsDVNo = ""; }
-        initSQL();
-        //set default retrieval for supplier / reference no
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                    "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-                    + " AND i.sBankName LIKE " + SQLUtil.toSQL("%" + fsBank)
-                    + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsBankAccount)
-                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-                    + " AND a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsDVNo)
-                    + " AND a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.CERTIFIED)
-                    + " AND h.cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT));
-
-        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        if (MiscUtil.RecordCount(loRS) <= 0) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record found.");
-            return poJSON;
-        }
-
-        while (loRS.next()) {
-            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
-            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
-            if ("success".equals((String) poJSON.get("result"))) {
-                paMaster.add((Model) loObject);
-            } else {
-                return poJSON;
-            }
-        }
-        MiscUtil.close(loRS);
-        return poJSON;
-    }
-    
-    /**
-     * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
      * @param fsIndustry pass the industry name
      * @param fsBankName  pass the bank name
      * @param fsBankAccount pass the bankAccount number

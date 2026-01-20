@@ -192,34 +192,5 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         /*This procedure was called when saving was complete*/
         System.out.println("Transaction saved successfully.");
     }
-
-    @Override
-    public void initSQL() {
-        SQL_BROWSE = "SELECT "
-                + " a.sTransNox,"
-                + " a.sVouchrNo,"
-                + " a.dTransact,"
-                + " c.sBranchNm,"
-                + " d.sPayeeNme,"
-                + " e.sCompnyNm AS supplier,"
-                + " f.sDescript,"
-                + " a.nNetTotal, "
-                + " a.cDisbrsTp, "
-                + " a.cBankPrnt, "
-                + " k.sDescript AS sIndustry "
-                + " FROM Disbursement_Master a "
-                + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
-                + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
-                + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " LEFT JOIN Client_Master e ON d.sClientID = e.sClientID "
-                + " LEFT JOIN Particular f ON b.sPrtclrID = f.sPrtclrID"
-                + " LEFT JOIN Check_Payments g ON a.sTransNox = g.sSourceNo"
-                + " LEFT JOIN Other_Payments h ON a.sTransNox = h.sSourceNo"
-                + " LEFT JOIN Banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
-                + " LEFT JOIN Bank_Account_Master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID"
-                + " LEFT JOIN Industry k ON k.sIndstCdx = a.sIndstCdx";
-    }
-    
-    
     
 }
