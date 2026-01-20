@@ -26,6 +26,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
 /**
  *
@@ -51,13 +52,11 @@ public class Model_Other_Payments extends Model {
 
             MiscUtil.initRowSet(poEntity);
 
-//            poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-//            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-//            poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
-//            poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
-//            poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
-//            poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
-//            poEntity.updateNull("dPrintxxx");
+            poEntity.updateNull("dTransact");
+            poEntity.updateNull("dModified");
+            poEntity.updateObject("nTotlAmnt", 0.0000);
+            poEntity.updateObject("nAmtPaidx", 0.0000);
+            poEntity.updateString("cTranStat", OtherPaymentStatus.FLOAT);
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
