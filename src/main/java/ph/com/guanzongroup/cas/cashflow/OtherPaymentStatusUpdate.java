@@ -33,20 +33,6 @@ import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 public class OtherPaymentStatusUpdate extends DisbursementVoucher {
     
     public List<Model> paOtherPayment;
-    
-    @Override
-    public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "DISb";
-
-        poMaster = new CashflowModels(poGRider).DisbursementMaster();
-        poDetail = new CashflowModels(poGRider).DisbursementDetail();
-        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-        poOtherPayments = new CashflowControllers(poGRider, logwrapr).OtherPayments();
-        
-        paOtherPayment = new ArrayList<>();
-        
-        return initialize();
-    }
 
     @Override
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {

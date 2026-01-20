@@ -1885,17 +1885,29 @@ public class DisbursementVoucher extends Transaction {
         if (fsIndustry == null) { fsIndustry = ""; }
         if (fsSupplier == null) { fsSupplier = ""; }
         initSQL();
+        
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                     "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                     + " AND  k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
                     + " AND ( IFNULL('',d.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + fsSupplier)
                     + " OR IFNULL('',e.sCompnyNm ) LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
                     + " ) "
-                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
-                    + " OR a.sTransNox IN (SELECT op.sSourceNo FROM Other_Payments op WHERE op.sSourceNo = a.sTransNox AND op.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+"  ) ) "
                     + " AND a.sTransNox IN (SELECT wtd.sSourceNo FROM Withholding_Tax_Deductions wtd WHERE wtd.sSourceNo = a.sTransNox AND wtd.cReversex = "+SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)+" ) "
                     + " AND a.cPrintBIR = '0'"
+                    + " AND ( g.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
+                    + " OR h.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+" ) "
                     );
+//        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+//                    "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                    + " AND  k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
+//                    + " AND ( IFNULL('',d.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + fsSupplier)
+//                    + " OR IFNULL('',e.sCompnyNm ) LIKE " + SQLUtil.toSQL("%" + fsSupplier) 
+//                    + " ) "
+//                    + " AND ( a.sTransNox IN (SELECT cp.sSourceNo FROM Check_Payments cp WHERE cp.sSourceNo = a.sTransNox AND cp.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
+//                    + " OR a.sTransNox IN (SELECT op.sSourceNo FROM Other_Payments op WHERE op.sSourceNo = a.sTransNox AND op.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+"  ) ) "
+//                    + " AND a.sTransNox IN (SELECT wtd.sSourceNo FROM Withholding_Tax_Deductions wtd WHERE wtd.sSourceNo = a.sTransNox AND wtd.cReversex = "+SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)+" ) "
+//                    + " AND a.cPrintBIR = '0'"
+//                    );
         
         
         String lsCondition = "";
