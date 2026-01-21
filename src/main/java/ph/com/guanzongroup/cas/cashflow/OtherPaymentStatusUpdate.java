@@ -43,6 +43,11 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
 
     @Override
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = validateEntry();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         return saveTransaction();
     }
 
@@ -91,14 +96,6 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
             return poJSON;
-        }
-        
-        switch(Master().getDisbursementType()){
-            case DisbursementStatic.DisbursementType.WIRED: //BANK TRANSFER
-                poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.OPEN);
-            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT: //E-WALLET
-                poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.POSTED);
-                break;
         }
         
         return poJSON;
@@ -357,6 +354,28 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
 
     public Model_Disbursement_Master getOtherPayment(int masterRow) {
         return (Model_Disbursement_Master) paOtherPayment.get(masterRow);
+    }
+    
+    private JSONObject validateEntry(){
+        poJSON = new JSONObject();
+        if(OtherPaymentStatus.POSTED.equals(OtherPayments().getModel().getTransactionStatus())
+            || OtherPaymentStatus.OPEN.equals(OtherPayments().getModel().getTransactionStatus())){
+            if(OtherPayments().getModel().getReferNox() == null || "".equals(OtherPayments().getModel().getReferNox())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Reference No cannot be empty.");
+                return poJSON;
+            }
+        }
+        if(OtherPaymentStatus.POSTED.equals(OtherPayments().getModel().getTransactionStatus())){
+            if(OtherPayments().getModel().getPostedDate() == null){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Posted date cannot be empty.");
+                return poJSON;
+            }
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
     }
     
     @Override

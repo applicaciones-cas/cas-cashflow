@@ -8,6 +8,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -21,6 +23,8 @@ import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
@@ -163,12 +167,32 @@ public class Model_Other_Payments extends Model {
         return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
     }
 
-    public JSONObject setPayLoad(String payLoad) {
+    public JSONObject setPayLoad(JSONObject payLoad) {
         return setValue("sPayLoadx", payLoad);
     }
 
-    public String getPayLoad() {
-        return (String) getValue("sPayLoadx");
+    public JSONObject getPayLoad() {
+        JSONObject jsonObject = new JSONObject();
+        JSONParser parser = new JSONParser();
+        try {
+            String lsPayload = (String) getValue("sPayLoadx");
+            if(lsPayload != null && !"".equals(lsPayload)){
+                jsonObject = (JSONObject) parser.parse(lsPayload);
+            }
+        } catch (ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        
+        return jsonObject;
+    }
+
+    public JSONObject setPostedDate(Date postedDate) {
+        getPayLoad().put("sPostdDte", postedDate);
+        return setPayLoad(getPayLoad());
+    }
+
+    public Date getPostedDate() {
+        return (Date) getPayLoad().get("sPostdDte");
     }
 
     public JSONObject setRemarks(String remarks) {
