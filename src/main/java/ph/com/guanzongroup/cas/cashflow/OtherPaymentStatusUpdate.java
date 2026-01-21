@@ -22,11 +22,9 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
@@ -64,15 +62,10 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             return poJSON;
         }
         
-        switch(Master().getDisbursementType()){
-            case DisbursementStatic.DisbursementType.WIRED:
-            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
-                    poJSON = populateOtherPayment();
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
-                        return poJSON;
-                    }
-                break;
+        poJSON = populateOtherPayment();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            return poJSON;
         }
         
         return poJSON;
@@ -93,16 +86,17 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             return poJSON;
         }
         
+        poJSON = populateOtherPayment();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
         switch(Master().getDisbursementType()){
-            case DisbursementStatic.DisbursementType.CHECK:
-                break;
-            case DisbursementStatic.DisbursementType.WIRED:
-            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
-                    poJSON = populateOtherPayment();
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
-                        return poJSON;
-                    }
+            case DisbursementStatic.DisbursementType.WIRED: //BANK TRANSFER
+                poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.OPEN);
+            case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT: //E-WALLET
+                poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.POSTED);
                 break;
         }
         
@@ -138,23 +132,24 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        poJSON = callApproval();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
 
         poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Linked transaction to DV
-        poJSON = updateLinkedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        //Call Class for updating of linked transactions in DV Details
+        Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
+        loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
+        loDVExtend.setUpdateAmountPaid(false);
+        poJSON = loDVExtend.updateLinkedTransactions(lsStatus);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        //Return Journal TODO
+        poJournal.setWithParent(true);
+        poJournal.setWithUI(false);
+        poJSON = poJournal.ReturnTransaction("");
         if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
             return poJSON;
         }
             
@@ -219,23 +214,30 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
 
             poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
 
-            //Update Related transaction to DV
-            poJSON = updateLinkedTransactions(lsStatus);
-            if (!"success".equals((String) poJSON.get("result"))) {
+            //Call Class for updating of linked transactions in DV Details
+            Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
+            loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
+            loDVExtend.setUpdateAmountPaid(false);
+            poJSON = loDVExtend.updateLinkedTransactions(lsStatus);
+            if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
 
             //Update Related transaction to DV
-            poJSON = updateRelatedTransactions(lsStatus);
+            //Return Journal TODO
+            poJournal.setWithParent(true);
+            poJournal.setWithUI(false);
+            poJSON = poJournal.ReturnTransaction("");
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
-            
+
             poOtherPayments.setWithParentClass(true);
             poOtherPayments.setWithUI(false);
             poJSON = poOtherPayments.CancelTransaction("");
             if ("error".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
                 return poJSON;
             }
 
@@ -411,7 +413,10 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             
             System.out.println("--------------------------SAVE OTHER TRANSACTION---------------------------------------------");
             //Update other linked transaction in DV Detail
-            poJSON = updateLinkedTransactions(Master().getTransactionStatus());
+            Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
+            loDVExtend.setDisbursemmentVoucher(this, poGRider, logwrapr);
+            loDVExtend.setUpdateAmountPaid(pbIsUpdateAmountPaid);
+            poJSON = loDVExtend.updateLinkedTransactions(Master().getTransactionStatus());
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
