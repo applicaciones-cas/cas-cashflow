@@ -22,6 +22,7 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -338,8 +339,8 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         }
 
         while (loRS.next()) {
-            Model_Other_Payments loObject = new CashflowModels(poGRider).OtherPayments();
-            poJSON = loObject.openRecord(loRS.getString("sOtherPay"));
+            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+            poJSON = loObject.openRecord(loRS.getString("sTransNox")); //sOtherPay
             if ("success".equals((String) poJSON.get("result"))) {
                 paOtherPayment.add((Model) loObject);
             } else {
@@ -350,12 +351,12 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         return poJSON;
     }
     
-    public List<Model_Other_Payments> getOtherPaymentList() {
-        return (List<Model_Other_Payments>) (List<?>) paOtherPayment;
+    public List<Model_Disbursement_Master> getOtherPaymentList() {
+        return (List<Model_Disbursement_Master>) (List<?>) paOtherPayment;
     }
 
-    public Model_Other_Payments getOtherPayment(int masterRow) {
-        return (Model_Other_Payments) paOtherPayment.get(masterRow);
+    public Model_Disbursement_Master getOtherPayment(int masterRow) {
+        return (Model_Disbursement_Master) paOtherPayment.get(masterRow);
     }
     
     @Override

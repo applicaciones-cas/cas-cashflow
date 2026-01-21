@@ -10,7 +10,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
-import org.guanzon.appdriver.agent.systables.TransactionStatusHistory;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -23,9 +22,6 @@ import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
-import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
 /**
@@ -41,7 +37,6 @@ public class Model_Other_Payments extends Model {
     Model_Banks poBanks;
     Model_Industry poIndustry;
     Model_Transaction_Status_History poTransactionStatusHistory;
-    Model_Disbursement_Master poDisbursementMaster;
 
     @Override
     public void initialize() {
@@ -71,7 +66,6 @@ public class Model_Other_Payments extends Model {
             poIndustry = model.Industry();
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
-            poDisbursementMaster = cashFlow.DisbursementMaster();
             poBankAccountMaster = cashFlow.Bank_Account_Master();
             ClientModels clientModel = new ClientModels(poGRider);
             poSupplier = clientModel.ClientMaster();
@@ -220,26 +214,6 @@ public class Model_Other_Payments extends Model {
     @Override
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
-    }
-
-    public Model_Disbursement_Master DisbursementMaster() throws GuanzonException, SQLException {
-        if (!"".equals((String) getValue("sSourceNo"))) {
-            if (poDisbursementMaster.getEditMode() == EditMode.READY
-                    && poDisbursementMaster.getTransactionNo().equals((String) getValue("sSourceNo"))) {
-                return poDisbursementMaster;
-            } else {
-                poJSON = poDisbursementMaster.openRecord((String) getValue("sSourceNo"));
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poDisbursementMaster;
-                } else {
-                    poDisbursementMaster.initialize();
-                    return poDisbursementMaster;
-                }
-            }
-        } else {
-            poDisbursementMaster.initialize();
-            return poDisbursementMaster;
-        }
     }
     
     public Model_Payee Payee() throws GuanzonException, SQLException {

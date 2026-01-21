@@ -31,6 +31,7 @@ public class Model_Disbursement_Master extends Model {
     Model_Company poCompany;
     Model_Industry poIndustry;
     Model_Check_Payments poCheckPayments;
+    Model_Other_Payments poOtherPayments;
     private String oldDisbursementType = DisbursementStatic.DisbursementType.CHECK;
     private String supplierClientID = "";
     private String searchParticularID = "";
@@ -85,6 +86,7 @@ public class Model_Disbursement_Master extends Model {
             CashflowModels cashflow = new CashflowModels(poGRider);
             poPayee = cashflow.Payee();
             poCheckPayments = cashflow.CheckPayments();
+            poOtherPayments = cashflow.OtherPayments();
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -463,7 +465,7 @@ public class Model_Disbursement_Master extends Model {
 
     public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sTransNox"))) {
-            if (poCheckPayments.getEditMode() == EditMode.READY
+            if (poOtherPayments.getEditMode() == EditMode.READY
                     && poCheckPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
                 return poCheckPayments;
             } else {
@@ -479,6 +481,27 @@ public class Model_Disbursement_Master extends Model {
         } else {
             poCheckPayments.initialize();
             return poCheckPayments;
+        }
+    }
+    
+    public Model_Other_Payments OtherPayments() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sTransNox"))) {
+            if (poOtherPayments.getEditMode() == EditMode.READY
+                    && poOtherPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
+                return poOtherPayments;
+            } else {
+                poJSON = poOtherPayments.openRecordbySourceNo((String) getValue("sTransNox"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poOtherPayments;
+                } else {
+                    poOtherPayments.initialize();
+                    return poOtherPayments;
+                }
+            }
+        } else {
+            poOtherPayments.initialize();
+            return poOtherPayments;
         }
     }
 
