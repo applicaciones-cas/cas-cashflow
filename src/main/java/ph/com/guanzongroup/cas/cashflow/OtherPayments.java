@@ -11,7 +11,6 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
-import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -21,7 +20,6 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
-import ph.com.guanzongroup.cas.cashflow.validator.OtherPaymentValidator;
 
 public class OtherPayments extends Parameter {
 
@@ -261,7 +259,7 @@ public class OtherPayments extends Parameter {
         }
 
         //validator
-        poJSON = isEntryOkay(lsStatus);
+        poJSON = isEntryOkay();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -305,7 +303,7 @@ public class OtherPayments extends Parameter {
         }
 
         //validator
-        poJSON = isEntryOkay(lsStatus);
+        poJSON = isEntryOkay();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -323,17 +321,6 @@ public class OtherPayments extends Parameter {
         return poJSON;
     }
     
-    public JSONObject isEntryOkay(String status) throws SQLException {
-        poJSON = new JSONObject();
-
-        GValidator loValidator = new OtherPaymentValidator();
-        loValidator.setApplicationDriver(poGRider);
-        loValidator.setTransactionStatus(status);
-        loValidator.setMaster(poModel);
-        poJSON = loValidator.validate();
-        return poJSON;
-    }
-
     @Override
     public String getSQ_Browse() {
         String lsCondition = "";
