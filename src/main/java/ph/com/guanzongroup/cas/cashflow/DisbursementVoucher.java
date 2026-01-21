@@ -2467,7 +2467,6 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
-                
                 lbUpdated = loRecord.getDetailCount() == getDetailCount();
                 if (lbUpdated) {
                     lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
@@ -2491,20 +2490,50 @@ public class DisbursementVoucher extends Transaction {
                     lbUpdated = loRecord.getWTaxDeductionsCount() == getWTaxDeductionsCount();
                 }
                 
+                //Check disbursement detail
                 if (lbUpdated) {
                     for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
-                        lbUpdated = loRecord.Detail(lnCtr).getParticularID().equals(Detail(lnCtr).getParticularID());
-                        if (lbUpdated) {
-                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Detail(lnCtr).getAmount()), String.format("%.4f", Detail(lnCtr).getAmount())));
-                        }
-                        if (lbUpdated) {
-                            lbUpdated = loRecord.Detail(lnCtr).getTaxCode().equals(Detail(lnCtr).getTaxCode());
-                        }
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Detail(lnCtr).getAmount()), String.format("%.4f", Detail(lnCtr).getAmount())));
                         if (!lbUpdated) {
                             break;
                         }
                     }
                 }
+                //Check Disbursement Payment
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getDisbursementType().equals(Master().getDisbursementType());
+                }
+                
+                if (lbUpdated) {
+                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                        lbUpdated = loRecord.CheckPayments().getModel().getBankID().equals(CheckPayments().getModel().getBankID());
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.CheckPayments().getModel().getBankAcountID().equals(CheckPayments().getModel().getBankAcountID());
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.CheckPayments().getModel().getPayeeType().equals(CheckPayments().getModel().getPayeeType());
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.CheckPayments().getModel().getClaimant().equals(CheckPayments().getModel().getClaimant());
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.CheckPayments().getModel().getAuthorize().equals(CheckPayments().getModel().getAuthorize());
+                        }
+                    } else {
+                        lbUpdated = loRecord.OtherPayments().getModel().getBankID().equals(OtherPayments().getModel().getBankID());
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.OtherPayments().getModel().getBankAcountID().equals(OtherPayments().getModel().getBankAcountID());
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.OtherPayments().getModel().getTotalAmount()), String.format("%.4f", OtherPayments().getModel().getTotalAmount())));
+                        }
+                        if (lbUpdated) {
+                            lbUpdated = loRecord.OtherPayments().getModel().getTransactionNo().equals(OtherPayments().getModel().getTransactionNo());
+                        }
+                    
+                    }
+                }
+                
                 //Check Journal
                 if (lbUpdated) {
                     for (int lnCtr = 0; lnCtr <= loRecord.Journal().getDetailCount() - 1; lnCtr++) {
