@@ -362,7 +362,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         poJSON = new JSONObject();
         if((OtherPaymentStatus.POSTED.equals(OtherPayments().getModel().getTransactionStatus())
             || OtherPaymentStatus.OPEN.equals(OtherPayments().getModel().getTransactionStatus())
-            ) && DisbursementStatic.DisbursementType.DIGITAL_PAYMENT.equals(Master().getDisbursementType())){
+            ) && DisbursementStatic.DisbursementType.WIRED.equals(Master().getDisbursementType())){
             if(OtherPayments().getModel().getReferNox() == null || "".equals(OtherPayments().getModel().getReferNox())){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Reference No cannot be empty.");
