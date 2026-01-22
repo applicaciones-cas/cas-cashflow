@@ -403,7 +403,10 @@ public class Model_Other_Payments extends Model {
     public JSONObject openRecordbySourceNo(String ssourceNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsSQL = MiscUtil.makeSelect(this);
-        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)); 
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)
+                                        +  " AND cTranStat != " + SQLUtil.toSQL(OtherPaymentStatus.CANCELLED)
+                                        +  " AND cTranStat != " + SQLUtil.toSQL(OtherPaymentStatus.VOID)
+                                        ); 
                                       
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);

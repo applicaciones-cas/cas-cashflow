@@ -64,6 +64,12 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             return poJSON;
         }
         
+        if(existOtherPayments() == null || "".equals(existOtherPayments())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "System error while loading other payment.\nNo active other payment linked, please update disbursement voucher.");
+            return poJSON;
+        }
+        
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
@@ -386,7 +392,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         poJSON = new JSONObject();
         if((OtherPaymentStatus.POSTED.equals(OtherPayments().getModel().getTransactionStatus())
             || OtherPaymentStatus.OPEN.equals(OtherPayments().getModel().getTransactionStatus())
-            ) && DisbursementStatic.DisbursementType.WIRED.equals(Master().getDisbursementType())){
+            )){ // && DisbursementStatic.DisbursementType.WIRED.equals(Master().getDisbursementType())
             if(OtherPayments().getModel().getReferNox() == null || "".equals(OtherPayments().getModel().getReferNox())){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Reference No cannot be empty.");

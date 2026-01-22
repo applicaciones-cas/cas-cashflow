@@ -4162,7 +4162,7 @@ public class DisbursementVoucher extends Transaction {
      * @return
      * @throws SQLException 
      */
-    private String existOtherPayments() throws SQLException{
+    public String existOtherPayments() throws SQLException{
         Model_Other_Payments loMaster = new CashflowModels(poGRider).OtherPayments();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         
