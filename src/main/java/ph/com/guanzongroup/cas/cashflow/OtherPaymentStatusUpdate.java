@@ -43,6 +43,8 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
 
     @Override
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        System.out.println("PAYLOAD : " + OtherPayments().getModel().getPayLoad());
+        System.out.println("POSTED DATE : " + OtherPayments().getModel().getPostedDate());
         poJSON = validateEntry();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -79,7 +81,30 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
 
     @Override
     public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        //Validate transaction status of Other Payment
+        Model_Other_Payments loObject = new CashflowModels(poGRider).OtherPayments();
+        loObject.openRecord(OtherPayments().getModel().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        if(OtherPaymentStatus.CANCELLED.equals(loObject.getTransactionStatus())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "System error while updating other payment.\nAlready Cancelled.");
+            return poJSON;
+        }
+        if(OtherPaymentStatus.POSTED.equals(loObject.getTransactionStatus())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "System error while updating other payment.\nAlready Posted.");
+            return poJSON;
+        }
+        if(OtherPaymentStatus.VOID.equals(loObject.getTransactionStatus())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "System error while updating other payment.\nAlready Voided.");
+            return poJSON;
+        }
         
+        //Proceed to update
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
@@ -97,7 +122,6 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
             poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
-        
         return poJSON;
     }
     

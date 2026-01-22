@@ -168,14 +168,14 @@ public class Model_Other_Payments extends Model {
     }
 
     public JSONObject setPayLoad(JSONObject payLoad) {
-        return setValue("sPayLoadx", payLoad);
+        return setValue("sPayLoadx", payLoad.toJSONString());
     }
 
     public JSONObject getPayLoad() {
         JSONObject jsonObject = new JSONObject();
         JSONParser parser = new JSONParser();
+        String lsPayload = (String) getValue("sPayLoadx");
         try {
-            String lsPayload = (String) getValue("sPayLoadx");
             if(lsPayload != null && !"".equals(lsPayload)){
                 jsonObject = (JSONObject) parser.parse(lsPayload);
             }
@@ -187,12 +187,30 @@ public class Model_Other_Payments extends Model {
     }
 
     public JSONObject setPostedDate(Date postedDate) {
-        getPayLoad().put("sPostdDte", postedDate);
-        return setPayLoad(getPayLoad());
+        JSONObject jsonObject = new JSONObject();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+        if(getPayLoad() == null ){
+            jsonObject.put("sPostdDte", sdf.format(postedDate));
+        } else {
+            jsonObject = getPayLoad();
+            jsonObject.put("sPostdDte", sdf.format(postedDate));
+        }
+        return setPayLoad(jsonObject);
     }
 
     public Date getPostedDate() {
-        return (Date) getPayLoad().get("sPostdDte");
+        Date ldValue = null;
+        String lsPostdDte = (String) getPayLoad().get("sPostdDte");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+        try {
+            if(lsPostdDte != null && !"".equals(lsPostdDte)){
+                ldValue = sdf.parse(lsPostdDte);
+            }
+        } catch (java.text.ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+                
+        return ldValue;
     }
 
     public JSONObject setRemarks(String remarks) {
