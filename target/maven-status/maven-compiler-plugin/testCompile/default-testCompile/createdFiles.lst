@@ -1,6 +1,7 @@
 testPRFUpdateTransaction.class
 testPRFPaidTransaction.class
 testPRFCancelTransaction.class
+testBankAccountTrans.class
 testBIR2307Print.class
 testPRFConfirmTransaction.class
 testDisbursementNewTransaction.class

@@ -700,6 +700,12 @@ public class BankAccountTrans {
         poJSON = processDetail();
         if ("error".equals((String) poJSON.get("result"))) return poJSON;
         
+        //for delete
+        if (pnEditMode == EditMode.DELETE){
+            poJSON = DeleteTransaction();
+            return poJSON;
+        }
+        
         //save detail
         poJSON = saveDetail();
         if ("error".equals((String) poJSON.get("result"))) return poJSON;
@@ -731,7 +737,7 @@ public class BankAccountTrans {
                 }
             }
             
-            if (!psCheckNox.isEmpty()){
+            if (psCheckNox != null && !psCheckNox.isEmpty()){
                 lsSQL += ", sCheckNox = " + SQLUtil.toSQL(psCheckNox);
             }
             
@@ -745,7 +751,7 @@ public class BankAccountTrans {
             }
         }
         
-        if (!psSerialNo.isEmpty()){
+        if (psSerialNo != null && !psSerialNo.isEmpty()){
             poJSON = updateRefNo("");
             
             if ("error".equals((String) poJSON.get("result"))) return poJSON;
@@ -757,23 +763,22 @@ public class BankAccountTrans {
     
     private JSONObject saveDetail() throws SQLException, GuanzonException {
         String lsSQL = "INSERT INTO " + DETAIL_TABLE + " SET" +
-                "  sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
-                ", nLedgerNo = " +
-                " IF(ISNULL(@xLedgerNo := (SELECT nLedgerNo + 1" +
-                    "  FROM Bank_Account_Ledger a" +
-                    "  WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
-                    "  ORDER BY nLedgerNo DESC LIMIT 1))" +
-                    ", 1, @xLedgerNo)" +
-                ", sBranchCd = " + SQLUtil.toSQL(psBranchCd) +
-                ", dTransact = " + SQLUtil.toSQL(pdTransact) + 
-                ", sSourceCd = " + SQLUtil.toSQL(psSourceCd) + 
-                ", sSourceNo = " + SQLUtil.toSQL(psSourceNo) + 
-                ", nAmountIn = " + SQLUtil.toSQL(pnAmountIn) + 
-                ", nAmountOt = " + SQLUtil.toSQL(pnAmountOt) + 
-                ", nOBalance = " + SQLUtil.toSQL(poMaster.getDouble("xOBalance") + pnOTranAmt) + 
-                ", nABalance = " + SQLUtil.toSQL(poMaster.getDouble("xABalance") + pnATranAmt) + 
-                ", dPostedxx = " + SQLUtil.toSQL(pdPostedxx) + 
-                ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate());
+                        "  sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
+                        ", nLedgerNo = " +
+                        " IF(ISNULL(@xLedgerNo := (SELECT nLedgerNo + 1" +
+                            "  FROM Bank_Account_Ledger a" +
+                            "  WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
+                            "  ORDER BY nLedgerNo DESC LIMIT 1))" +
+                            ", 1, @xLedgerNo)" +
+                        ", sBranchCd = " + SQLUtil.toSQL(psBranchCd) +
+                        ", dTransact = " + SQLUtil.toSQL(pdTransact) + 
+                        ", sSourceCd = " + SQLUtil.toSQL(psSourceCd) + 
+                        ", sSourceNo = " + SQLUtil.toSQL(psSourceNo) + 
+                        ", nAmountIn = " + SQLUtil.toSQL(pnAmountIn) + 
+                        ", nAmountOt = " + SQLUtil.toSQL(pnAmountOt) + 
+                        ", dPostedxx = " + SQLUtil.toSQL(pdPostedxx) + 
+                        ", cTranStat = '1'" +
+                        ", dModified = " + SQLUtil.toSQL(poGRider.getServerDate());
 
         if (poGRider.executeQuery(lsSQL, DETAIL_TABLE, psBranchCd, "", "") <= 0) {
             poJSON = new JSONObject();
@@ -805,9 +810,14 @@ public class BankAccountTrans {
                             " LEFT JOIN Bank_Account_Ledger b" +
                                 " ON a.sBnkActID = b.sBnkActID";
         
-        if (pnEditMode == EditMode.ADDNEW){
-            lsSQL = MiscUtil.addCondition(lsSQL, "0 = 1");
-        } else {
+//        if (pnEditMode == EditMode.ADDNEW){
+//            lsSQL = MiscUtil.addCondition(lsSQL, "0 = 1");
+//        } else {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "b.sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
+//                                                        " AND b.sSourceNo = " + SQLUtil.toSQL(psSourceNo));
+//        }        
+
+        if (pnEditMode == EditMode.DELETE){
             lsSQL = MiscUtil.addCondition(lsSQL, "b.sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
                                                         " AND b.sSourceNo = " + SQLUtil.toSQL(psSourceNo));
         }
@@ -816,7 +826,7 @@ public class BankAccountTrans {
         
         poMaster = poGRider.executeQuery(lsSQL);
         
-        return MiscUtil.RecordCount(poMaster) > 0;
+        return poMaster.next();
     }
     
     private JSONObject processDetail() throws SQLException {        
@@ -918,7 +928,12 @@ public class BankAccountTrans {
     }
     
     private JSONObject delDetail() throws SQLException, GuanzonException{
-        String lsSQL = "DELETE FROM " + DETAIL_TABLE +
+//        String lsSQL = "DELETE FROM " + DETAIL_TABLE +
+//                        " WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
+//                            " AND sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
+//                            " AND sSourceNo = " + SQLUtil.toSQL(psSourceNo);
+        String lsSQL = "UPDATE " + DETAIL_TABLE + " SET" +
+                            "  cTranStat = '0'" +
                         " WHERE sBnkActID = " + SQLUtil.toSQL(psBnkActID) +
                             " AND sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
                             " AND sSourceNo = " + SQLUtil.toSQL(psSourceNo);
