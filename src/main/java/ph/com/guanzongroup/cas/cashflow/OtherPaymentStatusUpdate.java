@@ -52,11 +52,17 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         
         return saveTransaction();
     }
-
+    
     @Override
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
         //Reset Transaction
-        resetTransaction();
+        resetMaster();
+        resetJournal();
+        resetCheckPayment();
+        resetOtherPayment();
+        Detail().clear();
+        WTaxDeduction().clear();
+        paAttachments = new ArrayList<>();
         
         poJSON = openTransaction(transactionNo);
         if (!"success".equals((String) poJSON.get("result"))) {

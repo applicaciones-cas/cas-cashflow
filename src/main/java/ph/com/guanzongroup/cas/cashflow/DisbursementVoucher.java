@@ -1894,7 +1894,7 @@ public class DisbursementVoucher extends Transaction {
                     + " ) "
                     + " AND a.sTransNox IN (SELECT wtd.sSourceNo FROM Withholding_Tax_Deductions wtd WHERE wtd.sSourceNo = a.sTransNox AND wtd.cReversex = "+SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)+" ) "
                     + " AND a.cPrintBIR = '0'"
-                    + " AND ( g.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)+" ) "
+                    + " AND ( g.cTranStat = "+SQLUtil.toSQL(CheckStatus.OPEN)
                     + " OR h.cTranStat = "+SQLUtil.toSQL(OtherPaymentStatus.POSTED)+" ) "
                     );
 //        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
@@ -4551,7 +4551,7 @@ public class DisbursementVoucher extends Transaction {
                 + " LEFT JOIN Particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN Check_Payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN Other_Payments h ON a.sTransNox = h.sSourceNo"
-                + " LEFT JOIN Banks i ON g.sBankIDxx = i.sBankIDxx OR h.sBankIDxx = i.sBankIDxx"
+                + " LEFT JOIN Banks i ON (g.sBankIDxx = i.sBankIDxx AND a.cDisbrsTp = "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + ") OR (h.sBankIDxx = i.sBankIDxx AND a.cDisbrsTp != "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + ")"
                 + " LEFT JOIN Bank_Account_Master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID"
                 + " LEFT JOIN Industry k ON k.sIndstCdx = a.sIndstCdx";
     }
