@@ -359,10 +359,23 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
                     + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsBankAccount)
                     + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
                     + " AND a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsDVNo)
-                    + " AND a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.CERTIFIED)
-                    + " AND ( h.cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
-                    + " OR h.cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
-                    + " ) ");
+                    + " AND a.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.CERTIFIED));
+        
+        String lsTransStat = "";
+        if(psTranStat != null){
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
+                lsTransStat = " AND h.cTranStat IN (" + lsTransStat.substring(2) + ")";
+            } else {
+                lsTransStat = " AND h.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            }
+        }
+        
+        if(!lsTransStat.isEmpty()){
+            lsSQL = lsSQL + lsTransStat;
+        }
 
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
