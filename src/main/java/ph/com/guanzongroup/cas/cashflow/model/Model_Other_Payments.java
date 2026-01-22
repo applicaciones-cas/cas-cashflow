@@ -189,12 +189,18 @@ public class Model_Other_Payments extends Model {
     public JSONObject setPostedDate(Date postedDate) {
         JSONObject jsonObject = new JSONObject();
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+        
         if(getPayLoad() == null ){
             jsonObject.put("sPostdDte", sdf.format(postedDate));
         } else {
             jsonObject = getPayLoad();
-            jsonObject.put("sPostdDte", sdf.format(postedDate));
+            if(postedDate == null){
+                jsonObject.remove("sPostdDte");
+            } else {
+                jsonObject.put("sPostdDte", sdf.format(postedDate));
+            }
         }
+        
         return setPayLoad(jsonObject);
     }
 
