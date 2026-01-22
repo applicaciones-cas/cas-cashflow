@@ -66,25 +66,25 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         
         poJSON = openTransaction(transactionNo);
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         if(existOtherPayments() == null || "".equals(existOtherPayments())){
             poJSON.put("result", "error");
-            poJSON.put("message", "System error while loading other payment.\nNo active other payment linked, please update disbursement voucher.");
+            poJSON.put("message", "Unable to load other payment.\nNo active other payment linked, please update disbursement voucher.");
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateOtherPayment();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load other payment.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -97,7 +97,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         Model_Other_Payments loObject = new CashflowModels(poGRider).OtherPayments();
         loObject.openRecord(OtherPayments().getModel().getTransactionNo());
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load other payment.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         if(OtherPaymentStatus.CANCELLED.equals(loObject.getTransactionStatus())){
@@ -119,19 +119,19 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         //Proceed to update
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading journal.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
         poJSON = populateOtherPayment();
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading other payment.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load other payment.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         return poJSON;
@@ -145,7 +145,7 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         
         poJSON = OpenTransaction(Master().getTransactionNo());
         if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "System error while loading disbursement.\n" + (String) poJSON.get("message"));
+            poJSON.put("message", "Unable to load disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
