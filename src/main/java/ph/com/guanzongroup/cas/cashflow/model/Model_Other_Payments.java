@@ -210,6 +210,9 @@ public class Model_Other_Payments extends Model {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
         try {
             if(lsPostdDte != null && !"".equals(lsPostdDte)){
+                if (lsPostdDte.matches("\\d{4}-\\d{2}-\\d{2}\\.\\d")) {
+                    lsPostdDte = lsPostdDte.replace(".0", " 00:00:00.0");
+                }
                 ldValue = sdf.parse(lsPostdDte);
             }
         } catch (java.text.ParseException ex) {
