@@ -62,6 +62,7 @@ public class BankAccountTrans {
     private String psSourceNo;  
     private String psCheckNox; 
     private String psSerialNo; 
+    private String psReferNox;
     
     // Transaction dates
     private Date pdTransact; 
@@ -128,6 +129,10 @@ public class BankAccountTrans {
             return poJSON;
         }
 
+        psReferNox = "";
+        psCheckNox = "";
+        psSerialNo = "";
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -333,6 +338,136 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         psCheckNox = checkNo;
         psSerialNo = serialNo;
+        pnAmountIn = 0.00;
+        pnAmountOt = amount;
+        pnEditMode = updateMode;
+
+        return saveTransaction();
+    }
+    
+    /**
+    * Records a wired disbursement transaction for a given bank account.
+    * <p>
+    * Wired disbursements represent funds transferred electronically out of the account
+    * (e.g., bank-to-bank transfers, online payments). This method validates the transaction
+    * state and update mode, sets the appropriate transaction details (source code, account ID,
+    * source number, transaction date, reference number, and disbursement amount), and then
+    * calls {@link #saveTransaction()} to persist the transaction in the ledger and update
+    * the master account balances.
+    * </p>
+    * <p>
+    * Since wired disbursements are immediate transfers, the available balance is reduced
+    * at the time of posting. No check or serial numbers are associated with this type of
+    * transaction, but a reference number is stored for traceability.
+    * </p>
+    *
+    * @param bankAccountId   the unique identifier of the bank account from which the wired disbursement is made.
+    *                        This corresponds to the primary key in the master account table.
+    * @param sourceNo        the source reference number for this transaction (e.g., voucher or transaction ID).
+    *                        Used to uniquely identify the transaction in the ledger.
+    * @param transactionDate the date when the wired disbursement occurred. This is used for posting
+    *                        and updating the account’s last transaction date.
+    * @param amount          the disbursement amount to be debited from the account. This value will
+    *                        decrease the available balance immediately.
+    * @param referNo         the reference number associated with this wired disbursement. Typically used
+    *                        for tracking electronic transfers and ensuring auditability.
+    * @param updateMode      the edit mode for the transaction. Must be either
+    *                        {@link EditMode#ADDNEW} to add a new disbursement or
+    *                        {@link EditMode#DELETE} to rollback/remove a disbursement.
+    *
+    * @return a {@link JSONObject} containing the result of the operation:
+    *         <ul>
+    *           <li>"success" if the transaction was recorded and balances updated correctly</li>
+    *           <li>"error" with a descriptive message if validation fails or database update fails</li>
+    *         </ul>
+    *
+    * @throws SQLException       if a database access error occurs during validation,
+    *                            ledger insertion, or master account update.
+    * @throws GuanzonException   if application-specific errors occur during transaction processing.
+    *
+    * @see #saveTransaction()
+    * @see #validateInitAndMode(int)
+    */
+    public JSONObject WiredDisbursement(String bankAccountId, String sourceNo,
+                                        Date transactionDate, double amount,
+                                        String referNo, int updateMode)
+            throws SQLException, GuanzonException {
+
+        poJSON = validateInitAndMode(updateMode);
+        if ("error".equals(poJSON.get("result"))) return poJSON;
+
+        psSourceCd = BankAccountConstants.WIRED_DISBURSEMENT;
+        psBnkActID = bankAccountId;
+        psSourceNo = sourceNo;
+        pdTransact = transactionDate;
+        psReferNox = referNo;
+        psCheckNox = "";
+        psSerialNo = "";
+        pnAmountIn = 0.00;
+        pnAmountOt = amount;
+        pnEditMode = updateMode;
+
+        return saveTransaction();
+    }
+    
+    /**
+    * Records an electronic payment (e-payment) disbursement transaction for a given bank account.
+    * <p>
+    * Electronic payment disbursements represent funds transferred digitally out of the account
+    * (e.g., online bill payments, mobile banking transfers, or automated electronic debits).
+    * This method validates the transaction state and update mode, sets the appropriate transaction
+    * details (source code, account ID, source number, transaction date, reference number, and
+    * disbursement amount), and then calls {@link #saveTransaction()} to persist the transaction
+    * in the ledger and update the master account balances.
+    * </p>
+    * <p>
+    * Since e-payments are immediate transfers, the available balance is reduced at the time of posting.
+    * No check or serial numbers are associated with this type of transaction, but a reference number
+    * is stored for traceability and audit purposes.
+    * </p>
+    *
+    * @param bankAccountId   the unique identifier of the bank account from which the e-payment disbursement is made.
+    *                        This corresponds to the primary key in the master account table.
+    * @param sourceNo        the source reference number for this transaction (e.g., voucher number or transaction ID).
+    *                        Used to uniquely identify the transaction in the ledger.
+    * @param transactionDate the date when the e-payment disbursement occurred. This is used for posting
+    *                        and updating the account’s last transaction date.
+    * @param amount          the disbursement amount to be debited from the account. This value will
+    *                        decrease the available balance immediately.
+    * @param referNo         the reference number associated with this e-payment disbursement. Typically used
+    *                        for tracking electronic transfers and ensuring auditability.
+    * @param updateMode      the edit mode for the transaction. Must be either
+    *                        {@link EditMode#ADDNEW} to add a new disbursement or
+    *                        {@link EditMode#DELETE} to rollback/remove a disbursement.
+    *
+    * @return a {@link JSONObject} containing the result of the operation:
+    *         <ul>
+    *           <li>"success" if the transaction was recorded and balances updated correctly</li>
+    *           <li>"error" with a descriptive message if validation fails or database update fails</li>
+    *         </ul>
+    *
+    * @throws SQLException       if a database access error occurs during validation,
+    *                            ledger insertion, or master account update.
+    * @throws GuanzonException   if application-specific errors occur during transaction processing.
+    *
+    * @see #saveTransaction()
+    * @see #validateInitAndMode(int)
+    */
+    public JSONObject EPaymentDisbursement(String bankAccountId, String sourceNo,
+                                        Date transactionDate, double amount,
+                                        String referNo, int updateMode)
+            throws SQLException, GuanzonException {
+
+        poJSON = validateInitAndMode(updateMode);
+        if ("error".equals(poJSON.get("result"))) return poJSON;
+
+        psSourceCd = BankAccountConstants.EPAY_DISBURSEMENT;
+        psBnkActID = bankAccountId;
+        psSourceNo = sourceNo;
+        pdTransact = transactionDate;
+        psReferNox = referNo;
+        psCheckNox = "";
+        psSerialNo = "";
         pnAmountIn = 0.00;
         pnAmountOt = amount;
         pnEditMode = updateMode;
