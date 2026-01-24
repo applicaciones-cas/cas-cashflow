@@ -4678,7 +4678,7 @@ public class DisbursementVoucher extends Transaction {
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             
             String bankCode = getDocumentCode(CheckPayments().getModel().getBankAcountID()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
-            bankCode = "MBTDSChk";
+//            bankCode = "MBTDSChk";
             if(bankCode == null || "".equals(bankCode)){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Please configure the document code for bank account.");
@@ -4734,7 +4734,8 @@ public class DisbursementVoucher extends Transaction {
                         + " FROM Banks a "                                                  
                         + " LEFT JOIN Bank_Account_Master b ON b.sBankIDxx = a.sBankIDxx "  
                         + " LEFT JOIN Branch_Bank_Account c ON c.sBnkActID = b.sBnkActID "  ;
-            lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId));
+            lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
+                                                + " c.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             try {
