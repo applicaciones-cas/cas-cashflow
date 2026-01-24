@@ -15,6 +15,7 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -235,7 +236,91 @@ public class OtherPayments extends Parameter {
         
         return poJSON;
     }
+    
+    public JSONObject VoidTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
 
+        String lsStatus = OtherPaymentStatus.VOID;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poModel.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already voided.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, poModel.getTransactionNo());
+
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction voided successfully.");
+        return poJSON;
+    }
+    
+    public JSONObject CancelTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = OtherPaymentStatus.CANCELLED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) poModel.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already cancelled.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction cancelled successfully.");
+        return poJSON;
+    }
+    
     @Override
     public String getSQ_Browse() {
         String lsCondition = "";
@@ -278,13 +363,12 @@ public class OtherPayments extends Parameter {
                 + ", IFNULL(b.sBankName, '') xBankName"
                 + ", IFNULL(c.sPayeeNme, '') xPayeeNme"
                 + ", IFNULL(d.sBranchNm, '') xBranchNm"
-                + //             ", IFNULL(e.sBankAcct, '') xBankAcct" +
-                " FROM check_payments a"
+                + ", IFNULL(e.sBankAcct, '') xBankAcct" 
+                + " FROM Other_Payments a"
                 + " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx"
                 + " LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx"
-                + " LEFT JOIN Branch d ON a.sBranchCD = d.sBranchCd";
-//               +
-//             " LEFT JOIN Bank_Account_Master e ON a.sBnkActID = e.sBnkActID";
+                + " LEFT JOIN Branch d ON a.sBranchCD = d.sBranchCd"
+                + " LEFT JOIN Bank_Account_Master e ON a.sBnkActID = e.sBnkActID";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }

@@ -8,9 +8,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.systables.Model_Transaction_Status_History;
-import org.guanzon.appdriver.agent.systables.TransactionStatusHistory;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -22,10 +23,10 @@ import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
-import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 
 /**
  *
@@ -51,13 +52,11 @@ public class Model_Other_Payments extends Model {
 
             MiscUtil.initRowSet(poEntity);
 
-//            poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-//            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-//            poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
-//            poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
-//            poEntity.updateString("cProcessd", DisbursementStatic.OPEN);
-//            poEntity.updateString("cPrintxxx", CheckStatus.PrintStatus.OPEN);
-//            poEntity.updateNull("dPrintxxx");
+            poEntity.updateNull("dTransact");
+            poEntity.updateNull("dModified");
+            poEntity.updateObject("nTotlAmnt", 0.0000);
+            poEntity.updateObject("nAmtPaidx", 0.0000);
+            poEntity.updateString("cTranStat", OtherPaymentStatus.FLOAT);
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -168,12 +167,59 @@ public class Model_Other_Payments extends Model {
         return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
     }
 
-    public JSONObject setPayLoad(String payLoad) {
-        return setValue("sPayLoadx", payLoad);
+    public JSONObject setPayLoad(JSONObject payLoad) {
+        return setValue("sPayLoadx", payLoad.toJSONString());
     }
 
-    public String getPayLoad() {
-        return (String) getValue("sPayLoadx");
+    public JSONObject getPayLoad() {
+        JSONObject jsonObject = new JSONObject();
+        JSONParser parser = new JSONParser();
+        String lsPayload = (String) getValue("sPayLoadx");
+        try {
+            if(lsPayload != null && !"".equals(lsPayload)){
+                jsonObject = (JSONObject) parser.parse(lsPayload);
+            }
+        } catch (ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        
+        return jsonObject;
+    }
+
+    public JSONObject setPostedDate(Date postedDate) {
+        JSONObject jsonObject = new JSONObject();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+        
+        if(getPayLoad() == null ){
+            jsonObject.put("sPostdDte", sdf.format(postedDate));
+        } else {
+            jsonObject = getPayLoad();
+            if(postedDate == null){
+                jsonObject.remove("sPostdDte");
+            } else {
+                jsonObject.put("sPostdDte", sdf.format(postedDate));
+            }
+        }
+        
+        return setPayLoad(jsonObject);
+    }
+
+    public Date getPostedDate() {
+        Date ldValue = null;
+        String lsPostdDte = (String) getPayLoad().get("sPostdDte");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.S");
+        try {
+            if(lsPostdDte != null && !"".equals(lsPostdDte)){
+                if (lsPostdDte.matches("\\d{4}-\\d{2}-\\d{2}\\.\\d")) {
+                    lsPostdDte = lsPostdDte.replace(".0", " 00:00:00.0");
+                }
+                ldValue = sdf.parse(lsPostdDte);
+            }
+        } catch (java.text.ParseException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+                
+        return ldValue;
     }
 
     public JSONObject setRemarks(String remarks) {
@@ -220,7 +266,7 @@ public class Model_Other_Payments extends Model {
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
-
+    
     public Model_Payee Payee() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sPayeeIDx"))) {
             if (poPayee.getEditMode() == EditMode.READY
@@ -240,7 +286,7 @@ public class Model_Other_Payments extends Model {
             return poPayee;
         }
     }
-
+    
     public Model_Client_Master Supplier() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sSupplier"))) {
             if (poSupplier.getEditMode() == EditMode.READY
@@ -366,7 +412,10 @@ public class Model_Other_Payments extends Model {
     public JSONObject openRecordbySourceNo(String ssourceNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsSQL = MiscUtil.makeSelect(this);
-        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)); 
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)
+                                        +  " AND cTranStat != " + SQLUtil.toSQL(OtherPaymentStatus.CANCELLED)
+                                        +  " AND cTranStat != " + SQLUtil.toSQL(OtherPaymentStatus.VOID)
+                                        ); 
                                       
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
