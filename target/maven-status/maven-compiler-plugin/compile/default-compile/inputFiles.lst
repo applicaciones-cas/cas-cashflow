@@ -1,129 +1,129 @@
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\TransactionAccountChart.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDepositValidatorFactory.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\PaymentRequest.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CachePayableStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\SelectedITems.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Filler.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountTrans.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CheckModels.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransferValidatorFactory.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Document_Mapping.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckPrintRequestStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Car.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckDepositStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_LP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\DisbursementFactory.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_LP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\WithholdingTax.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\NumberToWords.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Account_Chart.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Transfer_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckRelease.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursementold.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Monarch.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Adjustment.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Appliance.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SOATagging.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Payments.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckReleaseValidatorFactory.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_General.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payment_Request_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Recurring_Issuance.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_General.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckPrintingValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckReleaseRecords.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\TextFormaterUtil.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Other_Payments.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Ledger.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Monarch.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Particular.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\DisbursementPaymentModeFactoring.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckDepositRecords.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_MC.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Release_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_LP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Filler1.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\OtherPaymentStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\DisbursementValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckImporting.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Deposit_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\JournalStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPaymentImporting.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CheckController.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Car.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Journal.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPayments.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Print.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\SourceDetail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_MP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Particular.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\APPaymentValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Transaction_Account_Chart.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\PaymentRequestStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_MC.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_PRF.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\NewClass.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountMaster.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursement.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowModels.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckTransferRecords.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_SOA.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Car.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckTransfer.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_CachePayable.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Account_ChartX.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\APPaymentAdjustmentStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\DisbursementVoucher.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursement_LinkedTransactions.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Appliance.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\WithholdingTaxDeductions.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Deposit_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\DocumentMapping.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payment_Request_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\OtherPayments.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\AccountChart.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\APPaymentAdjustment.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Appliance.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_MC.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Transfer_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\RecurringIssuance.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\SOATaggingStatic.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPrintingRequest.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Withholding_Tax.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPrinting.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Document_Mapping_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_MP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckReleaseStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\PaymentRequestValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckTransferStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CachePayable.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckPaymentValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Master.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Withholding_Tax_Deductions.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\SOATaggingStatus.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\APPaymentAdjustmentValidator.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\DisbursementStatic.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckStatusUpdate.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountConstants.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Payee.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_MP.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\NewClass.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Release_Detail.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_General.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\PaymentRequestStaticData.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\CustomCommonUtil.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payee.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Monarch.java
-D:\MAVEN INTEGSYS\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckDeposit.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckReleaseRecords.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckPrintRequestStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckTransferRecords.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\APPaymentAdjustmentValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CachePayable.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_MP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckPaymentValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\PaymentRequestStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_General.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPrintingRequest.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Payments.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\PaymentRequestValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Recurring_Issuance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Appliance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Release_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\NewClass.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPayments.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckReleaseStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Transfer_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_MC.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_General.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Particular.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPaymentImporting.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursement.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_General.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckImporting.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountConstants.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\SourceDetail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowModels.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CheckController.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Car.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\DisbursementVoucher.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Adjustment.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\DocumentMapping.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\AccountChart.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Withholding_Tax.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Account_Chart.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Transaction_Account_Chart.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckTransfer.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Monarch.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Monarch.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\DisbursementPaymentModeFactoring.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursement_LinkedTransactions.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckPrintingValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Document_Mapping.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Other_Payments.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\PaymentRequestStaticData.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDepositValidatorFactory.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\WithholdingTax.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckDepositRecords.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckStatusUpdate.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\SOATaggingStatic.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CheckModels.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_Appliance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\SOATaggingStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Print.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payment_Request_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\services\CashflowControllers.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\PaymentRequest.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Filler1.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Cache_Payable_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckRelease.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payee.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SOATagging.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Account_ChartX.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Bank_Account_Ledger.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Journal_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_PRF.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Payee.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckReleaseValidatorFactory.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\JournalStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Transfer_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Disbursementold.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\OtherPayments.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Car.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\Journal.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Release_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_Appliance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\CustomCommonUtil.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\RecurringIssuance.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\APPaymentValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Deposit_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckTransferStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Printing_Request_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\APPaymentAdjustmentStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\SelectedITems.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Check_Deposit_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\DisbursementStatic.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Withholding_Tax_Deductions.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckPrinting.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckDeposit_LP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_MC.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\CheckDeposit.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_AP_Payment_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Disbursement_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\NumberToWords.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\APPaymentAdjustment.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\utility\TextFormaterUtil.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BIR2307Filler.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Particular.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_MC.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\NewClass.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_MP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_CachePayable.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransferValidatorFactory.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\OtherPaymentStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\TransactionAccountChart.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_MP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountMaster.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\Disbursement_SOA.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Payment_Request_Master.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Car.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\SubClass\DisbursementFactory.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\WithholdingTaxDeductions.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_Monarch.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\BankAccountTrans.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CheckDepositStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\status\CachePayableStatus.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\DisbursementValidator.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\model\Model_Document_Mapping_Detail.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckRelease_LP.java
+D:\Guanzon\GMC SEG Folder - Maven\cas-cashflow\src\main\java\ph\com\guanzongroup\cas\cashflow\validator\CheckTransfer_LP.java
