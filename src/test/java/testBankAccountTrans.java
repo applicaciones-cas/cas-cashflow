@@ -49,26 +49,26 @@ public class testBankAccountTrans {
                                         lsSourceNo, 
                                         ldTranDate, 
                                         lnAmountxx,
-                                        EditMode.ADDNEW);
+                                        false);
             if ("error".equals((String) loJSON.get("result"))) {
                 instance.rollbackTrans();
                 Assert.fail((String) loJSON.get("message"));
             } 
             instance.commitTrans();
             
-//            //assuming that there is always a parent transaction that calling it, do transaction database commands
-//            instance.beginTrans("CASH DEPOSIT", "DELETE", lsSourceCd, lsSourceNo);         
-//            loJSON = record.CashDeposit("011100000001", 
-//                                        lsSourceNo, 
-//                                        ldTranDate, 
-//                                        lnAmountxx, 
-//                                        EditMode.DELETE);
-//            
-//            if ("error".equals((String) loJSON.get("result"))) {
-//                instance.rollbackTrans();
-//                Assert.fail((String) loJSON.get("message"));
-//            } 
-//            instance.commitTrans();
+            //assuming that there is always a parent transaction that calling it, do transaction database commands
+            instance.beginTrans("CASH DEPOSIT", "DELETE", lsSourceCd, lsSourceNo);         
+            loJSON = record.CashDeposit("011100000001", 
+                                        lsSourceNo, 
+                                        ldTranDate, 
+                                        lnAmountxx, 
+                                        true);
+            
+            if ("error".equals((String) loJSON.get("result"))) {
+                instance.rollbackTrans();
+                Assert.fail((String) loJSON.get("message"));
+            } 
+            instance.commitTrans();
         } catch (SQLException | GuanzonException  e) {
             Assert.fail(e.getMessage());
         }
@@ -97,27 +97,29 @@ public class testBankAccountTrans {
                                         ldTranDate, 
                                         lnAmountxx, 
                                         "", 
-                                        "", EditMode.ADDNEW);
+                                        "", 
+                                        false);
             if ("error".equals((String) loJSON.get("result"))) {
                 instance.rollbackTrans();
                 Assert.fail((String) loJSON.get("message"));
             } 
             instance.commitTrans();
             
-//            //assuming that there is always a parent transaction that calling it, do transaction database commands
-//            instance.beginTrans("CHECK DISBURSEMENT", "DELETE", lsSourceCd, lsSourceNo);         
-//            loJSON = record.CheckDisbursement("011100000001", 
-//                                        lsSourceNo, 
-//                                        ldTranDate, 
-//                                        lnAmountxx, 
-//                                        "", 
-//                                        "", EditMode.DELETE);
-//            
-//            if ("error".equals((String) loJSON.get("result"))) {
-//                instance.rollbackTrans();
-//                Assert.fail((String) loJSON.get("message"));
-//            } 
-//            instance.commitTrans();
+            //assuming that there is always a parent transaction that calling it, do transaction database commands
+            instance.beginTrans("CHECK DISBURSEMENT", "DELETE", lsSourceCd, lsSourceNo);         
+            loJSON = record.CheckDisbursement("011100000001", 
+                                        lsSourceNo, 
+                                        ldTranDate, 
+                                        lnAmountxx, 
+                                        "", 
+                                        "",
+                                        true);
+            
+            if ("error".equals((String) loJSON.get("result"))) {
+                instance.rollbackTrans();
+                Assert.fail((String) loJSON.get("message"));
+            } 
+            instance.commitTrans();
         } catch (SQLException | GuanzonException  e) {
             Assert.fail(e.getMessage());
         }

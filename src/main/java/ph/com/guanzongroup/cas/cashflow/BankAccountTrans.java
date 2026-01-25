@@ -63,6 +63,7 @@ public class BankAccountTrans {
     private String psCheckNox; 
     private String psSerialNo; 
     private String psReferNox;
+    private Boolean pbReversex;
     
     // Transaction dates
     private Date pdTransact; 
@@ -74,7 +75,6 @@ public class BankAccountTrans {
     private double pnATranAmt; 
     private double pnOTranAmt; 
 
-    private int pnEditMode; 
     private Boolean pbInitTran; 
     private JSONObject poJSON;
     
@@ -102,39 +102,17 @@ public class BankAccountTrans {
         if (psBranchCd == null || psBranchCd.isEmpty()) psBranchCd = poGRider.getBranchCode();
         
         pbInitTran = true;
-        
         poJSON.put("result", "success");
         return poJSON;
     }
     
     /**
-     * Validates that the transaction is initialized and update mode is valid.
-     * @param updateMode EditMode (ADDNEW or DELETE)
-     * @return JSON result indicating success or error
+     * Initializes references.
      */
-    private JSONObject validateInitAndMode(int updateMode) {
-        poJSON = new JSONObject();
-
-        if (!pbInitTran) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Object is not initialized.");
-            return poJSON;
-        }
-
-        if (!(updateMode == EditMode.ADDNEW || updateMode == EditMode.DELETE)) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Update Mode Detected!\n" +
-                                  "Only Add and Delete Mode is Allowed for this Transaction!\n\n" +
-                                  "Verify your entry then Try Again!");
-            return poJSON;
-        }
-
+    private void initReferences() {
         psReferNox = "";
         psCheckNox = "";
         psSerialNo = "";
-        
-        poJSON.put("result", "success");
-        return poJSON;
     }
 
     /**
@@ -165,11 +143,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject CashDeposit(String bankAccountId, String sourceNo, Date transactionDate, double amount, int updateMode)
+    public JSONObject CashDeposit(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CASH_DEPOSIT;
         psBnkActID = bankAccountId;
@@ -177,7 +154,7 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         pnAmountIn = amount;
         pnAmountOt = 0.00;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -216,11 +193,10 @@ public class BankAccountTrans {
     * @see #validateInitAndMode(int)
     * @see #ClearCheckDeposited(String, String, Date, double, int)
     */
-    public JSONObject CheckDeposit(String bankAccountId, String sourceNo, Date transactionDate, double amount, int updateMode)
+    public JSONObject CheckDeposit(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CHECK_DEPOSIT;
         psBnkActID = bankAccountId;
@@ -228,7 +204,7 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         pnAmountIn = amount;
         pnAmountOt = 0.00;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -265,12 +241,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject CashWithdrawal(String bankAccountId, String sourceNo,
-                                     Date transactionDate, double amount, int updateMode)
+    public JSONObject CashWithdrawal(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CASH_WITHDRAWAL;
         psBnkActID = bankAccountId;
@@ -278,7 +252,7 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         pnAmountIn = 0.00;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -324,13 +298,10 @@ public class BankAccountTrans {
     * @see #validateInitAndMode(int)
     * @see #clearChecks()
     */
-    public JSONObject CheckDisbursement(String bankAccountId, String sourceNo,
-                                        Date transactionDate, double amount,
-                                        String checkNo, String serialNo, int updateMode)
+    public JSONObject CheckDisbursement(String bankAccountId, String sourceNo, Date transactionDate, double amount, String checkNo, String serialNo, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CHECK_DISBURSEMENT;
         psBnkActID = bankAccountId;
@@ -340,7 +311,7 @@ public class BankAccountTrans {
         psSerialNo = serialNo;
         pnAmountIn = 0.00;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -388,13 +359,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject WiredDisbursement(String bankAccountId, String sourceNo,
-                                        Date transactionDate, double amount,
-                                        String referNo, int updateMode)
+    public JSONObject WiredDisbursement(String bankAccountId, String sourceNo, Date transactionDate, double amount, String referNo, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.WIRED_DISBURSEMENT;
         psBnkActID = bankAccountId;
@@ -405,7 +373,7 @@ public class BankAccountTrans {
         psSerialNo = "";
         pnAmountIn = 0.00;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -453,13 +421,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject EPaymentDisbursement(String bankAccountId, String sourceNo,
-                                        Date transactionDate, double amount,
-                                        String referNo, int updateMode)
+    public JSONObject EPaymentDisbursement(String bankAccountId, String sourceNo, Date transactionDate, double amount, String referNo, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.EPAY_DISBURSEMENT;
         psBnkActID = bankAccountId;
@@ -470,7 +435,7 @@ public class BankAccountTrans {
         psSerialNo = "";
         pnAmountIn = 0.00;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -508,12 +473,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject DebitMemo(String bankAccountId, String sourceNo,
-                                Date transactionDate, double amount, int updateMode)
+    public JSONObject DebitMemo(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.DEBIT_MEMO;
         psBnkActID = bankAccountId;
@@ -521,7 +484,7 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         pnAmountIn = amount;
         pnAmountOt = 0.00;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -559,12 +522,10 @@ public class BankAccountTrans {
     * @see #saveTransaction()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject CreditMemo(String bankAccountId, String sourceNo,
-                                 Date transactionDate, double amount, int updateMode)
+    public JSONObject CreditMemo(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CREDIT_MEMO;
         psBnkActID = bankAccountId;
@@ -572,7 +533,7 @@ public class BankAccountTrans {
         pdTransact = transactionDate;
         pnAmountIn = 0.00;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return saveTransaction();
     }
@@ -611,19 +572,17 @@ public class BankAccountTrans {
     * @see #clearChecks()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject ClearCheckIssued(String bankAccountId, String sourceNo,
-                                       Date transactionDate, double amount, int updateMode)
+    public JSONObject ClearCheckIssued(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
+        initReferences();
 
         psSourceCd = BankAccountConstants.CHECK_DISBURSEMENT;
         psBnkActID = bankAccountId;
         psSourceNo = sourceNo;
         pdTransact = transactionDate;
         pnAmountOt = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return clearChecks();
     }
@@ -662,19 +621,17 @@ public class BankAccountTrans {
     * @see #clearChecks()
     * @see #validateInitAndMode(int)
     */
-    public JSONObject ClearCheckDeposited(String bankAccountId, String sourceNo,
-                                          Date transactionDate, double amount, int updateMode)
+    public JSONObject ClearCheckDeposited(String bankAccountId, String sourceNo, Date transactionDate, double amount, boolean reverse)
             throws SQLException, GuanzonException {
 
-        poJSON = validateInitAndMode(updateMode);
-        if ("error".equals(poJSON.get("result"))) return poJSON;
-
+        initReferences();
+        
         psSourceCd = BankAccountConstants.CHECK_DEPOSIT;
         psBnkActID = bankAccountId;
         psSourceNo = sourceNo;
         pdTransact = transactionDate;
         pnAmountIn = amount;
-        pnEditMode = updateMode;
+        pbReversex = reverse;
 
         return clearChecks();
     }
@@ -707,9 +664,7 @@ public class BankAccountTrans {
     *
     * @see #updateRefNo(String)
     */
-    public JSONObject UpdateReferences(String bankAccountId,
-                                        String serialNo,
-                                        String checkNo) throws SQLException, GuanzonException{
+    public JSONObject UpdateReferences(String bankAccountId, String serialNo, String checkNo) throws SQLException, GuanzonException{
     
         psBnkActID = bankAccountId;
         psSerialNo = serialNo;
@@ -813,17 +768,7 @@ public class BankAccountTrans {
     
     private JSONObject saveTransaction() throws SQLException, GuanzonException{
         poJSON = new JSONObject();
-        
-        switch (pnEditMode){
-            case EditMode.ADDNEW:
-            case EditMode.DELETE:
-                break;
-            default:
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid Update Mode Detected!");
-                return poJSON;
-        }
-        
+                
         //load the transaction
         if (!loadTransaction()){
             poJSON.put("result", "error");
@@ -836,7 +781,7 @@ public class BankAccountTrans {
         if ("error".equals((String) poJSON.get("result"))) return poJSON;
         
         //for delete
-        if (pnEditMode == EditMode.DELETE){
+        if (pbReversex){
             poJSON = DeleteTransaction();
             return poJSON;
         }
@@ -952,7 +897,7 @@ public class BankAccountTrans {
 //                                                        " AND b.sSourceNo = " + SQLUtil.toSQL(psSourceNo));
 //        }        
 
-        if (pnEditMode == EditMode.DELETE){
+        if (pbReversex){
             lsSQL = MiscUtil.addCondition(lsSQL, "b.sSourceCd = " + SQLUtil.toSQL(psSourceCd) +
                                                         " AND b.sSourceNo = " + SQLUtil.toSQL(psSourceNo));
         }
