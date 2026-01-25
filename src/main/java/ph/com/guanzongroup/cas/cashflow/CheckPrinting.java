@@ -543,7 +543,7 @@ public class CheckPrinting extends Transaction {
                                  checkPayments.getModel().getAmount(),
                                  checkPayments.getModel().getCheckNo(),
                                 Master().getVoucherNo(),
-                              EditMode.ADDNEW);
+                              false);
                         if ("error".equals(poJSON.get("result"))) {
                             poGRider.rollbackTrans();
                             return poJSON;
