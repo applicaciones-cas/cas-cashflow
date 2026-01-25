@@ -20,6 +20,7 @@ import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DisbursementVoucher;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
+import ph.com.guanzongroup.cas.cashflow.OtherPaymentStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.OtherPayments;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
@@ -448,6 +449,25 @@ public class CashflowControllers {
         poOtherPayments.initialize();
         return poOtherPayments;
     }
+    
+    public OtherPaymentStatusUpdate OtherPaymentStatusUpdate() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.OtherPaymentStatusUpdate: Application driver is not set.");
+            return null;
+        }
+
+        if (poOtherPaymentStatusUpdate != null) {
+            return poOtherPaymentStatusUpdate;
+        }
+
+        poOtherPaymentStatusUpdate = new OtherPaymentStatusUpdate();
+        poOtherPaymentStatusUpdate.setApplicationDriver(poGRider);
+        poOtherPaymentStatusUpdate.setBranchCode(poGRider.getBranchCode());
+        poOtherPaymentStatusUpdate.setLogWrapper(poLogWrapper);
+        poOtherPaymentStatusUpdate.setVerifyEntryNo(true);
+        poOtherPaymentStatusUpdate.setWithParent(false);
+        return poOtherPaymentStatusUpdate;
+    }
 
     public BIR2307Filler BIR2307Filler() throws SQLException, GuanzonException {
         if (poGRider == null) {
@@ -529,6 +549,8 @@ public class CashflowControllers {
             poBIR2307Filler = null;
             poWithholdingTax = null;
             poWithholdingTaxDeductions = null;
+            poOtherPayments = null;
+            poOtherPaymentStatusUpdate = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -561,6 +583,7 @@ public class CashflowControllers {
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;
     private OtherPayments poOtherPayments;
+    private OtherPaymentStatusUpdate poOtherPaymentStatusUpdate;
     private CheckPaymentImporting poCheckPaymentImports;
     private BIR2307Filler poBIR2307Filler;
     private WithholdingTax poWithholdingTax;

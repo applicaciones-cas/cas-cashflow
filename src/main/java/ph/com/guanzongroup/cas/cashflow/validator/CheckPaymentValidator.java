@@ -4,8 +4,7 @@ import java.util.ArrayList;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 public class CheckPaymentValidator implements GValidator{
@@ -13,9 +12,8 @@ public class CheckPaymentValidator implements GValidator{
     String psTranStat;
     JSONObject poJSON;
     
-    Model_Disbursement_Master poMaster;
-    ArrayList<Model_Disbursement_Detail> poDetail;
-
+    Model_Check_Payments poMaster;
+    
     @Override
     public void setApplicationDriver(Object applicationDriver) {
         poGrider = (GRiderCAS) applicationDriver;
@@ -28,15 +26,7 @@ public class CheckPaymentValidator implements GValidator{
 
     @Override
     public void setMaster(Object value) {
-        poMaster = (Model_Disbursement_Master) value;
-    }
-
-    @Override
-    public void setDetail(ArrayList<Object> value) {
-        poDetail.clear();
-        for(int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++){
-            poDetail.add((Model_Disbursement_Detail) value.get(lnCtr));
-        }
+        poMaster = (Model_Check_Payments) value;
     }
 
     @Override
@@ -142,5 +132,10 @@ public class CheckPaymentValidator implements GValidator{
                 
         poJSON.put("result", "success");
         return poJSON;
+    }
+
+    @Override
+    public void setDetail(ArrayList<Object> al) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }

@@ -494,13 +494,13 @@ public class Journal extends Transaction {
                     ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
                     && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
                     AddDetail();
-                    Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+                    Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
                 } 
             }  
         }
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
-            Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
         }
     
     }

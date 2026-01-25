@@ -7,6 +7,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
@@ -201,6 +202,13 @@ public class CheckDeposit extends Transaction {
     @Override
     protected JSONObject willSave() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
+        
+        //set the industry based on detail
+        if (getDetail(1).CheckPayment().getIndustryID() != null
+                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+            getMaster().setIndustryId(psIndustryCode);
+        }
 
         poJSON = isEntryOkay(CheckDepositStatus.OPEN);
         if ("error".equals((String) poJSON.get("result"))) {
@@ -212,13 +220,15 @@ public class CheckDeposit extends Transaction {
         //assign values needed
         for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
             Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-            if (loDetail == null) {
+            
+            
+            if (loDetail == null || loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
                 paDetail.remove(lnCtr);
             } else {
-                if (loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
-                    paDetail.remove(lnCtr);
-                    continue;
-                }
+//                if (loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
+//                    paDetail.remove(lnCtr);
+//                    continue;
+//                }
                 lnDetailCount++;
                 loDetail.setTransactionNo(getMaster().getTransactionNo());
                 loDetail.setEntryNo(lnDetailCount);
@@ -234,12 +244,7 @@ public class CheckDeposit extends Transaction {
         }
         pdModified = poGRider.getServerDate();
         
-        //set the industry based on detail
-        if (getDetail(1).CheckPayment().getIndustryID() != null
-                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
-            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
-            getMaster().setIndustryId(psIndustryCode);
-        }
+        
 
         poJSON.put("result", "success");
         return poJSON;
@@ -733,13 +738,12 @@ public class CheckDeposit extends Transaction {
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat <> " + SQLUtil.toSQL(CheckDepositStatus.CANCELLED));
 
-        poJSON = new JSONObject();
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 value,
                 "Transaction No»Date»Check No.»sActNumbr»sActNamex»sBankName",
                 "sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
-                "a.sTransNox»dTransact»sCheckNox»sActNumbr»sActNamex»sBankName",
+                "a.sTransNox»a.dTransact»a.sCheckNox»c.sActNumbr»c.sActNamex»b.sBankName",
                 byCode ? 0 : 2);
 
         if (poJSON != null) {
@@ -804,7 +808,7 @@ public class CheckDeposit extends Transaction {
 
             if ("success".equals((String) poJSON.get("result"))) {
                 getMaster().setBankAccount(loBrowse.getBankAccountId());
-                searchTransactionBankMasterFilter(loBrowse.getBankId(), true);
+                //searchTransactionBankMasterFilter(loBrowse.getBankId(), true);
 
                 this.poJSON = new JSONObject();
                 this.poJSON.put("result", "success");
