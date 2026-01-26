@@ -2665,7 +2665,7 @@ public class DisbursementVoucher extends Transaction {
                             poJSON = poBankAccountTrans.InitTransaction();
                             poJSON = poBankAccountTrans.CheckDisbursement(
                                 poCheckPayments.getModel().getBankAcountID(),
-                                    poCheckPayments.getModel().getSourceCode(),
+                                    poCheckPayments.getModel().getSourceNo(),
                                poCheckPayments.getModel().getCheckDate(),
                                      poCheckPayments.getModel().getAmount(),
                                      poCheckPayments.getModel().getCheckNo(),
@@ -3965,6 +3965,7 @@ public class DisbursementVoucher extends Transaction {
                 poCheckPayments.getModel().setIndustryID(Master().getIndustryID());
                 poCheckPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                 poCheckPayments.getModel().setSourceCode(getSourceCode());
+                poCheckPayments.getModel().setPayeeID(Master().getPayeeID());
                 
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
