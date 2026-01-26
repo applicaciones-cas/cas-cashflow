@@ -2663,10 +2663,13 @@ public class DisbursementVoucher extends Transaction {
                         if(CheckStatus.PrintStatus.PRINTED.equals(poCheckPayments.getModel().getPrint())){
                             BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
                             poJSON = poBankAccountTrans.InitTransaction();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }         
                             poJSON = poBankAccountTrans.CheckDisbursement(
                                 poCheckPayments.getModel().getBankAcountID(),
                                     poCheckPayments.getModel().getSourceNo(),
-                               poCheckPayments.getModel().getCheckDate(),
+                               SQLUtil.toDate(xsDateShort(poCheckPayments.getModel().getCheckDate()), SQLUtil.FORMAT_SHORT_DATE),
                                      poCheckPayments.getModel().getAmount(),
                                      poCheckPayments.getModel().getCheckNo(),
                                     Master().getVoucherNo(),
@@ -4164,6 +4167,8 @@ public class DisbursementVoucher extends Transaction {
                         }
                         poOtherPayments.updateRecord();
                     } 
+                    
+                    poOtherPayments.getModel().setPaymentType(Master().getDisbursementType()); //get the latest payment type
                 break;
             }
         } else {
@@ -4181,6 +4186,8 @@ public class DisbursementVoucher extends Transaction {
                 poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.FLOAT);
                 poOtherPayments.getModel().setSourceCode(getSourceCode());
                 poOtherPayments.getModel().setTotalAmount(Master().getNetTotal());
+                poOtherPayments.getModel().setCompanyID(Master().getCompanyID());
+                poOtherPayments.getModel().setPaymentType(Master().getDisbursementType());
                 
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poOtherPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");

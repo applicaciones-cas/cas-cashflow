@@ -118,6 +118,14 @@ public class Model_Other_Payments extends Model {
     public String getCompanyID() {
         return (String) getValue("sCompnyID");
     }
+
+    public JSONObject setPaymentType(String companyID) {
+        return setValue("cPaymType", companyID);
+    }
+
+    public String getPaymentType() {
+        return (String) getValue("cPaymType");
+    }
     
     public JSONObject setTransactionDate(Date transactionDate) {
         return setValue("dTransact", transactionDate);
