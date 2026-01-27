@@ -196,6 +196,16 @@ public class CheckDeposit extends Transaction {
         poJSON.put("message", "Transaction saved successfully.");
         return poJSON;
     }
+    
+    public JSONObject AddDetail() throws CloneNotSupportedException {
+        if (Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Last row has empty item.");
+            return poJSON;
+        }
+        return addDetail();
+    }
 
     public JSONObject UpdateTransaction() {
         poJSON = new JSONObject();
@@ -219,9 +229,9 @@ public class CheckDeposit extends Transaction {
         poJSON = new JSONObject();
         
         //set the industry based on detail
-        if (Detail(1).CheckPayment().getIndustryID() != null
-                && !Detail(1).CheckPayment().getIndustryID().isEmpty()) {
-            psIndustryCode = Detail(1).CheckPayment().getIndustryID();
+        if (Detail(0).CheckPayment().getIndustryID() != null
+                && !Detail(0).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = Detail(0).CheckPayment().getIndustryID();
             getMaster().setIndustryId(psIndustryCode);
         }
 
@@ -334,21 +344,7 @@ public class CheckDeposit extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-
-            if (loDetail.getSourceNo() != null) {
-                if (!loDetail.getSourceNo().isEmpty()) {
-                    poJSON = new JSONObject();
-                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
-
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                }
-            }
-        }
+        
 
         poGRider.commitTrans();
 
@@ -456,22 +452,24 @@ public class CheckDeposit extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
+        
+        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
+            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
 
-//        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-//            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-//
-//            if (loDetail.getSourceNo() != null) {
-//                if (!loDetail.getSourceNo().isEmpty()) {
-//                    poJSON = new JSONObject();
-//                    poJSON = ReceiveCheckPaymentTransaction(lnCtr);
-//
-//                    if (!"success".equals((String) poJSON.get("result"))) {
-//                        poGRider.rollbackTrans();
-//                        return poJSON;
-//                    }
-//                }
-//            }
-//        }
+            if (loDetail.getSourceNo() != null) {
+                if (!loDetail.getSourceNo().isEmpty()) {
+                    poJSON = new JSONObject();
+                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
+
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
+
         poGRider.commitTrans();
 
         openTransaction(getMaster().getTransactionNo());
@@ -548,6 +546,25 @@ public class CheckDeposit extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction cancelled successfully.");
 
+        return poJSON;
+    }
+    
+    public JSONObject updateCheckPaymentTransaction(int EntryNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(EntryNo);
+        Model_Check_Payments loCheckPayment = loDetail.CheckPayment();
+        if (loCheckPayment.getEditMode() == EditMode.READY) {
+            loCheckPayment.updateRecord();
+            loCheckPayment.setBranchCode(poGRider.getBranchCode());
+            loCheckPayment.setLocation("1");
+            poJSON = loCheckPayment.saveRecord();
+
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
         return poJSON;
     }
 
