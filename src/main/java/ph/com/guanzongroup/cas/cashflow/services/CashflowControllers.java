@@ -13,7 +13,6 @@ import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
-import ph.com.guanzongroup.cas.cashflow.CheckPrinting;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
@@ -357,25 +356,6 @@ public class CashflowControllers {
         return poJournal;
     }
 
-    public CheckPrinting CheckPrinting() throws SQLException, GuanzonException {
-        if (poGRider == null) {
-            poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
-            return null;
-        }
-
-        if (poCheckPrinting != null) {
-            return poCheckPrinting;
-        }
-
-        poCheckPrinting = new CheckPrinting();
-        poCheckPrinting.setApplicationDriver(poGRider);
-        poCheckPrinting.setBranchCode(poGRider.getBranchCode());
-        poCheckPrinting.setLogWrapper(poLogWrapper);
-        poCheckPrinting.setVerifyEntryNo(true);
-        poCheckPrinting.setWithParent(false);
-        return poCheckPrinting;
-    }
-
     public DocumentMapping DocumentMapping() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.CheckPrinting: Application driver is not set.");
@@ -542,7 +522,6 @@ public class CashflowControllers {
             poCheckPrintingRequest = null;
             poAccountChart = null;
             poTransactionAccountChart = null;
-            poCheckPrinting = null;
             poDocummentMapping = null;
             poCheckStatusUpdate = null;
             poCheckImporting = null;
@@ -578,7 +557,6 @@ public class CashflowControllers {
     private AccountChart poAccountChart;
     private TransactionAccountChart poTransactionAccountChart;
     private Journal poJournal;
-    private CheckPrinting poCheckPrinting;
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;
