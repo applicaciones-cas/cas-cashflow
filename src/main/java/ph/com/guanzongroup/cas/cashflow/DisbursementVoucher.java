@@ -90,6 +90,8 @@ import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.rmj.cas.core.APTransaction;
+import org.rmj.cas.core.GLTransaction;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
@@ -2661,6 +2663,8 @@ public class DisbursementVoucher extends Transaction {
                         }
                         
                         if(CheckStatus.PrintStatus.PRINTED.equals(poCheckPayments.getModel().getPrint())){
+                            System.out.println("----------Bank Account Transaction----------");
+                            //Bank Account Transaction
                             BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
                             poJSON = poBankAccountTrans.InitTransaction();
                             if ("error".equals((String) poJSON.get("result"))) {
@@ -2677,6 +2681,26 @@ public class DisbursementVoucher extends Transaction {
                             if ("error".equals(poJSON.get("result"))) {
                                 return poJSON;
                             }
+                            System.out.println("--------------------------------------------");
+                            System.out.println("----------AP CLIENT MASTER----------");
+                            //Insert AP Client
+                            APTransaction loAPTrans = new APTransaction(poGRider, Master().getBranchCode());
+                            //get detail per category
+                            List<String> laPerCategory = getCategoryDetail();
+                            for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
+                                loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), laPerCategory.get(lnCategory),Master().getTransactionNo(),Master().getTransactionDate(),  Master().getNetTotal(), false);
+                            }
+                            System.out.println("-----------------------------------");
+                            
+                            System.out.println("----------ACCOUNT MASTER / LEDGER----------");
+                            //GL Transaction Account Ledger
+                            GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                            loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                            for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+                                loGLTrans.addDetail(Journal().Master().getBranchCode(), Journal().Detail(lnCtr).getAccountCode(),SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , Journal().Detail(lnCtr).getDebitAmount(), Journal().Detail(lnCtr).getCreditAmount());
+                            }
+                            loGLTrans.saveTransaction();
+                            System.out.println("-----------------------------------");
                         }
                         
                     } else {
@@ -2825,6 +2849,42 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+    
+    private List<String> getCategoryDetail() throws SQLException, GuanzonException{
+        //get detail per category
+        List<String> laPerCategory = new ArrayList();
+        for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+            switch(Detail(lnCtr).getSourceCode()){
+                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                    switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                        case SOATaggingStatic.APPaymentAdjustment:
+                            //TODO
+                        break;
+                        case SOATaggingStatic.PaymentRequest:
+                            //TODO
+                        break;
+                        case SOATaggingStatic.POReceiving:
+                            if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
+                                laPerCategory.add(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode());
+                            }
+                        break;
+                    }
+                break;
+                case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                    //TODO
+                break;
+                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    //TODO
+                break;
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
+                        laPerCategory.add(Detail(lnCtr).POReceiving().getCategoryCode());
+                    }
+                break;
+            }
+        }
+        return laPerCategory;
+    } 
     
     @Override
     public void saveComplete() {

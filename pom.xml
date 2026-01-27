@@ -86,6 +86,11 @@
             <version>0.2-SNAPSHOT</version>
             <type>jar</type>
         </dependency>
+        <dependency>
+            <groupId>ph.com.guanzongroup</groupId>
+            <artifactId>cas-core</artifactId>
+            <version>0.2-SNAPSHOT</version>
+        </dependency>
     </dependencies>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
