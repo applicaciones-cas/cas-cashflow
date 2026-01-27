@@ -1762,7 +1762,7 @@ public class DisbursementVoucher extends Transaction {
      * @throws SQLException
      * @throws GuanzonException 
      */
-    public JSONObject loadTransactionList(String fsIndustry, String fsValue1, String fsValue2, String fsValue3, boolean isBank) throws SQLException, GuanzonException {
+    public JSONObject loadTransactionList(String fsIndustry, String fsValue1, String fsValue2, String fsValue3, boolean isBank, boolean isAuthorization) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paMaster = new ArrayList<>();
         if (fsIndustry == null) { fsIndustry = ""; }
@@ -1787,6 +1787,10 @@ public class DisbursementVoucher extends Transaction {
                     + ( fsValue3.isEmpty() ? "" : " AND g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsValue3));
         }
         
+        if(isAuthorization){
+            lsSQL = lsSQL + " AND a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK);
+        }
+        
         String lsCondition = "";
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
@@ -1800,11 +1804,7 @@ public class DisbursementVoucher extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-        if(isBank){
-            lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
-        } else {
-            lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact DESC ";
-        }
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -2656,6 +2656,25 @@ public class DisbursementVoucher extends Transaction {
                             poJSON = poCheckPayments.saveRecord();
                             if ("error".equals((String) poJSON.get("result"))) {
                                 System.out.println("Save Check Payment : " + poJSON.get("message"));
+                                return poJSON;
+                            }
+                        }
+                        
+                        if(CheckStatus.PrintStatus.PRINTED.equals(poCheckPayments.getModel().getPrint())){
+                            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+                            poJSON = poBankAccountTrans.InitTransaction();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                return poJSON;
+                            }         
+                            poJSON = poBankAccountTrans.CheckDisbursement(
+                                poCheckPayments.getModel().getBankAcountID(),
+                                    poCheckPayments.getModel().getSourceNo(),
+                               SQLUtil.toDate(xsDateShort(poCheckPayments.getModel().getCheckDate()), SQLUtil.FORMAT_SHORT_DATE),
+                                     poCheckPayments.getModel().getAmount(),
+                                     poCheckPayments.getModel().getCheckNo(),
+                                    Master().getVoucherNo(),
+                                  false);
+                            if ("error".equals(poJSON.get("result"))) {
                                 return poJSON;
                             }
                         }
@@ -3949,6 +3968,7 @@ public class DisbursementVoucher extends Transaction {
                 poCheckPayments.getModel().setIndustryID(Master().getIndustryID());
                 poCheckPayments.getModel().setTransactionStatus(CheckStatus.FLOAT);
                 poCheckPayments.getModel().setSourceCode(getSourceCode());
+                poCheckPayments.getModel().setPayeeID(Master().getPayeeID());
                 
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poCheckPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
@@ -4147,6 +4167,8 @@ public class DisbursementVoucher extends Transaction {
                         }
                         poOtherPayments.updateRecord();
                     } 
+                    
+                    poOtherPayments.getModel().setPaymentType(Master().getDisbursementType()); //get the latest payment type
                 break;
             }
         } else {
@@ -4164,6 +4186,8 @@ public class DisbursementVoucher extends Transaction {
                 poOtherPayments.getModel().setTransactionStatus(OtherPaymentStatus.FLOAT);
                 poOtherPayments.getModel().setSourceCode(getSourceCode());
                 poOtherPayments.getModel().setTotalAmount(Master().getNetTotal());
+                poOtherPayments.getModel().setCompanyID(Master().getCompanyID());
+                poOtherPayments.getModel().setPaymentType(Master().getDisbursementType());
                 
             } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poOtherPayments.getEditMode() == EditMode.ADDNEW) {
                 poJSON.put("result", "success");
@@ -4694,12 +4718,22 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("amountNumeric : " + nAmountxx);
             System.out.println("amountWords : " + xAmountWords);
             System.out.println("===============================================");
+            
+            DocumentMapping poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
+            poDocumentMapping.InitTransaction();
+            poJSON = poDocumentMapping.OpenTransaction(bankCode);
+            if ("error".equals((String) poJSON.get("result"))){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Please configure the document mapping for "+bankCode+".\n"+ (String) poJSON.get("message"));
+                return poJSON;
+            }
+            
             // Store transaction for printing
             Transaction transaction = new Transaction(transactionno, sPayeeNme, dCheckDte, nAmountxx, bankCode, new BigDecimal(nAmountxx));
             
             // Now print the voucher using PrinterJob
-            if (showPrintPreview(transaction)) {
-                poJSON = PrintCheck(transaction);
+            if (showPrintPreview(transaction, poDocumentMapping)) {
+                poJSON = PrintCheck(transaction,poDocumentMapping);
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
@@ -4730,12 +4764,12 @@ public class DisbursementVoucher extends Transaction {
     private String getDocumentCode(String fsBankAccountId){
         try {
             String lsSQL =   " SELECT "                                                        
-                        + " CONCAT(a.sBankCode,'Chk',c.sSlipType) AS sDocCodex "            
+                        + " CONCAT(a.sBankCode,c.sSlipType,'Chk') AS sDocCodex "            
                         + " FROM Banks a "                                                  
                         + " LEFT JOIN Bank_Account_Master b ON b.sBankIDxx = a.sBankIDxx "  
                         + " LEFT JOIN Branch_Bank_Account c ON c.sBnkActID = b.sBnkActID "  ;
             lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
-                                                + " c.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+                                                + " AND c.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             try {
@@ -4757,7 +4791,7 @@ public class DisbursementVoucher extends Transaction {
         return  "";
     }
     
-    private JSONObject PrintCheck(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
+    private JSONObject PrintCheck(Transaction tx, DocumentMapping poDocumentMapping) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         Printer printer = Printer.getDefaultPrinter();
         if (printer == null) {
@@ -4782,7 +4816,7 @@ public class DisbursementVoucher extends Transaction {
         double pw = layout.getPrintableWidth();   // points
         double ph = layout.getPrintableHeight();
 
-        Node voucherNode = buildVoucherNode(tx, pw, ph);
+        Node voucherNode = buildVoucherNode(tx, pw, ph,poDocumentMapping);
 
         job.getJobSettings().setPageLayout(layout);
         job.getJobSettings().setJobName("Voucher-" + tx.transactionNo);
@@ -4806,7 +4840,7 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
-    private boolean showPrintPreview(Transaction tx) throws SQLException, GuanzonException, CloneNotSupportedException {
+    private boolean showPrintPreview(Transaction tx, DocumentMapping poDocumentMapping) throws SQLException, GuanzonException, CloneNotSupportedException {
         Printer printer = Printer.getDefaultPrinter();
         PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
                 PageOrientation.PORTRAIT,
@@ -4814,8 +4848,8 @@ public class DisbursementVoucher extends Transaction {
 
         double pw = layout.getPrintableWidth();
         double ph = layout.getPrintableHeight();
-
-        Node voucher = buildVoucherNode(tx, pw, ph);
+        
+        Node voucher = buildVoucherNode(tx, pw, ph,poDocumentMapping);
 
         // Wrap in a Group so zooming keeps proportions if the user resizes the window
         Group zoomRoot = new Group(voucher);
@@ -4859,7 +4893,8 @@ public class DisbursementVoucher extends Transaction {
      */
     private Node buildVoucherNode(Transaction tx,
             double widthPts,
-            double heightPts)
+            double heightPts,
+    DocumentMapping poDocumentMapping)
             throws SQLException, GuanzonException, CloneNotSupportedException {
 
         // Root container for all voucher text nodes
@@ -4870,10 +4905,6 @@ public class DisbursementVoucher extends Transaction {
         final double LINE_HEIGHT = 18;   // row‑to‑row spacing
         final double CHAR_WIDTH = 7;    // col‑to‑col spacing
         
-        DocumentMapping poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
-        poDocumentMapping.InitTransaction();
-        poDocumentMapping.OpenTransaction(tx.bankCode);
-
         for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
             String fieldName = poDocumentMapping.Detail(i).getFieldCode();
             String fontName = poDocumentMapping.Detail(i).getFontName();
