@@ -7,7 +7,11 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,6 +26,8 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.rmj.cas.core.APTransaction;
+import org.rmj.cas.core.GLTransaction;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
@@ -473,6 +479,63 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
                                 System.out.println("Save Other Payment : " + poJSON.get("message"));
                                 return poJSON;
                             }
+                            
+                            if(OtherPaymentStatus.POSTED.equals(poOtherPayments.getModel().getTransactionStatus())){
+                                System.out.println("----------Bank Account Transaction----------");
+                                //Bank Account Transaction
+                                BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+                                poJSON = poBankAccountTrans.InitTransaction();
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    return poJSON;
+                                }         
+                                poJSON = poBankAccountTrans.CheckDisbursement(
+                                    poCheckPayments.getModel().getBankAcountID(),
+                                        poCheckPayments.getModel().getSourceNo(),
+                                   SQLUtil.toDate(xsDateShort(poCheckPayments.getModel().getCheckDate()), SQLUtil.FORMAT_SHORT_DATE),
+                                         poCheckPayments.getModel().getAmount(),
+                                         poCheckPayments.getModel().getCheckNo(),
+                                        Master().getVoucherNo(),
+                                      false);
+                                if ("error".equals(poJSON.get("result"))) {
+                                    return poJSON;
+                                }
+                                System.out.println("--------------------------------------------");
+
+                                System.out.println("----------AP CLIENT MASTER----------");
+                                //Insert AP Client
+                                APTransaction loAPTrans = new APTransaction(poGRider, Master().getBranchCode());
+                                poJSON = loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
+                                        "",
+                                        Master().getTransactionNo(),
+                                        Master().getTransactionDate(),  
+                                        Master().getNetTotal(), 
+                                        false);
+                                if ("error".equals(poJSON.get("result"))) {
+                                    return poJSON;
+                                }
+                                System.out.println("-----------------------------------");
+
+                                System.out.println("----------ACCOUNT MASTER / LEDGER----------");
+                                try {
+                                    //GL Transaction Account Ledger
+                                    GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                                    loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                                    for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+                                        loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+                                                Journal().Detail(lnCtr).getAccountCode(),
+                                                SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                                Journal().Detail(lnCtr).getDebitAmount(), 
+                                                Journal().Detail(lnCtr).getCreditAmount());
+                                    }
+                                    loGLTrans.saveTransaction();
+                                } catch (GuanzonException | SQLException  ex) {
+                                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message", MiscUtil.getException(ex));
+                                    return poJSON;
+                                }
+                                System.out.println("-----------------------------------");
+                            }
                         }
                         System.out.println("-----------------------------------------------------------------------");
                     } else {
@@ -512,4 +575,19 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
         System.out.println("Transaction saved successfully.");
     }
     
+    /*Convert Date to String*/
+    private static String xsDateShort(Date fdValue) {
+        if(fdValue == null){
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
+
+    private LocalDate strToDate(String val) {
+        DateTimeFormatter date_formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(val, date_formatter);
+        return localDate;
+    }
 }

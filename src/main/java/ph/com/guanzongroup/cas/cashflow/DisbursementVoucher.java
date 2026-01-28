@@ -2687,29 +2687,39 @@ public class DisbursementVoucher extends Transaction {
                             //Insert AP Client
                             APTransaction loAPTrans = new APTransaction(poGRider, Master().getBranchCode());
                             //get detail per category to pass on payment issue category
-                            List<String> laPerCategory = getCategoryDetail();
-                            for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
-                                loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
-                                        laPerCategory.get(lnCategory),
-                                        Master().getTransactionNo(),
-                                        Master().getTransactionDate(),  
-                                        Master().getNetTotal(), 
-                                        false);
+//                            List<String> laPerCategory = getCategoryDetail();
+//                            for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
+//                            }
+                            poJSON = loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
+                                    "",
+                                    Master().getTransactionNo(),
+                                    Master().getTransactionDate(),  
+                                    Master().getNetTotal(), 
+                                    false);
+                            if ("error".equals(poJSON.get("result"))) {
+                                return poJSON;
                             }
                             System.out.println("-----------------------------------");
                             
                             System.out.println("----------ACCOUNT MASTER / LEDGER----------");
-                            //GL Transaction Account Ledger
-                            GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
-                            loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
-                            for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-                                loGLTrans.addDetail(Journal().Master().getBranchCode(), 
-                                        Journal().Detail(lnCtr).getAccountCode(),
-                                        SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
-                                        Journal().Detail(lnCtr).getDebitAmount(), 
-                                        Journal().Detail(lnCtr).getCreditAmount());
+                            try {
+                                //GL Transaction Account Ledger
+                                GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+                                    loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+                                            Journal().Detail(lnCtr).getAccountCode(),
+                                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                            Journal().Detail(lnCtr).getDebitAmount(), 
+                                            Journal().Detail(lnCtr).getCreditAmount());
+                                }
+                                loGLTrans.saveTransaction();
+                            } catch (GuanzonException | SQLException  ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                                poJSON.put("result", "error");
+                                poJSON.put("message", MiscUtil.getException(ex));
+                                return poJSON;
                             }
-                            loGLTrans.saveTransaction();
                             System.out.println("-----------------------------------");
                         }
                         
@@ -5343,7 +5353,6 @@ public class DisbursementVoucher extends Transaction {
                     poJSON.put("message", "JRViewer not found!");
                     return poJSON;
                 }
-
                 for (int i = 0; i < viewer.getComponentCount(); i++) {
                     if (viewer.getComponent(i) instanceof JRViewerToolbar) {
 
@@ -5391,6 +5400,9 @@ public class DisbursementVoucher extends Transaction {
                                         }
                                     });
                                 } else {
+                                    if ("Save".equals(button.getToolTipText())) {
+                                        toolbar.remove(button);
+                                    }
                                     poJSON.put("result", "error");
                                     poJSON.put("message",  "Transaction print aborted!");
                                 }
