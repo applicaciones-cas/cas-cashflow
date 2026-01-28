@@ -2682,13 +2682,19 @@ public class DisbursementVoucher extends Transaction {
                                 return poJSON;
                             }
                             System.out.println("--------------------------------------------");
+                            
                             System.out.println("----------AP CLIENT MASTER----------");
                             //Insert AP Client
                             APTransaction loAPTrans = new APTransaction(poGRider, Master().getBranchCode());
-                            //get detail per category
+                            //get detail per category to pass on payment issue category
                             List<String> laPerCategory = getCategoryDetail();
                             for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
-                                loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), laPerCategory.get(lnCategory),Master().getTransactionNo(),Master().getTransactionDate(),  Master().getNetTotal(), false);
+                                loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
+                                        laPerCategory.get(lnCategory),
+                                        Master().getTransactionNo(),
+                                        Master().getTransactionDate(),  
+                                        Master().getNetTotal(), 
+                                        false);
                             }
                             System.out.println("-----------------------------------");
                             
@@ -2697,7 +2703,11 @@ public class DisbursementVoucher extends Transaction {
                             GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
                             loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
                             for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-                                loGLTrans.addDetail(Journal().Master().getBranchCode(), Journal().Detail(lnCtr).getAccountCode(),SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , Journal().Detail(lnCtr).getDebitAmount(), Journal().Detail(lnCtr).getCreditAmount());
+                                loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+                                        Journal().Detail(lnCtr).getAccountCode(),
+                                        SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                        Journal().Detail(lnCtr).getDebitAmount(), 
+                                        Journal().Detail(lnCtr).getCreditAmount());
                             }
                             loGLTrans.saveTransaction();
                             System.out.println("-----------------------------------");
