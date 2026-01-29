@@ -2690,7 +2690,11 @@ public class DisbursementVoucher extends Transaction {
 //                            List<String> laPerCategory = getCategoryDetail();
 //                            for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
 //                            }
-                            poJSON = loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
+                            String lsClientId = Master().Payee().getAPClientID();
+                            if(lsClientId == null || "".equals(lsClientId)){
+                                lsClientId = Master().Payee().getClientID();
+                            } 
+                            poJSON = loAPTrans.PaymentIssue(lsClientId, 
                                     "",
                                     Master().getTransactionNo(),
                                     Master().getTransactionDate(),  
@@ -5400,9 +5404,8 @@ public class DisbursementVoucher extends Transaction {
                                         }
                                     });
                                 } else {
-                                    if ("Save".equals(button.getToolTipText())) {
-                                        toolbar.remove(button);
-                                    }
+                                    // Disable all other buttons
+                                    button.setEnabled(false);
                                     poJSON.put("result", "error");
                                     poJSON.put("message",  "Transaction print aborted!");
                                 }
