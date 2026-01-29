@@ -264,13 +264,13 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     return poJSON;
                 }
             }
-        }
         
-        //PAID Transaction
-        if(Detail(row).PRF().getNetTotal() == Detail(row).PRF().getAmountPaid()){
-            poJSON = paidLinkedTransaction(lsSourceNo, DisbursementStatic.SourceCode.PAYMENT_REQUEST);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+            //PAID Transaction
+            if(Detail(row).PRF().getNetTotal() == Detail(row).PRF().getAmountPaid()){
+                poJSON = paidLinkedTransaction(lsSourceNo, DisbursementStatic.SourceCode.PAYMENT_REQUEST);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
         }
     
@@ -395,10 +395,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
         
             
         //Tag Source Transaction as Paid
-        if(Objects.equals(Detail(row).POReceiving().getNetTotal(), ldblAmountPaid)){
-            poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        if(pbIsUpdateAmountPaid){
+            if(Objects.equals(Detail(row).POReceiving().getNetTotal(), ldblAmountPaid)){
+                poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
         }
         
@@ -501,18 +503,20 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         //PAID Transaction
-        if(loModel.getNetTotal() == loModel.getAmountPaid()){
-            //Tag Cache Payable as Paid
-            poJSON = paidLinkedTransaction(loModel.getTransactionNo(), DisbursementStatic.SourceCode.CASH_PAYABLE);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        if(pbIsUpdateAmountPaid){
+            if(loModel.getNetTotal() == loModel.getAmountPaid()){
+                //Tag Cache Payable as Paid
+                poJSON = paidLinkedTransaction(loModel.getTransactionNo(), DisbursementStatic.SourceCode.CASH_PAYABLE);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+
+                //Tag Source Transaction as Paid
+    //            poJSON = paidLinkedTransaction(loModel.getSourceNo(), loModel.getSourceCode());
+    //                if ("error".equals((String) poJSON.get("result"))) {
+    //                    return poJSON;
+    //                }
             }
-            
-            //Tag Source Transaction as Paid
-//            poJSON = paidLinkedTransaction(loModel.getSourceNo(), loModel.getSourceCode());
-//                if ("error".equals((String) poJSON.get("result"))) {
-//                    return poJSON;
-//                }
         }
     
         poJSON.put("result", "success");
@@ -604,10 +608,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         //Tag Source Transaction as Paid
-        if(Objects.equals(String.format("%.4f", Detail(row).APAdjustment().getNetTotal()), String.format("%.4f", Detail(row).APAdjustment().getAppliedAmount()))){
-            poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        if(pbIsUpdateAmountPaid){
+            if(Objects.equals(String.format("%.4f", Detail(row).APAdjustment().getNetTotal()), String.format("%.4f", Detail(row).APAdjustment().getAppliedAmount()))){
+                poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
             }
         }
         
@@ -767,7 +773,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         //PAID Transaction
-        if(isAdd){
+        if(isAdd && pbIsUpdateAmountPaid){
             if(loMaster.getNetTotal().doubleValue() == loMaster.getAmountPaid().doubleValue()){
                 poJSON = paidLinkedTransaction(loMaster.getTransactionNo(), DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE);
                 if ("error".equals((String) poJSON.get("result"))) {

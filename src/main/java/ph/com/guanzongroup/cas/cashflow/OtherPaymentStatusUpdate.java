@@ -481,36 +481,41 @@ public class OtherPaymentStatusUpdate extends DisbursementVoucher {
                             }
                             
                             if(OtherPaymentStatus.POSTED.equals(poOtherPayments.getModel().getTransactionStatus())){
-                                System.out.println("----------Bank Account Transaction----------");
+                                System.out.println("----------Bank Account Transaction---TODO-------");
                                 //Bank Account Transaction
-                                BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
-                                poJSON = poBankAccountTrans.InitTransaction();
-                                if ("error".equals((String) poJSON.get("result"))) {
-                                    return poJSON;
-                                }         
-                                poJSON = poBankAccountTrans.CheckDisbursement(
-                                    poCheckPayments.getModel().getBankAcountID(),
-                                        poCheckPayments.getModel().getSourceNo(),
-                                   SQLUtil.toDate(xsDateShort(poCheckPayments.getModel().getCheckDate()), SQLUtil.FORMAT_SHORT_DATE),
-                                         poCheckPayments.getModel().getAmount(),
-                                         poCheckPayments.getModel().getCheckNo(),
-                                        Master().getVoucherNo(),
-                                      false);
-                                if ("error".equals(poJSON.get("result"))) {
-                                    return poJSON;
-                                }
+//                                BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+//                                poJSON = poBankAccountTrans.InitTransaction();
+//                                if ("error".equals((String) poJSON.get("result"))) {
+//                                    return poJSON;
+//                                }         
+//                                poJSON = poBankAccountTrans.CheckDisbursement(
+//                                    poCheckPayments.getModel().getBankAcountID(),
+//                                        poCheckPayments.getModel().getSourceNo(),
+//                                   SQLUtil.toDate(xsDateShort(poCheckPayments.getModel().getCheckDate()), SQLUtil.FORMAT_SHORT_DATE),
+//                                         poCheckPayments.getModel().getAmount(),
+//                                         poCheckPayments.getModel().getCheckNo(),
+//                                        Master().getVoucherNo(),
+//                                      false);
+//                                if ("error".equals((String) poJSON.get("result"))) {
+//                                    System.out.println("Save BankAccountTrans : " + poJSON.get("message"));
+//                                    return poJSON;
+//                                }
                                 System.out.println("--------------------------------------------");
 
                                 System.out.println("----------AP CLIENT MASTER----------");
                                 //Insert AP Client
                                 APTransaction loAPTrans = new APTransaction(poGRider, Master().getBranchCode());
-                                poJSON = loAPTrans.PaymentIssue(Master().Payee().getAPClientID(), 
+                                String lsClientId = Master().Payee().getAPClientID();
+                                if(lsClientId == null || "".equals(lsClientId)){
+                                    lsClientId = Master().Payee().getClientID();
+                                } 
+                                poJSON = loAPTrans.PaymentIssue(lsClientId, 
                                         "",
                                         Master().getTransactionNo(),
                                         Master().getTransactionDate(),  
                                         Master().getNetTotal(), 
                                         false);
-                                if ("error".equals(poJSON.get("result"))) {
+                                if ("error".equals((String)poJSON.get("result"))) {
                                     return poJSON;
                                 }
                                 System.out.println("-----------------------------------");
