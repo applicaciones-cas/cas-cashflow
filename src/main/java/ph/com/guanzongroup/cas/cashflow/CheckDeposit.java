@@ -47,6 +47,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckDepositRecords;
 import ph.com.guanzongroup.cas.cashflow.status.CheckDepositStatus;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckDepositValidatorFactory;
 
 public class CheckDeposit extends Transaction {
@@ -80,42 +81,56 @@ public class CheckDeposit extends Transaction {
     public List<Model_Check_Deposit_Detail> getDetailList() {
         return (List<Model_Check_Deposit_Detail>) (List<?>) paDetail;
     }
-
-    public Model_Check_Deposit_Detail getDetail(int entryNo) {
-        if (getMaster().getTransactionNo().isEmpty() || entryNo <= 0) {
-            return null;
-        }
-
-        //autoadd detail if empty
-        Model_Check_Deposit_Detail lastDetail = (Model_Check_Deposit_Detail) paDetail.get(paDetail.size() - 1);
-        String stockID = lastDetail.getSourceNo();
-        if (stockID != null && !stockID.trim().isEmpty()) {
-            Model_Check_Deposit_Detail newDetail = new CheckModels(poGRider).CheckDepositDetail();
-            newDetail.newRecord();
-            newDetail.setTransactionNo(getMaster().getTransactionNo());
-            newDetail.setEntryNo(paDetail.size() + 1);
-            paDetail.add(newDetail);
-        }
-
-        Model_Check_Deposit_Detail loDetail;
-
-        //find the detail record
-        for (int lnCtr = 0; lnCtr <= paDetail.size() - 1; lnCtr++) {
-            loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-
-            if (loDetail.getEntryNo() == entryNo) {
-                return loDetail;
-            }
-        }
-
-        loDetail = new CheckModels(poGRider).CheckDepositDetail();
-        loDetail.newRecord();
-        loDetail.setTransactionNo(getMaster().getTransactionNo());
-        loDetail.setEntryNo(entryNo);
-        paDetail.add(loDetail);
-
-        return loDetail;
+    
+    @Override
+    public Model_Check_Deposit_Detail Detail(int row) {
+        return (Model_Check_Deposit_Detail) paDetail.get(row);
     }
+    
+
+    public Model_Check_Deposit_Detail getDetail(int entryNo) throws CloneNotSupportedException {
+    if (getMaster().getTransactionNo().isEmpty() || entryNo < 0) {
+        return null;
+    }
+    if (getDetailCount() - 1 == entryNo) {
+        addDetail();
+    }
+
+    // Ensure the requested index exists
+    while (entryNo >= paDetail.size()) {
+        Model_Check_Deposit_Detail newDetail = new CheckModels(poGRider).CheckDepositDetail();
+        newDetail.newRecord();
+        newDetail.setTransactionNo(getMaster().getTransactionNo());
+        newDetail.setEntryNo(paDetail.size()); // entryNo = index
+        paDetail.add(newDetail);
+    }
+
+    // Return the requested detail
+    return (Model_Check_Deposit_Detail) paDetail.get(entryNo);
+}
+
+    
+//    public void addBlankRowIfNeeded() {
+//    if (paDetail.isEmpty()) {
+//        // First load: add first empty row
+//        Model_Check_Deposit_Detail firstRow = new CheckModels(poGRider).CheckDepositDetail();
+//        firstRow.newRecord();
+//        firstRow.setTransactionNo(getMaster().getTransactionNo());
+//        firstRow.setEntryNo(0);
+//        paDetail.add(firstRow);
+//        return;
+//    }
+//
+//    // Check last row
+//    Model_Check_Deposit_Detail lastDetail = (Model_Check_Deposit_Detail) paDetail.get(paDetail.size() - 1);
+//    if (lastDetail.getSourceNo() != null && !lastDetail.getSourceNo().trim().isEmpty()) {
+//        Model_Check_Deposit_Detail newRow = new CheckModels(poGRider).CheckDepositDetail();
+//        newRow.newRecord();
+//        newRow.setTransactionNo(getMaster().getTransactionNo());
+//        newRow.setEntryNo(paDetail.size()); // next index
+//        paDetail.add(newRow);
+//    }
+//}
 
     @SuppressWarnings("unchecked")
     public List<Model_Check_Payments> getCheckPaymentList() {
@@ -181,6 +196,16 @@ public class CheckDeposit extends Transaction {
         poJSON.put("message", "Transaction saved successfully.");
         return poJSON;
     }
+    
+    public JSONObject AddDetail() throws CloneNotSupportedException {
+        if (Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Last row has empty item.");
+            return poJSON;
+        }
+        return addDetail();
+    }
 
     public JSONObject UpdateTransaction() {
         poJSON = new JSONObject();
@@ -200,13 +225,13 @@ public class CheckDeposit extends Transaction {
     }
 
     @Override
-    protected JSONObject willSave() throws SQLException, GuanzonException {
+    protected JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         
         //set the industry based on detail
-        if (getDetail(1).CheckPayment().getIndustryID() != null
-                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
-            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+        if (Detail(0).CheckPayment().getIndustryID() != null
+                && !Detail(0).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = Detail(0).CheckPayment().getIndustryID();
             getMaster().setIndustryId(psIndustryCode);
         }
 
@@ -319,21 +344,7 @@ public class CheckDeposit extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-
-            if (loDetail.getSourceNo() != null) {
-                if (!loDetail.getSourceNo().isEmpty()) {
-                    poJSON = new JSONObject();
-                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
-
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                }
-            }
-        }
+        
 
         poGRider.commitTrans();
 
@@ -441,22 +452,24 @@ public class CheckDeposit extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
+        
+        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
+            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
 
-//        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-//            Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(lnCtr);
-//
-//            if (loDetail.getSourceNo() != null) {
-//                if (!loDetail.getSourceNo().isEmpty()) {
-//                    poJSON = new JSONObject();
-//                    poJSON = ReceiveCheckPaymentTransaction(lnCtr);
-//
-//                    if (!"success".equals((String) poJSON.get("result"))) {
-//                        poGRider.rollbackTrans();
-//                        return poJSON;
-//                    }
-//                }
-//            }
-//        }
+            if (loDetail.getSourceNo() != null) {
+                if (!loDetail.getSourceNo().isEmpty()) {
+                    poJSON = new JSONObject();
+                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
+
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
+
         poGRider.commitTrans();
 
         openTransaction(getMaster().getTransactionNo());
@@ -533,6 +546,25 @@ public class CheckDeposit extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction cancelled successfully.");
 
+        return poJSON;
+    }
+    
+    public JSONObject updateCheckPaymentTransaction(int EntryNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        Model_Check_Deposit_Detail loDetail = (Model_Check_Deposit_Detail) paDetail.get(EntryNo);
+        Model_Check_Payments loCheckPayment = loDetail.CheckPayment();
+        if (loCheckPayment.getEditMode() == EditMode.READY) {
+            loCheckPayment.updateRecord();
+            loCheckPayment.setBranchCode(poGRider.getBranchCode());
+            loCheckPayment.setLocation("1");
+            poJSON = loCheckPayment.saveRecord();
+
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
         return poJSON;
     }
 
@@ -724,10 +756,23 @@ public class CheckDeposit extends Transaction {
             return poJSON;
         }
     }
+    public JSONObject computeMasterFields() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        double totalAmount = 0.0000;
 
-    public JSONObject searchDetailByCheck(int row, String value, boolean byCode) throws SQLException, GuanzonException {
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+        }
+        getMaster().setTransactionTotalDeposit(totalAmount);
+         poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    public JSONObject searchDetailByCheck(int row, String value, boolean byCode) throws SQLException, GuanzonException, CloneNotSupportedException {
         Model_Check_Payments loBrowse = new CashflowModels(poGRider).CheckPayments();
         loBrowse.initialize();
+        boolean lbExist = false;
+        int lnRow = 0;
         String lsSQL = CheckDepositRecords.CheckPaymentRecord();
 
 //        if (!psIndustryCode.isEmpty()) {
@@ -750,32 +795,44 @@ public class CheckDeposit extends Transaction {
             poJSON = loBrowse.openRecord((String) this.poJSON.get("sTransNox"));
             System.out.println("result " + (String) poJSON.get("result"));
 
-            if ("success".equals((String) poJSON.get("result"))) {
-                for (int lnExisting = 0; lnExisting <= paDetail.size() - 1; lnExisting++) {
-                    Model_Check_Deposit_Detail loExisting = (Model_Check_Deposit_Detail) paDetail.get(lnExisting);
-                    if (loExisting.getSourceNo() != null) {
-                        if (loExisting.getSourceNo().equals(loBrowse.getTransactionNo())) {
-                            poJSON = new JSONObject();
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Selected Check is already exist!");
-                            return poJSON;
-                        }
+                if ("success".equals((String) poJSON.get("result"))) {
+                 for (lnRow = 0; lnRow < getDetailCount(); lnRow++) {
+                     System.out.println("getsourceNo : " + Detail(lnRow).getSourceNo());
+                    if (Detail(lnRow).getSourceNo()== null || Detail(lnRow).getSourceNo().isEmpty()) {
+                        continue;
                     }
-                }
+                    
+                     System.out.println("getsourceNo : " + loBrowse.getTransactionNo());
+                     if (Detail(lnRow).getSourceNo().equals(loBrowse.getTransactionNo())) {
+                         lbExist = true;
+                         break; // Stop checking once a match is found
+                     }
+                 }
+                    if (!lbExist) {
+                        // Make sure you're writing to an empty row
+                        Detail(getDetailCount() - 1).setSourceNo(loBrowse.getTransactionNo());
+                        
+                        // Only add the detail if it's not empty
+                        if (Detail(getDetailCount() - 1).getSourceNo() != null && !Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
+                            addDetail();
+                        }
+                    } else {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Particular: " + Detail(lnRow).getSourceNo()+ " already exists in table at row " + (lnRow + 1) + ".");
+                        poJSON.put("tableRow", lnRow);
+                        poJSON.put("warning", "false");
+                        return poJSON;
+                    }
 
-                this.poJSON = new JSONObject();
-                this.poJSON.put("result", "success");
-                getDetail(row).setSourceNo(loBrowse.getTransactionNo());
-                return poJSON;
+                    // Return success
+                    
             }
-
         }
-        this.poJSON = new JSONObject();
-        this.poJSON.put("result", "error");
-        this.poJSON.put("message", "No record loaded.");
-        return this.poJSON;
+        poJSON.put("result", "success");
+        return poJSON;
 
     }
+
 
     public JSONObject searchTransactionBankAccount(String value, boolean byCode, boolean byExact) throws SQLException, GuanzonException {
         Model_Bank_Account_Master loBrowse = new CashflowModels(poGRider).Bank_Account_Master();
@@ -920,10 +977,10 @@ public class CheckDeposit extends Transaction {
 //            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
 //        }
         //only retrieve current selected Industry 
-        if (getDetail(1).CheckPayment().getIndustryID() != null
-                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(getDetail(1).CheckPayment().getIndustryID()));
-            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
+        if (Detail(0).CheckPayment().getIndustryID() != null
+                && !Detail(0).CheckPayment().getIndustryID().isEmpty()) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(Detail(0).CheckPayment().getIndustryID()));
+            psIndustryCode = Detail(0).CheckPayment().getIndustryID();
             getMaster().setIndustryId(psIndustryCode);
         }
         if (poBank.getBankID() != null) {
@@ -1324,7 +1381,7 @@ public class CheckDeposit extends Transaction {
                 case "sCheckNox":
                 case "nAmountxx":
                     for (int lnRow = 1; lnRow <= paDetail.size(); lnRow++) {
-                        Model_Check_Deposit_Detail loDetail = getDetail(lnRow);
+                        Model_Check_Deposit_Detail loDetail = Detail(lnRow);
                         if (loDetail == null || loDetail.getSourceNo() == null) {
                             continue;
                         }

@@ -58,17 +58,18 @@ public class CheckTransferRecords {
 
     public static final String PrintRecordQuery() {
         String lsSQL = "SELECT"
-                + "  Check_Transfer_Master.sTransNox,"
-                + "  Check_Transfer_Master.dTransact,"
-                + "  Check_Transfer_Master.sDestinat,"
-                + "  Check_Transfer_Master.sDeptIDxx,"
+                + "  COALESCE(Check_Transfer_Master.sTransNox, '') sTransNox,"
+                + "  COALESCE(Check_Transfer_Master.dTransact, '') dTransact,"
+                + "  COALESCE(Check_Transfer_Master.sDestinat, '') sDestinat,"
+                + "  COALESCE(Check_Transfer_Master.sDeptIDxx, '') sDeptIDxx,"
                 + "  Check_Transfer_Master.nTranTotl,"
-                + "  Check_Transfer_Master.sRemarksx,"
-                + "  Check_Transfer_Detail.sSourceNo,"
-                + "  Check_Transfer_Detail.sRemarksx xRemarksx,"
-                + "  Check_Payments.dTransact,"
-                + "  Check_Payments.sCheckNox,"
-                + "  Check_Payments.nAmountxx"
+                + "  COALESCE(Check_Transfer_Master.sRemarksx, '') sRemarksx,"
+                + "  COALESCE(Check_Transfer_Detail.sSourceNo, '') sSourceNo,"
+                + "  COALESCE(Check_Transfer_Detail.sRemarksx, '') xRemarksx,"
+                + "  COALESCE(Check_Payments.dTransact, '') dTransactPay,"
+                + "  COALESCE(Check_Payments.sCheckNox, '') sCheckNox,"
+                + "  Check_Payments.nAmountxx,"
+                + "  COALESCE(Payee.sPayeeNme, '') sPayee"
                 + " FROM"
                 + "  Check_Transfer_Master `Check_Transfer_Master`"
                 + "  LEFT JOIN Check_Transfer_Detail `Check_Transfer_Detail`"
@@ -80,7 +81,10 @@ public class CheckTransferRecords {
                 + "  LEFT JOIN Check_Payments `Check_Payments`"
                 + "    ON Check_Transfer_Detail.`sSourceNo` = Check_Payments.`sTransNox`"
                 + "  LEFT JOIN `Bank_Account_Master` `Bank_Account_Master`"
-                + "    ON Check_Payments.`sBnkActID` = Bank_Account_Master.`sBnkActID`";
+                + "    ON Check_Payments.`sBnkActID` = Bank_Account_Master.`sBnkActID`"
+                + " LEFT JOIN Payee "
+                + "    ON Check_Payments.sPayeeIDx = Payee.sPayeeIDx";
+
 
         return lsSQL;
     }

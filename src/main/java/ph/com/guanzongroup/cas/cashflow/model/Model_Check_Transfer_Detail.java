@@ -38,6 +38,7 @@ public class Model_Check_Transfer_Detail extends Model {
             poEntity.updateObject("nEntryNox", 1);
             poEntity.updateNull("sSourceNo");
             poEntity.updateNull("sSourceCd");
+            poEntity.updateObject("cReversex", "+");
             poEntity.updateString("cReceived", "0");
             ID = poEntity.getMetaData().getColumnLabel(1);
             ID2 = poEntity.getMetaData().getColumnLabel(2);
@@ -118,6 +119,14 @@ public class Model_Check_Transfer_Detail extends Model {
 
     public JSONObject setReceived(boolean received) {
         return setValue("cReceived", received == true ? "1" : "0");
+    }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
 
     //dModified

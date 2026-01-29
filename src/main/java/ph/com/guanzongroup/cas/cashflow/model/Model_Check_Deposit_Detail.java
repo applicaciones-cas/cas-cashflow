@@ -37,7 +37,8 @@ public class Model_Check_Deposit_Detail extends Model {
 
             poEntity.updateObject("nEntryNox", 1);
             poEntity.updateNull("sSourceNo");
-            poEntity.updateNull("sSourceCd");
+            poEntity.updateNull("sSourceCd");            
+            poEntity.updateObject("cReversex", "+");
             ID = poEntity.getMetaData().getColumnLabel(1);
             ID2 = poEntity.getMetaData().getColumnLabel(2);
 
@@ -100,6 +101,14 @@ public class Model_Check_Deposit_Detail extends Model {
 
     public String getRemarks() {
         return (String) getValue("sRemarksx");
+    }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
 
     //dModified
