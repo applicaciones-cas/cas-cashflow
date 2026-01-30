@@ -3787,6 +3787,7 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    private static String psNoCategory = "EMPTY";
     /**
      * Populate Journal information
      * @return
@@ -3841,10 +3842,9 @@ public class DisbursementVoucher extends Transaction {
                         case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
                             switch(Detail(lnCtr).SOADetail().getSourceCode()){
                                 case SOATaggingStatic.APPaymentAdjustment:
-                                    //TODO
-                                break;
                                 case SOATaggingStatic.PaymentRequest:
                                     //TODO
+                                    laPerCategory.add(psNoCategory);
                                 break;
                                 case SOATaggingStatic.POReceiving:
                                     if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
@@ -3854,10 +3854,9 @@ public class DisbursementVoucher extends Transaction {
                             }
                         break;
                         case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                            //TODO
-                        break;
                         case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                             //TODO
+                            laPerCategory.add(psNoCategory);
                         break;
                         case DisbursementStatic.SourceCode.PO_RECEIVING:
                             if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
@@ -3883,10 +3882,9 @@ public class DisbursementVoucher extends Transaction {
                             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
                                 switch(Detail(lnCtr).SOADetail().getSourceCode()){
                                     case SOATaggingStatic.APPaymentAdjustment:
-                                        //TODO
-                                    break;
                                     case SOATaggingStatic.PaymentRequest:
                                         //TODO
+                                        lsCategory = psNoCategory;
                                     break;
                                     case SOATaggingStatic.POReceiving:
                                         lsCategory = Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode();
@@ -3894,10 +3892,9 @@ public class DisbursementVoucher extends Transaction {
                                 }
                             break;
                             case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                                //TODO
-                            break;
                             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                                 //TODO
+                                lsCategory = psNoCategory;
                             break;
                             case DisbursementStatic.SourceCode.PO_RECEIVING:
                                lsCategory = Detail(lnCtr).POReceiving().getCategoryCode();
@@ -3918,8 +3915,11 @@ public class DisbursementVoucher extends Transaction {
                     jsondetail = new JSONObject();
                     jsondetail.put("Disbursement_Master", jsonmaster);
                     jsondetail.put("Disbursement_Detail", jsondetails);
-
-                    TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,psIndustryId, laPerCategory.get(lnCategory)); //Master().getIndustryID()
+                    lsCategory = laPerCategory.get(lnCategory);
+                    if(psNoCategory.equals(lsCategory)){
+                        lsCategory = "";
+                    }
+                    TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryID(), lsCategory); //Master().getIndustryID()
                     tbj.setGRiderCAS(poGRider);
                     tbj.setData(jsondetail);
                     jsonmaster = tbj.processRequest();
