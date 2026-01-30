@@ -82,16 +82,16 @@ public class CheckReleaseRecords {
     
     public static final String PrintRecord(){
         return "SELECT " +
-                "a.sTransNox, " +
-                "a.dTransact, " +
-                "a.sRemarksx, " +
-                "b.sSourceNo, " +
-                "c.sCheckNox, " +
-                "c.sRemarksx sNotesx, " +
-                "a.sReceived " +
-                "FROM Check_Release_Master a, Check_Release_Detail b, Check_Payments c " +
-                "WHERE a.sTransNox = b.sTransNox " +
-                "AND b.sSourceNo = c.sTransNox";
+                " a.sTransNox, " +
+                " a.dTransact, " +
+                " a.sRemarksx, " +
+                " b.sSourceNo, " +
+                " c.sCheckNox, " +
+                " c.sRemarksx xRemarksx, " +
+                " a.sReceived sPayee" +
+                " FROM Check_Release_Master a " +
+                " LEFT JOIN Check_Release_Detail b ON a.sTransNox = b.sTransNox " +
+                " LEFT JOIN Check_Payments c ON c.sTransNox = b.sSourceNo ";
     }
     
     public static String getJasperReport(String psIndustryCode) {

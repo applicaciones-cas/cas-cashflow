@@ -50,6 +50,7 @@ public class Model_Check_Release_Detail extends Model{
             poEntity.updateNull("sSourceNo");
             poEntity.updateNull("sSourceCd");
             poEntity.updateObject("nEntryNox", 1);
+            poEntity.updateObject("cReversex", "+");
             poEntity.updateObject("dModified", poGRider.getServerDate());
 
             //Step 7. get primary id from metadata, and initialized to variable as row id
@@ -102,6 +103,14 @@ public class Model_Check_Release_Detail extends Model{
 
     public String getSourceNo() {
         return (String) getValue("sSourceNo");
+    }
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
     
     //dModified
