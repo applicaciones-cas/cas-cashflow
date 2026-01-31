@@ -3,6 +3,7 @@ package ph.com.guanzongroup.cas.cashflow;
 import ph.com.guanzongroup.cas.cashflow.services.CheckModels;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -33,6 +34,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Master;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckReleaseValidatorFactory;
 import org.guanzon.cas.inv.warehouse.report.ReportUtil;
 import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Master;
+import ph.com.guanzongroup.cas.cashflow.services.CheckController;
 
 /**
  *
@@ -49,6 +52,8 @@ public class CheckRelease extends Transaction {
     private String psIndustryCode = "";
     private String psApprovalUser = "";
     private List<Model> paCheckList;
+    private List<Model> paMaster;
+    List<Model_Check_Release_Master> poCheckReleaseMaster;
 
     public void setIndustryID(String industryId) {
         psIndustryCode = industryId;
@@ -57,16 +62,15 @@ public class CheckRelease extends Transaction {
     public Model_Check_Release_Master GetMaster() {
         return (Model_Check_Release_Master) poMaster;
     }
-
-    public Model_Check_Release_Detail GetDetail() {
-        return (Model_Check_Release_Detail) poDetail;
+    public Model_Check_Release_Master poCheckReleaseMaster(int row) {
+        return (Model_Check_Release_Master) poCheckReleaseMaster.get(row);
     }
 
     public List<Model_Check_Release_Detail> GetDetailList() {
         return (List<Model_Check_Release_Detail>) (List<?>) paDetail;
     }
-
-    public Model_Check_Release_Detail GetDetail(int fnRow) {
+    @Override
+    public Model_Check_Release_Detail Detail(int fnRow) {
         return (Model_Check_Release_Detail) paDetail.get(fnRow);
     }
 
@@ -74,7 +78,19 @@ public class CheckRelease extends Transaction {
     public List<Model_Check_Payments> GetCheckPaymentList() {
         return (List<Model_Check_Payments>) (List<?>) paCheckList;
     }
+    @SuppressWarnings("unchecked")
+    public List<Model_Check_Transfer_Master> getMasterList() {
+        return (List<Model_Check_Transfer_Master>) (List<?>) paMaster;
+    }
 
+    private Model_Check_Release_Master CheckReleaseMasterList() {
+        return new CheckModels(poGRider).CheckReleaseMaster();
+    }
+    
+    public int getCheckReleaseMasterCount() {
+        return this.poCheckReleaseMaster.size();
+    }
+    
     @Override
     protected JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
@@ -133,9 +149,9 @@ public class CheckRelease extends Transaction {
         //initialize date modified
         pdModified = poGRider.getServerDate();
 
-        if (GetDetail(0).CheckPayment().getIndustryID() != null
-                && !GetDetail(0).CheckPayment().getIndustryID().isEmpty()) {
-            psIndustryCode = GetDetail(0).CheckPayment().getIndustryID();
+        if (Detail(0).CheckPayment().getIndustryID() != null
+                && !Detail(0).CheckPayment().getIndustryID().isEmpty()) {
+            psIndustryCode = Detail(0).CheckPayment().getIndustryID();
             GetMaster().setIndustryId(psIndustryCode);
         }
         poJSON.put("result", "success");
@@ -294,25 +310,7 @@ public class CheckRelease extends Transaction {
             return poJSON;
         }
 
-        //if success, get details
-        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
-            Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
 
-            //get source no, if not empty
-            if (loDetail.getSourceNo() != null) {
-                if (!loDetail.getSourceNo().isEmpty()) {
-
-                    //update detail's check payment
-                    poJSON = new JSONObject();
-                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
-
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                }
-            }
-        }
 
         poGRider.commitTrans();
 
@@ -339,7 +337,6 @@ public class CheckRelease extends Transaction {
             loCheckPayment.updateRecord();
 
             //set properties for record
-            loCheckPayment.setLocation("3");
             loCheckPayment.setReleased("1");
             loCheckPayment.setModifiedDate(poGRider.getServerDate());
             loCheckPayment.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
@@ -612,6 +609,28 @@ public class CheckRelease extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
+
+                //if success, get details
+        for (int lnCtr = 0; lnCtr < paDetail.size(); lnCtr++) {
+            Model_Check_Release_Detail loDetail = (Model_Check_Release_Detail) paDetail.get(lnCtr);
+
+            //get source no, if not empty
+            if (loDetail.getSourceNo() != null) {
+                if (!loDetail.getSourceNo().isEmpty()) {
+
+                    //update detail's check payment
+                    poJSON = new JSONObject();
+                    poJSON = ReleaseCheckPaymentTransaction(lnCtr);
+
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
+        
         poGRider.commitTrans();
 
         //open transactino record
@@ -623,32 +642,38 @@ public class CheckRelease extends Transaction {
 
         return poJSON;
     }
+    
+    
 
     public JSONObject SearchTransaction(String value, boolean byExact) {
 
         try {
-            String lsSQL = CheckReleaseRecords.CheckReleaseMaster();
-
-            //filter search with industry, if set
-            if (!psIndustryCode.isEmpty()) {
-                lsSQL = MiscUtil.addCondition(lsSQL, "sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-            }
-
+            String lsSQL = SQL_BROWSE;
             //filter search with branchcode, using transaction no code
             lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(sTransNox,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+            
+            String lsCondition = "";
+            if (psTranStat != null) {
+                if (this.psTranStat.length() > 1) {
+                    for (int lnCtr = 0; lnCtr <= this.psTranStat.length() - 1; lnCtr++) {
+                        lsCondition = lsCondition + ", " + SQLUtil.toSQL(Character.toString(this.psTranStat.charAt(lnCtr)));
+                    }
+                    lsCondition = "cTranStat IN (" + lsCondition.substring(2) + ")";
+                } else {
+                    lsCondition = "cTranStat = " + SQLUtil.toSQL(this.psTranStat);
+                }
+                lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+            }
 
-            //filter search with uncancelled transactions only
-            lsSQL = MiscUtil.addCondition(lsSQL, "cTranStat = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN) + " OR cTranStat = " + SQLUtil.toSQL(CheckReleaseStatus.CONFIRMED));
 
             System.out.print(lsSQL);
 
-            poJSON = new JSONObject();
             poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     value,
                     "Transaction No»Transaction Date»Received By",
                     "sTransNox»dTransact»sReceived",
-                    "sTransNox»sReceived",
+                    "sTransNox»dTransact»sReceived",
                     byExact ? 0 : 1);
 
             if (poJSON != null) {
@@ -676,10 +701,7 @@ public class CheckRelease extends Transaction {
         try {
             String lsSQL = CheckReleaseRecords.CheckReleaseMaster();
 
-            //filter search with industry, if set
-            if (!psIndustryCode.isEmpty()) {
-                lsSQL = MiscUtil.addCondition(lsSQL, "sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-            }
+
 
             //filter search with branchcode, using transaction no code
             lsSQL = MiscUtil.addCondition(lsSQL, "LEFT(sTransNox,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
@@ -719,14 +741,10 @@ public class CheckRelease extends Transaction {
 
         try {
             String lsSQL = CheckReleaseRecords.CheckPaymentRecord();
-
-//            if (!psIndustryCode.isEmpty()) {
-//                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-//            }
-            if (GetDetail(1).CheckPayment().getIndustryID() != null
-                    && !GetDetail(1).CheckPayment().getIndustryID().isEmpty()) {
-                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(GetDetail(1).CheckPayment().getIndustryID()));
-                psIndustryCode = GetDetail(1).CheckPayment().getIndustryID();
+            if (Detail(0).CheckPayment().getIndustryID() != null
+                    && !Detail(0).CheckPayment().getIndustryID().isEmpty()) {
+                lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(Detail(1).CheckPayment().getIndustryID()));
+                psIndustryCode = Detail(0).CheckPayment().getIndustryID();
                 GetMaster().setIndustryId(psIndustryCode);
             }
             //filter search with unreleased checks
@@ -786,12 +804,7 @@ public class CheckRelease extends Transaction {
 //            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
 //        }
 //    
-        if (GetDetail(0).CheckPayment().getIndustryID() != null
-                && !GetDetail(0).CheckPayment().getIndustryID().isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(GetDetail(0).CheckPayment().getIndustryID()));
-            psIndustryCode = GetDetail(0).CheckPayment().getIndustryID();
-            GetMaster().setIndustryId(psIndustryCode);
-        }
+
         //filter search with unreleased checks
         lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckReleaseStatus.OPEN));
 
@@ -958,11 +971,11 @@ public class CheckRelease extends Transaction {
             return poJSON;
         }
 
-        if (CheckReleaseStatus.RELEASED.equals((String) poMaster.getValue("cTranStat"))) { //should be unreleased
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already released.");
-            return poJSON;
-        }
+//        if (CheckReleaseStatus.RELEASED.equals((String) poMaster.getValue("cTranStat"))) { //should be unreleased
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Transaction was already released.");
+//            return poJSON;
+//        }
 
         if (CheckReleaseStatus.CANCELLED.equals((String) poMaster.getValue("cTranStat"))) { //should not be cancelled
             poJSON.put("result", "error");
@@ -1075,10 +1088,11 @@ public class CheckRelease extends Transaction {
         poReportJasper.addParameter("BranchName", poGRider.getBranchName());
         poReportJasper.addParameter("Address", poGRider.getAddress());
         poReportJasper.addParameter("CompanyName", poGRider.getClientName());
+        poReportJasper.addParameter("Destination", GetMaster().getReceivedBy());
         poReportJasper.addParameter("TransactionNo", GetMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(GetMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", GetMaster().getRemarks());
-        poReportJasper.addParameter("ReceivedBy", "Sheryl Rabanal");
+        poReportJasper.addParameter("PreparedBy", "Sheryl Rabanal");
         poReportJasper.addParameter("DatePrinted", SQLUtil.dateFormat(poGRider.getServerDate(), SQLUtil.FORMAT_TIMESTAMP));
 
         //set watermark based on print status, "Print" or "Reprint"
@@ -1182,5 +1196,63 @@ public class CheckRelease extends Transaction {
         return true;
 
     }
+    
+    public JSONObject getCheckRelease(String fsTransactionNo, String fsPayee,LocalDate dateFrom, LocalDate dateThru) throws SQLException, GuanzonException {
+        JSONObject loJSON = new JSONObject();
+        String lsTransStat = "";
+        String lsSQL = CheckReleaseRecords.CheckReleaseMaster();
+        if(fsTransactionNo != null || !fsTransactionNo.isEmpty() ){
+            lsSQL = MiscUtil.addCondition(lsSQL, "sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%"));
+        }
+        if(fsPayee != null || !fsPayee.isEmpty() ){
+            lsSQL = MiscUtil.addCondition(lsSQL, "sReceived LIKE " + SQLUtil.toSQL("%" + fsPayee + "%"));
+        }
+        if (dateFrom != null && dateThru != null) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "dTransact BETWEEN " + SQLUtil.toSQL(dateFrom) + " AND " + SQLUtil.toSQL(dateThru));
+        }
+        
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+        
+        lsSQL = MiscUtil.addCondition(lsSQL, lsTransStat);
+
+        lsSQL = lsSQL + " GROUP BY  sTransNox"
+                + " ORDER BY dTransact ASC";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            poCheckReleaseMaster = new ArrayList<>();
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                System.out.println("------------------------------------------------------------------------------");
+
+                poCheckReleaseMaster.add(CheckReleaseMasterList());
+                poCheckReleaseMaster.get(poCheckReleaseMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record loaded successfully.");
+        } else {
+            poCheckReleaseMaster = new ArrayList<>();
+            poCheckReleaseMaster.add(CheckReleaseMasterList());
+            loJSON.put("result", "error");
+            loJSON.put("continue", true);
+            loJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return loJSON;
+    }
+
 
 }
