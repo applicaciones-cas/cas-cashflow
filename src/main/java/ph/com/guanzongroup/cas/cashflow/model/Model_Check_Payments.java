@@ -26,7 +26,6 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
-import static ph.com.guanzongroup.cas.cashflow.status.CheckStatus.OPEN;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 /**

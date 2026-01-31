@@ -32,7 +32,10 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.rmj.cas.core.APTransaction;
+import org.rmj.cas.core.GLTransaction;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
@@ -41,6 +44,8 @@ import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 public class CheckPaymentImporting extends Parameter {
 
     Model_Check_Payments poModel;
+    Disbursement poDVMaster;
+    public Journal poJournal;
     List<Model_Check_Payments> paCheckPayment;  
     @Override
     public void initialize() {
@@ -101,6 +106,7 @@ public class CheckPaymentImporting extends Parameter {
     public Model_Check_Payments getModel() {
         return poModel;
     }
+
     @Override
     public JSONObject searchRecord(String fsValue, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -312,7 +318,7 @@ public class CheckPaymentImporting extends Parameter {
         private String      voucherNo;
         private String      checkNo;
         private String      checkDate;
-        private BigDecimal  amount;
+        private double  amount;
         private String      payeeName;
 
         public String getVoucherNo()            { return voucherNo; }
@@ -321,8 +327,13 @@ public class CheckPaymentImporting extends Parameter {
         public String getCheckDate()            { return checkDate; }
         public void   setCheckDate(String d)    { this.checkDate = d; }
 
-        public BigDecimal getAmount()           { return amount; }
-        public void      setAmount(BigDecimal a){ this.amount = a; }
+        public double getAmount() {
+            return amount; // always safe
+        }
+
+        public void setAmount(Double a) {
+            this.amount = a; // auto-unboxing → NPE if a == null
+        }
 
         public String getPayeeName()            { return payeeName; }
         public void   setPayeeName(String n)    { this.payeeName = n; }
@@ -354,7 +365,11 @@ public class CheckPaymentImporting extends Parameter {
                 bean.setCheckNo(fmt.formatCellValue(row.getCell(18)));
 
                 String amt = fmt.formatCellValue(row.getCell(4));
-                bean.setAmount(amt.isEmpty() ? BigDecimal.ZERO : new BigDecimal(amt));
+                bean.setAmount(
+                        amt == null || amt.trim().isEmpty()
+                        ? 0.0
+                        : Double.parseDouble(amt.trim())
+                );
                 bean.setPayeeName(fmt.formatCellValue(row.getCell(8)));
 
                 list.add(bean);
@@ -465,10 +480,11 @@ public class CheckPaymentImporting extends Parameter {
         }
         return sSeries;
     }
-    public JSONObject updateChecks(String transactionNo, String CheckNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject updateChecks(String transactionNo, String CheckNo,String Checkdate,Double amt) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        poJSON = openRecord(transactionNo);
+        poJSON = poModel.openRecord(transactionNo);
+
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put(poJSON.get("message"),"message");
             return poJSON;
@@ -478,7 +494,9 @@ public class CheckPaymentImporting extends Parameter {
 
         String lsSQL = "UPDATE "
                 + poModel.getTable()
-                + " SET   sCheckNox = " + SQLUtil.toSQL(CheckNo)
+                + " SET   sCheckNox = " + SQLUtil.toSQL(CheckNo)                
+                + "    ,dCheckDte = " + SQLUtil.toSQL(Checkdate)                
+                + "    ,nAmountxx = " + SQLUtil.toSQL(amt)                
                 + "    ,cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
                 + "    ,dPrintxxx = " + SQLUtil.toSQL(poGRider.getServerDate())
                 + "    ,cLocation = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
@@ -497,7 +515,18 @@ public class CheckPaymentImporting extends Parameter {
             poJSON.put("message", "Error updating the transaction status.");
             return poJSON;
         }
-
+        System.out.println("SOURCE NO : " + poModel.getSourceNo());
+        poDVMaster = new CashflowControllers(poGRider, logwrapr).Disbursement();
+        poDVMaster.InitTransaction();
+        poDVMaster.OpenTransaction(poModel.getSourceNo());
+        
+        JSONObject loJSON = new JSONObject();        
+        loJSON = updateOthers(CheckNo,Checkdate,amt);
+        if ("error".equals((String) loJSON.get("result"))) {
+            loJSON.put(loJSON.get("message"),"message");
+            return loJSON;
+        }
+        
         poGRider.commitTrans();
 
         poJSON = new JSONObject();
@@ -505,5 +534,84 @@ public class CheckPaymentImporting extends Parameter {
         poJSON.put("message", "Check Imports Save Successfully.");
 
         return poJSON;
+    }
+    
+    
+    public JSONObject updateOthers(String checkno,String checkdate,Double checkamt) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        
+        System.out.println("----------Bank Account Transaction----------");
+        //Bank Account Transaction
+        BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+        poJSON = poBankAccountTrans.InitTransaction();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        poJSON = poBankAccountTrans.CheckDisbursement(
+                poModel.getBankAcountID(),
+                poModel.getSourceNo(),
+                SQLUtil.toDate(checkdate, SQLUtil.FORMAT_SHORT_DATE),
+                checkamt,
+                checkno,
+               poDVMaster.getVoucherNo(),
+                false);
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        System.out.println("--------------------------------------------");
+
+        System.out.println("----------AP CLIENT MASTER----------");
+        //Insert AP Client
+        APTransaction loAPTrans = new APTransaction(poGRider, poDVMaster.Master().getBranchCode());
+        String lsClientId = poDVMaster.Master().Payee().getAPClientID();
+        if (lsClientId == null || "".equals(lsClientId)) {
+            lsClientId = poDVMaster.Master().Payee().getClientID();
+        }
+        poJSON = loAPTrans.PaymentIssue(lsClientId,
+                "",
+                poDVMaster.Master().getTransactionNo(),
+                poDVMaster.Master().getTransactionDate(),
+                poDVMaster.Master().getNetTotal(),
+                false);
+        if ("error".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        System.out.println("-----------------------------------");
+
+        System.out.println("----------ACCOUNT MASTER / LEDGER----------");
+        try {
+            //GL Transaction Account Ledger
+            GLTransaction loGLTrans = new GLTransaction(poGRider, poDVMaster.Master().getBranchCode());
+            loGLTrans.initTransaction(poModel.getSourceCode(), poDVMaster.Master().getTransactionNo());
+            for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
+                loGLTrans.addDetail(Journal().Master().getBranchCode(),
+                        Journal().Detail(lnCtr).getAccountCode(),
+                        SQLUtil.toDate(Journal().Detail(lnCtr).getForMonthOf().toString(), SQLUtil.FORMAT_SHORT_DATE),
+                        Journal().Detail(lnCtr).getDebitAmount(),
+                        Journal().Detail(lnCtr).getCreditAmount());
+            }
+            loGLTrans.saveTransaction();
+        } catch (GuanzonException | SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        System.out.println("-----------------------------------");
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    public Journal Journal(){
+        try{
+            if (poJournal == null) {
+                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+                poJournal.InitTransaction();
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        return poJournal;
     }
 }
