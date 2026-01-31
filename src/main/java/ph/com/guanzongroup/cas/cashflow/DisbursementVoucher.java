@@ -75,6 +75,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
@@ -1581,8 +1582,14 @@ public class DisbursementVoucher extends Transaction {
 
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
-                if(poCheckPayments.getModel().getCheckNo() != null && !"".equals(poCheckPayments.getModel().getCheckNo())){
+                if (Logical.YES.equals(Master().getBankPrint())) {
                     poCheckPayments.getModel().setAmount(Master().getNetTotal());
+                } else {
+                    if(poCheckPayments.getModel().getCheckNo() != null && !"".equals(poCheckPayments.getModel().getCheckNo())){
+                        poCheckPayments.getModel().setAmount(Master().getNetTotal());
+                    } else {
+                        poCheckPayments.getModel().setAmount(0.0000);
+                    }
                 }
                 break;
             case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
