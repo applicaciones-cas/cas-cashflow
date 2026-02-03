@@ -10,9 +10,11 @@ import org.json.simple.parser.ParseException;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Test;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -38,14 +40,17 @@ public class testCashAdvance {
         poCashAdvance = new CashflowControllers(instance, null).CashAdvance();
     }
 
-//    @Test
+    @Test
     public void testNewTransaction() {
         String branchCd = instance.getBranchCode();
         String industryId = "01";
-        String remarks = "this is a test Class 3.";
         String clientId = "C00124000003";
         String issuedTo = "M00124000012";
         String companyId = "0002";
+        String departmentrequst = "0002";
+        String pettycashid = "0002";
+        String voucher = "0002";
+        String remarks = "this is a test Class 3.";
 
         JSONObject loJSON;
 
@@ -62,14 +67,18 @@ public class testCashAdvance {
                 poCashAdvance.getModel().setIndustryId(industryId);
                 poCashAdvance.getModel().setBranchCode(branchCd);
                 poCashAdvance.getModel().setCompanyId(companyId);
-//                poCashAdvance.getModel().setPayerCode(clientId);
+                poCashAdvance.getModel().setPayeeName(clientId);
                 poCashAdvance.getModel().setClientId(clientId);
                 poCashAdvance.getModel().setCreditedTo(issuedTo);
-                poCashAdvance.getModel().isCollected(true);
-                poCashAdvance.getModel().isLiquidated(true);
-                poCashAdvance.getModel().setAdvanceAmount(1000.00);
+                poCashAdvance.getModel().setDepartmentRequest(departmentrequst);
+                poCashAdvance.getModel().setPettyCashId(pettycashid);
+                poCashAdvance.getModel().setVoucher(voucher);
+                poCashAdvance.getModel().setRemarks(remarks);
                 poCashAdvance.getModel().setAdvanceAmount(1000.00);
                 poCashAdvance.getModel().setLiquidationTotal(1000.00);
+                poCashAdvance.getModel().isCollected(true);
+                poCashAdvance.getModel().isLiquidated(true);
+                poCashAdvance.getModel().setTransactionStatus(CashAdvanceStatus.OPEN);
                 poCashAdvance.getModel().setRemarks(remarks);
 
                 print("Industry ID : " + instance.getIndustry());
