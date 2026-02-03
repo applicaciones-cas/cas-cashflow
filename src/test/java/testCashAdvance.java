@@ -50,7 +50,10 @@ public class testCashAdvance {
         String departmentrequst = "0002";
         String pettycashid = "0002";
         String voucher = "0002";
+        String voucher1 = "0002";
+        String voucher2 = "0002";
         String remarks = "this is a test Class 3.";
+        String liquidatedby = "M00124000012";
 
         JSONObject loJSON;
 
@@ -73,10 +76,13 @@ public class testCashAdvance {
                 poCashAdvance.getModel().setDepartmentRequest(departmentrequst);
                 poCashAdvance.getModel().setPettyCashId(pettycashid);
                 poCashAdvance.getModel().setVoucher(voucher);
+                poCashAdvance.getModel().setVoucher1(voucher1);
+                poCashAdvance.getModel().setVoucher2(voucher2);
                 poCashAdvance.getModel().setRemarks(remarks);
                 poCashAdvance.getModel().setAdvanceAmount(1000.00);
                 poCashAdvance.getModel().setLiquidationTotal(1000.00);
                 poCashAdvance.getModel().isCollected(true);
+                poCashAdvance.getModel().setLiquidatedBy(liquidatedby);
                 poCashAdvance.getModel().isLiquidated(true);
                 poCashAdvance.getModel().setTransactionStatus(CashAdvanceStatus.OPEN);
                 poCashAdvance.getModel().setRemarks(remarks);

@@ -813,20 +813,29 @@ public class CashAdvance extends Parameter {
                 + " a.dTransact "
                 + " , a.sTransNox "
                 + " , a.sIndstCdx "
-                + " , b.sCompnyNm  AS sSupplrNm "
-                + " , c.sPayeeNme  AS sPayeeNme "
-                + " , d.sCompnyNm  AS sCompnyNm "
-                + " , e.sDescript  AS sIndustry "
-                + " , f.sDeptName  AS sDeptName "
-                + " FROM CashAdvance a "
-                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
-                + " LEFT JOIN Payee c ON c.sPayeeIDx = a.sIssuedTo "
-                + " LEFT JOIN Company d ON d.sCompnyID = a.sCompnyID  "
-                + " LEFT JOIN Industry e ON e.sIndstCdx = a.sIndstCdx "
-                + " LEFT JOIN Department f ON f.sDeptIDxx = a.sDeptReqs ";
+                + " FROM CashAdvance a";
 
     }
 
+//    @Override
+//    public String getSQ_Browse() {
+//        return " SELECT "
+//                + " a.dTransact "
+//                + " , a.sTransNox "
+//                + " , a.sIndstCdx "
+//                + " , b.sCompnyNm  AS sSupplrNm "
+//                + " , c.sPayeeNme  AS sPayeeNme "
+//                + " , d.sCompnyNm  AS sCompnyNm "
+//                + " , e.sDescript  AS sIndustry "
+//                + " , f.sDeptName  AS sDeptName "
+//                + " FROM CashAdvance a "
+//                + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
+//                + " LEFT JOIN Payee c ON c.sPayeeIDx = a.sIssuedTo "
+//                + " LEFT JOIN Company d ON d.sCompnyID = a.sCompnyID  "
+//                + " LEFT JOIN Industry e ON e.sIndstCdx = a.sIndstCdx "
+//                + " LEFT JOIN Department f ON f.sDeptIDxx = a.sDeptReqs ";
+//
+//    }
 //    public String getAPPaymentSQL() {
 //        return " SELECT "
 //                + "   GROUP_CONCAT(DISTINCT a.sTransNox) AS sTransNox "

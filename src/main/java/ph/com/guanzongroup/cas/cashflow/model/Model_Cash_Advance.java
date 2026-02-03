@@ -141,11 +141,11 @@ public class Model_Cash_Advance extends Model {
     }
 
     public JSONObject setCreditedTo(String creditedTo) {
-        return setValue("sCrdeTo", creditedTo);
+        return setValue("sCrdtedTo", creditedTo);
     }
 
     public String getCreditedTo() {
-        return (String) getValue("sCrdeTo");
+        return (String) getValue("sCrdtedTo");
     }
 
     public JSONObject setDepartmentRequest(String deptRequest) {
