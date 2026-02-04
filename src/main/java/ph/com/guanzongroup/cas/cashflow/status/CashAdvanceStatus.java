@@ -16,4 +16,10 @@ public class CashAdvanceStatus {
     public static final  String VOID = "4";
     public static final  String RELEASED = "5"; 
     
+    
+    public class CashLiquidationStatus {
+        public static final String OPEN = "0";
+        public static final  String CONFIRMED = "1";
+    }
+    
 }

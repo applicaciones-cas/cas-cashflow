@@ -68,11 +68,11 @@ public class Model_Cash_Advance_Detail extends Model {
         return (String) getValue("sTransNox");
     }
     
-    public JSONObject setEntryNumber(int entryNumber){
+    public JSONObject setEntryNo(int entryNumber){
         return setValue("nEntryNox", entryNumber);
     }
 
-    public int getEntryNumber() {
+    public int getEntryNo() {
         return (int) getValue("nEntryNox");
     }
 
@@ -84,11 +84,11 @@ public class Model_Cash_Advance_Detail extends Model {
         return (String) getValue("sAcctCode");
     }
 
-    public JSONObject setParticular(String particular) {
+    public JSONObject setParticularId(String particular) {
         return setValue("sPartculr", particular);
     }
 
-    public String getParticular() {
+    public String getParticularId() {
         return (String) getValue("sPartculr");
     }
 
