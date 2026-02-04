@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -137,6 +138,63 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction confirmed successfully.");
         return poJSON;
     }
+    
+    public JSONObject ConfirmTransaction(String remarks,List<String> fasTransactionNo)
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = CashAdvanceStatus.CONFIRMED;
+        
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        for(int lnCtr = 0; lnCtr <= fasTransactionNo.size() - 1; lnCtr++){
+            poJSON = OpenTransaction(fasTransactionNo.get(lnCtr));
+            if (!"success".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+            
+            if (getEditMode() != EditMode.READY) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No transacton was loaded.");
+                return poJSON;
+            }
+
+            if (lsStatus.equals((String) Master().getValue("cTranStat"))) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Transaction was already confirmed.");
+                return poJSON;
+            }
+
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            poJSON = callApproval();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            } 
+
+            poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+            //change status
+            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+
+            poGRider.commitTrans();
+        }
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction certified successfully.");
+        return poJSON;
+    }
 
     public JSONObject CancelTransaction(String remarks)
             throws ParseException,
@@ -238,6 +296,68 @@ public class CashAdvance extends Transaction {
         return poJSON;
     }
     
+    public JSONObject DisApproveTransaction(String remarks,List<String> fasTransactionNo)
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = CashAdvanceStatus.VOID;
+        String lsStatusInfo = "Voided";
+        String lsStatusTran = "VoidTransaction";
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        for(int lnCtr = 0; lnCtr <= fasTransactionNo.size() - 1; lnCtr++){
+            lsStatus = CashAdvanceStatus.VOID;
+            lsStatusInfo = "Voided";
+            lsStatusTran = "VoidTransaction";
+            poJSON = OpenTransaction(fasTransactionNo.get(lnCtr));
+            if (!"success".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+            
+            if(CashAdvanceStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+                lsStatus = CashAdvanceStatus.CANCELLED;
+                lsStatusInfo = "Cancelled";
+                lsStatusTran = "CancelTransaction";
+            }
+            
+            if (getEditMode() != EditMode.READY) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No transacton was loaded.");
+                return poJSON;
+            }
+
+            if (lsStatus.equals((String) Master().getValue("cTranStat"))) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Transaction was already "+lsStatusInfo+".");
+                return poJSON;
+            }
+
+            //validator
+            poJSON = isEntryOkay(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+            poGRider.beginTrans("UPDATE STATUS", lsStatusTran, SOURCE_CODE, Master().getTransactionNo());
+
+            //change status
+            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+
+            poGRider.commitTrans();
+        }
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction "+lsStatusInfo+" successfully.");
+        return poJSON;
+    }
+    
     public JSONObject ReleaseTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -286,6 +406,58 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction released successfully.");
         return poJSON;
     }
+    
+//    public JSONObject ReleaseTransaction(String remarks,List<String> fasTransactionNo)
+//            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+//        poJSON = new JSONObject();
+//        String lsStatus = CashAdvanceStatus.RELEASED;
+//        
+//        poJSON = callApproval();
+//        if (!"success".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
+//        
+//        for(int lnCtr = 0; lnCtr <= fasTransactionNo.size() - 1; lnCtr++){
+//            poJSON = OpenTransaction(fasTransactionNo.get(lnCtr));
+//            if (!"success".equals(poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//            
+//            if (getEditMode() != EditMode.READY) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No transacton was loaded.");
+//                return poJSON;
+//            }
+//
+//            if (lsStatus.equals((String) Master().getValue("cTranStat"))) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Transaction was already released.");
+//                return poJSON;
+//            }
+//
+//            //validator
+//            poJSON = isEntryOkay(lsStatus);
+//            if (!"success".equals((String) poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//
+//            poGRider.beginTrans("UPDATE STATUS", "ReleaseTransaction", SOURCE_CODE, Master().getTransactionNo());
+//
+//            //change status
+//            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+//            if (!"success".equals((String) poJSON.get("result"))) {
+//                poGRider.rollbackTrans();
+//                return poJSON;
+//            }
+//
+//            poGRider.commitTrans();
+//        }
+//        
+//        poJSON = new JSONObject();
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "Transaction released successfully.");
+//        return poJSON;
+//    }
     
     public JSONObject callApproval(){
         poJSON = new JSONObject();
