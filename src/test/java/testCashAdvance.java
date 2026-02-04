@@ -47,7 +47,7 @@ public class testCashAdvance {
         String clientId = "C00124000003";
         String issuedTo = "M00124000012";
         String companyId = "0002";
-        String departmentrequst = "0002";
+        String departmentrequst = "02";
         String pettycashid = "0002";
         String voucher = "0002";
         String voucher1 = "0002";
@@ -86,7 +86,6 @@ public class testCashAdvance {
                 poCashAdvance.getModel().isLiquidated(true);
                 poCashAdvance.getModel().setTransactionStatus(CashAdvanceStatus.OPEN);
                 poCashAdvance.getModel().setRemarks(remarks);
-
                 print("Industry ID : " + instance.getIndustry());
                 print("Industry : " + poCashAdvance.getModel().Industry().getDescription());
                 print("Company : " + poCashAdvance.getModel().Company().getCompanyName());
@@ -104,12 +103,15 @@ public class testCashAdvance {
         } catch (ExceptionInInitializerError e) {
             System.err.println(MiscUtil.getException(e));
             Assert.fail();
-        } catch (CloneNotSupportedException ex) {
+        } catch (CloneNotSupportedException | SQLException | GuanzonException ex) {
             Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (SQLException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (GuanzonException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    public void checkJSON(JSONObject loJSON) {
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
         }
     }
 
