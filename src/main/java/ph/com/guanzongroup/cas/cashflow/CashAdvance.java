@@ -965,7 +965,7 @@ public class CashAdvance extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("AP Payment Adjustment", (String) Master().getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Cash Advances", (String) Master().getValue("sTransNox"), entryBy, entryDate, crs);
     }
 
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
