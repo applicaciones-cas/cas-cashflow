@@ -11,11 +11,10 @@ import org.guanzon.appdriver.iface.GValidator;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import org.json.simple.JSONObject;
-import ph.com.guanzongroup.cas.cashflow.utility.JCLUtil;
 
 /**
  *
- * @author Team 1
+ * @author Aldrich & Arsiela 02/03/2026
  */
 public class CashAdvanceValidator implements GValidator {
 
@@ -78,59 +77,54 @@ public class CashAdvanceValidator implements GValidator {
     private JSONObject validateNew() {
         poJSON = new JSONObject();
 
-        if (poMaster.getTransactionNo() == null || poMaster.getTransactionNo().isEmpty()) {
+        if (poMaster.getTransactionNo() == null || "".equals(poMaster.getTransactionNo())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Transaction No");
+            poJSON.put("message", "Transaction No");
             return poJSON;
         }
 
-//        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
-//            poJSON.put("result","error");
-//            poJSON.put("message", "Invalid Industry ID");
-//            return poJSON;
-//        }
-        if (poMaster.getCompanyId() == null || poMaster.getCompanyId().isEmpty()) {
+        if (poMaster.getIndustryId() == null || "".equals(poMaster.getIndustryId())) {
+            poJSON.put("result","error");
+            poJSON.put("message", "Industry ID cannot be empty");
+            return poJSON;
+        }
+        
+        if (poMaster.getCompanyId() == null || "".equals(poMaster.getCompanyId())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Company ID");
+            poJSON.put("message", "Company ID cannot be empty");
             return poJSON;
         }
 
-        if (poMaster.getBranchCode() == null || poMaster.getBranchCode().isEmpty()) {
+        if (poMaster.getBranchCode() == null || "".equals(poMaster.getBranchCode())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Branch");
+            poJSON.put("message", "Branch cannot be empty");
             return poJSON;
         }
 
-        if (poMaster.getClientId() == null || poMaster.getClientId().isEmpty()) {
+        if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Supplier ID");
+            poJSON.put("message", "Payee ID cannot be empty");
             return poJSON;
         }
 
-        if (poMaster.getVoucher() == null || poMaster.getVoucher().isEmpty()) {
+        if (poMaster.getVoucher() == null || "".equals(poMaster.getVoucher())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Invalid Reference No");
+            poJSON.put("message", "Voucher No cannot be empty");
             return poJSON;
         }
 
-        //TODO
-//        if (poMaster.getIssuedTo() == null || poMaster.getIssuedTo().isEmpty()) {
-//            poJSON.put("result","error");
-//            poJSON.put("message", "Payee information is missing or not set.");
-//            return poJSON;
-//        }
-        if (poMaster.getAdvanceAmount().doubleValue() <= 0.0000) {
+        if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
+            poJSON.put("result","error");
+            poJSON.put("message", "Credited to cannot be empty.");
+            return poJSON;
+        }
+        
+        if (poMaster.getAdvanceAmount() <= 0.0000) {
             poJSON.put("result", "error");
             poJSON.put("message", "Advance amount cannot be empty.");
             return poJSON;
         }
-
-        if (poMaster.getLiquidationTotal().doubleValue() <= 0.0000) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Liquidation amount cannot be empty.");
-            return poJSON;
-        }
-
+        
         poJSON.put("result", "success");
         return poJSON;
     }

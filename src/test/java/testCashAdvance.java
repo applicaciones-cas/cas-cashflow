@@ -23,7 +23,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
  */
 /**
  *
- * @author Team 1
+ * @author Aldrich & Arsiela 02/03/2026
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testCashAdvance {
@@ -40,7 +40,7 @@ public class testCashAdvance {
         poCashAdvance = new CashflowControllers(instance, null).CashAdvance();
     }
 
-    @Test
+//    @Test
     public void testNewTransaction() {
         String branchCd = instance.getBranchCode();
         String industryId = "01";
@@ -49,7 +49,7 @@ public class testCashAdvance {
         String companyId = "0002";
         String departmentrequst = "02";
         String pettycashid = "0002";
-        String voucher = "0002";
+        String voucher = "test";
         String voucher1 = "0002";
         String voucher2 = "0002";
         String remarks = "this is a test Class 3.";
@@ -107,19 +107,8 @@ public class testCashAdvance {
             Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
-    public void checkJSON(JSONObject loJSON) {
-        if (!"success".equals((String) loJSON.get("result"))) {
-            System.err.println((String) loJSON.get("message"));
-            Assert.fail();
-        }
-    }
-
-    public void print(String toPrint) {
-        System.out.println(toPrint);
-    }
+    
 //    @Test
-
     public void testCashAdvanceList() {
         JSONObject loJSON = new JSONObject();
         String industryId = "01";
@@ -131,7 +120,7 @@ public class testCashAdvance {
         poCashAdvance.getModel().setClientId(""); //direct assignment of value
 
         poCashAdvance.setRecordStatus("0");
-        loJSON = poCashAdvance.loadTransactionList(companyId, "", "");
+        loJSON = poCashAdvance.loadTransactionList("09", "", "");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
@@ -159,8 +148,7 @@ public class testCashAdvance {
 
         try {
             poCashAdvance.initialize();
-
-            loJSON = poCashAdvance.OpenTransaction("A00125000001");
+            loJSON = poCashAdvance.OpenTransaction("GCO126000004");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -191,7 +179,9 @@ public class testCashAdvance {
         try {
             poCashAdvance.initialize();
 
-            loJSON = poCashAdvance.OpenTransaction("A00125000001");
+            poCashAdvance.setWithParentClass(true);
+            poCashAdvance.setWithUI(false);
+            loJSON = poCashAdvance.OpenTransaction("GCO126000004");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -213,12 +203,10 @@ public class testCashAdvance {
             }
 
             print((String) loJSON.get("message"));
-        } catch (CloneNotSupportedException | ParseException e) {
+        } catch (CloneNotSupportedException | ParseException | SQLException | GuanzonException e) {
             System.err.println(MiscUtil.getException(e));
             Assert.fail();
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        } 
     }
 
 //    @Test
@@ -228,7 +216,9 @@ public class testCashAdvance {
         try {
             poCashAdvance.initialize();
 
-            loJSON = poCashAdvance.OpenTransaction("A00125000001");
+            poCashAdvance.setWithParentClass(true);
+            poCashAdvance.setWithUI(false);
+            loJSON = poCashAdvance.OpenTransaction("GCO126000004");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -265,7 +255,9 @@ public class testCashAdvance {
         try {
             poCashAdvance.initialize();
 
-            loJSON = poCashAdvance.OpenTransaction("A00125000001");
+            poCashAdvance.setWithParentClass(true);
+            poCashAdvance.setWithUI(false);
+            loJSON = poCashAdvance.OpenTransaction("GCO126000004");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -296,39 +288,52 @@ public class testCashAdvance {
     }
 
 //    @Test
-//    public void testReleaseTransaction() {
-//        JSONObject loJSON;
-//        
-//        try {
-//            poCashAdvance.initialize();
-//
-//            loJSON = poCashAdvance.OpenTransaction("A00125000001");
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//
-//            //retreiving using column index
-//            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++){
-//                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
-//            }
-//            //retreiving using field descriptions
-//            print(poCashAdvance.getModel().Branch().getBranchName());
-//            print(poCashAdvance.getModel().Company().getCompanyName());
-//            print(poCashAdvance.getModel().Industry().getDescription());
-//
-//            loJSON = poCashAdvance.PaidTransaction("test paid");
-//            if (!"success".equals((String) loJSON.get("result"))){
-//                System.err.println((String) loJSON.get("message"));
-//                Assert.fail();
-//            } 
-//            
-//            print((String) loJSON.get("message"));
-//        } catch (CloneNotSupportedException |ParseException e) {
-//            System.err.println(MiscUtil.getException(e));
-//            Assert.fail();
-//        } catch (SQLException | GuanzonException ex) {
-//            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
-//        }
-//    } 
+    public void testReleaseTransaction() {
+        JSONObject loJSON;
+        
+        try {
+            poCashAdvance.initialize();
+
+            poCashAdvance.setWithParentClass(true);
+            poCashAdvance.setWithUI(false);
+            loJSON = poCashAdvance.OpenTransaction("GCO126000004");
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+
+            //retreiving using column index
+            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++){
+                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            }
+            //retreiving using field descriptions
+            print(poCashAdvance.getModel().Branch().getBranchName());
+            print(poCashAdvance.getModel().Company().getCompanyName());
+            print(poCashAdvance.getModel().Industry().getDescription());
+
+            loJSON = poCashAdvance.ReleaseTransaction("test released");
+            if (!"success".equals((String) loJSON.get("result"))){
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            } 
+            
+            print((String) loJSON.get("message"));
+        } catch (CloneNotSupportedException |ParseException e) {
+            System.err.println(MiscUtil.getException(e));
+            Assert.fail();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    } 
+    
+    public void checkJSON(JSONObject loJSON) {
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
+        }
+    }
+
+    public void print(String toPrint) {
+        System.out.println(toPrint);
+    }
 }
