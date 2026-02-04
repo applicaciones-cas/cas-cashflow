@@ -134,7 +134,7 @@ public class testCashAdvance {
                 print("Transaction Date ->> " + poCashAdvance.CashAdvanceList(lnCtr).getTransactionDate());
                 print("Industry ->> " + poCashAdvance.CashAdvanceList(lnCtr).Industry().getDescription());
                 print("Company ->> " + poCashAdvance.CashAdvanceList(lnCtr).Company().getCompanyName());
-                print("Client ->> " + poCashAdvance.CashAdvanceList(lnCtr).Client().getCompanyName());
+                print("Client ->> " + poCashAdvance.CashAdvanceList(lnCtr).Credited().getCompanyName());
                 print("----------------------------------------------------------------------------------");
             } catch (GuanzonException | SQLException ex) {
                 Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);

@@ -69,9 +69,11 @@ public class Model_Cash_Advance extends Model {
             poBranch = model.Branch();
             poIndustry = model.Industry();
             poCompany = model.Company();
+            poDepartment = model.Department();
 
             ClientModels clientModel = new ClientModels(poGRider);
             poCreditTo = clientModel.ClientMaster();
+            poClient = clientModel.ClientMaster();
 
             CashflowModels gl = new CashflowModels(poGRider);
             poPayee = gl.Payee();
@@ -360,12 +362,12 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Model_Payee Payee() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sIssuedTo"))) {
+        if (!"".equals((String) getValue("sClientID"))) {
             if (poPayee.getEditMode() == EditMode.READY
-                    && poPayee.getPayeeID().equals((String) getValue("sIssuedTo"))) {
+                    && poPayee.getPayeeID().equals((String) getValue("sClientID"))) {
                 return poPayee;
             } else {
-                poJSON = poPayee.openRecord((String) getValue("sIssuedTo"));
+                poJSON = poPayee.openRecord((String) getValue("sClientID"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poPayee;
@@ -380,13 +382,13 @@ public class Model_Cash_Advance extends Model {
         }
     }
 
-    public Model_Client_Master Client() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sClientID"))) {
+    public Model_Client_Master Credited() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sCrdtedTo"))) {
             if (poClient.getEditMode() == EditMode.READY
-                    && poClient.getClientId().equals((String) getValue("sClientID"))) {
+                    && poClient.getClientId().equals((String) getValue("sCrdtedTo"))) {
                 return poClient;
             } else {
-                poJSON = poClient.openRecord((String) getValue("sClientID"));
+                poJSON = poClient.openRecord((String) getValue("sCrdtedTo"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poClient;
