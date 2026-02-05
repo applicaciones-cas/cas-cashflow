@@ -10,6 +10,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Ledger;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Bank_Account_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
@@ -492,6 +494,40 @@ public class CashflowModels {
         return poWithholdingTaxDeductions;
     }
     
+    public Model_Cash_Advance CashAdvanceMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CashAdvanceMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashAdvance == null){
+            poCashAdvance = new Model_Cash_Advance();
+            poCashAdvance.setApplicationDriver(poGRider);
+            poCashAdvance.setXML("Model_CashAdvance");
+            poCashAdvance.setTableName("CashAdvance");
+            poCashAdvance.initialize();
+        }
+
+        return poCashAdvance;
+    }
+    
+    public Model_Cash_Advance_Detail CashAdvanceDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.CashAdvanceDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCashAdvanceDetail == null){
+            poCashAdvanceDetail = new Model_Cash_Advance_Detail();
+            poCashAdvanceDetail.setApplicationDriver(poGRider);
+            poCashAdvanceDetail.setXML("Model_CashAdvance_Detail");
+            poCashAdvanceDetail.setTableName("CashAdvance_Detail");
+            poCashAdvanceDetail.initialize();
+        }
+
+        return poCashAdvanceDetail;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -512,6 +548,8 @@ public class CashflowModels {
             poOtherPayments= null;
             poWithholdingTax = null;
             poWithholdingTaxDeductions= null;
+            poCashAdvance = null;
+            poCashAdvanceDetail= null;
 
             poGRider = null;
         } finally {
@@ -548,4 +586,6 @@ public class CashflowModels {
     private Model_Other_Payments poOtherPayments;
     private Model_Withholding_Tax poWithholdingTax;
     private Model_Withholding_Tax_Deductions poWithholdingTaxDeductions;
+    private Model_Cash_Advance poCashAdvance;
+    private Model_Cash_Advance_Detail poCashAdvanceDetail;
 }

@@ -10,6 +10,8 @@ import ph.com.guanzongroup.cas.cashflow.BIR2307Filler;
 import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
+import ph.com.guanzongroup.cas.cashflow.CashAdvance;
+import ph.com.guanzongroup.cas.cashflow.CashLiquidation;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
@@ -499,6 +501,25 @@ public class CashflowControllers {
         poWithholdingTaxDeductions.newRecord();
         return poWithholdingTaxDeductions;
     }
+    
+    public CashAdvance CashAdvance() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashAdvance: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashAdvance != null) {
+            return poCashAdvance;
+        }
+
+        poCashAdvance = new CashAdvance();
+        poCashAdvance.setApplicationDriver(poGRider);
+        poCashAdvance.setBranchCode(poGRider.getBranchCode());
+        poCashAdvance.setLogWrapper(poLogWrapper);
+        poCashAdvance.setVerifyEntryNo(false);
+        poCashAdvance.setWithParent(false);
+        return poCashAdvance;
+    }
 
     @Override
     protected void finalize() throws Throwable {
@@ -530,6 +551,7 @@ public class CashflowControllers {
             poWithholdingTaxDeductions = null;
             poOtherPayments = null;
             poOtherPaymentStatusUpdate = null;
+            poCashAdvance = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -566,4 +588,5 @@ public class CashflowControllers {
     private BIR2307Filler poBIR2307Filler;
     private WithholdingTax poWithholdingTax;
     private WithholdingTaxDeductions poWithholdingTaxDeductions;
+    private CashAdvance poCashAdvance;
 }
