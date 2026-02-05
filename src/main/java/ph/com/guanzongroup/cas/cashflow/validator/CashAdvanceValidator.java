@@ -118,6 +118,12 @@ public class CashAdvanceValidator implements GValidator {
             poJSON.put("message", "Credited to cannot be empty.");
             return poJSON;
         }
+
+        if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
+            poJSON.put("result","error");
+            poJSON.put("message", "Remarks to cannot be empty.");
+            return poJSON;
+        }
         
         if (poMaster.getAdvanceAmount() <= 0.0000) {
             poJSON.put("result", "error");

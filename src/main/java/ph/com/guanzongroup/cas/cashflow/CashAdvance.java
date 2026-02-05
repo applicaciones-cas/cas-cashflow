@@ -195,7 +195,7 @@ public class CashAdvance extends Transaction {
             poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
 
             //change status
-            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), "Confirm", lsStatus, false, true);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -206,7 +206,7 @@ public class CashAdvance extends Transaction {
         
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        poJSON.put("message", "Transaction certified successfully.");
+        poJSON.put("message", "Transaction confirmed successfully.");
         return poJSON;
     }
     /**
@@ -342,7 +342,7 @@ public class CashAdvance extends Transaction {
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = CashAdvanceStatus.VOID; //Void transaction by default
-        String lsStatusInfo = "Voided";
+        String lsStatusInfo = "voided";
         String lsStatusTran = "VoidTransaction";
         
         //Require approval for encoder
@@ -353,7 +353,7 @@ public class CashAdvance extends Transaction {
         
         for(int lnCtr = 0; lnCtr <= fasTransactionNo.size() - 1; lnCtr++){
             lsStatus = CashAdvanceStatus.VOID;
-            lsStatusInfo = "Voided";
+            lsStatusInfo = "voided";
             lsStatusTran = "VoidTransaction";
             poJSON = OpenTransaction(fasTransactionNo.get(lnCtr));
             if (!"success".equals(poJSON.get("result"))) {
@@ -387,7 +387,7 @@ public class CashAdvance extends Transaction {
             poGRider.beginTrans("UPDATE STATUS", lsStatusTran, SOURCE_CODE, Master().getTransactionNo());
 
             //change status
-            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+            poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), lsStatusInfo, lsStatus, false, true);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
