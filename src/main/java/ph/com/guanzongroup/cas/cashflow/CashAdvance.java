@@ -89,7 +89,16 @@ public class CashAdvance extends Transaction {
     public JSONObject UpdateTransaction() {
         return super.updateTransaction();
     }
-
+    
+    /**
+     * Confirm the transaction
+     * @param remarks
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     public JSONObject ConfirmTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -116,7 +125,7 @@ public class CashAdvance extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -138,12 +147,22 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction confirmed successfully.");
         return poJSON;
     }
-    
+    /**
+     * Confirm the multiple transaction
+     * @param remarks
+     * @param fasTransactionNo
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ScriptException 
+     */
     public JSONObject ConfirmTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = CashAdvanceStatus.CONFIRMED;
-        
+        //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -173,11 +192,6 @@ public class CashAdvance extends Transaction {
                 return poJSON;
             }
 
-            poJSON = callApproval();
-            if (!"success".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            } 
-
             poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
 
             //change status
@@ -195,7 +209,15 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction certified successfully.");
         return poJSON;
     }
-
+    /**
+     * Cancel the confirmed transaction
+     * @param remarks
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     public JSONObject CancelTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -218,11 +240,12 @@ public class CashAdvance extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(CashAdvanceStatus.CANCELLED);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
+        //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -244,7 +267,15 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction cancelled successfully.");
         return poJSON;
     }
-
+    /**
+     * Void the transaction
+     * @param remarks
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     public JSONObject VoidTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -272,7 +303,8 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
 
-        if (Master().getTransactionStatus().equals(CashAdvanceStatus.CONFIRMED)) {
+        //Require approval for encoder if the transaction is already confirmed
+        if (CashAdvanceStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
             poJSON = callApproval();
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -295,13 +327,25 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction voided successfully.");
         return poJSON;
     }
-    
+    /**
+     * Disapprove = Void/Cancelled multiple transaction
+     * @param remarks
+     * @param fasTransactionNo
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ScriptException 
+     */
     public JSONObject DisApproveTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        String lsStatus = CashAdvanceStatus.VOID;
+        String lsStatus = CashAdvanceStatus.VOID; //Void transaction by default
         String lsStatusInfo = "Voided";
         String lsStatusTran = "VoidTransaction";
+        
+        //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -315,7 +359,7 @@ public class CashAdvance extends Transaction {
             if (!"success".equals(poJSON.get("result"))) {
                 return poJSON;
             }
-            
+            //If the transaction was confirmed cancel transaction will be the status
             if(CashAdvanceStatus.CONFIRMED.equals(Master().getTransactionStatus())){
                 lsStatus = CashAdvanceStatus.CANCELLED;
                 lsStatusInfo = "Cancelled";
@@ -357,7 +401,15 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "Transaction "+lsStatusInfo+" successfully.");
         return poJSON;
     }
-    
+    /**
+     * Release the transaction for CASH Releasing
+     * @param remarks
+     * @return
+     * @throws ParseException
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     public JSONObject ReleaseTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -379,12 +431,19 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
 
+        if (CashAdvanceStatus.OPEN.equals((String) Master().getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Cash advance needs to be confirm before releasing.");
+            return poJSON;
+        }
+
         //validator
         poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
+        //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -459,6 +518,10 @@ public class CashAdvance extends Transaction {
 //        return poJSON;
 //    }
     
+    /**
+     * Approval method for user encoder
+     * @return 
+     */
     public JSONObject callApproval(){
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
@@ -477,7 +540,14 @@ public class CashAdvance extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
-
+    
+    /**
+     * Search transaction based on current logged in Industry and Company
+     * @return
+     * @throws CloneNotSupportedException
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject searchTransaction()
             throws CloneNotSupportedException,
             SQLException,
@@ -521,7 +591,16 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
     }
-
+    /**
+     * Search Transaction based on current logged in Company
+     * @param fsIndustry
+     * @param fsPayee
+     * @param fsVoucherNo
+     * @return
+     * @throws CloneNotSupportedException
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject searchTransaction(String fsIndustry, String fsPayee, String fsVoucherNo)
             throws CloneNotSupportedException,
             SQLException,
@@ -582,7 +661,13 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
     }
-
+    /**
+     * Load transaction list
+     * @param fsIndustry
+     * @param fsPayee
+     * @param fsVoucherNo
+     * @return 
+     */
     public JSONObject loadTransactionList(String fsIndustry, String fsPayee, String fsVoucherNo){
         poJSON = new JSONObject();
         try {
@@ -659,7 +744,15 @@ public class CashAdvance extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-
+    /**
+     * Search Industry for filtering transactions
+     * @param value
+     * @param byCode
+     * @return
+     * @throws ExceptionInInitializerError
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -671,7 +764,14 @@ public class CashAdvance extends Transaction {
 
         return poJSON;
     }
-
+    /**
+     * Search Department
+     * @param value
+     * @param byCode
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject SearchDepartment(String value, boolean byCode)
             throws SQLException,
             GuanzonException {
@@ -685,7 +785,16 @@ public class CashAdvance extends Transaction {
         }
         return poJSON;
     }
-
+    /**
+     * Search Payee
+     * @param value
+     * @param byCode 
+     * @param isSearch set FALSE  for transaction payee and set TRUE if search payee for filtering transactions.
+     * @return
+     * @throws ExceptionInInitializerError
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -702,7 +811,14 @@ public class CashAdvance extends Transaction {
 
         return poJSON;
     }
-
+    /**
+     * Search credited to
+     * @param value
+     * @param byCode
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
     public JSONObject SearchCreditedTo(String value, boolean byCode)
             throws SQLException,
             GuanzonException {
@@ -717,14 +833,16 @@ public class CashAdvance extends Transaction {
         }
         return poJSON;
     }
-
+    
+    //Setting of default values and for filtering data
     public void setIndustryId(String industryId) { psIndustryId = industryId; }
     public void setCompanyId(String companyId) { psCompanyId = companyId; }
     public void setSearchIndustry(String industryName) { psIndustry = industryName; }
     public void setSearchPayee(String payeeName) { psPayee = payeeName; }
     public String getSearchIndustry() { return psIndustry; }
     public String getSearchPayee() { return psPayee; }
-
+    
+    //Reset Master
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
     }
@@ -751,6 +869,10 @@ public class CashAdvance extends Transaction {
         return this.paMaster.size();
     }
     
+    /**
+     * Initialize fields value
+     * @return 
+     */
     @Override
     public JSONObject initFields() {
         try {
@@ -775,7 +897,13 @@ public class CashAdvance extends Transaction {
         return poJSON;
     }
     
-    
+    /**
+     * System Validation and other assignments
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
@@ -851,7 +979,11 @@ public class CashAdvance extends Transaction {
         return isEntryOkay(CashAdvanceStatus.OPEN);
 
     }
-
+    
+    /**
+     * Saving for other tables needed to create / update
+     * @return 
+     */
     @Override
     public JSONObject saveOthers() {
 //        try {
@@ -870,6 +1002,12 @@ public class CashAdvance extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Validate transaction fields
+     * @param status
+     * @return
+     * @throws SQLException 
+     */
     @Override
     public JSONObject isEntryOkay(String status) throws SQLException {
         poJSON = new JSONObject();
