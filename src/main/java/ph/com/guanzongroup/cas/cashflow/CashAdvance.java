@@ -7,6 +7,7 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -531,7 +532,7 @@ public class CashAdvance extends Transaction {
             }
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer..");
+                poJSON.put("message", "User is not an authorized approving officer.");
                 return poJSON;
             }
         }   
@@ -573,11 +574,12 @@ public class CashAdvance extends Transaction {
             lsSQL = lsSQL + lsTransStat;
         }
 
+        lsSQL = lsSQL + " GROUP BY a.sTransNox";
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Voucher No»Payee»Req. Department",
+                "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
                 "sTransNox»dTransact»sVoucherx»sPayeeNme»sDeptName",
                 "a.sTransNox»a.dTransact»a.sVoucherx»a.sPayeeNme»d.sDeptName",
                 1);
@@ -642,12 +644,13 @@ public class CashAdvance extends Transaction {
         if (lsTransStat != null && !"".equals(lsTransStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
-
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox";
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Voucher No»Payee»Req. Department",
+                "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
                 "sTransNox»dTransact»sVoucherx»sPayeeNme»sDeptName",
                 "a.sTransNox»a.dTransact»a.sVoucherx»a.sPayeeNme»d.sDeptName",
                 1);
@@ -703,7 +706,7 @@ public class CashAdvance extends Transaction {
                 }
             }
 
-            lsSQL = lsSQL + "" + lsTransStat + " ORDER BY a.dTransact DESC ";
+            lsSQL = lsSQL + "" + lsTransStat +" GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
 
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -789,26 +792,90 @@ public class CashAdvance extends Transaction {
      * Search Payee
      * @param value
      * @param byCode 
-     * @param isSearch set FALSE  for transaction payee and set TRUE if search payee for filtering transactions.
+     * @param isOthers set FALSE  for Others will be search thru PAYEE Table else TRUE if not Other Will be search thru CLient Master
      * @return
      * @throws ExceptionInInitializerError
      * @throws SQLException
      * @throws GuanzonException 
      */
-    public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-
-        poJSON = object.searchRecordbyClientID(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            if (isSearch) {
-                setSearchPayee(object.getModel().getPayeeName());
-            } else {
-                Master().setClientId(object.getModel().getPayeeID());
-                Master().setPayeeName(object.getModel().getPayeeName());
+    public JSONObject SearchPayee(String value, boolean byCode, boolean isOthers) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if(isOthers){
+            Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
+            loPayee.setRecordStatus(RecordStatus.ACTIVE);
+            poJSON = loPayee.searchRecordbyClientID(value, byCode);
+            if ("success".equals((String) poJSON.get("result"))) {
+                Master().setClientId("");
+                Master().setPayeeName(loPayee.getModel().getPayeeName());
             }
+        } else {
+            poJSON = SearchOthers(value, byCode, false);
         }
+        return poJSON;
+    }
+    /**
+     * Search credited to
+     * @param value
+     * @param byCode
+     * @param isOthers
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
+    public JSONObject SearchCreditedTo(String value, boolean byCode, boolean isOthers)
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+        if(isOthers){
+            Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
+            loPayee.setRecordStatus(RecordStatus.ACTIVE);
+            poJSON = loPayee.searchRecordbyClientID(value, byCode);
+            if ("success".equals((String) poJSON.get("result"))) {
+                Master().setClientId("");
+                Master().setPayeeName(loPayee.getModel().getPayeeName());
+            }
+        } else {
+            poJSON = SearchOthers(value, byCode, false);
+        }
+        return poJSON;
+    }
+    
+    private JSONObject SearchOthers(String value, boolean byCode, boolean isPayee)
+            throws SQLException,
+            GuanzonException {
 
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM GGC_ISysDBF.Employee_Master001 a" 
+                + " LEFT JOIN GGC_ISysDBF.Client_Master b ON b.sClientID = a.sEmployID" ;
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL");
+        lsSQL = lsSQL + " GROUP BY sEmployID";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
+                byCode ? 0 : 1);
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            if(isPayee){
+                Master().setClientId((String) loJSON.get("sEmployID"));
+                Master().setPayeeName((String) loJSON.get("EmployNme"));
+            } else {
+                Master().setCreditedTo((String) loJSON.get("sEmployID"));
+            }
+        } else {
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
+        }
+    
         return poJSON;
     }
     /**
@@ -819,19 +886,65 @@ public class CashAdvance extends Transaction {
      * @throws SQLException
      * @throws GuanzonException 
      */
-    public JSONObject SearchCreditedTo(String value, boolean byCode)
+    public JSONObject SearchPettyCash(String value, boolean byCode)
             throws SQLException,
             GuanzonException {
         poJSON = new JSONObject();
+        String lsSQL = MiscUtil.addCondition(PettyCash_SQL(),
+                " sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND cTranStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+        
+        lsSQL = lsSQL + " GROUP BY sPettyDsc";
+        System.out.println("Executing SQL: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Petty Cash»Branch»Deparment»Industry»Company",
+                "sPettyDsc»BranchNme»Departmnt»Industryx»Companyxx",
+                "a.sPettyDsc»e.sBranchNm»d.sDeptName»c.sDescript»b.sCompnyNm",
+                1);
 
-        Client object = new ClientControllers(poGRider, logwrapr).Client();
-        object.Master().setRecordStatus(RecordStatus.ACTIVE);
-        object.Master().setClientType(Logical.NO);
-        poJSON = object.Master().searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            Master().setCreditedTo(object.Master().getModel().getClientId());
+        if (poJSON != null) {
+            System.out.println("Branch Code" + (String) poJSON.get("sBranchCD"));
+            System.out.println("Branch Name" + (String) poJSON.get("BranchNme"));
+            System.out.println("Department Code" + (String) poJSON.get("sDeptIDxx"));
+            System.out.println("Department Name" + (String) poJSON.get("Departmnt"));
+            String lsPettyCashID = (String) poJSON.get("sBranchCD") +  (String) poJSON.get("sDeptIDxx");
+           poJSON = Master().setPettyCashId(lsPettyCashID);
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
         }
+        
         return poJSON;
+    }
+    
+    private Double checkBalance(){
+        try {
+            String lsSQL = MiscUtil.addCondition(PettyCash_SQL(), 
+                            " a.sBranchCD = " + SQLUtil.toSQL(Master().getPettyCashId().substring(0, 4))
+                            + " AND a.sDeptIDxx = " + SQLUtil.toSQL(Master().getPettyCashId().substring(3, 7)));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return  loRS.getDouble("nBalancex");
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+                return  0.0000;
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return  0.0000;
+        }
+        return 0.0000;
     }
     
     //Setting of default values and for filtering data
@@ -883,6 +996,7 @@ public class CashAdvance extends Transaction {
             Master().setCompanyId(psCompanyId);
             Master().setTransactionDate(poGRider.getServerDate());
             Master().setTransactionStatus(CashAdvanceStatus.OPEN);
+            Master().setPettyCashId(poGRider.getBranchCode()+poGRider.getDepartment());
             Master().isCollected(false);
             Master().isLiquidated(false);
 
@@ -916,7 +1030,13 @@ public class CashAdvance extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        
+        if(Master().getAdvanceAmount() > checkBalance()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance : " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            return poJSON;
+        }
+        
         if (Master().getEditMode() == EditMode.ADDNEW) {
             System.out.println("Will Save : " + Master().getNextCode());
             Master().setTransactionNo(Master().getNextCode());
@@ -1042,6 +1162,46 @@ public class CashAdvance extends Transaction {
             + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
             + " LEFT JOIN Payee f ON f.sPayeeIDx = a.sClientID "
             + " LEFT JOIN Client_Master g ON g.sClientID = a.sCrdtedTo ";
+    }
+    
+    private String PettyCash_SQL(){
+        return  " SELECT "                                                  
+                + "   a.sBranchCD "                                             
+                + " , a.sDeptIDxx "                                           
+                + " , a.sCompnyID "                                           
+                + " , a.sIndstCdx "                                           
+                + " , a.sPettyDsc "                                           
+                + " , a.nBalancex "                                           
+                + " , a.nBegBalxx "                                           
+                + " , a.dBegDatex "                                           
+                + " , a.sPettyMgr "                                           
+                + " , a.nLedgerNo "                                           
+                + " , a.dLastTran "                                           
+                + " , a.cTranStat "                                           
+                + " , b.sCompnyNm AS Companyxx "                              
+                + " , c.sDescript AS Industryx "                              
+                + " , d.sDeptName AS Departmnt "                              
+                + " , e.sBranchNm AS BranchNme "                              
+                + " FROM PettyCash  a          "                              
+                + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID    "     
+                + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx   "     
+                + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptIDxx "     
+                + " LEFT JOIN Branch e ON e.sBranchCd = a.sBranchCD     "     ;
+    }
+    
+    public static String setIntegerValueToDecimalFormat(Object foObject, boolean fbIs4Decimal) {
+        String lsDecimalFormat = fbIs4Decimal ? "#,##0.0000" : "#,##0.00";
+        DecimalFormat format = new DecimalFormat(lsDecimalFormat);
+        try {
+            if (foObject != null) {
+                return format.format(Double.parseDouble(String.valueOf(foObject)));
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("Error: Invalid number format for input - " + foObject);
+        } catch (Exception e) {
+            System.err.println("An unexpected error occurred: " + e.getMessage());
+        }
+        return fbIs4Decimal ? "0.0000" : "0.00";
     }
     
     public void ShowStatusHistory() throws SQLException, GuanzonException, Exception {
