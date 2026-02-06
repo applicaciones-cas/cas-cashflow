@@ -627,7 +627,8 @@ public class CashAdvance extends Transaction {
             SQLException,
             GuanzonException {
         poJSON = new JSONObject();
-
+        int lnSort = 1;
+        String lsSearch = "";
         if (fsIndustry == null || "".equals(fsIndustry)) { 
             poJSON.put("result", "error");
             poJSON.put("message", "Industry cannot be empty.");
@@ -636,16 +637,26 @@ public class CashAdvance extends Transaction {
 
         if (fsPayee == null) {
             fsPayee = "";
+        } else {
+            if(!"".equals(fsPayee)){
+                lnSort = 3;
+                lsSearch = fsPayee;
+            }
         }
         if (fsVoucherNo == null) {
             fsVoucherNo = "";
+        } else {
+            if(!"".equals(fsVoucherNo)){
+                lnSort = 2;
+                lsSearch = fsVoucherNo;
+            }
         }
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
             " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-            + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-            + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee)
-            + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo)
+            + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+            + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+            + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
         );
         
         String lsTransStat = "";
@@ -668,11 +679,11 @@ public class CashAdvance extends Transaction {
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
-                "",
+                lsSearch,
                 "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
                 "sTransNox»dTransact»sVoucherx»sPayeeNme»sDeptName",
                 "a.sTransNox»a.dTransact»a.sVoucherx»a.sPayeeNme»d.sDeptName",
-                1);
+                lnSort);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
@@ -708,9 +719,9 @@ public class CashAdvance extends Transaction {
             initSQL();
             String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-                + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee)
-                + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo)
+                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+                + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
             );
             
             String lsTransStat = "";
@@ -1219,14 +1230,15 @@ public class CashAdvance extends Transaction {
             + " , c.sDescript AS sIndustry "
             + " , d.sDeptName AS sDeptName "
             + " , e.sCompnyNm AS sPayeexxx "
-            + " , g.sCompnyNm AS sCreditTo "
+            + " , IFNULL(g.sCompnyNm,h.sPayeeNme) AS sCreditTo "
             + " FROM CashAdvance a "
             + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID "
             + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx "
             + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs "
             + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
             + " LEFT JOIN Payee f ON f.sPayeeIDx = a.sClientID "
-            + " LEFT JOIN Client_Master g ON g.sClientID = a.sCrdtedTo ";
+            + " LEFT JOIN Client_Master g ON g.sClientID = a.sCrdtedTo "
+            + " LEFT JOIN Payee h ON h.sPayeeIDx = a.sCrdtedTo ";
     }
     
     private String PettyCash_SQL(){
