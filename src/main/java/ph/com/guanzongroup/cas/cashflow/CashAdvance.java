@@ -129,7 +129,7 @@ public class CashAdvance extends Transaction {
         
         if(Master().getAdvanceAmount() > checkBalance()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            poJSON.put("message", "The advance amount must not exceed the available petty cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
         
@@ -202,7 +202,7 @@ public class CashAdvance extends Transaction {
             
             if(Master().getAdvanceAmount() > checkBalance()){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+                poJSON.put("message", "The advance amount must not exceed the available petty cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
                 return poJSON;
             }
 
@@ -459,7 +459,7 @@ public class CashAdvance extends Transaction {
         
         if(Master().getAdvanceAmount() > checkBalance()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            poJSON.put("message", "The advance amount must not exceed the available petty cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
         
@@ -1049,7 +1049,7 @@ public class CashAdvance extends Transaction {
         
         if(Master().getAdvanceAmount() > checkBalance()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            poJSON.put("message", "The advance amount must not exceed the available petty cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
         
