@@ -36,6 +36,7 @@ public class Model_Cash_Advance extends Model {
     Model_Client_Master poCreditTo;
     Model_Payee poCreditToOthers;
     Model_Client_Master poClient;
+    Model_PettyCash poPettyCash;
 
     @Override
     public void initialize() {
@@ -77,6 +78,7 @@ public class Model_Cash_Advance extends Model {
 
             CashflowModels gl = new CashflowModels(poGRider);
             poCreditToOthers = gl.Payee();
+            poPettyCash = gl.PettyCashMaster();
 //            end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -421,6 +423,37 @@ public class Model_Cash_Advance extends Model {
         } else {
             poDepartment.initialize();
             return poDepartment;
+        }
+    }
+
+    public Model_PettyCash PettyCash() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPettyIDx"))) {
+            if(((String) getValue("sPettyIDx")).length() >= 7){
+                System.out.println("PETTY ID Branch Code : " + ((String) getValue("sPettyIDx")).substring(0, 4));
+                System.out.println("PETTY ID Department ID : " + ((String) getValue("sPettyIDx")).substring(4, 7));
+                if (poPettyCash.getEditMode() == EditMode.READY
+                        && poPettyCash.getBranchCode().equals(((String) getValue("sPettyIDx")).substring(0, 4))
+                        && poPettyCash.getDepartmentId().equals(((String) getValue("sPettyIDx")).substring(4, 7))){
+                    return poPettyCash;
+                } else {
+                    poJSON = poPettyCash.openRecord(
+                            ((String) getValue("sPettyIDx")).substring(0, 4), 
+                            ((String) getValue("sPettyIDx")).substring(4, 7));
+
+                    if ("success".equals((String) poJSON.get("result"))) {
+                        return poPettyCash;
+                    } else {
+                        poPettyCash.initialize();
+                        return poPettyCash;
+                    }
+                }
+            } else {
+                poPettyCash.initialize();
+                return poPettyCash;
+            }
+        } else {
+            poPettyCash.initialize();
+            return poPettyCash;
         }
     }
 

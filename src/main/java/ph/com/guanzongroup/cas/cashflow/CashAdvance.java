@@ -809,7 +809,7 @@ public class CashAdvance extends Transaction {
                 Master().setPayeeName(loPayee.getModel().getPayeeName());
             }
         } else {
-            poJSON = SearchOthers(value, byCode, false);
+            poJSON = SearchOthers(value, byCode, true);
         }
         return poJSON;
     }
@@ -831,8 +831,7 @@ public class CashAdvance extends Transaction {
             loPayee.setRecordStatus(RecordStatus.ACTIVE);
             poJSON = loPayee.searchRecordbyClientID(value, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
-                Master().setClientId("");
-                Master().setPayeeName(loPayee.getModel().getPayeeName());
+                Master().setCreditedTo(loPayee.getModel().getPayeeID());
             }
         } else {
             poJSON = SearchOthers(value, byCode, false);
@@ -848,8 +847,8 @@ public class CashAdvance extends Transaction {
         String lsSQL = "SELECT " 
                 + "   a.sEmployID "
                 + " , b.sCompnyNm AS EmployNme" 
-                + " FROM GGC_ISysDBF.Employee_Master001 a" 
-                + " LEFT JOIN GGC_ISysDBF.Client_Master b ON b.sClientID = a.sEmployID" ;
+                + " FROM Employee_Master001 a" //GGC_ISysDBF.
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL");
         lsSQL = lsSQL + " GROUP BY sEmployID";
         System.out.println("Executing SQL: " + lsSQL);
@@ -891,13 +890,13 @@ public class CashAdvance extends Transaction {
             GuanzonException {
         poJSON = new JSONObject();
         String lsSQL = MiscUtil.addCondition(PettyCash_SQL(),
-                " sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-                + " AND cTranStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+                " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND a.cTranStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         
         lsSQL = lsSQL + " GROUP BY sPettyDsc";
         System.out.println("Executing SQL: " + lsSQL);
-        poJSON = ShowDialogFX.Browse(poGRider,
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
                 "Petty Cash»Branch»Deparment»Industry»Company",
@@ -905,13 +904,15 @@ public class CashAdvance extends Transaction {
                 "a.sPettyDsc»e.sBranchNm»d.sDeptName»c.sDescript»b.sCompnyNm",
                 1);
 
-        if (poJSON != null) {
-            System.out.println("Branch Code" + (String) poJSON.get("sBranchCD"));
-            System.out.println("Branch Name" + (String) poJSON.get("BranchNme"));
-            System.out.println("Department Code" + (String) poJSON.get("sDeptIDxx"));
-            System.out.println("Department Name" + (String) poJSON.get("Departmnt"));
-            String lsPettyCashID = (String) poJSON.get("sBranchCD") +  (String) poJSON.get("sDeptIDxx");
-           poJSON = Master().setPettyCashId(lsPettyCashID);
+        if (loJSON != null) {
+            if ("success".equals((String) loJSON.get("result"))) {
+                System.out.println("Branch Code" + (String) loJSON.get("sBranchCD"));
+                System.out.println("Branch Name" + (String) loJSON.get("BranchNme"));
+                System.out.println("Department Code" + (String) loJSON.get("sDeptIDxx"));
+                System.out.println("Department Name" + (String) loJSON.get("Departmnt"));
+                String lsPettyCashID = (String) loJSON.get("sBranchCD") +  (String) loJSON.get("sDeptIDxx");
+                poJSON = Master().setPettyCashId(lsPettyCashID);
+            }
         } else {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
@@ -926,7 +927,7 @@ public class CashAdvance extends Transaction {
         try {
             String lsSQL = MiscUtil.addCondition(PettyCash_SQL(), 
                             " a.sBranchCD = " + SQLUtil.toSQL(Master().getPettyCashId().substring(0, 4))
-                            + " AND a.sDeptIDxx = " + SQLUtil.toSQL(Master().getPettyCashId().substring(3, 7)));
+                            + " AND a.sDeptIDxx = " + SQLUtil.toSQL(Master().getPettyCashId().substring(4, 7)));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             try {
@@ -1033,7 +1034,7 @@ public class CashAdvance extends Transaction {
         
         if(Master().getAdvanceAmount() > checkBalance()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance : " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
         
