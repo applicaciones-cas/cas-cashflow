@@ -11,7 +11,6 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
-import ph.com.guanzongroup.cas.cashflow.CashLiquidation;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
