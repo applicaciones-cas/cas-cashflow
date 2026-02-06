@@ -824,11 +824,45 @@ public class CashAdvance extends Transaction {
             loPayee.setRecordStatus(RecordStatus.ACTIVE);
             poJSON = loPayee.searchRecordbyClientID(value, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
+                String lsCreditedTo = "";
+                if(Master().Credited().getCompanyName() != null && !"".equals(Master().Credited().getCompanyName())){
+                    lsCreditedTo = Master().Credited().getCompanyName();
+                } else {
+                    lsCreditedTo = Master().CreditedToOthers().getPayeeName();
+                }
+                
+                if(lsCreditedTo != null && !"".equals(lsCreditedTo)){
+                    if(lsCreditedTo.equals(loPayee.getModel().getPayeeName())){
+                        Master().setClientId("");
+                        Master().setPayeeName("");
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Payee name cannot be equal to credited to.");
+                        return poJSON;
+                    }
+                }
                 Master().setClientId("");
                 Master().setPayeeName(loPayee.getModel().getPayeeName());
             }
         } else {
             poJSON = SearchOthers(value, byCode, true);
+            if ("success".equals((String) poJSON.get("result"))) {
+                String lsCreditedTo = "";
+                if(Master().Credited().getCompanyName() != null && !"".equals(Master().Credited().getCompanyName())){
+                    lsCreditedTo = Master().Credited().getCompanyName();
+                } else {
+                    lsCreditedTo = Master().CreditedToOthers().getPayeeName();
+                }
+                
+                if(lsCreditedTo != null && !"".equals(lsCreditedTo)){
+                    if(lsCreditedTo.equals(Master().getPayeeName())){
+                        Master().setClientId("");
+                        Master().setPayeeName("");
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Payee name cannot be equal to credited to.");
+                        return poJSON;
+                    }
+                }
+            }
         }
         return poJSON;
     }
@@ -850,10 +884,23 @@ public class CashAdvance extends Transaction {
             loPayee.setRecordStatus(RecordStatus.ACTIVE);
             poJSON = loPayee.searchRecordbyClientID(value, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
+                if(loPayee.getModel().getPayeeName().equals(Master().getPayeeName())){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Credited to cannot be equal to payee name.");
+                    return poJSON;
+                }
                 Master().setCreditedTo(loPayee.getModel().getPayeeID());
             }
         } else {
             poJSON = SearchOthers(value, byCode, false);
+            if ("success".equals((String) poJSON.get("result"))) {
+                if(Master().Credited().getCompanyName().equals(Master().getPayeeName())){
+                    Master().setCreditedTo("");
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Credited to cannot be equal to payee name.");
+                    return poJSON;
+                }
+            }
         }
         return poJSON;
     }
@@ -894,6 +941,8 @@ public class CashAdvance extends Transaction {
             return loJSON;
         }
     
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     /**
