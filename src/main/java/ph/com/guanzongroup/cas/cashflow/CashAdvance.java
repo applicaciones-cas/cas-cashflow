@@ -894,7 +894,7 @@ public class CashAdvance extends Transaction {
                 + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND a.cTranStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
         
-        lsSQL = lsSQL + " GROUP BY sPettyDsc";
+        lsSQL = lsSQL + " GROUP BY a.sBranchCD, a.sDeptIDxx";
         System.out.println("Executing SQL: " + lsSQL);
         JSONObject loJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
@@ -905,14 +905,10 @@ public class CashAdvance extends Transaction {
                 1);
 
         if (loJSON != null) {
-            if ("success".equals((String) loJSON.get("result"))) {
-                System.out.println("Branch Code" + (String) loJSON.get("sBranchCD"));
-                System.out.println("Branch Name" + (String) loJSON.get("BranchNme"));
-                System.out.println("Department Code" + (String) loJSON.get("sDeptIDxx"));
-                System.out.println("Department Name" + (String) loJSON.get("Departmnt"));
-                String lsPettyCashID = (String) loJSON.get("sBranchCD") +  (String) loJSON.get("sDeptIDxx");
-                poJSON = Master().setPettyCashId(lsPettyCashID);
-            }
+            System.out.println("SELECTED : " + loJSON.toJSONString());
+            System.out.println("SELECTED CODE: " +  (String) loJSON.get("sBranchCD") +  (String) loJSON.get("sDeptIDxx"));
+            String lsPettyCashID = (String) loJSON.get("sBranchCD") +  (String) loJSON.get("sDeptIDxx");
+            poJSON = Master().setPettyCashId(lsPettyCashID);
         } else {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
