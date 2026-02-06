@@ -126,6 +126,13 @@ public class CashAdvance extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        if(Master().getAdvanceAmount() > checkBalance()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
+            return poJSON;
+        }
+        
         //Require approval for encoder
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -190,6 +197,12 @@ public class CashAdvance extends Transaction {
             //validator
             poJSON = isEntryOkay(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            
+            if(Master().getAdvanceAmount() > checkBalance()){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
                 return poJSON;
             }
 
@@ -441,6 +454,12 @@ public class CashAdvance extends Transaction {
         //validator
         poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(Master().getAdvanceAmount() > checkBalance()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Advances amount cannot be greater than the Petty Cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
         
