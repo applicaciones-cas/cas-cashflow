@@ -26,6 +26,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Transaction_Account_Chart;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax;
@@ -528,6 +529,23 @@ public class CashflowModels {
         return poCashAdvanceDetail;
     }
     
+    public Model_PettyCash PettyCashMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.PettyCashMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poPettyCash == null){
+            poPettyCash = new Model_PettyCash();
+            poPettyCash.setApplicationDriver(poGRider);
+            poPettyCash.setXML("Model_PettyCash");
+            poPettyCash.setTableName("PettyCash");
+            poPettyCash.initialize();
+        }
+
+        return poPettyCash;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -550,6 +568,7 @@ public class CashflowModels {
             poWithholdingTaxDeductions= null;
             poCashAdvance = null;
             poCashAdvanceDetail= null;
+            poPettyCash = null;
 
             poGRider = null;
         } finally {
@@ -588,4 +607,5 @@ public class CashflowModels {
     private Model_Withholding_Tax_Deductions poWithholdingTaxDeductions;
     private Model_Cash_Advance poCashAdvance;
     private Model_Cash_Advance_Detail poCashAdvanceDetail;
+    private Model_PettyCash poPettyCash;
 }

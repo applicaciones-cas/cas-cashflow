@@ -100,22 +100,30 @@ public class CashAdvanceValidator implements GValidator {
             poJSON.put("message", "Branch cannot be empty");
             return poJSON;
         }
+        
+        if (poMaster.getPettyCashId() == null || "".equals(poMaster.getPettyCashId())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Petty Cash cannot be empty");
+            return poJSON;
+        }
+        
+        if (poMaster.getPayeeName() == null || "".equals(poMaster.getPayeeName())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Payee Name cannot be empty");
+            return poJSON;
+        }
 
         if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Payee ID cannot be empty");
-            return poJSON;
+            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Credited to cannot be empty.");
+                return poJSON;
+            }
         }
 
         if (poMaster.getVoucher() == null || "".equals(poMaster.getVoucher())) {
             poJSON.put("result", "error");
             poJSON.put("message", "Voucher No cannot be empty");
-            return poJSON;
-        }
-
-        if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
-            poJSON.put("result","error");
-            poJSON.put("message", "Credited to cannot be empty.");
             return poJSON;
         }
 
