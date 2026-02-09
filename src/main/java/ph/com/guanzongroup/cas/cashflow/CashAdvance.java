@@ -981,7 +981,7 @@ public class CashAdvance extends Transaction {
                 "Petty Cash»Branch»Deparment»Industry»Company",
                 "sPettyDsc»BranchNme»Departmnt»Industryx»Companyxx",
                 "a.sPettyDsc»e.sBranchNm»d.sDeptName»c.sDescript»b.sCompnyNm",
-                1);
+                0);
 
         if (loJSON != null) {
             System.out.println("SELECTED : " + loJSON.toJSONString());
@@ -998,7 +998,19 @@ public class CashAdvance extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Check balance of the selected petty cash
+     * @return 
+     */
     private Double checkBalance(){
+        //Return by default 0.0000 if petty cash id matches the conditions
+        if(Master().getPettyCashId() == null || "".equals(Master().getPettyCashId()) ){
+            return 0.0000;
+        } else {
+            if(Master().getPettyCashId().length() < 7){
+                return 0.0000;
+            }
+        }
         try {
             String lsSQL = MiscUtil.addCondition(PettyCash_SQL(), 
                             " a.sBranchCD = " + SQLUtil.toSQL(Master().getPettyCashId().substring(0, 4))
@@ -1107,17 +1119,18 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
         
+        //do not allow when cash advance exceed the petty cash balance
         if(Master().getAdvanceAmount() > checkBalance()){
             poJSON.put("result", "error");
             poJSON.put("message", "The advance amount must not exceed the available petty cash balance " +  setIntegerValueToDecimalFormat(checkBalance(),true) + ".");
             return poJSON;
         }
-        
+        //set latest transaction number for new entry
         if (Master().getEditMode() == EditMode.ADDNEW) {
             System.out.println("Will Save : " + Master().getNextCode());
             Master().setTransactionNo(Master().getNextCode());
         }
-
+        //update value of modified by and modified date
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
 
@@ -1127,7 +1140,7 @@ public class CashAdvance extends Transaction {
                 return poJSON;
             } 
         }
-
+        //Remove detail if particular is empty or the transaction amount is 0.0000
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
@@ -1147,7 +1160,7 @@ public class CashAdvance extends Transaction {
 //                return poJSON;
 //            }
 //        }
-        
+        //set value for transaction no and entry no for detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
