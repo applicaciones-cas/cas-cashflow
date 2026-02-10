@@ -4792,6 +4792,18 @@ public class DisbursementVoucher extends Transaction {
             String nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             
+            if(dCheckDte == null || "".equals(dCheckDte)){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Check Date is not set.");
+                return poJSON;
+            }
+            
+            if(dCheckDte.replace("-", "").length() < 8 ){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid CheckDate.");
+                return poJSON;
+            }
+            
             String bankCode = getDocumentCode(CheckPayments().getModel().getBankAcountID()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
 //            bankCode = "MBTDSChk";
             if(bankCode == null || "".equals(bankCode)){
@@ -5038,10 +5050,15 @@ public class DisbursementVoucher extends Transaction {
                     }
                     String gap = String.join("", Collections.nCopies(spaceCount, " "));
                     String rawDate = tx.dCheckDte == null ? "" : tx.dCheckDte.replace("-", "");
-                    textValue = rawDate
-                            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")
-                            .replaceAll("", gap)
-                            .trim();
+//                    textValue = rawDate
+//                            .replaceAll("(.{2})(.{2})(.{4})", "$1 $2 $3")
+//                            .replaceAll("", gap)
+//                            .trim();
+                    textValue = addSpaceBetweenChars(rawDate.substring(0,2),spaceCount) 
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(2,4),spaceCount)
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(4,8),spaceCount) ;
                     break;
                 case "xAmountW":
                     textValue = NumberToWords.convertToWords(new BigDecimal(tx.nAmountxx));
@@ -5059,6 +5076,29 @@ public class DisbursementVoucher extends Transaction {
         }
 
         return root;
+    }
+    
+    private static String addSpaceBetweenChars(String input, int spaceCount) {
+        if (input == null || input.isEmpty()) {
+            return "";
+        }
+        String space = repeatSpace(spaceCount);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < input.length(); i++) {
+            sb.append(input.charAt(i));
+            if (i < input.length() - 1) {
+                sb.append(space);
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String repeatSpace(int count) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            sb.append(' ');
+        }
+        return sb.toString();
     }
     
     private static class Transaction {
