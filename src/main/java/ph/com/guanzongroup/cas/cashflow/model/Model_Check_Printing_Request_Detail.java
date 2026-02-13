@@ -6,6 +6,8 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -22,7 +24,7 @@ public class Model_Check_Printing_Request_Detail extends Model {
     Model_Disbursement_Master poDVMaster;
     Model_Disbursement_Detail poDVDetail;
     Model_Check_Payments poCheckPayments;
-
+    String lsremarks = "";
 
     @Override
     public void initialize() {
@@ -115,6 +117,18 @@ public class Model_Check_Printing_Request_Detail extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
+    public String setdetailRemarks(String remarks) {
+        return this.lsremarks = remarks;
+    }
+
+    public String getdetailRemarks() throws SQLException, GuanzonException {
+        if(lsremarks.isEmpty()){
+                lsremarks = CheckPayments().getRemarks();
+        }
+        return this.lsremarks;
+    }
+
 
     @Override
     public String getNextCode(){
