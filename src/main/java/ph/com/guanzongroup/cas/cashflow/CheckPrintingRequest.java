@@ -442,7 +442,7 @@ public class CheckPrintingRequest extends Transaction {
 
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             String sourceno = Detail(lnCtr).getSourceNo();
-            String remarks = Detail(lnCtr).DisbursementMaster().CheckPayments().getRemarks();
+            String remarks = Detail(lnCtr).getdetailRemarks();
             updateDV(sourceno,remarks);
         }
 
