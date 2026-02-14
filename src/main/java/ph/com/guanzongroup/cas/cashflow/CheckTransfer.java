@@ -813,7 +813,7 @@ public class CheckTransfer extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, "a.sDestinat = " + SQLUtil.toSQL(poGRider.getBranchCode()));
 
             System.out.println("Search Query is = " + lsSQL);
-            poJSON = ShowDialogFX.Search(poGRider,
+            poJSON = ShowDialogFX.Browse(poGRider,
                     lsSQL,
                     value,
                     "Transaction No»Branch Name»Date",
@@ -1192,9 +1192,9 @@ public class CheckTransfer extends Transaction {
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
 
-        if (!psIndustryCode.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-        }
+//        if (!psIndustryCode.isEmpty()) {
+//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
+//        }
 
         lsSQL = MiscUtil.addCondition(lsSQL, "a.sDestinat = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         ResultSet loRS = poGRider.executeQuery(lsSQL);
