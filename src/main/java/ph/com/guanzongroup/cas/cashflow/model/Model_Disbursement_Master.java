@@ -4,6 +4,7 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -505,4 +506,6 @@ public class Model_Disbursement_Master extends Model {
         }
     }
 
+    
+    
 }

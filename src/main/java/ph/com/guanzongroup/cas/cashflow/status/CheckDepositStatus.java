@@ -18,4 +18,6 @@ public class CheckDepositStatus {
             "CANCELLED", 
             "VOID","","","RETURN"
     );
+     public static final String PRINTED = "1";
+    
 }
