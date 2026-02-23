@@ -856,24 +856,24 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 break;
                 
             case DisbursementStatic.SourceCode.CASH_PAYABLE: 
-//                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
-//                poJSON = loCachePayable.InitTransaction();
-//                if ("error".equals((String) poJSON.get("result"))) {
-//                    
-//                    return poJSON;
-//                }
-//                poJSON = loCachePayable.OpenTransaction(fsSourceNo);
-//                if ("error".equals((String) poJSON.get("result"))) {
-//                    
-//                    return poJSON;
-//                }
-//                loCachePayable.setWithParent(true);
-//                loCachePayable.setWithUI(false);
-//                poJSON = loCachePayable.PaidTransaction("");
-//                if ("error".equals((String) poJSON.get("result"))) {
-//                    
-//                    return poJSON;
-//                }
+                CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
+                poJSON = loCachePayable.InitTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    
+                    return poJSON;
+                }
+                poJSON = loCachePayable.OpenTransaction(fsSourceNo);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    
+                    return poJSON;
+                }
+                loCachePayable.setWithParent(true);
+                loCachePayable.setWithUI(false);
+                poJSON = loCachePayable.PaidTransaction("");
+                if ("error".equals((String) poJSON.get("result"))) {
+                    
+                    return poJSON;
+                }
                 break;
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
                 APPaymentAdjustment loAPAdjustment = new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();

@@ -13,5 +13,6 @@ public class CachePayableStatus {
     public static final String OPEN = "0";
     public static final  String CONFIRMED = "1";
     public static final  String POSTED = "2"; 
+    public static final  String PAID = "5"; 
     public static final  String CANCELLED = "3";
 }

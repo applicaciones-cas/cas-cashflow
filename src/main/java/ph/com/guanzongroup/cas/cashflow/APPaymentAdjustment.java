@@ -295,6 +295,7 @@ public class APPaymentAdjustment extends Parameter {
             poCachePayable.Master().setReferNo(getModel().getReferenceNo()); 
             poCachePayable.Master().setGrossAmount(getModel().getTransactionTotal().doubleValue()); 
             poCachePayable.Master().setNetTotal(getModel().getTransactionTotal().doubleValue()); 
+            poCachePayable.Master().setVATExempt(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setPayables(getModel().getDebitAmount().doubleValue()); 
             poCachePayable.Master().setReceivables(getModel().getCreditAmount().doubleValue()); 
             poCachePayable.Master().setTransactionStatus(CachePayableStatus.CONFIRMED);
