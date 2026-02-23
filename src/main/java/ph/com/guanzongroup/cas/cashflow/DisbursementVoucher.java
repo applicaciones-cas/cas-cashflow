@@ -3558,7 +3558,7 @@ public class DisbursementVoucher extends Transaction {
                         if(Master().getVATAmount() > 0.0000){
                             computeDetail(lnRow);
                         } else {
-                            Detail(lnRow).setDetailVatExempt(ldblBalance);
+                            ldblVatExempt = ldblBalance;
                         }
                     }
                 break;
@@ -3919,7 +3919,9 @@ public class DisbursementVoucher extends Transaction {
                                 case SOATaggingStatic.APPaymentAdjustment:
                                 case SOATaggingStatic.PaymentRequest:
                                     //TODO
-                                    laPerCategory.add(psNoCategory);
+                                    if(!laPerCategory.contains(psNoCategory)){
+                                        laPerCategory.add(psNoCategory);
+                                    }
                                 break;
                                 case SOATaggingStatic.POReceiving:
                                     if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
@@ -3931,7 +3933,9 @@ public class DisbursementVoucher extends Transaction {
                         case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                             //TODO
-                            laPerCategory.add(psNoCategory);
+                            if(!laPerCategory.contains(psNoCategory)){
+                                laPerCategory.add(psNoCategory);
+                            }
                         break;
                         case DisbursementStatic.SourceCode.PO_RECEIVING:
                             if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
