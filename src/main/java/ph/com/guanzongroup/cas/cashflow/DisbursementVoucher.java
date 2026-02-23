@@ -2410,7 +2410,7 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
             }
-        }
+        } 
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
@@ -4126,6 +4126,7 @@ public class DisbursementVoucher extends Transaction {
                 }
                 
                 //Set initial value for check payment
+                poCheckPayments.getModel().setCheckDate(Master().getTransactionDate());
                 poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
                 poCheckPayments.getModel().setBranchCode(Master().getBranchCode());
                 poCheckPayments.getModel().setIndustryID(Master().getIndustryID());
