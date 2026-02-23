@@ -2383,6 +2383,40 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    private JSONObject validateCheckPayment(){
+        poJSON = new JSONObject();
+        if(Logical.YES.equals(Master().getBankPrint())){
+            if(CheckPayments().getModel().getPayeeType() == null || "".equals(CheckPayments().getModel().getPayeeType())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Payee type cannot be empty.");
+                return poJSON;
+            }
+            if(CheckPayments().getModel().getDesbursementMode() == null || "".equals(CheckPayments().getModel().getDesbursementMode())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Disbursement mode cannot be empty.");
+                return poJSON;
+            }
+            if(Logical.YES.equals(CheckPayments().getModel().getDesbursementMode())){
+                if(CheckPayments().getModel().getClaimant() == null || "".equals(CheckPayments().getModel().getClaimant())){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Claimant cannot be empty.");
+                    return poJSON;
+                }
+                if(Logical.NO.equals(CheckPayments().getModel().getClaimant())){
+                    if(CheckPayments().getModel().getAuthorize() == null || "".equals(CheckPayments().getModel().getAuthorize())){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Authorize representative cannot be empty.");
+                        return poJSON;
+                    }
+                }
+            }
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
     @Override
     public JSONObject initFields() {
         //Put initial model values here/
@@ -2438,6 +2472,13 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        //Validate Check payment
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+            poJSON = validateCheckPayment();
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
         //Seek Approval
 //        poJSON = callApproval();
 //        if (!"success".equals((String) poJSON.get("result"))) {
@@ -3447,6 +3488,7 @@ public class DisbursementVoucher extends Transaction {
                     }
 
                     ldblSourceBalance = loPRF.Master().getTranTotal() - loPRF.Master().getAmountPaid();
+                    ldblVatExempt = ldblSourceBalance;
                     //Validate transaction to be add in DV Detail
                     poJSON = validateDetail(ldblSourceBalance, loPRF.Master().getPayeeID(), loPRF.Master().Payee().getClientID(),loPRF.Master().getIndustryID());
                     if ("error".equals((String) poJSON.get("result"))) {
@@ -3493,6 +3535,9 @@ public class DisbursementVoucher extends Transaction {
                         if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loCachePayable.Master().getSourceCode())){
                             if(loCachePayable.Master().getReceivables() > 0.0000){
                                 ldblBalance = -ldblBalance;
+                                ldblVatAmount = 0.0000;
+                                ldblVatableSales = 0.0000;
+                                ldblVatExempt = 0.0000;
                             }
                         }
                     }
@@ -3506,11 +3551,34 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnRow).setAmount(ldblBalance);
             Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
             //Apply Vat
+            switch(Detail(lnRow).SOADetail().getSourceCode()){
+                case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                    //Apply Vat
+                    if(ldblBalance < 0){
+                        if(Master().getVATAmount() > 0.0000){
+                            computeDetail(lnRow);
+                        } else {
+                            ldblVatExempt = ldblBalance;
+                        }
+                    }
+                break;
+            }
+            
             Detail(lnRow).setDetailVatAmount(ldblVatAmount);
             Detail(lnRow).setDetailVatSales(ldblVatableSales);
             Detail(lnRow).setDetailVatExempt(ldblVatExempt);
             Detail(lnRow).setDetailZeroVat(ldblVatZeroRated);
             Detail(lnRow).setDetailVatRates(ldblVatRate);
+            
+            
+            JSONObject loJSON = computeFields(true);
+            if ("error".equals((String) loJSON.get("result"))) {
+                Detail().remove(lnRow);
+                AddDetail();
+                loJSON.put("row", lnRow);
+                return loJSON;
+            }
+            
             AddDetail();
         }
     
@@ -3851,7 +3919,9 @@ public class DisbursementVoucher extends Transaction {
                                 case SOATaggingStatic.APPaymentAdjustment:
                                 case SOATaggingStatic.PaymentRequest:
                                     //TODO
-                                    laPerCategory.add(psNoCategory);
+                                    if(!laPerCategory.contains(psNoCategory)){
+                                        laPerCategory.add(psNoCategory);
+                                    }
                                 break;
                                 case SOATaggingStatic.POReceiving:
                                     if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
@@ -3863,7 +3933,9 @@ public class DisbursementVoucher extends Transaction {
                         case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                         case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                             //TODO
-                            laPerCategory.add(psNoCategory);
+                            if(!laPerCategory.contains(psNoCategory)){
+                                laPerCategory.add(psNoCategory);
+                            }
                         break;
                         case DisbursementStatic.SourceCode.PO_RECEIVING:
                             if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
@@ -4054,6 +4126,7 @@ public class DisbursementVoucher extends Transaction {
                 }
                 
                 //Set initial value for check payment
+                poCheckPayments.getModel().setCheckDate(Master().getTransactionDate());
                 poCheckPayments.getModel().setSourceNo(Master().getTransactionNo());
                 poCheckPayments.getModel().setBranchCode(Master().getBranchCode());
                 poCheckPayments.getModel().setIndustryID(Master().getIndustryID());

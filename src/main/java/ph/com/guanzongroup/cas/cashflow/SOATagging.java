@@ -26,6 +26,7 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
@@ -725,7 +726,7 @@ public class SOATagging extends Transaction {
 
         Client object = new ClientControllers(poGRider, logwrapr).Client();
         object.Master().setRecordStatus(RecordStatus.ACTIVE);
-        object.Master().setClientType("1");
+        object.Master().setClientType(Logical.YES);
         poJSON = object.Master().searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             Master().setClientId(object.Master().getModel().getClientId());
@@ -1063,14 +1064,14 @@ public class SOATagging extends Transaction {
                 referenceNo = "";
             }
 
-            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
+            String lsSQL = getPayableSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex, sPayablNm ASC ";
             switch(payableType){
                 case SOATaggingStatic.APPaymentAdjustment:
                 case SOATaggingStatic.POReceiving:
-                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dDueDatex ASC ";
+                    lsSQL = getCachePayableSQL(supplier, company, payee, referenceNo, payableType) + " ORDER BY dDueDatex, sPayablNm ASC ";
                     break;
                 case SOATaggingStatic.PaymentRequest:
-                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex ASC ";
+                    lsSQL = getPRFSQL(supplier, company, payee, referenceNo) + " ORDER BY dDueDatex, sPayablNm  ASC ";
                     break;
             }
             System.out.println("Executing SQL: " + lsSQL);
@@ -2159,24 +2160,24 @@ public class SOATagging extends Transaction {
                         if ("error".equals((String) poJSON.get("result"))) {
                             return poJSON;
                         }
-                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess(Logical.YES);
                         lbIsLinked = getLinkedPayment(paPaymentRequest.get(paPaymentRequest.size() - 1).Master().getTransactionNo(),Detail(lnCtr).getSourceCode()) ;
                         switch (status) {
                             case SOATaggingStatus.VOID:
                             case SOATaggingStatus.CANCELLED:
                             case SOATaggingStatus.RETURNED:
                                 if(lbIsLinked){
-                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("1");
+                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess(Logical.YES);
                                 } else {
-                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
+                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess(Logical.NO);
                                 }
                                 
                                 if(!isWithSOA(Detail(lnCtr).getSourceNo(),Detail(lnCtr).getSourceCode())){
-                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0"); 
+                                    paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa(Logical.NO); 
                                 }
                                 break;
                             case SOATaggingStatus.CONFIRMED:
-                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("1");
+                                paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa(Logical.YES);
                                 break;
                         }
 
@@ -2302,11 +2303,11 @@ public class SOATagging extends Transaction {
                     }
                     lbIsLinked = getLinkedPayment(paPaymentRequest.get(paPaymentRequest.size() - 1).Master().getTransactionNo(),DetailRemove(lnCtr).getSourceCode());
                     if(!lbIsLinked){
-                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess("0");
-                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0");
+                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setProcess(Logical.NO);
+                        paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa(Logical.NO);
                     } else {
                         if(!isWithSOA(Detail(lnCtr).getSourceNo(),DetailRemove(lnCtr).getSourceCode())){
-                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa("0"); 
+                            paPaymentRequest.get(paPaymentRequest.size() - 1).Master().setWithSoa(Logical.NO); 
                         }
                     }
                     
@@ -2563,6 +2564,7 @@ public class SOATagging extends Transaction {
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO)
                 + " UNION  "
                 + " SELECT "
                 + "   a.sTransNox "
@@ -2589,7 +2591,8 @@ public class SOATagging extends Transaction {
                 + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
-                + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
+                + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO);
     }
     
     public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo, String payableType) {
@@ -2616,7 +2619,8 @@ public class SOATagging extends Transaction {
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND a.sReferNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
-                + " AND a.sSourceCd = " + SQLUtil.toSQL(payableType);
+                + " AND a.sSourceCd = " + SQLUtil.toSQL(payableType)
+                + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO);
     }
     
     public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
@@ -2645,7 +2649,8 @@ public class SOATagging extends Transaction {
                 + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
                 + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo);
+                + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
+                + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO);
     }
 
     @Override

@@ -105,11 +105,6 @@ public class DisbursementValidator implements GValidator{
             return poJSON;
         }
         
-        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
-            poJSON.put("message", "Disbursement Type is missing or not set.");
-            return poJSON;
-        }
-        
         if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
             poJSON.put("message", "Payee is missing or not set.");
             return poJSON;
@@ -127,12 +122,6 @@ public class DisbursementValidator implements GValidator{
         
         if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getTransactionTotal()) {
             poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
-            return poJSON;
-        }
-        
-        if(poMaster.getVATSale() > 0.0000 && poMaster.getWithTaxTotal() <= 0.0000){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Tax Amount is not set.");
             return poJSON;
         }
         
@@ -211,6 +200,67 @@ public class DisbursementValidator implements GValidator{
     private JSONObject validateCertified(){
         poJSON = new JSONObject();
                 
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
+            poJSON.put("message", "Invalid Branch");
+            return poJSON;
+        }
+
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getCompanyID()== null || poMaster.getCompanyID().isEmpty()) {
+            poJSON.put("message", "Company is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVoucherNo()== null || poMaster.getVoucherNo().isEmpty()) {
+            poJSON.put("message", "Voucher No is missing or not set.");
+            return poJSON;
+        }        
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+            poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+         
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if(poMaster.getVATSale() > 0.0000 && poMaster.getWithTaxTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Amount is not set.");
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -233,6 +283,67 @@ public class DisbursementValidator implements GValidator{
     private JSONObject validatePosted(){
         poJSON = new JSONObject();
                 
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
+            poJSON.put("message", "Invalid Branch");
+            return poJSON;
+        }
+
+        if (poMaster.getIndustryID()== null || poMaster.getIndustryID().isEmpty()) {
+            poJSON.put("message", "Industry is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getCompanyID()== null || poMaster.getCompanyID().isEmpty()) {
+            poJSON.put("message", "Company is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVoucherNo()== null || poMaster.getVoucherNo().isEmpty()) {
+            poJSON.put("message", "Voucher No is missing or not set.");
+            return poJSON;
+        }        
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getDisbursementType()== null || poMaster.getDisbursementType().isEmpty()) {
+            poJSON.put("message", "Disbursement Type is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
+            poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+         
+        if (poMaster.getVATAmount() < 0.0000 || poMaster.getVATAmount() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATExmpt() < 0.0000 || poMaster.getVATExmpt() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Exempt cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getVATSale() < 0.0000 || poMaster.getVATSale() > poMaster.getTransactionTotal()) {
+            poJSON.put("message", "Vat Sales cannot be greater than net total or lesser than zero.");
+            return poJSON;
+        }
+        
+        if(poMaster.getVATSale() > 0.0000 && poMaster.getWithTaxTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Amount is not set.");
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
