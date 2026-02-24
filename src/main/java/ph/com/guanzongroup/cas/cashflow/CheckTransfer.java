@@ -342,37 +342,37 @@ public class CheckTransfer extends Transaction {
 
     @Override
     protected JSONObject isEntryOkay(String status) {
-        psApprovalUser = "";
-
-        poJSON = new JSONObject();
-        GValidator loValidator = CheckTransferValidatorFactory.make(getMaster().getIndustryId());
-
-        loValidator.setApplicationDriver(poGRider);
-        loValidator.setTransactionStatus(status);
-        loValidator.setMaster(poMaster);
-        ArrayList laDetailList = new ArrayList<>(getDetailList());
-        loValidator.setDetail(laDetailList);
-
-        poJSON = loValidator.validate();
-        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                } else {
-                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "User is not an authorized approving officer.");
-                        return poJSON;
-                    }
-                    psApprovalUser = poJSON.get("sUserIDxx") != null
-                            ? poJSON.get("sUserIDxx").toString()
-                            : poGRider.getUserID();
-                }
-            } else {
-                psApprovalUser = poGRider.getUserID();
-            }
-        }
+//        psApprovalUser = "";
+//
+//        poJSON = new JSONObject();
+//        GValidator loValidator = CheckTransferValidatorFactory.make(getMaster().getIndustryId());
+//
+//        loValidator.setApplicationDriver(poGRider);
+//        loValidator.setTransactionStatus(status);
+//        loValidator.setMaster(poMaster);
+//        ArrayList laDetailList = new ArrayList<>(getDetailList());
+//        loValidator.setDetail(laDetailList);
+//
+//        poJSON = loValidator.validate();
+//        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                poJSON = ShowDialogFX.getUserApproval(poGRider);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                } else {
+//                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "User is not an authorized approving officer.");
+//                        return poJSON;
+//                    }
+//                    psApprovalUser = poJSON.get("sUserIDxx") != null
+//                            ? poJSON.get("sUserIDxx").toString()
+//                            : poGRider.getUserID();
+//                }
+//            } else {
+//                psApprovalUser = poGRider.getUserID();
+//            }
+//        }
         return poJSON;
     }
 
@@ -1337,7 +1337,7 @@ public class CheckTransfer extends Transaction {
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());
-        poReportJasper.addParameter("Destination", getMaster().BranchDestination().getBranchName());
+        poReportJasper.addParameter("Destination", getMaster().Branch().getBranchName());
         poReportJasper.addParameter("Department", getMaster().Department().getDescription() != null ? getMaster().Department().getDescription() : "");
 //        poReportJasper.addParameter("PreparedBy", getMaster().getPreparedBy() != null ? poGRider.Decrypt(getMaster().getPreparedBy()) : "");
         poReportJasper.addParameter("PreparedBy", "Sheryl Rabanal");

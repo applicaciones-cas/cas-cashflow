@@ -550,7 +550,7 @@ public class CashflowModels {
     
     public Model_Check_Transfer_Master CheckTransferMaster() {
         if (poGRider == null) {
-            System.err.println("CashflowModels.CashAdvanceMaster: Application driver is not set.");
+            System.err.println("CashflowModels.CheckTransferMaster: Application driver is not set.");
             return null;
         }
 
@@ -567,7 +567,7 @@ public class CashflowModels {
     
     public Model_Check_Transfer_Detail CheckTransferDetail(){
         if (poGRider == null){
-            System.err.println("CashflowModels.CashAdvanceDetail: Application driver is not set.");
+            System.err.println("CashflowModels.CheckTransferDetail: Application driver is not set.");
             return null;
         }
         

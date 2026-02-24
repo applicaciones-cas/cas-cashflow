@@ -524,11 +524,11 @@ public class CashflowControllers {
     
     public CheckTransfers CheckTransfers() {
         if (poGRider == null) {
-            poLogWrapper.severe("CashFlowcontrollers.CashAdvance: Application driver is not set.");
+            poLogWrapper.severe("CashFlowcontrollers.CheckTransfers: Application driver is not set.");
             return null;
         }
 
-        if (poCashAdvance != null) {
+        if (poCheckTransfer != null) {
             return poCheckTransfer;
         }
 
@@ -536,7 +536,7 @@ public class CashflowControllers {
         poCheckTransfer.setApplicationDriver(poGRider);
         poCheckTransfer.setBranchCode(poGRider.getBranchCode());
         poCheckTransfer.setLogWrapper(poLogWrapper);
-        poCheckTransfer.setVerifyEntryNo(false);
+        poCheckTransfer.setVerifyEntryNo(true);
         poCheckTransfer.setWithParent(false);
         return poCheckTransfer;
     }

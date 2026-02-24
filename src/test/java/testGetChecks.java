@@ -1,5 +1,6 @@
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.Date;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -41,7 +42,8 @@ public class testGetChecks {
     @Test
     public void testGetPurchaseOrder() {
         JSONObject loJSON;
-        
+        LocalDate datefrom = LocalDate.now();
+        LocalDate datethru = LocalDate.now();
         String industryId = "03";
         String companyId = "0003";
         try {
@@ -55,7 +57,7 @@ public class testGetChecks {
 //
 //            poChecks.CheckTransfer().Master().setCompanyID(companyId); //direct assignment of value
 //            Assert.assertEquals(poChecks.CheckTransfer().Master().getCompanyID(), companyId);
-            loJSON = poChecks.CheckTransfers().loadCheckPayment("", "","");
+            loJSON = poChecks.CheckTransfers().loadCheckPayment("",datefrom,datethru );
 
             if ("success".equals((String) loJSON.get("result"))) {
                 System.out.println("RESULT" + (String) loJSON.get("message"));
@@ -66,9 +68,13 @@ public class testGetChecks {
                 }
             }
             
-        } catch (ExceptionInInitializerError | SQLException | GuanzonException e) {
+        } catch (ExceptionInInitializerError e) {
             System.err.println(MiscUtil.getException(e));
             Assert.fail();
+        } catch (SQLException ex) {
+            Logger.getLogger(testGetChecks.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (GuanzonException ex) {
+            Logger.getLogger(testGetChecks.class.getName()).log(Level.SEVERE, null, ex);
         }
 
     }

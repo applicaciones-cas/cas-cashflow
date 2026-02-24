@@ -2,6 +2,8 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.ShowDialogFX;
@@ -50,32 +52,31 @@ public class CheckPayments extends Parameter {
             poJSON.put("message", "Branch is missing or not set.");
             return poJSON;
         }
-        
-        if (poModel.getBankID()== null || poModel.getBankID().isEmpty()) {
+
+        if (poModel.getBankID() == null || poModel.getBankID().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Bank is missing or not set.");
             return poJSON;
         }
-        
-        if (poModel.getBankAcountID()== null || poModel.getBankAcountID().isEmpty()) {
+
+        if (poModel.getBankAcountID() == null || poModel.getBankAcountID().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Bank Account is missing or not set.");
             return poJSON;
         }
-        
-        
-        if (poModel.getSourceCode()== null || poModel.getSourceCode().isEmpty()) {
+
+        if (poModel.getSourceCode() == null || poModel.getSourceCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Source Code is missing or not set.");
             return poJSON;
         }
-        
-        if (poModel.getSourceNo()== null || poModel.getSourceNo().isEmpty()) {
+
+        if (poModel.getSourceNo() == null || poModel.getSourceNo().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Source No is missing or not set.");
             return poJSON;
         }
-        
+
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());
 
@@ -87,6 +88,7 @@ public class CheckPayments extends Parameter {
     public Model_Check_Payments getModel() {
         return poModel;
     }
+
     @Override
     public JSONObject searchRecord(String fsValue, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -120,125 +122,135 @@ public class CheckPayments extends Parameter {
             return poJSON;
         }
     }
-    
+
     @Override
-    public JSONObject deactivateRecord() throws SQLException, GuanzonException  {
-        if (!pbInitRec){
+    public JSONObject deactivateRecord() throws SQLException, GuanzonException {
+        if (!pbInitRec) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Object is not initialized.");
             return poJSON;
         }
-        
+
         poJSON = new JSONObject();
-        
-        if (getModel().getEditMode() != EditMode.READY ||
-            getModel().getEditMode() != EditMode.UPDATE){
-        
+
+        if (getModel().getEditMode() != EditMode.READY
+                || getModel().getEditMode() != EditMode.UPDATE) {
+
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "No record loaded.");
         }
-        
-        
+
         if (getModel().getEditMode() == EditMode.READY) {
             poJSON = updateRecord();
-            if ("error".equals((String) poJSON.get("result"))) return poJSON;
-        } 
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
 
         poJSON = getModel().setValue("cTranStat", CheckStatus.VOID);
 
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+
         poJSON = getModel().setValue("sModified", poGRider.getUserID());
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
-        }     
+        }
 
         poJSON = getModel().setValue("dModified", poGRider.getServerDate());
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+
         if (!pbWthParent) {
-            poGRider.beginTrans((String) poEvent.get("event"), 
-                        getModel().getTable(), 
-                        SOURCE_CODE, 
-                        String.valueOf(getModel().getValue(1)));
+            poGRider.beginTrans((String) poEvent.get("event"),
+                    getModel().getTable(),
+                    SOURCE_CODE,
+                    String.valueOf(getModel().getValue(1)));
         }
 
-        poJSON =  getModel().saveRecord();
-        
-        if ("success".equals((String) poJSON.get("result"))){
-            if (!pbWthParent) poGRider.commitTrans();
+        poJSON = getModel().saveRecord();
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            if (!pbWthParent) {
+                poGRider.commitTrans();
+            }
         } else {
-            if (!pbWthParent) poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
         }
-        
+
         return poJSON;
     }
 
     @Override
-    public JSONObject activateRecord() throws SQLException, GuanzonException  {
-        if (!pbInitRec){
+    public JSONObject activateRecord() throws SQLException, GuanzonException {
+        if (!pbInitRec) {
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Object is not initialized.");
             return poJSON;
         }
-        
+
         poJSON = new JSONObject();
-        
-        if (getModel().getEditMode() != EditMode.READY ||
-            getModel().getEditMode() != EditMode.UPDATE){
-        
+
+        if (getModel().getEditMode() != EditMode.READY
+                || getModel().getEditMode() != EditMode.UPDATE) {
+
             poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "No record loaded.");
         }
-        
-        
+
         if (getModel().getEditMode() == EditMode.READY) {
             poJSON = updateRecord();
-            if ("error".equals((String) poJSON.get("result"))) return poJSON;
-        } 
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
 
         poJSON = getModel().setValue("cTranStat", CheckStatus.OPEN);
 
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+
         poJSON = getModel().setValue("sModified", poGRider.getUserID());
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
-        }     
+        }
 
         poJSON = getModel().setValue("dModified", poGRider.getServerDate());
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+
         if (!pbWthParent) {
-            poGRider.beginTrans((String) poEvent.get("event"), 
-                        getModel().getTable(), 
-                        SOURCE_CODE, 
-                        String.valueOf(getModel().getValue(1)));
+            poGRider.beginTrans((String) poEvent.get("event"),
+                    getModel().getTable(),
+                    SOURCE_CODE,
+                    String.valueOf(getModel().getValue(1)));
         }
 
-        poJSON =  getModel().saveRecord();
-        
-        if ("success".equals((String) poJSON.get("result"))){
-            if (!pbWthParent) poGRider.commitTrans();
+        poJSON = getModel().saveRecord();
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            if (!pbWthParent) {
+                poGRider.commitTrans();
+            }
         } else {
-            if (!pbWthParent) poGRider.rollbackTrans();
+            if (!pbWthParent) {
+                poGRider.rollbackTrans();
+            }
         }
-        
+
         return poJSON;
     }
-    
+
     public JSONObject VoidTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -282,7 +294,7 @@ public class CheckPayments extends Parameter {
         poJSON.put("message", "Transaction voided successfully.");
         return poJSON;
     }
-    
+
     public JSONObject CancelTransaction(String remarks)
             throws ParseException,
             SQLException,
@@ -322,7 +334,7 @@ public class CheckPayments extends Parameter {
         poJSON.put("message", "Transaction cancelled successfully.");
         return poJSON;
     }
-    
+
     public JSONObject isEntryOkay(String status) throws SQLException {
         poJSON = new JSONObject();
 
@@ -333,7 +345,7 @@ public class CheckPayments extends Parameter {
         poJSON = loValidator.validate();
         return poJSON;
     }
-    
+
     @Override
     public String getSQ_Browse() {
         String lsCondition = "";
@@ -475,7 +487,6 @@ public class CheckPayments extends Parameter {
         return null; // or throw an exception if not found
     }
 
-
     public JSONObject getRecord(String SourceNo, String SourceCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         getSQ_Browse();
@@ -494,6 +505,71 @@ public class CheckPayments extends Parameter {
                 "sBranchCd»xBankName»xPayeeNme»nAmountxx»dCheckDte",
                 ".sBranchCd»IFNULL(b.sBankName, '')»IFNULL(a.sPayeeIDx, '')»IFNULL(d.sPayeeNme, '')»a.nAmountxx»a.dCheckDte",
                 1);
+
+        if (poJSON != null) {
+            return openRecord((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+
+    public JSONObject searchRecordwithFilter(String fsTransNo, String fsCheckNo, boolean byCode)
+            throws SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+
+        String lsSQL = getSQ_Browse(); // your base query
+
+        // Build list of filter conditions
+        List<String> conditions = new ArrayList<>();
+
+        // Filter by Transaction No
+        if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
+            conditions.add("a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%"));
+        }
+
+        // Filter by Check No
+        if (fsCheckNo != null && !fsCheckNo.trim().isEmpty()) {
+            conditions.add("a.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo + "%"));
+        }
+
+        // Always-required filters
+        conditions.add("a.cReleased = '0'");
+        conditions.add("a.cTranStat <> 3");
+
+        // Join all conditions
+        String lsFilterCondition = String.join(" AND ", conditions);
+
+        // Append filters to SQL safely
+        if (!lsFilterCondition.isEmpty()) {
+            // Check if lsSQL already has WHERE at the end
+            if (lsSQL.toUpperCase().matches(".*\\bWHERE\\s*$")) {
+                lsSQL += " " + lsFilterCondition;  // just add conditions
+            } else if (lsSQL.toUpperCase().contains("WHERE")) {
+                lsSQL += " AND " + lsFilterCondition; // append with AND
+            } else {
+                lsSQL += " WHERE " + lsFilterCondition; // first WHERE
+            }
+        }
+
+        // Add grouping
+        lsSQL += " GROUP BY a.sTransNox";
+
+        System.out.println("SQL EXECUTED: " + lsSQL);
+
+        // Execute Browse
+        poJSON = ShowDialogFX.Search(
+                poGRider,
+                lsSQL,
+                fsTransNo,
+                "Branch»Banks»Payee»Amount»Check Date",
+                "sBranchCd»xBankName»xPayeeNme»nAmountxx»dCheckDte",
+                "a.sBranchCd»IFNULL(b.sBankName, '')»IFNULL(c.sPayeeNme, '')»a.nAmountxx»a.dCheckDte",
+                byCode ? 0 : 1
+        );
 
         if (poJSON != null) {
             return openRecord((String) poJSON.get("sTransNox"));

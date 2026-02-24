@@ -247,11 +247,11 @@ public class Model_Check_Transfer_Master extends Model {
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
-
+    
     public Model_Branch BranchDestination() throws SQLException, GuanzonException {
         if (!"".equals(getValue("sDestinat"))) {
-            if (this.poBranchDestination.getEditMode() == 1 && this.poBranchDestination
-                    .getBranchCode().equals(getValue("sDestinat"))) {
+            if (this.poBranchDestination.getEditMode() == EditMode.READY
+                    && this.poBranchDestination.getBranchCode().equals((String)getValue("sDestinat"))) {
                 return this.poBranchDestination;
             }
             this.poJSON = this.poBranchDestination.openRecord((String) getValue("sDestinat"));
@@ -267,8 +267,8 @@ public class Model_Check_Transfer_Master extends Model {
 
     public Model_Department Department() throws SQLException, GuanzonException {
         if (!"".equals(getValue("sDeptIDxx"))) {
-            if (this.poDepartment.getEditMode() == 1 && this.poDepartment
-                    .getDepartmentId().equals(getValue("sDeptIDxx"))) {
+            if (this.poDepartment.getEditMode() == EditMode.READY
+                    && this.poDepartment.getDepartmentId().equals(getValue("sDeptIDxx"))) {
                 return this.poDepartment;
             }
             this.poJSON = this.poDepartment.openRecord((String) getValue("sDeptIDxx"));
@@ -282,21 +282,24 @@ public class Model_Check_Transfer_Master extends Model {
         return this.poDepartment;
     }
 
-    public Model_Branch Branch() throws SQLException, GuanzonException {
-        if (!"".equals(getValue("sTransNox"))) {
-            if (this.poBranch.getEditMode() == 1 && this.poBranch
-                    .getBranchCode().equals(getValue("sTransNox").toString().substring(0, 4))) {
-                return this.poBranch;
+    public Model_Branch Branch() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sDestinat"))) {
+            if (poBranch.getEditMode() == EditMode.READY
+                    && poBranch.getBranchCode().equals((String) getValue("sDestinat"))) {
+                return poBranch;
+            } else {
+                poJSON = poBranch.openRecord((String) getValue("sDestinat"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBranch;
+                } else {
+                    poBranch.initialize();
+                    return poBranch;
+                }
             }
-            this.poJSON = this.poBranch.openRecord(getValue("sTransNox").toString().substring(0, 4));
-            if ("success".equals(this.poJSON.get("result"))) {
-                return this.poBranch;
-            }
-            this.poBranch.initialize();
-            return this.poBranch;
+        } else {
+            poBranch.initialize();
+            return poBranch;
         }
-        this.poBranch.initialize();
-        return this.poBranch;
     }
 
     public Model_Industry Industry() throws SQLException, GuanzonException {
