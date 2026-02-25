@@ -1,5 +1,7 @@
 
 import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -20,23 +22,24 @@ public class testRecurringExpenseSchedule {
 
     @BeforeClass
     public static void setUpClass() {
-        System.setProperty("sys.default.path.metadata", "D:/GGC_Maven_Systems/config/metadata/new/");
-
-        instance = MiscUtil.Connect("M001000002");
-        
-        CashflowControllers ctrl = new CashflowControllers(instance, null);
-        record = ctrl.RecurringExpenseSchedule();
+        try {
+            System.setProperty("sys.default.path.metadata", "D:/GGC_Maven_Systems/config/metadata/new/");
+            
+            instance = MiscUtil.Connect("M001000002");
+            
+            CashflowControllers ctrl = new CashflowControllers(instance, null);
+            record = ctrl.RecurringExpenseSchedule();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(testRecurringExpenseSchedule.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
-
+    //Technically no NEW RECORD 
+    
     @Test
     public void testOpenRecord() {
         try {
             JSONObject loJSON;
-            loJSON = record.InitTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
+            record.initialize();
             
 //            loJSON = record.NewTransaction();
 //            if ("error".equals((String) loJSON.get("result"))) {
@@ -49,20 +52,17 @@ public class testRecurringExpenseSchedule {
                 if (!"success".equals((String) loJSON.get("result"))){
                     Assert.fail((String) loJSON.get("message"));
                 }   
-                
-                loJSON = record.populateDetail();
-                if (!"success".equals((String) loJSON.get("result"))){
-                    Assert.fail((String) loJSON.get("message"));
-                }
             }    
             
             record.Detail(0).setBranchCode("A001");
             record.Detail(0).setDepartmentId("004");
+            record.Detail(0).setDateFrom(instance.getServerDate());
             record.Detail(0).setBillDay(8);
             record.Detail(0).setDueDay(28);
             record.Detail(0).setAmount(10000.00);
             
             for(int lnCtr = 0; lnCtr < record.getDetailCount(); lnCtr++){
+                System.out.println("editmode detail: " + record.Detail(lnCtr).getEditMode());
                 System.out.println("Recurring No : " + record.Detail(lnCtr).getRecurringNo() );
                 System.out.println("Account No : " + record.Detail(lnCtr).getAccountNo());
                 System.out.println("Account Name : " + record.Detail(lnCtr).getAccountName());
@@ -74,7 +74,6 @@ public class testRecurringExpenseSchedule {
                 System.out.println("Amount : " + record.Detail(lnCtr).getAmount());
             }
             
-            System.out.println("editmode: " + record.getEditMode());
             System.out.println("editmode master: " + record.Master().getEditMode());
             loJSON = record.SaveTransaction();
             if ("error".equals((String) loJSON.get("result"))) {

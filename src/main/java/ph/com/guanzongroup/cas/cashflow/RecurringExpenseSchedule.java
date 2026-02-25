@@ -2,13 +2,18 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.agent.services.Parameter;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
@@ -19,36 +24,78 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Schedule;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
-public class RecurringExpenseSchedule extends Transaction{   
+public class RecurringExpenseSchedule extends Parameter{   
     
+    private int pnEditMode = EditMode.UNKNOWN;
     public String psIndustryId = "";
     
-    public JSONObject InitTransaction(){      
-        SOURCE_CODE = "RESx";
+    Model_Recurring_Expense poModel;
+    Model_Recurring_Expense_Schedule poDetail;
+    public List<Model_Recurring_Expense_Schedule> paDetail;
+    
+    @Override
+    public void initialize() throws SQLException, GuanzonException {
+        psRecdStat = Logical.YES;
+
+        CashflowModels model = new CashflowModels(poGRider);
+        poModel = model.Recurring_Expense();
+        poDetail = model.Recurring_Expense_Schedule();
         
-        poMaster = new CashflowModels(poGRider).Recurring_Expense();
-        poDetail = new CashflowModels(poGRider).Recurring_Expense_Schedule();
+        paDetail = new ArrayList<>();
+        pnEditMode = EditMode.UNKNOWN;
+        super.initialize();
+    }
+    
+    @Override
+    public int getEditMode(){
+        return pnEditMode;
+    }
+    
+    public JSONObject NewTransaction() throws CloneNotSupportedException, SQLException, GuanzonException{   
+        poJSON = poModel.newRecord();
+        if (!"success".equals((String) poJSON.get("result"))){
+            pnEditMode = EditMode.UNKNOWN;
+            return poJSON;
+        }    
+        pnEditMode = EditMode.ADDNEW;
+        return poJSON;
+    }
+
+    public JSONObject OpenTransaction(String recurringID) throws CloneNotSupportedException, SQLException, GuanzonException{      
+        poJSON = poModel.openRecord(recurringID);
+        if (!"success".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }    
         
-        return super.initialize();
+        poJSON = populateDetail();
+        if (!"success".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }   
+        
+        pnEditMode = poModel.getEditMode();
+        return poJSON;
     }
     
-    
-    public JSONObject NewTransaction() throws CloneNotSupportedException{        
-        return super.newTransaction();
+    public JSONObject UpdateTransaction() throws CloneNotSupportedException{
+        poJSON = poModel.updateRecord();
+        if (!"success".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }   
+        
+        for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+            if(Detail(lnCtr).getEditMode() == EditMode.READY){
+                poJSON = Detail(lnCtr).updateRecord();
+                if (!"success".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }    
+            }
+        }
+        
+        AddDetail(); //Mandatory add detail
+        pnEditMode = poModel.getEditMode();
+        return poJSON;
     }
     
-    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException{
-        return super.saveTransaction();
-    }
-    
-    
-    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException{        
-        return openTransaction(transactionNo);
-    }
-    
-    public JSONObject UpdateTransaction(){
-        return super.updateTransaction();
-    }
     /*Search Master References*/   
     public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
@@ -84,6 +131,9 @@ public class RecurringExpenseSchedule extends Transaction{
                 }   
                 
                 poJSON = populateDetail();
+                if (!"success".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }   
             }    
         }    
         
@@ -119,7 +169,7 @@ public class RecurringExpenseSchedule extends Transaction{
             }
             MiscUtil.close(loRS);
         } else {
-            String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+            String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                      " a.sRecurrID = " + SQLUtil.toSQL(Master().getRecurringId())
                     );
             System.out.println("Executing SQL: " + lsSQL);
@@ -138,14 +188,15 @@ public class RecurringExpenseSchedule extends Transaction{
             MiscUtil.close(loRS);
         }
     
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     
     public String checkRecurringExpenseSchedule(String fsBranchCode) throws SQLException{
         poJSON = new JSONObject();
         String lsRecurringNo = "";
-        initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+        String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                  " a.sRecurrID = " + SQLUtil.toSQL(Master().getRecurringId())
                 + " AND a.sBranchCd = " + SQLUtil.toSQL(fsBranchCode)
                 );
@@ -252,34 +303,41 @@ public class RecurringExpenseSchedule extends Transaction{
 
     /*End - Search Master References*/
         
-    @Override
-    public String getSourceCode(){
-        return SOURCE_CODE;
-    }    
-    
-    @Override
-    public Model_Recurring_Expense Master() {
-        return (Model_Recurring_Expense) poMaster;
-    }
-
-    @Override
-    public Model_Recurring_Expense_Schedule Detail(int row) {
-        return (Model_Recurring_Expense_Schedule) paDetail.get(row);
-    }    
-    
     public void setIndustryID(String industryId) { psIndustryId = industryId; }
     
-    public JSONObject AddDetail() throws CloneNotSupportedException{
-        if (Detail(getDetailCount() - 1).getBranchCode().isEmpty()) {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "Last row has insufficient detail.");
-            return poJSON;
-        }
-        
-        return addDetail();
+    public Model_Recurring_Expense Master() {
+        return (Model_Recurring_Expense) poModel;
+    }
+
+    public List<Model_Recurring_Expense_Schedule> Detail() {
+      return paDetail;
+    }  
+    
+    public Model_Recurring_Expense_Schedule Detail(int row) {
+        return (Model_Recurring_Expense_Schedule) paDetail.get(row);
+    }  
+    
+    public int getDetailCount() {
+        return paDetail.size();
     }
     
+    public JSONObject AddDetail() throws CloneNotSupportedException{
+        
+        if(getDetailCount() > 0){
+            if (Detail(getDetailCount() - 1).getBranchCode().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has insufficient detail.");
+                return poJSON;
+            }
+        }
+        
+        Model_Recurring_Expense_Schedule loDetail = new CashflowModels(poGRider).Recurring_Expense_Schedule();
+        loDetail.newRecord();
+        paDetail.add(loDetail);
+        
+        return poJSON;
+    }
     
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
@@ -307,7 +365,7 @@ public class RecurringExpenseSchedule extends Transaction{
         poJSON = new JSONObject();
         
         //remove items with no stockid or quantity order       
-        Iterator<Model> detail = Detail().iterator();
+        Iterator<Model_Recurring_Expense_Schedule> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
@@ -331,37 +389,63 @@ public class RecurringExpenseSchedule extends Transaction{
                 return poJSON;
             }
         }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        if (!pbInitRec) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Object is not initialized.");
+            return poJSON;
+        } 
+        
+        poJSON = willSave();
+        if ("error".equals(poJSON.get("result"))){
+            return poJSON; 
+        }
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){   
             Detail(lnCtr).setRecurringId(Master().getRecurringId());
             Detail(lnCtr).setPayeeId(Master().getPayeeId());
             Detail(lnCtr).setRecurringNo(Detail(lnCtr).getNextCode());
+            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+            Detail(lnCtr).setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+            
+            poJSON = isEntryOkay(lnCtr);
+            if (!"success".equals(poJSON.get("result"))){
+              return poJSON; 
+            }
+            
+            String lsEvent = ""; //Default Event
+            switch(Detail(lnCtr).getEditMode()){
+                case EditMode.UPDATE:
+                    lsEvent = "UPDATE";
+                break;
+                default:
+                    lsEvent = "ADD NEW";
+                break;
+            }
+            
+            poGRider.beginTrans(lsEvent,Detail(lnCtr).getTable(), "PARM",String.valueOf(Detail(lnCtr).getValue(1))); 
+            
+            if ("success".equals(poJSON.get("result"))) {
+                poJSON = Detail(lnCtr).saveRecord();
+                if ("success".equals(poJSON.get("result"))) {
+                  poGRider.commitTrans(); 
+                  poJSON = new JSONObject();
+                  poJSON.put("result", "success");
+                  poJSON.put("message", "Transaction saved successfully.");
+                } 
+            } else {
+              poGRider.rollbackTrans();
+            } 
+        
         }
-        
-        poJSON.put("result", "success");
         return poJSON;
-    }
-    
-    @Override
-    public JSONObject save() {
-        /*Put saving business rules here*/
-        return isEntryOkay("");
-    }
-    
-    @Override
-    public JSONObject saveOthers() {
-        /*Only modify this if there are other tables to modify except the master and detail tables*/
-        poJSON = new JSONObject();
-        
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    
-    @Override
-    public void saveComplete() {
-        /*This procedure was called when saving was complete*/
-        System.out.println("Transaction saved successfully.");
     }
     
     @Override
@@ -375,8 +459,8 @@ public class RecurringExpenseSchedule extends Transaction{
     }
     
     @Override
-    public void initSQL(){
-        SQL_BROWSE = " SELECT "
+    public String getSQ_Browse(){
+        return " SELECT "
                     + "    a.sRecurrNo "
                     + "  , a.sRecurrID "
                     + "  , a.sPayeeIDx "
@@ -408,58 +492,54 @@ public class RecurringExpenseSchedule extends Transaction{
                     + " LEFT JOIN Client_Master f ON f.sClientID = a.sEmployID     ";
     }
     
-    @Override
-    protected JSONObject isEntryOkay(String status){
+    protected JSONObject isEntryOkay(int fnRow){
         poJSON = new JSONObject();
         
-        if (Master().getRecurringId().isEmpty()){
+        if (Detail(fnRow).getRecurringId() == null || "".equals(Detail(fnRow).getRecurringId())){
             poJSON.put("result", "error");
             poJSON.put("message", "Recurring must not be empty.");
             return poJSON;
         }
         
-        for(int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++){
-            if (Detail(lnCtr).getBranchCode() == null || "".equals(Detail(lnCtr).getBranchCode())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Branch Code must not be empty.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getPayeeId() == null || "".equals(Detail(lnCtr).getPayeeId())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Payee must not be empty.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getDateFrom() == null || "".equals(Detail(lnCtr).getDateFrom())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Date from must not be empty.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getDepartmentId() == null || "".equals(Detail(lnCtr).getDepartmentId())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Department must not be empty.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getAccountable() == null || "".equals(Detail(lnCtr).getAccountable())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Accountable must not be empty.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getBillDay() <= 0){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid bill day.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getDueDay() <= 0){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid due day.");
-                return poJSON;
-            }
-            if (Detail(lnCtr).getAmount() <= 0.0000){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid amount.");
-                return poJSON;
-            }
-            
+        if (Detail(fnRow).getBranchCode() == null || "".equals(Detail(fnRow).getBranchCode())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Branch Code must not be empty.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getPayeeId() == null || "".equals(Detail(fnRow).getPayeeId())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Payee must not be empty.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getDateFrom() == null || "".equals(Detail(fnRow).getDateFrom())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Date from must not be empty.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getDepartmentId() == null || "".equals(Detail(fnRow).getDepartmentId())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Department must not be empty.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getAccountable() == null || "".equals(Detail(fnRow).getAccountable())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Accountable must not be empty.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getBillDay() <= 0){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid bill day.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getDueDay() <= 0){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid due day.");
+            return poJSON;
+        }
+        if (Detail(fnRow).getAmount() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid amount.");
+            return poJSON;
         }
         
         poJSON.put("result", "success");
