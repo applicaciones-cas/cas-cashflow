@@ -1,7 +1,11 @@
 package ph.com.guanzongroup.cas.cashflow.validator;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Detail;
@@ -10,11 +14,12 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.status.CheckTransferStatus;
 
-public class CheckTransferValidatorFactory implements GValidator{
-GRiderCAS poGrider;
+public class CheckTransferValidatorFactory implements GValidator {
+
+    GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
-    
+
     Model_Check_Transfer_Master poMaster;
     ArrayList<Model_Check_Transfer_Detail> poDetail;
 
@@ -36,7 +41,7 @@ GRiderCAS poGrider;
     @Override
     public void setDetail(ArrayList<Object> value) {
         poDetail.clear();
-        for(int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++){
+        for (int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++) {
             poDetail.add((Model_Check_Transfer_Detail) value.get(lnCtr));
         }
     }
@@ -48,7 +53,7 @@ GRiderCAS poGrider;
 
     @Override
     public JSONObject validate() {
-        switch (psTranStat){
+        switch (psTranStat) {
             case CheckTransferStatus.OPEN:
                 return validateNew();
             case CheckTransferStatus.CONFIRMED:
@@ -63,70 +68,62 @@ GRiderCAS poGrider;
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
         }
-        
+
         return poJSON;
     }
-    
-    private JSONObject validateNew(){
-        poJSON = new JSONObject();
-        
-        
-//        if (poMaster.getBranchCode()== null || poMaster.getBranchCode().isEmpty()) {
-//            poJSON.put("message", "Invalid Branch");
-//            return poJSON;
-//        }
-//        
-//        if (poGrider.isMainOffice() || poGrider.isWarehouse()){
-//            if (poMaster.getDepartmentID()== null || poMaster.getDepartmentID().isEmpty()) {
-//                poJSON.put("message", "Department is not set");
-//                return poJSON;
-//            }
-//        }
-        
-//        if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
-//            poJSON.put("message", "Payee information is missing or not set.");
-//            return poJSON;
-//        }
-        
-//        if (!poGrider.isMainOffice() || !poGrider.isWarehouse()){
-//            if (poMaster.getSeriesNo()== null || poMaster.getSeriesNo().isEmpty()) {
-//                poJSON.put("message", "Series No is not set");
-//                return poJSON;
-//            }
-//        }
-        
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    
-    private JSONObject validateConfirmed(){
-        poJSON = new JSONObject();
-                
+
+    private JSONObject validateNew() {
+        try {
+            poJSON = new JSONObject();
+
+            if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+                poJSON.put("message", "Industry isnot set");
+                return poJSON;
+            }
+//
+            if (poMaster.Branch().isMainOffice() || poMaster.Branch().isWarehouse()) {
+                if (poMaster.getDepartment() == null || poMaster.getDepartment().isEmpty()) {
+                    poJSON.put("message", "Department is not set");
+                    return poJSON;
+                }
+            }
+
+        } catch (GuanzonException | SQLException ex) {
+            poJSON = new JSONObject();
+            Logger.getLogger(CheckTransferValidatorFactory.class.getName()).log(Level.SEVERE, null, ex);
+            poJSON.put("result", "error");
+            return poJSON;
+        }
         poJSON.put("result", "success");
         return poJSON;
     }
 
-    
-    private JSONObject validateCancelled(){
+    private JSONObject validateConfirmed() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    
-    private JSONObject validateVoid(){
+
+    private JSONObject validateCancelled() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
-    private JSONObject validatePosted(){
+
+    private JSONObject validateVoid() {
         poJSON = new JSONObject();
-                
+
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+
+    private JSONObject validatePosted() {
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
 }

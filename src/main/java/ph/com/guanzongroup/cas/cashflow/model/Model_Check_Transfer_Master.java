@@ -41,7 +41,7 @@ public class Model_Check_Transfer_Master extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", poGRider.getServerDate());
-            poEntity.updateDouble("nTranTotl", 0.00d);
+            poEntity.updateDouble("nTranTotl", 0.0000);
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateNull("sDeptIDxx");
             poEntity.updateNull("sPrepared");
