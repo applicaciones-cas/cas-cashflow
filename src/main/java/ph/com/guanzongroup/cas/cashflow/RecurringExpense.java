@@ -7,13 +7,16 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.Logical;
+import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class RecurringExpense extends Parameter {
     public String psIndustryId = "";
+    public String psPayeeId = "";
     
     Model_Recurring_Expense poModel;
 
@@ -27,8 +30,8 @@ public class RecurringExpense extends Parameter {
         super.initialize();
     }
     
-    
     public void setIndustryID(String industryId) { psIndustryId = industryId; }
+    public void setPayeeID(String payeeId) { psPayeeId = payeeId; }
 
     @Override
     public JSONObject isEntryOkay() throws SQLException {
@@ -91,6 +94,9 @@ public class RecurringExpense extends Parameter {
         if(psIndustryId != null && !"".equals(psIndustryId)){
             lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
         }
+        if(psPayeeId != null && !"".equals(psPayeeId)){
+            lsSQL = lsSQL + " AND a.sPayeeIDx = " + SQLUtil.toSQL(psPayeeId);
+        }
         
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
@@ -108,6 +114,30 @@ public class RecurringExpense extends Parameter {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    
+    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setPayeeId(object.getModel().getPayeeID());
+        }
+
+        return poJSON;
+    }
+    
+    public JSONObject SearchParticular(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setParticularId(object.getModel().getParticularID());
+        }
+
+        return poJSON;
     }
 
     @Override
