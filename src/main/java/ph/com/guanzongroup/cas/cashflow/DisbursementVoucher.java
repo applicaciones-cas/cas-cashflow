@@ -4236,9 +4236,13 @@ public class DisbursementVoucher extends Transaction {
             if (poCheckPayments.getModel().getCheckNo() == null || "".equals(poCheckPayments.getModel().getCheckNo())) {
                 //get the latest check no existed in bank account
                 lsCheckNo = poBankAccount.getModel().getCheckNo();
-                if (lsCheckNo.matches("\\d+")) {
-                    long incremented = Long.parseLong(lsCheckNo) + 1;
-                    lsCheckNo = String.format("%0" + lsCheckNo.length() + "d", incremented);
+                if(lsCheckNo != null && !"".equals(lsCheckNo)){
+                    if (lsCheckNo.matches("\\d+")) {
+                        long incremented = Long.parseLong(lsCheckNo) + 1;
+                        lsCheckNo = String.format("%0" + lsCheckNo.length() + "d", incremented);
+                    }
+                } else {
+                    lsCheckNo = "";
                 }
                 poCheckPayments.getModel().setCheckNo(lsCheckNo);
                 poCheckPayments.getModel().setCheckDate(poGRider.getServerDate());
