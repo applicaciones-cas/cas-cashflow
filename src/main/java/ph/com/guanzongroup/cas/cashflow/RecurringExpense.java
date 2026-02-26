@@ -116,6 +116,46 @@ public class RecurringExpense extends Parameter {
         }
     }
     
+    public JSONObject searchRecordByParticular(String value, boolean byCode) throws SQLException, GuanzonException {
+        String lsSQL = getSQ_Browse();
+        
+        String lsCondition = "";
+        if (psRecdStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psRecdStat.length() - 1; lnCtr++) {
+                lsCondition += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
+            }
+
+            lsCondition = "a.cRecdStat IN (" + lsCondition.substring(2) + ")";
+        } else {
+            lsCondition = "a.cRecdStat = " + SQLUtil.toSQL(psRecdStat);
+        }
+        
+        lsSQL =  MiscUtil.addCondition(lsSQL, lsCondition);
+        if(psIndustryId != null && !"".equals(psIndustryId)){
+            lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+        if(psPayeeId != null && !"".equals(psPayeeId)){
+            lsSQL = lsSQL + " AND a.sPayeeIDx = " + SQLUtil.toSQL(psPayeeId);
+        }
+        
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Payee»Particular",
+                "sRecurrID»xPayeeNme»xParticlr",
+                "a.sRecurrID»c.sPayeeNme»IFNULL(d.sDescript, '')",
+                byCode ? 0 : 2);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sRecurrID"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
     public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);

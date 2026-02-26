@@ -121,7 +121,7 @@ public class RecurringExpenseSchedule extends Parameter{
         object.setIndustryID(psIndustryId);
         object.setPayeeID(Master().getPayeeId());
 
-        poJSON = object.searchRecord(value, byCode);
+        poJSON = object.searchRecordByParticular(value, byCode);
         if ("success".equals((String) poJSON.get("result"))){
             poJSON = OpenTransaction(object.getModel().getRecurringId());
             if ("success".equals((String) poJSON.get("result"))){
@@ -335,7 +335,6 @@ public class RecurringExpenseSchedule extends Parameter{
         Model_Recurring_Expense_Schedule loDetail = new CashflowModels(poGRider).Recurring_Expense_Schedule();
         loDetail.newRecord();
         paDetail.add(loDetail);
-        
         return poJSON;
     }
     
@@ -431,18 +430,38 @@ public class RecurringExpenseSchedule extends Parameter{
             }
             
             poGRider.beginTrans(lsEvent,Detail(lnCtr).getTable(), "PARM",String.valueOf(Detail(lnCtr).getValue(1))); 
-            
+            poJSON = Detail(lnCtr).saveRecord();
             if ("success".equals(poJSON.get("result"))) {
-                poJSON = Detail(lnCtr).saveRecord();
-                if ("success".equals(poJSON.get("result"))) {
-                  poGRider.commitTrans(); 
-                  poJSON = new JSONObject();
-                  poJSON.put("result", "success");
-                  poJSON.put("message", "Transaction saved successfully.");
-                } 
+              poGRider.commitTrans(); 
+              poJSON = new JSONObject();
+              poJSON.put("result", "success");
+              poJSON.put("message", "Transaction saved successfully.");
             } else {
-              poGRider.rollbackTrans();
+                poGRider.rollbackTrans();
             } 
+           
+//            boolean lbUpdateStatus = false;
+//            Model_Recurring_Expense_Schedule loObject = new CashflowModels(poGRider).Recurring_Expense_Schedule();
+//            if(Detail(lnCtr).getEditMode() == EditMode.UPDATE){
+//                poJSON = loObject.openRecord(Detail(lnCtr).getRecurringNo());
+//                if (!"success".equals(poJSON.get("result"))) {
+//                    return poJSON;
+//                }
+//                
+//                lbUpdateStatus = Detail(lnCtr).isActive() != loObject.isActive();
+//            }
+//            
+//            if(lbUpdateStatus){
+//                if(loObject.getEditMode() == EditMode.READY){
+//                    if(Detail(lnCtr).isActive() && !loObject.isActive()){
+//                        loObject.
+//                    }
+//
+//                
+//                }
+//                
+//            } else {
+//            }
         
         }
         return poJSON;
