@@ -5,10 +5,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Parameter;
-import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -97,6 +98,60 @@ public class RecurringExpenseSchedule extends Parameter{
     }
     
     /*Search Master References*/   
+
+    /**
+     *
+     * @param value
+     * @param byCode
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     */
+    @Override
+    public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = getSQ_Browse();
+        
+        String lsCondition = "";
+        if (psRecdStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psRecdStat.length() - 1; lnCtr++) {
+                lsCondition += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
+            }
+
+            lsCondition = "a.cRecdStat IN (" + lsCondition.substring(2) + ")";
+        } else {
+            lsCondition = "a.cRecdStat = " + SQLUtil.toSQL(psRecdStat);
+        }
+        
+        lsSQL =  MiscUtil.addCondition(lsSQL, lsCondition);
+        if(psIndustryId != null && !"".equals(psIndustryId)){
+            lsSQL = lsSQL + " AND b.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+        lsSQL = lsSQL + " GROUP BY a.sRecurrID ";
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Payee»Particular",
+                "sRecurrID»xPayeeNme»xParticlr",
+                "a.sRecurrID»c.sPayeeNme»IFNULL(g.sDescript, '')",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            try {
+                return OpenTransaction((String) poJSON.get("sRecurrID"));
+            } catch (CloneNotSupportedException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON.put("result", "error");
+                poJSON.put("message", MiscUtil.getException(ex));
+                return poJSON;
+            }
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
     public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException{
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -142,6 +197,7 @@ public class RecurringExpenseSchedule extends Parameter{
     
     public JSONObject populateDetail() throws SQLException, GuanzonException, CloneNotSupportedException{
         poJSON = new JSONObject();
+        AddDetail();
         if(Master().isAllBranches()){
             String lsSQL = "SELECT sBranchCd FROM Branch ";
             System.out.println("Executing SQL: " + lsSQL);
@@ -187,7 +243,11 @@ public class RecurringExpenseSchedule extends Parameter{
             }
             MiscUtil.close(loRS);
         }
-    
+        
+        if(poModel.getEditMode() == EditMode.READY){
+            Detail().remove(getDetailCount() - 1);
+        }
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -394,8 +454,8 @@ public class RecurringExpenseSchedule extends Parameter{
     }
     
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
         if (!pbInitRec) {
-            poJSON = new JSONObject();
             poJSON.put("result", "error");
             poJSON.put("message", "Object is not initialized.");
             return poJSON;
@@ -408,9 +468,24 @@ public class RecurringExpenseSchedule extends Parameter{
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr ++){   
-            Detail(lnCtr).setRecurringId(Master().getRecurringId());
-            Detail(lnCtr).setPayeeId(Master().getPayeeId());
-            Detail(lnCtr).setRecurringNo(Detail(lnCtr).getNextCode());
+            String lsEvent = ""; //Default Event
+            switch(Detail(lnCtr).getEditMode()){
+                case EditMode.UPDATE:
+                    lsEvent = "UPDATE";
+                break;
+                case EditMode.ADDNEW:
+                    Detail(lnCtr).setRecurringId(Master().getRecurringId());
+                    Detail(lnCtr).setPayeeId(Master().getPayeeId());
+                    Detail(lnCtr).setRecurringNo(Detail(lnCtr).getNextCode());
+                    lsEvent = "ADD NEW";
+                break;
+                default:
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Invalid Update Mode.");
+                    return poJSON;
+                    
+            }
+            
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
             Detail(lnCtr).setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
             
@@ -419,51 +494,17 @@ public class RecurringExpenseSchedule extends Parameter{
               return poJSON; 
             }
             
-            String lsEvent = ""; //Default Event
-            switch(Detail(lnCtr).getEditMode()){
-                case EditMode.UPDATE:
-                    lsEvent = "UPDATE";
-                break;
-                default:
-                    lsEvent = "ADD NEW";
-                break;
-            }
-            
             poGRider.beginTrans(lsEvent,Detail(lnCtr).getTable(), "PARM",String.valueOf(Detail(lnCtr).getValue(1))); 
             poJSON = Detail(lnCtr).saveRecord();
             if ("success".equals(poJSON.get("result"))) {
-              poGRider.commitTrans(); 
-              poJSON = new JSONObject();
-              poJSON.put("result", "success");
-              poJSON.put("message", "Transaction saved successfully.");
+                poGRider.commitTrans(); 
             } else {
                 poGRider.rollbackTrans();
+                return poJSON;
             } 
-           
-//            boolean lbUpdateStatus = false;
-//            Model_Recurring_Expense_Schedule loObject = new CashflowModels(poGRider).Recurring_Expense_Schedule();
-//            if(Detail(lnCtr).getEditMode() == EditMode.UPDATE){
-//                poJSON = loObject.openRecord(Detail(lnCtr).getRecurringNo());
-//                if (!"success".equals(poJSON.get("result"))) {
-//                    return poJSON;
-//                }
-//                
-//                lbUpdateStatus = Detail(lnCtr).isActive() != loObject.isActive();
-//            }
-//            
-//            if(lbUpdateStatus){
-//                if(loObject.getEditMode() == EditMode.READY){
-//                    if(Detail(lnCtr).isActive() && !loObject.isActive()){
-//                        loObject.
-//                    }
-//
-//                
-//                }
-//                
-//            } else {
-//            }
-        
         }
+        poJSON.put("result", "success");
+        poJSON.put("message", "Record saved successfully.");
         return poJSON;
     }
     
@@ -503,12 +544,14 @@ public class RecurringExpenseSchedule extends Parameter{
                     + "  , d.sBranchNm AS xBranchNm "
                     + "  , e.sDeptName AS xDeptName "
                     + "  , f.sCompnyNm AS xEmployNm "
+                    + "  , g.sDescript AS xParticlr "
                     + " FROM Recurring_Expense_Schedule a  "
                     + " LEFT JOIN Recurring_Expense b ON b.sRecurrID = a.sRecurrID "
                     + " LEFT JOIN Payee c ON c.sPayeeIDx = a.sPayeeIDx             "
                     + " LEFT JOIN Branch d ON d.sBranchCd = a.sBranchCd            "
                     + " LEFT JOIN Department e ON e.sDeptIDxx = a.sDeptIDxx        "
-                    + " LEFT JOIN Client_Master f ON f.sClientID = a.sEmployID     ";
+                    + " LEFT JOIN Client_Master f ON f.sClientID = a.sEmployID     "
+                    + " LEFT JOIN Particular g ON g.sPrtclrID = b.sPrtclrID     ";
     }
     
     protected JSONObject isEntryOkay(int fnRow){
