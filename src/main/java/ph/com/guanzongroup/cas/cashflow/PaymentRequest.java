@@ -401,6 +401,25 @@ public class PaymentRequest extends Transaction {
         }
         return addDetail();
     }
+    
+    /*Validate*/
+    public void ReverseItem(int row){
+        int lnExist = 0;
+        for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
+            if(lnCtr != row){
+                if(Detail(row).getParticularID().equals(Detail(lnCtr).getParticularID())){
+                    lnExist++;
+                    break; 
+                }
+            }
+        }
+        
+        if(lnExist >= 1){
+            Detail().remove(row);
+        } else {
+            Detail(row).isReverse(false);
+        }
+    }
 
     private TransactionAttachment TransactionAttachment() throws SQLException, GuanzonException {
         return new SysTableContollers(poGRider, null).TransactionAttachment();

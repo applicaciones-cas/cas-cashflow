@@ -39,6 +39,7 @@ public class Model_Payment_Request_Detail extends Model {
             poEntity.updateObject("nAddDiscx", 0.0000);
             poEntity.updateObject("nTWithHld", 0.0000);
             poEntity.updateObject("cVATaxabl", "0");
+            poEntity.updateObject("cReversex", "+");
 
             //end - assign default values
             poEntity.insertRow();
@@ -138,6 +139,13 @@ public class Model_Payment_Request_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nTWithHld")));
     }
     
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
+    }
 
     public JSONObject setModifiedDate(Date modifiedDate) {
         return setValue("dModified", modifiedDate);
