@@ -10,8 +10,6 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.status.CheckTransferStatus;
 
 public class CheckTransferValidatorFactory implements GValidator {

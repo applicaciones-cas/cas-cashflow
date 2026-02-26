@@ -11,6 +11,8 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
+import ph.com.guanzongroup.cas.cashflow.CheckDeposit;
+import ph.com.guanzongroup.cas.cashflow.CheckDeposits;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
@@ -540,6 +542,25 @@ public class CashflowControllers {
         poCheckTransfer.setWithParent(false);
         return poCheckTransfer;
     }
+    
+        public CheckDeposits CheckDeposits() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckDeposits: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckDeposit != null) {
+            return poCheckDeposit;
+        }
+
+        poCheckDeposit = new CheckDeposits();
+        poCheckDeposit.setApplicationDriver(poGRider);
+        poCheckDeposit.setBranchCode(poGRider.getBranchCode());
+        poCheckDeposit.setLogWrapper(poLogWrapper);
+        poCheckDeposit.setVerifyEntryNo(true);
+        poCheckDeposit.setWithParent(false);
+        return poCheckDeposit;
+    }
 
     
     @Override
@@ -549,6 +570,7 @@ public class CashflowControllers {
             poBankAccountMaster = null;
             poRecurringIssuance = null;
             poCheckTransfer = null;
+            poCheckDeposit = null;
             poParticular = null;
             poPayee = null;
             poRecurringIssuance = null;
@@ -611,4 +633,5 @@ public class CashflowControllers {
     private WithholdingTaxDeductions poWithholdingTaxDeductions;
     private CashAdvance poCashAdvance;
     private CheckTransfers poCheckTransfer;
+    private CheckDeposits poCheckDeposit;
 }

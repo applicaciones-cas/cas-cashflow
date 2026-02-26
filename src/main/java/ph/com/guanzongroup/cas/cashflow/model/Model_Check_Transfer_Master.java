@@ -29,6 +29,7 @@ public class Model_Check_Transfer_Master extends Model {
     Model_Department poDepartment;
     Model_Branch poBranch;
     Model_Branch poBranchDestination;
+    private String bankid;
 
     @Override
     public void initialize() {
@@ -242,7 +243,14 @@ public class Model_Check_Transfer_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
+    public String setBanks(String bankidx) {
+        return bankid = bankidx;
+    }
 
+    public String getBanks() {
+        return bankid;
+    }
     @Override
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());

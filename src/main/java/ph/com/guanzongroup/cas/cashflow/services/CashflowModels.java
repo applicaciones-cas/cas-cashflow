@@ -12,6 +12,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
@@ -582,6 +584,40 @@ public class CashflowModels {
         return poCheckTransferDetail;
     }
     
+    public Model_Check_Deposit_Master CheckDepositMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CheckDepositMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckDepositMaster == null){
+            poCheckDepositMaster = new Model_Check_Deposit_Master();
+            poCheckDepositMaster.setApplicationDriver(poGRider);
+            poCheckDepositMaster.setXML("Model_Check_Deposit_Master");
+            poCheckDepositMaster.setTableName("Check_Deposit_Master");
+            poCheckDepositMaster.initialize();
+        }
+
+        return poCheckDepositMaster;
+    }
+    
+    public Model_Check_Deposit_Detail CheckDepositDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.CheckDepositDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckDepositDetail == null){
+            poCheckDepositDetail = new Model_Check_Deposit_Detail();
+            poCheckDepositDetail.setApplicationDriver(poGRider);
+            poCheckDepositDetail.setXML("Model_Check_Deposit_Detail");
+            poCheckDepositDetail.setTableName("Check_Deposit_Detail");
+            poCheckDepositDetail.initialize();
+        }
+
+        return poCheckDepositDetail;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -606,6 +642,8 @@ public class CashflowModels {
             poCashAdvanceDetail= null;
             poCheckTransferMaster = null;
             poCheckTransferDetail= null;
+            poCheckDepositMaster = null;
+            poCheckDepositDetail= null;
             poPettyCash = null;
 
             poGRider = null;
@@ -647,5 +685,7 @@ public class CashflowModels {
     private Model_Cash_Advance_Detail poCashAdvanceDetail;
     private Model_PettyCash poPettyCash;
     private Model_Check_Transfer_Master poCheckTransferMaster;    
-    private Model_Check_Transfer_Detail poCheckTransferDetail;
+    private Model_Check_Transfer_Detail poCheckTransferDetail;    
+    private Model_Check_Deposit_Master poCheckDepositMaster;    
+    private Model_Check_Deposit_Detail poCheckDepositDetail;
 }
