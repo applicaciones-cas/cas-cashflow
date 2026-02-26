@@ -398,6 +398,10 @@ public class RecurringExpenseSchedule extends Parameter{
         return poJSON;
     }
     
+    /**
+     * Reload Detail for adding or deleting detail
+     * @throws CloneNotSupportedException 
+     */
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
@@ -416,6 +420,29 @@ public class RecurringExpenseSchedule extends Parameter{
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
         }
+    }
+    
+    /**
+     * Reload original data when update status triggered
+     * @param row
+     * @param status
+     * @return 
+     * @throws CloneNotSupportedException 
+     * @throws java.sql.SQLException 
+     * @throws org.guanzon.appdriver.base.GuanzonException 
+     */
+    public JSONObject ReloadData(int row, boolean status) throws CloneNotSupportedException, SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        
+        Model_Recurring_Expense_Schedule loObject = new CashflowModels(poGRider).Recurring_Expense_Schedule();
+        poJSON = loObject.openRecord(Detail(row).getRecurringNo());
+        if (!"success".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        Detail().set(row, loObject);
+        Detail(row).isActive(status);
+        return poJSON;
     }
         
     @Override
@@ -453,6 +480,13 @@ public class RecurringExpenseSchedule extends Parameter{
         return poJSON;
     }
     
+    /**
+     * Save Transaction : For Multiple record to save at once.
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException 
+     */
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
         if (!pbInitRec) {
