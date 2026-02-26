@@ -184,11 +184,6 @@ public class RecurringExpenseSchedule extends Parameter{
                 if (!"success".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }   
-                
-                poJSON = populateDetail();
-                if (!"success".equals((String) poJSON.get("result"))){
-                    return poJSON;
-                }   
             }    
         }    
         
