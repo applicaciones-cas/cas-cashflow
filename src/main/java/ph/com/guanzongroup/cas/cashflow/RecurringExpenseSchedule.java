@@ -345,6 +345,12 @@ public class RecurringExpenseSchedule extends Parameter{
      */
     public JSONObject SearchBranch(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException{
         poJSON = new JSONObject();
+        
+        poJSON = validateRecurring();
+        if (!"success".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
 
@@ -369,7 +375,11 @@ public class RecurringExpenseSchedule extends Parameter{
             throws SQLException,
             GuanzonException {
         poJSON = new JSONObject();
-
+        poJSON = validateRecurring();
+        if (!"success".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         Department object = new ParamControllers(poGRider, logwrapr).Department();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
@@ -393,6 +403,11 @@ public class RecurringExpenseSchedule extends Parameter{
             GuanzonException {
 
         poJSON = new JSONObject();
+        poJSON = validateRecurring();
+        if (!"success".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         String lsSQL = "SELECT " 
                 + "   a.sEmployID "
                 + " , b.sCompnyNm AS EmployNme" 
@@ -419,6 +434,25 @@ public class RecurringExpenseSchedule extends Parameter{
             return loJSON;
         }
     
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject validateRecurring(){
+        poJSON = new JSONObject();
+        if(Master().getPayeeId() == null || "".equals(Master().getPayeeId())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Payee cannot be empty");
+            return poJSON;
+        }
+        
+        if(Master().getParticularId() == null || "".equals(Master().getParticularId())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Particular cannot be empty");
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
