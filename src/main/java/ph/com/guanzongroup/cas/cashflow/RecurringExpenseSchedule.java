@@ -478,7 +478,7 @@ public class RecurringExpenseSchedule extends Parameter{
         return paDetail.size();
     }
     
-    public JSONObject AddDetail() throws CloneNotSupportedException{
+    public JSONObject AddDetail() throws CloneNotSupportedException, SQLException{
         if(Master().getParticularId() == null || "".equals(Master().getParticularId())){
             return poJSON;
         }
@@ -495,6 +495,7 @@ public class RecurringExpenseSchedule extends Parameter{
         Model_Recurring_Expense_Schedule loDetail = new CashflowModels(poGRider).Recurring_Expense_Schedule();
         loDetail.newRecord();
         paDetail.add(loDetail);
+        Detail(getDetailCount() - 1).setDateFrom(poGRider.getServerDate());
         return poJSON;
     }
     
