@@ -73,7 +73,7 @@ public class RecurringExpenseSchedule extends Parameter{
         return poJSON;
     }
     
-    public JSONObject UpdateTransaction() throws CloneNotSupportedException{
+    public JSONObject UpdateTransaction() throws CloneNotSupportedException, SQLException{
         poJSON = poModel.updateRecord();
         if (!"success".equals((String) poJSON.get("result"))){
             return poJSON;
@@ -503,7 +503,7 @@ public class RecurringExpenseSchedule extends Parameter{
      * Reload Detail for adding or deleting detail
      * @throws CloneNotSupportedException 
      */
-    public void ReloadDetail() throws CloneNotSupportedException{
+    public void ReloadDetail() throws CloneNotSupportedException, SQLException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
             if (Detail(lnCtr).getBranchCode() == null || "".equals(Detail(lnCtr).getBranchCode())) {
