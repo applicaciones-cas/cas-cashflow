@@ -194,7 +194,7 @@ public class RecurringExpenseSchedule extends Parameter{
         poJSON = new JSONObject();
         AddDetail();
         if(Master().isAllBranches()){
-            String lsSQL = "SELECT sBranchCd FROM Branch ";
+            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript FROM Branch ORDER BY sBranchNm ASC";
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -206,6 +206,11 @@ public class RecurringExpenseSchedule extends Parameter{
             int lnRow = getDetailCount() - 1;
             String lsRecurringNo = "";
             while (loRS.next()) {
+                System.out.println("-------------------------------------------------------------------");
+                System.out.println("Branch Code : " + lnRow + " : " + loRS.getString("sBranchCd"));
+                System.out.println("Branch Name : " + lnRow + " : " + loRS.getString("sBranchNm"));
+                System.out.println("Description : " + lnRow + " : " + loRS.getString("sDescript"));
+                System.out.println("-------------------------------------------------------------------");
                 lsRecurringNo = checkRecurringExpenseSchedule(loRS.getString("sBranchCd")); 
                 if(!lsRecurringNo.isEmpty()){
                     poJSON = Detail(lnRow).openRecord(lsRecurringNo);
