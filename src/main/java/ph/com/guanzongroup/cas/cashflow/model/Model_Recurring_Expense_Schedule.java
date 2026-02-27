@@ -355,4 +355,26 @@ public class Model_Recurring_Expense_Schedule extends Model {
             return poClient;
         }
     }
+
+    public Model_Recurring_Expense RecurringExpense() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sRecurrID"))) {
+            if (poRecurringExpense.getEditMode() == EditMode.READY
+                    && poRecurringExpense.getRecurringId().equals((String) getValue("sRecurrID"))) {
+                return poRecurringExpense;
+            } else {
+                poJSON = poRecurringExpense.openRecord((String) getValue("sRecurrID"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poRecurringExpense;
+                } else {
+                    poRecurringExpense.initialize();
+                    return poRecurringExpense;
+                }
+            }
+        } else {
+            poRecurringExpense.initialize();
+            return poRecurringExpense;
+        }
+    }
+
 }

@@ -21,7 +21,8 @@ public class Model_Payment_Request_Detail extends Model {
 
     Model_Particular poParticular;
     Model_Recurring_Issuance poRecurring;
-
+    Model_Recurring_Expense_Schedule poRecurringExpense;
+    
     @Override
     public void initialize() {
         try {
@@ -53,6 +54,7 @@ public class Model_Payment_Request_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
             poRecurring = cashFlow.Recurring_Issuance();
+            poRecurringExpense = cashFlow.Recurring_Expense_Schedule();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -89,6 +91,14 @@ public class Model_Payment_Request_Detail extends Model {
 
     public String getParticularID() {
         return (String) getValue("sPrtclrID");
+    }
+
+    public JSONObject setRecurringNo(String recurringNo) {
+        return setValue("sRecurrNo", recurringNo);
+    }
+
+    public String getRecurringNo() {
+        return (String) getValue("sRecurrNo");
     }
 
     public JSONObject setPRFRemarks(String prfRemarks) {
@@ -193,6 +203,26 @@ public class Model_Payment_Request_Detail extends Model {
         } else {
             poRecurring.initialize();
             return poRecurring;
+        }
+    }
+    
+    public Model_Recurring_Expense_Schedule RecurringExpenseSchedule() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sRecurrNo"))) {
+            if (poRecurringExpense.getEditMode() == EditMode.READY
+                    && poRecurringExpense.getRecurringNo().equals((String) getValue("sRecurrNo"))) {
+                return poRecurringExpense;
+            } else {
+                poJSON = poRecurringExpense.openRecord((String) getValue("sRecurrNo"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poRecurringExpense;
+                } else {
+                    poRecurringExpense.initialize();
+                    return poRecurringExpense;
+                }
+            }
+        } else {
+            poRecurringExpense.initialize();
+            return poRecurringExpense;
         }
     }
 

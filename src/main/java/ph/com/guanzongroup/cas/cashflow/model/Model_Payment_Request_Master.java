@@ -32,6 +32,7 @@ public class Model_Payment_Request_Master extends Model {
     Model_Branch poBranch;
     Model_Industry poIndustry;
     Model_Company poCompany;
+    Model_Recurring_Expense_Schedule poRecurringExpense;
 
     @Override
     public void initialize() {
@@ -67,10 +68,12 @@ public class Model_Payment_Request_Master extends Model {
             ParamModels model = new ParamModels(poGRider);
             poDepartment = model.Department();
             poBranch = model.Branch();
-            CashflowModels cashFlow = new CashflowModels(poGRider);
-            poPayee = cashFlow.Payee();
             poIndustry = model.Industry();
             poCompany = model.Company();
+            
+            CashflowModels cashFlow = new CashflowModels(poGRider);
+            poPayee = cashFlow.Payee();
+            poRecurringExpense = cashFlow.Recurring_Expense_Schedule();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -372,6 +375,26 @@ public class Model_Payment_Request_Master extends Model {
         } else {
             poIndustry.initialize();
             return poIndustry;
+        }
+    }
+    
+    public Model_Recurring_Expense_Schedule RecurringExpenseSchedule() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poRecurringExpense.getEditMode() == EditMode.READY
+                    && poRecurringExpense.getRecurringNo().equals((String) getValue("sSourceNo"))) {
+                return poRecurringExpense;
+            } else {
+                poJSON = poRecurringExpense.openRecord((String) getValue("sSourceNo"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poRecurringExpense;
+                } else {
+                    poRecurringExpense.initialize();
+                    return poRecurringExpense;
+                }
+            }
+        } else {
+            poRecurringExpense.initialize();
+            return poRecurringExpense;
         }
     }
 }

@@ -13,6 +13,7 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Iterator;
 import java.util.List;
@@ -45,10 +46,12 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Payment_Monitor;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStaticData;
+import static ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStaticData.recurring_expense_payment;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.PaymentRequestValidator;
 
@@ -130,6 +133,52 @@ public class PaymentRequest extends Transaction {
             return poJSON;
         }
 
+        //Arsiela 02-26-2026
+        boolean lbRecurring = false;
+        List<Model_Recurring_Expense_Payment_Monitor> laRecurringObj = new ArrayList<>();
+        Model_Recurring_Expense_Payment_Monitor loObject = new CashflowModels(poGRider).Recurring_Expense_Payment_Monitor();
+        if(getDetailCount() > 1){
+            if(Detail(getDetailCount() - 1).getRecurringNo() != null && !"".equals(Detail(getDetailCount() - 1).getRecurringNo())){
+                lbRecurring = true;
+                for(int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++){
+                    poJSON = loObject.openPendingRecurringExpense(Detail(lnCtr).getRecurringNo()); 
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+
+                    poJSON = loObject.updateRecord();
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+
+                    if(!laRecurringObj.contains(loObject)){
+                        loObject.setBatchNo(Master().getTransactionNo());
+                        laRecurringObj.add(loObject);
+                    }
+                }
+            } 
+        } else {
+            switch(Master().getSourceCode()){
+                case recurring_expense_payment:  
+                    lbRecurring = true;
+                    poJSON = loObject.openPendingRecurringExpense(Master().getSourceNo()); 
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+
+                    poJSON = loObject.updateRecord();
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+
+                    if(!laRecurringObj.contains(loObject)){
+                        loObject.setBatchNo(Master().getTransactionNo());
+                        laRecurringObj.add(loObject);
+                    }
+                break;
+            }
+        }
+        
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
@@ -141,6 +190,17 @@ public class PaymentRequest extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
+        }
+        
+        //Arsiela 02-27-2026
+        if(lbRecurring){
+            for(int lnCtr = 0; lnCtr < laRecurringObj.size(); lnCtr++){
+                poJSON = laRecurringObj.get(lnCtr).saveRecord();
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    poGRider.rollbackTrans();
+                    return poJSON;
+                }
+            }
         }
 
         poGRider.commitTrans();
@@ -570,6 +630,144 @@ public class PaymentRequest extends Transaction {
         }
         return poJSON;
     }
+    
+    /**
+     * Arsiela - 02-27-2026
+     * Populate Recurring Expense based on Recurring Expense Monitor
+     * @param fsRecurringTransNo
+     * @return
+     * @throws CloneNotSupportedException
+     * @throws SQLException
+     * @throws GuanzonException 
+     */
+    public JSONObject populateRecurringDetail(String fsRecurringTransNo) throws CloneNotSupportedException, SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        if(fsRecurringTransNo == null || "".equals(fsRecurringTransNo)){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No recurring detail to load.");
+            return poJSON;
+        }
+        String lsRecurringNo = "";
+        boolean lbExist = false;
+        boolean lbAddedNew = false;
+        ArrayList<String> laTransNo = new ArrayList<>(Arrays.asList(fsRecurringTransNo.split(",")));
+        for(int lnCtr = 0; lnCtr < laTransNo.size(); lnCtr++){
+            Model_Recurring_Expense_Payment_Monitor loObject = new CashflowModels(poGRider).Recurring_Expense_Payment_Monitor();
+            poJSON = loObject.openRecord(laTransNo.get(lnCtr));
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            lsRecurringNo = loObject.getRecurringNo();
+            
+            //Check Existing Recurring No
+            for(int lnRow = 0; lnRow < getDetailCount(); lnRow++){
+                if(Detail(lnRow).getParticularID() != null && !"".equals(Detail(lnRow).getParticularID())){
+                    if(Master().getPayeeID() != null && !"".equals(Master().getPayeeID())){
+                        if(Detail(lnRow).getRecurringNo() != null && !"".equals(Detail(lnRow).getRecurringNo())){
+                            if(!Master().getPayeeID().equals(Detail(lnRow).RecurringExpenseSchedule().getPayeeId())){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
+                                return poJSON;
+                            }
+                            
+                            if(Detail(lnRow).RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
+                                return poJSON;
+                            }
+                        } else {
+                            if(!Master().getPayeeID().equals(Master().RecurringExpenseSchedule().getPayeeId())){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
+                                return poJSON;
+                            }
+                            
+                            if(Master().RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
+                                return poJSON;
+                            }
+                        }
+                    }
+                }
+                
+                lbExist = Detail(lnRow).getRecurringNo().equals(lsRecurringNo);
+                if(lbExist){
+                    break;
+                }
+            }
+            
+            if(!lbExist){
+                Detail(getDetailCount() - 1).setRecurringNo(lsRecurringNo);
+                Detail(getDetailCount() - 1).setParticularID(
+                Detail(getDetailCount() - 1).RecurringExpenseSchedule().RecurringExpense().getParticularId());
+                Detail(getDetailCount() - 1).setAmount(Detail(getDetailCount() - 1).RecurringExpenseSchedule().getAmount());
+                Master().setPayeeID(Detail(getDetailCount() - 1).RecurringExpenseSchedule().getPayeeId());
+                
+                if(getDetailCount() <= 1){
+                    Master().setSource(lsRecurringNo);
+                    Master().setSourceCode("REPM");
+                } else {
+                    Master().setSource("");
+                    Master().setSourceCode("");
+                }
+                AddDetail();
+                lbAddedNew = true;
+            }
+            
+            lbExist = false;//Set false by default
+        }
+        
+        if(!lbAddedNew){
+            poJSON.put("result", "error");
+            poJSON.put("message", "All remaining recurring expense already added.");
+            return poJSON;
+        }
+        
+        return poJSON;
+    }
+    //TODO
+//    private JSONObject checkExistingPRF(String recurringNo){
+//        poJSON = new JSONObject();
+//        try {
+//            Model_Payment_Request_Detail loObject = new CashflowModels(poGRider).PaymentRequestDetail();
+//            String lsSQL = MiscUtil.addCondition(loObject,
+//                        " sRecurrNo = " + SQLUtil.toSQL(recurringNo)
+//                            + " AND b.sIndstCdx = " + SQLUtil.toSQL(fsIndustry)
+//                            + " AND b.sCategrCd = " + SQLUtil.toSQL(fsCategory)
+//                            + " AND a.cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+//            System.out.println("Executing SQL: " + lsSQL);
+//            ResultSet loRS = oApp.executeQuery(lsSQL);
+//            try {
+//                if (MiscUtil.RecordCount(loRS) > 0) {
+//                    if (loRS.next()) {
+//                        loJSON.put("sMenuCDxx", loRS.getString("sMenuCDxx"));
+//                        loJSON.put("sMenuGrpx", loRS.getString("sMenuGrpx"));
+//                        loJSON.put("sMenuName", loRS.getString("sMenuName"));
+//                        loJSON.put("sMenuDesc", loRS.getString("sMenuDesc"));
+//                        loJSON.put("sCommandx", loRS.getString("sCommandx"));
+//                        loJSON.put("sCmdTypex", loRS.getString("sCmdTypex"));
+//                        loJSON.put("sFormName", loRS.getString("sFormName"));
+//                        loJSON.put("sObjectNm", loRS.getString("sObjectNm"));
+//                        loJSON.put("sIndstCdx", loRS.getString("sIndstCdx"));
+//                        loJSON.put("sCategrCd", loRS.getString("sCategrCd"));
+//                        return loJSON;
+//                    }
+//                }
+//                MiscUtil.close(loRS);
+//            } catch (SQLException e) {
+//                System.out.println("No record loaded.");
+//            }
+//        } catch (SQLException ex) {
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//        }
+//        loJSON.put("result", "error");
+//        return loJSON;
+//    
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
 
     @Override
     public void initSQL() {
@@ -802,6 +1000,17 @@ public class PaymentRequest extends Transaction {
             }
         }
         
+        //Arsiela 02-26-2026
+        switch(Master().getSourceCode()){
+            case recurring_expense_payment:  //If source is from REPM and multiple ung detail, required na iset ang recurr no at empty ang nasa source no at source code else kung iisang row may laman ang source no / source code
+                if(getDetailCount() > 1){
+                    Master().setSourceNo("");
+                    Master().setSourceCode("");
+                } else {
+                    Detail(getDetailCount()-1).setRecurringNo("");
+                }
+            break;
+        }
 
         poJSON.put("result", "success");
         return poJSON;
