@@ -533,15 +533,6 @@ public class CheckDeposit extends Transaction {
             return poJSON;
         }
         System.out.println("-----------------------------------");
-        
-        
-        
-        
-        
-        
-        
-        
-        
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
