@@ -21,7 +21,7 @@ public class Model_Payment_Request_Detail extends Model {
 
     Model_Particular poParticular;
     Model_Recurring_Issuance poRecurring;
-    Model_Recurring_Expense_Schedule poRecurringExpense;
+    Model_Recurring_Expense_Payment_Monitor poRecurringExpense;
     
     @Override
     public void initialize() {
@@ -54,7 +54,7 @@ public class Model_Payment_Request_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
             poRecurring = cashFlow.Recurring_Issuance();
-            poRecurringExpense = cashFlow.Recurring_Expense_Schedule();
+            poRecurringExpense = cashFlow.Recurring_Expense_Payment_Monitor();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -206,10 +206,10 @@ public class Model_Payment_Request_Detail extends Model {
         }
     }
     
-    public Model_Recurring_Expense_Schedule RecurringExpenseSchedule() throws GuanzonException, SQLException {
+    public Model_Recurring_Expense_Payment_Monitor RecurringExpensePaymentMonitor() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sRecurrNo"))) {
             if (poRecurringExpense.getEditMode() == EditMode.READY
-                    && poRecurringExpense.getRecurringNo().equals((String) getValue("sRecurrNo"))) {
+                    && poRecurringExpense.getTransactionNo().equals((String) getValue("sRecurrNo"))) {
                 return poRecurringExpense;
             } else {
                 poJSON = poRecurringExpense.openRecord((String) getValue("sRecurrNo"));

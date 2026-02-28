@@ -33,7 +33,8 @@ public class testRecurringExpenseSchedule {
             Logger.getLogger(testRecurringExpenseSchedule.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    //Technically no NEW RECORD 
+    
+    //Technically no NEW RECORD because of search recurring expense then base on that recurring expense schedule will populate.
     
     @Test
     public void testOpenRecord() {

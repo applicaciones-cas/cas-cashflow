@@ -32,7 +32,7 @@ public class Model_Payment_Request_Master extends Model {
     Model_Branch poBranch;
     Model_Industry poIndustry;
     Model_Company poCompany;
-    Model_Recurring_Expense_Schedule poRecurringExpense;
+    Model_Recurring_Expense_Payment_Monitor poRecurringExpense;
 
     @Override
     public void initialize() {
@@ -73,7 +73,7 @@ public class Model_Payment_Request_Master extends Model {
             
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
-            poRecurringExpense = cashFlow.Recurring_Expense_Schedule();
+            poRecurringExpense = cashFlow.Recurring_Expense_Payment_Monitor();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -378,10 +378,10 @@ public class Model_Payment_Request_Master extends Model {
         }
     }
     
-    public Model_Recurring_Expense_Schedule RecurringExpenseSchedule() throws GuanzonException, SQLException {
+    public Model_Recurring_Expense_Payment_Monitor RecurringExpensePaymentMonitor() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sSourceNo"))) {
             if (poRecurringExpense.getEditMode() == EditMode.READY
-                    && poRecurringExpense.getRecurringNo().equals((String) getValue("sSourceNo"))) {
+                    && poRecurringExpense.getTransactionNo().equals((String) getValue("sSourceNo"))) {
                 return poRecurringExpense;
             } else {
                 poJSON = poRecurringExpense.openRecord((String) getValue("sSourceNo"));

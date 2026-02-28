@@ -86,6 +86,10 @@ public class Model_Recurring_Expense_Payment_Monitor extends Model {
         return setValue("sBatchNox", batchNo);
     }
 
+    public String getBatchNo() {
+        return (String) getValue("sBatchNox");
+    }
+
     public int getBillMonth() {
         return (int) getValue("nBillMnth");
     }
