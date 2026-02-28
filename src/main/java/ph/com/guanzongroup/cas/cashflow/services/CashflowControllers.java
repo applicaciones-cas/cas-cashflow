@@ -17,6 +17,7 @@ import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
+import ph.com.guanzongroup.cas.cashflow.CheckReleases;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.CheckTransfer;
 import ph.com.guanzongroup.cas.cashflow.CheckTransfers;
@@ -543,7 +544,7 @@ public class CashflowControllers {
         return poCheckTransfer;
     }
     
-        public CheckDeposits CheckDeposits() {
+    public CheckDeposits CheckDeposits() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckDeposits: Application driver is not set.");
             return null;
@@ -561,6 +562,25 @@ public class CashflowControllers {
         poCheckDeposit.setWithParent(false);
         return poCheckDeposit;
     }
+    
+    public CheckReleases CheckReleases() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckRelease: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckRelease != null) {
+            return poCheckRelease;
+        }
+
+        poCheckRelease = new CheckReleases();
+        poCheckRelease.setApplicationDriver(poGRider);
+        poCheckRelease.setBranchCode(poGRider.getBranchCode());
+        poCheckRelease.setLogWrapper(poLogWrapper);
+        poCheckRelease.setVerifyEntryNo(true);
+        poCheckRelease.setWithParent(false);
+        return poCheckRelease;
+    }
 
     
     @Override
@@ -571,6 +591,7 @@ public class CashflowControllers {
             poRecurringIssuance = null;
             poCheckTransfer = null;
             poCheckDeposit = null;
+            poCheckRelease= null;
             poParticular = null;
             poPayee = null;
             poRecurringIssuance = null;
@@ -634,4 +655,5 @@ public class CashflowControllers {
     private CashAdvance poCashAdvance;
     private CheckTransfers poCheckTransfer;
     private CheckDeposits poCheckDeposit;
+    private CheckReleases poCheckRelease;
 }
