@@ -1760,6 +1760,7 @@ public class PaymentRequest extends Transaction {
         double ldblNetTotal = 0.0000;
         double ldblDiscountAmount = 0.0000;
         double ldblVatAmount = 0.0000;
+        double ldblVatExempt = 0.0000;
 
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if(Detail(lnCtr).isReverse()){
@@ -1768,6 +1769,8 @@ public class PaymentRequest extends Transaction {
                 ldblDiscountAmount += Detail(lnCtr).getAddDiscount();
                 if(Detail(lnCtr).isVatable()){
                     ldblVatAmount += Detail(lnCtr).getVatAmount();
+                } else {
+                    ldblVatExempt += Detail(lnCtr).getNetTotal();
                 }
             }
         }
@@ -1775,6 +1778,7 @@ public class PaymentRequest extends Transaction {
         Master().setTranTotal(ldblTransactionTotal);
         Master().setDiscountAmount(ldblDiscountAmount);
         Master().setVatAmount(ldblVatAmount);
+        Master().setVatExempt(ldblVatExempt);
         Master().setNetTotal(ldblNetTotal);
         return poJSON;
     }
