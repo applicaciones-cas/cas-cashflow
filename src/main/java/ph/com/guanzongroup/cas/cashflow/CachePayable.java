@@ -13,9 +13,11 @@ import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 
 public class CachePayable extends Transaction{   
     public JSONObject InitTransaction(){      
@@ -43,6 +45,48 @@ public class CachePayable extends Transaction{
     public JSONObject UpdateTransaction(){
         return super.updateTransaction();
     }
+    
+    public JSONObject PaidTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CachePayableStatus.PAID;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) Master().getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already paid.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(CachePayableStatus.PAID);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+
+        //change status
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction paid successfully.");
+        return poJSON;
+    }
+
     
     public JSONObject AddDetail() throws CloneNotSupportedException{
         if (Detail(getDetailCount() - 1).getTransactionType().isEmpty() && 
