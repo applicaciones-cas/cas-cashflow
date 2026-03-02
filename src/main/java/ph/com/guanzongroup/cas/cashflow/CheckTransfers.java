@@ -545,6 +545,89 @@ public class CheckTransfers extends Transaction {
         }
         return paChecks.size();
     }
+    
+    public JSONObject getCheckTransferForPosting(String lsSource, String fsTransNo,LocalDate fddate) throws SQLException, GuanzonException {
+        JSONObject loJSON = new JSONObject();
+        String lsTransStat = "";
+        String lsSQL = "SELECT "
+             + "  a.sTransNox, "
+             + "  a.dTransact, "
+             + "  a.sDestinat, "
+             + "  b.sBranchNm, "
+             + "  c.sDeptIDxx, "
+             + "  c.sDeptName, "
+             + "  LEFT(a.sTransNox, 4) AS source, "
+             + "  d.sBranchNm, "
+             + "  a.cTranStat "
+             + " FROM "
+             + "  Check_Transfer_Master a "
+             + "  LEFT JOIN Branch b ON a.sDestinat = b.sBranchCd" 
+             + " LEFT JOIN Department c on a.sDeptIDxx = c.sDeptIDxx"
+             + " LEFT JOIN Branch d on  LEFT(a.sTransNox, 4) = d.sBranchCd";
+        
+        List<String> lsFilter = new ArrayList<>();
+
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+           lsFilter.add( "  a.cTranStat IN (" + lsTransStat.substring(2) + ")");
+        } else {
+            lsFilter.add("  a.cTranStat = " + SQLUtil.toSQL(psTranStat));
+        }
+        
+
+        if (lsSource != null && !lsSource.trim().isEmpty()) {
+            lsFilter.add(" d.sBranchNm = " + SQLUtil.toSQL(lsSource));
+        }
+        if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
+            lsFilter.add(" a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
+        }
+
+        if (fddate != null ) {
+            lsFilter.add("a.dTransact = " + SQLUtil.toSQL(java.sql.Date.valueOf(fddate)));
+        }
+        
+        lsFilter.add("a.sDestinat = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+  
+
+        // Append WHERE clause if any filter exists
+        if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+
+        
+        lsSQL = lsSQL + " GROUP BY  a.sTransNox"
+                + " ORDER BY a.dTransact DESC";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+        int lnCtr = 0;
+        if (MiscUtil.RecordCount(loRS) >= 0) {
+            poCheckTransferMaster = new ArrayList<>();
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                System.out.println("------------------------------------------------------------------------------");
+
+                poCheckTransferMaster.add(CheckTransferMasterList());
+                poCheckTransferMaster.get(poCheckTransferMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                lnCtr++;
+            }
+            System.out.println("Records found: " + lnCtr);
+            loJSON.put("result", "success");
+            loJSON.put("message", "Record loaded successfully.");
+        } else {
+            poCheckTransferMaster = new ArrayList<>();
+            poCheckTransferMaster.add(CheckTransferMasterList());
+            loJSON.put("result", "error");
+            loJSON.put("continue", true);
+            loJSON.put("message", "No record found .");
+        }
+        MiscUtil.close(loRS);
+        return loJSON;
+    }
 
     public JSONObject getCheckTransfer(String fsDestination, String fsTransNo,LocalDate fddate) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
