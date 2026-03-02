@@ -178,7 +178,7 @@ public class PaymentRequest extends Transaction {
 
         //Arsiela 02-27-2026
         for(int lnCtr = 0; lnCtr < laRecurringObj.size(); lnCtr++){
-            poJSON = loObject.openRecord(Detail(lnCtr).getRecurringNo()); 
+            poJSON = loObject.openRecord(laRecurringObj.get(lnCtr)); 
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -824,6 +824,7 @@ public class PaymentRequest extends Transaction {
             }
             
             if(!lbExist){
+                AddDetail();
                 Detail(getDetailCount() - 1).isReverse(true);
                 Detail(getDetailCount() - 1).setRecurringNo(lsRecurringNo);
                 Detail(getDetailCount() - 1).setParticularID(
@@ -839,7 +840,6 @@ public class PaymentRequest extends Transaction {
                     Master().setSourceCode("");
                 }
                 
-                AddDetail();
                 lbAddedNew = true;
             }
             
@@ -1722,62 +1722,60 @@ public class PaymentRequest extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+//
+//    public JSONObject computeNetPayableDetails(double rent, boolean isVatExclusive, double vatRate, double wtaxRate) {
+//        JSONObject result = new JSONObject();
+//        double baseRent;
+//        double vat;
+//        double whtax;
+//        double total;
+//        double netPayable;
+//
+//        if (isVatExclusive) {
+//            vat = rent * vatRate / (1 + vatRate);  // Extract VAT from total
+//            baseRent = rent - vat;
+//            whtax = baseRent * wtaxRate;
+//            total = rent;
+//            netPayable = total - whtax;
+//        } else {
+//            baseRent = rent;
+//            vat = rent * vatRate;
+//            total = rent + vat;
+//            whtax = rent * wtaxRate;
+//            netPayable = total - whtax;
+//        }
+//
+//        result.put("baseRent", baseRent);
+//        result.put("vat", vat);
+//        result.put("wtax", whtax);
+//        result.put("total", total);
+//        result.put("netPayable", netPayable);
+//        result.put("result", "success");
+//        return result;
+//    }
 
-    public JSONObject computeNetPayableDetails(double rent, boolean isVatExclusive, double vatRate, double wtaxRate) {
-        JSONObject result = new JSONObject();
-        double baseRent;
-        double vat;
-        double whtax;
-        double total;
-        double netPayable;
-
-        if (isVatExclusive) {
-            vat = rent * vatRate / (1 + vatRate);  // Extract VAT from total
-            baseRent = rent - vat;
-            whtax = baseRent * wtaxRate;
-            total = rent;
-            netPayable = total - whtax;
-        } else {
-            baseRent = rent;
-            vat = rent * vatRate;
-            total = rent + vat;
-            whtax = rent * wtaxRate;
-            netPayable = total - whtax;
-        }
-
-        result.put("baseRent", baseRent);
-        result.put("vat", vat);
-        result.put("wtax", whtax);
-        result.put("total", total);
-        result.put("netPayable", netPayable);
-        result.put("result", "success");
-        return result;
-    }
-
-    public JSONObject computeMasterFields() {
+    public JSONObject computeFields() {
         poJSON = new JSONObject();
-        double totalAmount = 0.0000;
-        double totalDiscountAmount = 0.0000;
-        double detailTaxAmount = 0.0000;
-        double detailNetAmount = 0.0000;
+        double ldblTransactionTotal = 0.0000;
+        double ldblNetTotal = 0.0000;
+        double ldblDiscountAmount = 0.0000;
+        double ldblVatAmount = 0.0000;
 
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            totalAmount += Detail(lnCtr).getAmount();
-            totalDiscountAmount += Detail(lnCtr).getAddDiscount();
-//            if (Detail(lnCtr).getVatable().equals("1")) {
-//                poJSON = computeNetPayableDetails(Detail(lnCtr).getAmount().doubleValue() - Detail(lnCtr).getAddDiscount().doubleValue(), true, 0.12, 0.0000);
-//            } else {
-//                poJSON = computeNetPayableDetails(Detail(lnCtr).getAmount().doubleValue() - Detail(lnCtr).getAddDiscount().doubleValue(), false, 0.12, 0.0000);
-//            }
-//            detailTaxAmount += Double.parseDouble(poJSON.get("vat").toString());
-//            detailNetAmount += Double.parseDouble(poJSON.get("netPayable").toString());
-//            detailNetAmount += totalAmount;
+            if(Detail(lnCtr).isReverse()){
+                ldblTransactionTotal += Detail(lnCtr).getAmount();
+                ldblNetTotal += Detail(lnCtr).getNetTotal();
+                ldblDiscountAmount += Detail(lnCtr).getAddDiscount();
+                if(Detail(lnCtr).isVatable()){
+                    ldblVatAmount += Detail(lnCtr).getVatAmount();
+                }
+            }
         }
-
-        Master().setTranTotal(totalAmount);
-        Master().setDiscountAmount(0.0000);
-        Master().setTaxAmount(0.0000);
-        Master().setNetTotal(totalAmount);
+        
+        Master().setTranTotal(ldblTransactionTotal);
+        Master().setDiscountAmount(ldblDiscountAmount);
+        Master().setTaxAmount(ldblVatAmount);
+        Master().setNetTotal(ldblNetTotal);
         return poJSON;
     }
 

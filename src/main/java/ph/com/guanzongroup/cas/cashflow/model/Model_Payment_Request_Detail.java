@@ -132,13 +132,38 @@ public class Model_Payment_Request_Detail extends Model {
     public double getAddDiscount() {
         return Double.parseDouble(String.valueOf(getValue("nAddDiscx")));
     }
-
-    public JSONObject setVatable(String vatable) {
-        return setValue("cVATaxabl", vatable);
+    
+    public JSONObject isVatable(boolean isReverse) {
+        return setValue("cVATaxabl", isReverse ? "1" : "0");
     }
 
-    public String getVatable() {
-        return (String) getValue("cVATaxabl");
+    public boolean isVatable() {
+        return ((String) getValue("cVATaxabl")).equals("1");
+    }
+    
+    public double getTotalDiscount(){
+        double ldblDetailDiscountRate = 0.00;
+        if(getDiscount() > 0){
+            ldblDetailDiscountRate = getAmount() * (getDiscount() / 100);
+        }
+        return ldblDetailDiscountRate + getAddDiscount();
+    }
+    
+    public double getVatAmount(){
+        double ldblDetailTotal = getAmount() - getTotalDiscount();
+        if(ldblDetailTotal > 0.0000){
+            return ldblDetailTotal * 0.12;
+        } else {
+            return 0.0000;
+        }
+    }
+    
+    public double getNetTotal(){
+        if(isVatable()){
+            return (getAmount() + getVatAmount()) - getTotalDiscount();
+        } else {
+            return getAmount() - getTotalDiscount();
+        }
     }
 
     public JSONObject setWithHoldingTax(double withHoldingTax) {
