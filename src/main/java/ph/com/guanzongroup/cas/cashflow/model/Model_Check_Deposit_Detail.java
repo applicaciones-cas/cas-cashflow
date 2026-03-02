@@ -35,9 +35,7 @@ public class Model_Check_Deposit_Detail extends Model {
 
             poEntity.absolute(1);
 
-            poEntity.updateObject("nEntryNox", 1);
-            poEntity.updateNull("sSourceNo");
-            poEntity.updateNull("sSourceCd");            
+            poEntity.updateObject("nEntryNox", 0);         
             poEntity.updateObject("cReversex", "+");
             ID = poEntity.getMetaData().getColumnLabel(1);
             ID2 = poEntity.getMetaData().getColumnLabel(2);

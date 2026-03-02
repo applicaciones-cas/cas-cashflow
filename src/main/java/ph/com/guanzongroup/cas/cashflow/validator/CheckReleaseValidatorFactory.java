@@ -1,36 +1,143 @@
 package ph.com.guanzongroup.cas.cashflow.validator;
 
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.iface.GValidator;
+import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Master;
+import ph.com.guanzongroup.cas.cashflow.status.CheckTransferStatus;
 
-public class CheckReleaseValidatorFactory {
+public class CheckReleaseValidatorFactory implements GValidator {
 
-    public static GValidator make(String industryId) {
-        switch (industryId) {
-            case "00": //Mobile Phone
-                return new CheckRelease_MP();
-            case "01": //Motorcycle
-                return new CheckRelease_MC();
-            case "02": //Vehicle
-            case "05":
-            case "06":
-                return new CheckRelease_Car();
-            case "03": //Monarch
-                return new CheckRelease_Monarch();
-            case "04": //Los Pedritos
-                return new CheckRelease_LP();
-            case "07": //Guanzon Services Office
-            case "08": //Main Office
-            case "09": //General Purchases
-            case "10": //Engineering
-                return new CheckRelease_General();
-            case "11": //Appliances
-                return new CheckRelease_Appliance();
-//
-//            case "": //Main Office
-//                return new CheckRelease_General();
-            default:
-                return null;
+    GRiderCAS poGrider;
+    String psTranStat;
+    JSONObject poJSON;
+
+    Model_Check_Release_Master poMaster;
+    ArrayList<Model_Check_Release_Detail> poDetail;
+
+    @Override
+    public void setApplicationDriver(Object applicationDriver) {
+        poGrider = (GRiderCAS) applicationDriver;
+    }
+
+    @Override
+    public void setTransactionStatus(String transactionStatus) {
+        psTranStat = transactionStatus;
+    }
+
+    @Override
+    public void setMaster(Object value) {
+        poMaster = (Model_Check_Release_Master) value;
+    }
+
+    @Override
+    public void setDetail(ArrayList<Object> value) {
+        poDetail.clear();
+        for (int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++) {
+            poDetail.add((Model_Check_Release_Detail) value.get(lnCtr));
         }
+    }
+
+    @Override
+    public void setOthers(ArrayList<Object> value) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public JSONObject validate() {
+        switch (psTranStat) {
+            case CheckTransferStatus.OPEN:
+                return validateNew();
+            case CheckTransferStatus.CONFIRMED:
+                return validateConfirmed();
+            case CheckTransferStatus.CANCELLED:
+                return validateCancelled();
+            case CheckTransferStatus.VOID:
+                return validateVoid();
+            case CheckTransferStatus.POSTED:
+                return validatePosted();
+            default:
+                poJSON = new JSONObject();
+                poJSON.put("result", "success");
+        }
+
+        return poJSON;
+    }
+
+    private JSONObject validateNew() {
+        poJSON = new JSONObject();
+        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+            poJSON.put("message", "Industry is not set");
+            return poJSON;
+        }
+        if (poMaster.getTransactionDate() == null) {
+            poJSON.put("message", "Transaction Date is not set");
+            return poJSON;
+        }
+        if (poMaster.getReceivedBy()== null || poMaster.getReceivedBy().isEmpty()) {
+            poJSON.put("message", "Received by is not set");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validateConfirmed() {
+        poJSON = new JSONObject();
+        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+            poJSON.put("message", "Industry is not set");
+            return poJSON;
+        }
+        if (poMaster.getTransactionDate() == null) {
+            poJSON.put("message", "Transaction Date is not set");
+            return poJSON;
+        }
+        if (poMaster.getReceivedBy()== null || poMaster.getReceivedBy().isEmpty()) {
+            poJSON.put("message", "Received by is not set");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validateCancelled() {
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validateVoid() {
+        poJSON = new JSONObject();
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    private JSONObject validatePosted() {
+        poJSON = new JSONObject();
+        if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+            poJSON.put("message", "Industry is not set");
+            return poJSON;
+        }
+        if (poMaster.getTransactionDate() == null) {
+            poJSON.put("message", "Transaction Date is not set");
+            return poJSON;
+        }
+        if (poMaster.getReceivedBy()== null || poMaster.getReceivedBy().isEmpty()) {
+            poJSON.put("message", "Received by is not set");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
     }
 
 }

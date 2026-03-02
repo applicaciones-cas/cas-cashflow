@@ -12,9 +12,15 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
@@ -546,6 +552,108 @@ public class CashflowModels {
         return poPettyCash;
     }
     
+    public Model_Check_Transfer_Master CheckTransferMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CheckTransferMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckTransferMaster == null){
+            poCheckTransferMaster = new Model_Check_Transfer_Master();
+            poCheckTransferMaster.setApplicationDriver(poGRider);
+            poCheckTransferMaster.setXML("Model_Check_Transfer_Master");
+            poCheckTransferMaster.setTableName("Check_Transfer_Master");
+            poCheckTransferMaster.initialize();
+        }
+
+        return poCheckTransferMaster;
+    }
+    
+    public Model_Check_Transfer_Detail CheckTransferDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.CheckTransferDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckTransferDetail == null){
+            poCheckTransferDetail = new Model_Check_Transfer_Detail();
+            poCheckTransferDetail.setApplicationDriver(poGRider);
+            poCheckTransferDetail.setXML("Model_Check_Transfer_Detail");
+            poCheckTransferDetail.setTableName("Check_Transfer_Detail");
+            poCheckTransferDetail.initialize();
+        }
+
+        return poCheckTransferDetail;
+    }
+    
+    public Model_Check_Deposit_Master CheckDepositMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CheckDepositMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckDepositMaster == null){
+            poCheckDepositMaster = new Model_Check_Deposit_Master();
+            poCheckDepositMaster.setApplicationDriver(poGRider);
+            poCheckDepositMaster.setXML("Model_Check_Deposit_Master");
+            poCheckDepositMaster.setTableName("Check_Deposit_Master");
+            poCheckDepositMaster.initialize();
+        }
+
+        return poCheckDepositMaster;
+    }
+    
+    public Model_Check_Deposit_Detail CheckDepositDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.CheckDepositDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckDepositDetail == null){
+            poCheckDepositDetail = new Model_Check_Deposit_Detail();
+            poCheckDepositDetail.setApplicationDriver(poGRider);
+            poCheckDepositDetail.setXML("Model_Check_Deposit_Detail");
+            poCheckDepositDetail.setTableName("Check_Deposit_Detail");
+            poCheckDepositDetail.initialize();
+        }
+
+        return poCheckDepositDetail;
+    }
+    
+    public Model_Check_Release_Master CheckReleaseMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CheckDepositMaster: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckReleaseMaster == null){
+            poCheckReleaseMaster = new Model_Check_Release_Master();
+            poCheckReleaseMaster.setApplicationDriver(poGRider);
+            poCheckReleaseMaster.setXML("Model_Check_Release_Master");
+            poCheckReleaseMaster.setTableName("Check_Release_Master");
+            poCheckReleaseMaster.initialize();
+        }
+
+        return poCheckReleaseMaster;
+    }
+    
+    public Model_Check_Release_Detail CheckReleaseDetail(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.CheckDepositDetail: Application driver is not set.");
+            return null;
+        }
+        
+        if (poCheckReleaseDetail == null){
+            poCheckReleaseDetail = new Model_Check_Release_Detail();
+            poCheckReleaseDetail.setApplicationDriver(poGRider);
+            poCheckReleaseDetail.setXML("Model_Check_Release_Detail");
+            poCheckReleaseDetail.setTableName("Check_Release_Detail");
+            poCheckReleaseDetail.initialize();
+        }
+
+        return poCheckReleaseDetail;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -568,6 +676,12 @@ public class CashflowModels {
             poWithholdingTaxDeductions= null;
             poCashAdvance = null;
             poCashAdvanceDetail= null;
+            poCheckTransferMaster = null;
+            poCheckTransferDetail= null;
+            poCheckDepositMaster = null;
+            poCheckDepositDetail= null;
+            poCheckReleaseDetail = null;
+            poCheckReleaseMaster = null;
             poPettyCash = null;
 
             poGRider = null;
@@ -608,4 +722,10 @@ public class CashflowModels {
     private Model_Cash_Advance poCashAdvance;
     private Model_Cash_Advance_Detail poCashAdvanceDetail;
     private Model_PettyCash poPettyCash;
+    private Model_Check_Transfer_Master poCheckTransferMaster;    
+    private Model_Check_Transfer_Detail poCheckTransferDetail;    
+    private Model_Check_Deposit_Master poCheckDepositMaster;    
+    private Model_Check_Deposit_Detail poCheckDepositDetail;    
+    private Model_Check_Release_Master poCheckReleaseMaster;    
+    private Model_Check_Release_Detail poCheckReleaseDetail;
 }
