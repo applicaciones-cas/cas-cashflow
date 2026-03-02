@@ -605,27 +605,8 @@ public class PaymentRequest extends Transaction {
                 return poJSON;
             }
         }
-
         poJSON.put("result", "success");
         return poJSON;
-
-    }
-    
-    public int addAttachment(String fFileName) throws SQLException, GuanzonException{
-        for(int lnCtr = 0;lnCtr <= getTransactionAttachmentCount() - 1;lnCtr++){
-            if(fFileName.equals(paAttachments.get(lnCtr).getModel().getFileName())
-                && RecordStatus.INACTIVE.equals(paAttachments.get(lnCtr).getModel().getRecordStatus())){
-                paAttachments.get(lnCtr).getModel().setRecordStatus(RecordStatus.ACTIVE);
-                System.out.println("Attachment :"+ lnCtr+" Activate");
-                return lnCtr;
-            }
-        }
-        
-        addAttachment();
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setFileName(fFileName);
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setSourceNo(Master().getTransactionNo());
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setRecordStatus(RecordStatus.ACTIVE);
-        return getTransactionAttachmentCount() - 1;
     }
     
     public JSONObject removeAttachment(int fnRow) throws GuanzonException, SQLException{
@@ -648,9 +629,26 @@ public class PaymentRequest extends Transaction {
         return poJSON;
     }
     
+    public int addAttachment(String fFileName) throws SQLException, GuanzonException{
+        for(int lnCtr = 0;lnCtr <= getTransactionAttachmentCount() - 1;lnCtr++){
+            if(fFileName.equals(paAttachments.get(lnCtr).getModel().getFileName())
+                && RecordStatus.INACTIVE.equals(paAttachments.get(lnCtr).getModel().getRecordStatus())){
+                paAttachments.get(lnCtr).getModel().setRecordStatus(RecordStatus.ACTIVE);
+                System.out.println("Attachment :"+ lnCtr+" Activate");
+                return lnCtr;
+            }
+        }
+        
+        addAttachment();
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setFileName(fFileName);
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setSourceNo(Master().getTransactionNo());
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setRecordStatus(RecordStatus.ACTIVE);
+        return getTransactionAttachmentCount() - 1;
+    }
+    
     public void copyFile(String fsPath){
         Path source = Paths.get(fsPath);
-        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/Attachments");
+        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments");
 
         try {
             // Ensure target directory exists
@@ -680,14 +678,15 @@ public class PaymentRequest extends Transaction {
             paAttachments.add(TransactionAttachment());
             poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
             if ("success".equals((String) poJSON.get("result"))) {
-                if (Master().getEditMode() == EditMode.UPDATE) {
-                    poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
+                if(Master().getEditMode() == EditMode.UPDATE){
+                   poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
                 }
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getTransactionNo());
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
                 System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
             }
+            
             //Download Attachments
             poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
                     , "0032" //Constant
@@ -706,9 +705,10 @@ public class PaymentRequest extends Transaction {
                     System.out.println("poJSON success: " +  poJSON.toJSONString());
                     System.out.println("File downloaded succesfully.");
                 } else {
-                    System.out.println("poJSON error: " + poJSON.toJSONString());
+                    poJSON = (JSONObject) poJSON.get("error");
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Unable to download file.");
+                    System.out.println("ERROR WebFile.DownloadFile: " + poJSON.get("message"));
+                    System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
                 }
                 
             } else {
@@ -1074,13 +1074,23 @@ public class PaymentRequest extends Transaction {
             Master().setTransactionStatus(PaymentRequestStatus.OPEN); //If edited update trasaction status into open
         }
         
+        //Arsiela 02-26-2026
         switch(Master().getSourceCode()){
             case InvTransCons.PURCHASE_ORDER:
-                Model_PO_Master loOb
+                Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+                poJSON = loObject.openRecord(Master().getSourceNo());
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                double ldblBalance = loObject.getNetTotal().doubleValue() - loObject.getAmountPaid().doubleValue();
+                if(ldblBalance < Master().getTranTotal()){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "PRF Net total cannot be greater than the purchase order balance.");
+                    return poJSON;
+                }
         
         }
         
-        //Arsiela 02-26-2026
         if(Detail(0).getRecurringNo() != null && !"".equals(Detail(0).getRecurringNo())){
             if(getDetailCount() > 1){
                 Master().setSourceNo("");
@@ -1119,34 +1129,74 @@ public class PaymentRequest extends Transaction {
         }
 
         //attachement checker
-        if (getTransactionAttachmentCount() > 0) {
-            Iterator<TransactionAttachment> attachment = TransactionAttachmentList().iterator();
-            while (attachment.hasNext()) {
-                TransactionAttachment item = attachment.next();
-
-                if ((String) item.getModel().getFileName() == null || "".equals(item.getModel().getFileName())) {
-                    attachment.remove();
-                }
-            }
-        }
-        //Set Transaction Attachments
-        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
+//        if (getTransactionAttachmentCount() > 0) {
+//            Iterator<TransactionAttachment> attachment = TransactionAttachmentList().iterator();
+//            while (attachment.hasNext()) {
+//                TransactionAttachment item = attachment.next();
+//
+//                if ((String) item.getModel().getFileName() == null || "".equals(item.getModel().getFileName())) {
+//                    attachment.remove();
+//                }
+//            }
+//        }
+        //assign other info on attachment
+        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
             TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
             TransactionAttachmentList(lnCtr).getModel().setSourceCode(getSourceCode());
             TransactionAttachmentList(lnCtr).getModel().setBranchCode(Master().getBranchCode());
             TransactionAttachmentList(lnCtr).getModel().setImagePath(System.getProperty("sys.default.path.temp.attachments"));
             
+            String lsOriginalFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+            //Check existing file name in database
+            if(EditMode.ADDNEW == TransactionAttachmentList(lnCtr).getModel().getEditMode()){
+                int lnCopies = 0;
+                String fsFilePath = TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + TransactionAttachmentList(lnCtr).getModel().getFileName();
+                String lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+                while ("error".equals((String)checkExistingFileName(lsNewFileName).get("result"))) {
+                    lnCopies++;
+                    //Rename the file
+                    int dotIndex = TransactionAttachmentList(lnCtr).getModel().getFileName().lastIndexOf(".");
+                    if (dotIndex == -1) {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName() +"_"+lnCopies;
+                    } else {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName().substring(0, dotIndex) +"_"+ lnCopies +TransactionAttachmentList(lnCtr).getModel().getFileName().substring(dotIndex);
+                    }
+                }
+
+                if(lnCopies > 0){
+                    Path source = Paths.get(fsFilePath);
+                    try {
+                        // Copy file into the target directory with a new name
+                        Path target = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments").resolve(lsNewFileName);
+                        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                        //check if file is existing
+                        int lnChecker = 0;
+                        File file = new File(TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + lsNewFileName);
+                        while(!file.exists() && lnChecker < 5){
+                            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);  
+                            System.out.println("Re-Copying... " + lnChecker);
+                            lnChecker++;
+                        }
+                        TransactionAttachmentList(lnCtr).getModel().setFileName(lsNewFileName);
+                        System.out.println("File copied successfully as " + lsNewFileName);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            //Upload Attachment when send status is 0
             try {
                 if("0".equals(TransactionAttachmentList(lnCtr).getModel().getSendStatus())){
-                    
-                    poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr);
+                    poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr,lsOriginalFileName);
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
                 }
             } catch (Exception ex) {
-                Logger.getLogger(PaymentRequest.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(PurchaseOrderReceiving.class.getName()).log(Level.SEVERE, null, ex);
             }
+            
         }
 
         if (PaymentRequestStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
@@ -1164,24 +1214,64 @@ public class PaymentRequest extends Transaction {
     public JSONObject save() {
         return isEntryOkay(PaymentRequestStatus.OPEN);
     }
-    public JSONObject uploadCASAttachments(GRiderCAS instance, String access, int fnRow) throws Exception{       
+    
+    public JSONObject checkExistingFileName(String fsFileName) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
-        System.out.println("Uploading... : " + paAttachments.get(fnRow).getModel().getFileName());
+        
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(TransactionAttachment().getModel()), 
+                                                                    " sFileName = " + SQLUtil.toSQL(fsFileName)
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sFileName") != null && !"".equals(loRS.getString("sFileName"))){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "File name already exist in database.\nTry changing the file name to upload.");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return poJSON;
+    }
+    
+    /**
+     * Upload Attachment
+     * @param instance
+     * @param access 
+     * @param fnRow 
+     * @return  
+     * @throws java.lang.Exception 
+     */
+    public JSONObject uploadCASAttachments(GRiderCAS instance, String access, int fnRow, String fsOriginalFileName) throws Exception{       
+        poJSON = new JSONObject();
+        System.out.println("Uploading... : fsOriginalFileName : " + fsOriginalFileName);
+        System.out.println("New File Name... : " + paAttachments.get(fnRow).getModel().getFileName());
         String hash;
-        File file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + paAttachments.get(fnRow).getModel().getFileName());
-
-        //check if file is existing
+        String lsFile = paAttachments.get(fnRow).getModel().getFileName();
+        
+        //check if new file is existing
+        File file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
         if(!file.exists()){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Cannot locate file in " + paAttachments.get(fnRow).getModel().getImagePath() + "/" + paAttachments.get(fnRow).getModel().getFileName()
-                                    + ".Contact system administrator for assistance.");
-            return poJSON;  
+            //check if original file is existing
+            lsFile = fsOriginalFileName;
+            file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
+            if(!file.exists()){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Cannot locate file in " + paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile
+                                        + ".\nContact system administrator for assistance.");
+                return poJSON;  
+            }
         }
 
         //check if file hash is not empty
         hash = paAttachments.get(fnRow).getModel().getMD5Hash();
         if(paAttachments.get(fnRow).getModel().getMD5Hash() == null || "".equals(paAttachments.get(fnRow).getModel().getMD5Hash())){
-            hash = MiscReplUtil.md5Hash(paAttachments.get(fnRow).getModel().getImagePath() + "/" + paAttachments.get(fnRow).getModel().getFileName());
+            hash = MiscReplUtil.md5Hash(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
         }
 
         JSONObject result = WebFile.UploadFile(getAccessToken(access)
@@ -1200,7 +1290,7 @@ public class PaymentRequest extends Transaction {
             System.out.println("Upload Error : " + paAttachments.get(fnRow).getModel().getFileName());
             poJSON.put("result", "error");
             poJSON.put("message", "System error while uploading file "+ paAttachments.get(fnRow).getModel().getFileName()
-                                    + ".Contact system administrator for assistance.");
+                                    + ".\nContact system administrator for assistance.");
             return poJSON;
         }
         paAttachments.get(fnRow).getModel().setMD5Hash(hash);
