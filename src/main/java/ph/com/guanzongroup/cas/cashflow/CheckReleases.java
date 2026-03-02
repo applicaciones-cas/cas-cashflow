@@ -76,7 +76,7 @@ import ph.com.guanzongroup.cas.cashflow.validator.CheckTransferValidatorFactory;
  */
 public class CheckReleases extends Transaction {
 
-    List<Model_Check_Release_Master> poCheckTransferMaster;
+    List<Model_Check_Release_Master> poCheckReleaseMaster;
     List<Model_Check_Payments> paChecks;
     List<CheckPayments> poChecks;
     private boolean pbApproval = false;
@@ -538,18 +538,17 @@ public class CheckReleases extends Transaction {
         return paChecks.size();
     }
 
-    public JSONObject getCheckTransfer(String fsDestination, String fsTransNo,LocalDate fddate) throws SQLException, GuanzonException {
+    public JSONObject getCheckRelease(String fsDestination, String fsTransNo) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsTransStat = "";
         String lsSQL = "SELECT "
-             + "  a.sTransNox, "
-             + "  a.dTransact, "
-             + "  a.sDestinat, "
-             + "  b.sBranchNm, "
-             + "  a.cTranStat "
+             + "  sTransNox, "
+             + "  dTransact, "
+             + "  sReceived, "
+             + "  sRemarksx, "
+             + "  cTranStat "
              + " FROM "
-             + "  Check_Transfer_Master a "
-             + "  LEFT JOIN Branch b ON a.sDestinat = b.sBranchCd";
+             + "  Check_Release_Master  ";
         
         List<String> lsFilter = new ArrayList<>();
 
@@ -557,22 +556,20 @@ public class CheckReleases extends Transaction {
             for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                 lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
             }
-           lsFilter.add( "  a.cTranStat IN (" + lsTransStat.substring(2) + ")");
+           lsFilter.add( "  cTranStat IN (" + lsTransStat.substring(2) + ")");
         } else {
-            lsFilter.add("  a.cTranStat = " + SQLUtil.toSQL(psTranStat));
+            lsFilter.add("  cTranStat = " + SQLUtil.toSQL(psTranStat));
         }
         
 
         if (fsDestination != null && !fsDestination.trim().isEmpty()) {
-            lsFilter.add(" a.sDestinat = " + SQLUtil.toSQL(fsDestination));
+            lsFilter.add(" sReceived = " + SQLUtil.toSQL(fsDestination));
         }
         if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
-            lsFilter.add(" a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
+            lsFilter.add(" sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
         }
 
-        if (fddate != null ) {
-            lsFilter.add("a.dTransact = " + SQLUtil.toSQL(java.sql.Date.valueOf(fddate)));
-        }
+
         
         
   
@@ -583,30 +580,30 @@ public class CheckReleases extends Transaction {
         }
 
         
-        lsSQL = lsSQL + " GROUP BY  a.sTransNox"
-                + " ORDER BY a.dTransact DESC";
+        lsSQL = lsSQL + " GROUP BY  sTransNox"
+                + " ORDER BY dTransact DESC";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         int lnCtr = 0;
         if (MiscUtil.RecordCount(loRS) >= 0) {
-            poCheckTransferMaster = new ArrayList<>();
+            poCheckReleaseMaster = new ArrayList<>();
             while (loRS.next()) {
                 // Print the result set
                 System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                 System.out.println("dTransact: " + loRS.getDate("dTransact"));
                 System.out.println("------------------------------------------------------------------------------");
 
-                poCheckTransferMaster.add(CheckTransferMasterList());
-                poCheckTransferMaster.get(poCheckTransferMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                poCheckReleaseMaster.add(CheckReleaseMasterList());
+                poCheckReleaseMaster.get(poCheckReleaseMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
                 lnCtr++;
             }
             System.out.println("Records found: " + lnCtr);
             loJSON.put("result", "success");
             loJSON.put("message", "Record loaded successfully.");
         } else {
-            poCheckTransferMaster = new ArrayList<>();
-            poCheckTransferMaster.add(CheckTransferMasterList());
+            poCheckReleaseMaster = new ArrayList<>();
+            poCheckReleaseMaster.add(CheckReleaseMasterList());
             loJSON.put("result", "error");
             loJSON.put("continue", true);
             loJSON.put("message", "No record found .");
@@ -751,17 +748,17 @@ public class CheckReleases extends Transaction {
         return poJSON;
     }
 
-    private Model_Check_Release_Master CheckTransferMasterList() {
+    private Model_Check_Release_Master CheckReleaseMasterList() {
         return new CashflowModels(poGRider).CheckReleaseMaster();
     }
 
 
-    public int getCheckTransferMasterCount() {
-        return this.poCheckTransferMaster.size();
+    public int getCheckReleaseMasterCount() {
+        return this.poCheckReleaseMaster.size();
     }
 
-    public Model_Check_Release_Master poCheckTransferMaster(int row) {
-        return (Model_Check_Release_Master) poCheckTransferMaster.get(row);
+    public Model_Check_Release_Master poCheckReleaseMaster(int row) {
+        return (Model_Check_Release_Master) poCheckReleaseMaster.get(row);
     }
     private JSONObject setValueToOthers(String status)
             throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -1219,85 +1216,7 @@ public class CheckReleases extends Transaction {
         return poJSON;
     }
     
-    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
-        CachedRowSet crs = getStatusHistory();
-        
-        crs.beforeFirst();
-        
-        while(crs.next()){
-            switch (crs.getString("cRefrStat")){
-                case "":
-                    crs.updateString("cRefrStat", "-");
-                    break;
-                case PurchaseOrderStatus.OPEN:
-                    crs.updateString("cRefrStat", "OPEN");
-                    break;
-                case PurchaseOrderStatus.CONFIRMED:
-                    crs.updateString("cRefrStat", "CONFIRMED");
-                    break;
-                case PurchaseOrderStatus.PROCESSED:
-                    crs.updateString("cRefrStat", "PROCESSED");
-                    break;
-                case PurchaseOrderStatus.CANCELLED:
-                    crs.updateString("cRefrStat", "CANCELLED");
-                    break;
-                case PurchaseOrderStatus.VOID:
-                    crs.updateString("cRefrStat", "VOID");
-                    break;
-                case PurchaseOrderStatus.APPROVED:
-                    crs.updateString("cRefrStat", "APPROVED");
-                    break;
-                case PurchaseOrderStatus.POSTED:
-                    crs.updateString("cRefrStat", "POSTED");
-                    break;
-                case PurchaseOrderStatus.RETURNED:
-                    crs.updateString("cRefrStat", "RETURNED");
-                    break;
-                default:
-                    char ch = crs.getString("cRefrStat").charAt(0);
-                    String stat = String.valueOf((int) ch - 64);
-                    
-                    switch (stat){
-                    case PurchaseOrderStatus.OPEN:
-                        crs.updateString("cRefrStat", "OPEN");
-                        break;
-                    case PurchaseOrderStatus.CONFIRMED:
-                        crs.updateString("cRefrStat", "CONFIRMED");
-                        break;
-                    case PurchaseOrderStatus.PROCESSED:
-                        crs.updateString("cRefrStat", "PROCESSED");
-                        break;
-                    case PurchaseOrderStatus.CANCELLED:
-                        crs.updateString("cRefrStat", "CANCELLED");
-                        break;
-                    case PurchaseOrderStatus.VOID:
-                        crs.updateString("cRefrStat", "VOID");
-                        break;
-                    case PurchaseOrderStatus.APPROVED:
-                        crs.updateString("cRefrStat", "APPROVED");
-                        break;
-                    case PurchaseOrderStatus.POSTED:
-                        crs.updateString("cRefrStat", "POSTED");
-                        break;
-                    case PurchaseOrderStatus.RETURNED:
-                        crs.updateString("cRefrStat", "RETURNED");
-                        break;
-                    }
-            }
-            crs.updateRow(); 
-        }
-        
-        JSONObject loJSON  = getEntryBy();
-        String entryBy = "";
-        String entryDate = "";
-        
-        if ("success".equals((String) loJSON.get("result"))){
-            entryBy = (String) loJSON.get("sCompnyNm");
-            entryDate = (String) loJSON.get("sEntryDte");
-        }
-        
-        showStatusHistoryUI("Check Transfer", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
-    }
+    
     public List<String> getApprover() throws SQLException{
         List<String> lsList = new ArrayList<String>();
             String lsSQL =   " SELECT "
@@ -1326,5 +1245,66 @@ public class CheckReleases extends Transaction {
             }
             
         return lsList;
+    }
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+        CachedRowSet crs = getStatusHistory();
+        
+        crs.beforeFirst();
+        
+        while(crs.next()){
+            switch (crs.getString("cRefrStat")){
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case CheckReleaseStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case CheckReleaseStatus.CONFIRMED:
+                    crs.updateString("cRefrStat", "CONFIRMED");
+                    break;
+                case CheckReleaseStatus.RELEASED:
+                    crs.updateString("cRefrStat", "RELEASED");
+                    break;
+                case CheckReleaseStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
+                    break;
+                case CheckReleaseStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+                    
+                    switch (stat){
+                        case CheckReleaseStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case CheckReleaseStatus.CONFIRMED:
+                            crs.updateString("cRefrStat", "CONFIRMED");
+                            break;
+                        case CheckReleaseStatus.RELEASED:
+                            crs.updateString("cRefrStat", "RELEASED");
+                            break;
+                        case CheckReleaseStatus.CANCELLED:
+                            crs.updateString("cRefrStat", "CANCELLED");
+                            break;
+                        case CheckReleaseStatus.VOID:
+                            crs.updateString("cRefrStat", "VOID");
+                            break;
+                    }
+            }
+            crs.updateRow(); 
+        }
+        
+        JSONObject loJSON  = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+        
+        if ("success".equals((String) loJSON.get("result"))){
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        
+        showStatusHistoryUI("Check Release", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
 }

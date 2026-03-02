@@ -1443,59 +1443,47 @@ public class CheckDeposits extends Transaction {
                 case "":
                     crs.updateString("cRefrStat", "-");
                     break;
-                case PurchaseOrderStatus.OPEN:
+                case CheckDepositStatus.OPEN:
                     crs.updateString("cRefrStat", "OPEN");
                     break;
-                case PurchaseOrderStatus.CONFIRMED:
+                case CheckDepositStatus.CONFIRMED:
                     crs.updateString("cRefrStat", "CONFIRMED");
                     break;
-                case PurchaseOrderStatus.PROCESSED:
-                    crs.updateString("cRefrStat", "PROCESSED");
-                    break;
-                case PurchaseOrderStatus.CANCELLED:
-                    crs.updateString("cRefrStat", "CANCELLED");
-                    break;
-                case PurchaseOrderStatus.VOID:
-                    crs.updateString("cRefrStat", "VOID");
-                    break;
-                case PurchaseOrderStatus.APPROVED:
-                    crs.updateString("cRefrStat", "APPROVED");
-                    break;
-                case PurchaseOrderStatus.POSTED:
+                case CheckDepositStatus.POSTED:
                     crs.updateString("cRefrStat", "POSTED");
                     break;
-                case PurchaseOrderStatus.RETURNED:
-                    crs.updateString("cRefrStat", "RETURNED");
+                case CheckDepositStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
                     break;
+                case CheckDepositStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                 case CheckDepositStatus.RETURN:
+                    crs.updateString("cRefrStat", "RETURN");
+                    break;   
                 default:
                     char ch = crs.getString("cRefrStat").charAt(0);
                     String stat = String.valueOf((int) ch - 64);
                     
                     switch (stat){
-                    case PurchaseOrderStatus.OPEN:
-                        crs.updateString("cRefrStat", "OPEN");
-                        break;
-                    case PurchaseOrderStatus.CONFIRMED:
-                        crs.updateString("cRefrStat", "CONFIRMED");
-                        break;
-                    case PurchaseOrderStatus.PROCESSED:
-                        crs.updateString("cRefrStat", "PROCESSED");
-                        break;
-                    case PurchaseOrderStatus.CANCELLED:
-                        crs.updateString("cRefrStat", "CANCELLED");
-                        break;
-                    case PurchaseOrderStatus.VOID:
-                        crs.updateString("cRefrStat", "VOID");
-                        break;
-                    case PurchaseOrderStatus.APPROVED:
-                        crs.updateString("cRefrStat", "APPROVED");
-                        break;
-                    case PurchaseOrderStatus.POSTED:
-                        crs.updateString("cRefrStat", "POSTED");
-                        break;
-                    case PurchaseOrderStatus.RETURNED:
-                        crs.updateString("cRefrStat", "RETURNED");
-                        break;
+                        case CheckDepositStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case CheckDepositStatus.CONFIRMED:
+                            crs.updateString("cRefrStat", "VERIFIED");
+                            break;
+                        case CheckDepositStatus.POSTED:
+                            crs.updateString("cRefrStat", "POSTED");
+                            break;
+                        case CheckDepositStatus.CANCELLED:
+                            crs.updateString("cRefrStat", "CANCELLED");
+                            break;
+                        case CheckDepositStatus.VOID:
+                            crs.updateString("cRefrStat", "VOID");
+                            break;
+                        case CheckDepositStatus.RETURN:
+                            crs.updateString("cRefrStat", "RETURN");
+                            break;
                     }
             }
             crs.updateRow(); 
@@ -1510,8 +1498,10 @@ public class CheckDeposits extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
         
-        showStatusHistoryUI("Check Transfer", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Check Deposit", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
+
+    
     public List<String> getApprover() throws SQLException{
         List<String> lsList = new ArrayList<String>();
             String lsSQL =   " SELECT "
@@ -1835,5 +1825,6 @@ public class CheckDeposits extends Transaction {
 
         return poJSON;
     }
-
+    
+    
 }
