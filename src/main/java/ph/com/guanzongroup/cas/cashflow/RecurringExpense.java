@@ -44,19 +44,19 @@ public class RecurringExpense extends Parameter {
         } else {
             poJSON = new JSONObject();
 
-            if (poModel.getPayeeId().isEmpty()) {
+            if (poModel.getPayeeId() == null || "".equals(poModel.getPayeeId())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Payee ID must not be empty.");
                 return poJSON;
             }
 
-            if (poModel.getParticularId() == null || poModel.getParticularId().isEmpty()) {
+            if (poModel.getParticularId() == null || "".equals(poModel.getParticularId())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Particular ID must not be empty.");
                 return poJSON;
             }
 
-            if (poModel.getIndustryCode() == null || poModel.getIndustryCode().isEmpty()) {
+            if (poModel.getIndustryCode() == null || "".equals(poModel.getIndustryCode())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Industry must not be empty.");
                 return poJSON;
