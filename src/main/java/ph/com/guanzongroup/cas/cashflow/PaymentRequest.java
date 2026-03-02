@@ -784,22 +784,30 @@ public class PaymentRequest extends Transaction {
                                 return poJSON;
                             }
                         } else {
+                            if(!PaymentRequestStaticData.recurring_expense_payment.equals(Master().getSourceCode())){    
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Recurring expense schedule cannot be mix with non recurring expense transaction source.");
+                                return poJSON;
+                            }
+                            
                             if(!Master().getPayeeID().equals(loObject.RecurringExpenseSchedule().getPayeeId())){
                                 poJSON.put("result", "error");
                                 poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
                                 return poJSON;
                             }
                             
-                            if(Master().RecurringExpensePaymentMonitor().getBillMonth() != loObject.getBillMonth()){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Bill month must be the same with the existing recurring expense in PRF detail.");
-                                return poJSON;
-                            }
-                            
-                            if(Master().RecurringExpensePaymentMonitor().RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
-                                return poJSON;
+                            if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
+                                if(Master().RecurringExpensePaymentMonitor().getBillMonth() != loObject.getBillMonth()){
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message", "Bill month must be the same with the existing recurring expense in PRF detail.");
+                                    return poJSON;
+                                }
+
+                                if(Master().RecurringExpensePaymentMonitor().RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
+                                    return poJSON;
+                                }
                             }
                         }
                     }
@@ -1703,9 +1711,10 @@ public class PaymentRequest extends Transaction {
             }
             
         }
-        
-        Detail().clear();
-        AddDetail();
+        if(!transactionNo.equals(Master().getSourceNo())){
+            Detail().clear();
+            AddDetail();
+        }
         Master().setPayeeID(loPayee.getPayeeID());
         Master().setSourceNo(loObject.getTransactionNo());
         Master().setSourceCode(InvTransCons.PURCHASE_ORDER);
