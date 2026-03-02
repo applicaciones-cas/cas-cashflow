@@ -1774,7 +1774,7 @@ public class PaymentRequest extends Transaction {
         
         Master().setTranTotal(ldblTransactionTotal);
         Master().setDiscountAmount(ldblDiscountAmount);
-        Master().setTaxAmount(ldblVatAmount);
+        Master().setVatAmount(ldblVatAmount);
         Master().setNetTotal(ldblNetTotal);
         return poJSON;
     }
