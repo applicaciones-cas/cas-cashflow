@@ -560,7 +560,7 @@ public class CheckDeposits extends Transaction {
 //        + " GROUP BY a.sTransNox";
     }
 
-    public JSONObject SearchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+    public JSONObject SearchTransaction(String lsTransNo, String lsBankAccount, LocalDate lsdate) throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
         List<String> lsFilter = new ArrayList<>();
@@ -580,6 +580,17 @@ public class CheckDeposits extends Transaction {
 //
 //        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         String lsSQL = SQL_BROWSE;
+        
+        
+        if (lsTransNo != null && !lsTransNo.trim().isEmpty()) {
+            lsFilter.add(" a.sTransNox = " + SQLUtil.toSQL(lsTransNo));
+        }
+        if (lsBankAccount != null && !lsBankAccount.trim().isEmpty()) {
+            lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + lsBankAccount));
+        }
+        if (lsdate != null ) {
+            lsFilter.add(" a.dTransact = " + SQLUtil.toSQL(lsdate));
+        }
         
         // Append WHERE clause if any filter exists
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
