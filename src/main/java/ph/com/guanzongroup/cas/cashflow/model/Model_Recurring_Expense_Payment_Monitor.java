@@ -37,7 +37,7 @@ public class Model_Recurring_Expense_Payment_Monitor extends Model {
             poEntity.absolute(1);
 
             //assign default values
-            poEntity.updateDouble("nBillMnth", 0.0000);
+            poEntity.updateDouble("nBillMnth", 0);
             //end - assign default values
 
             ID = poEntity.getMetaData().getColumnLabel(1);
@@ -91,6 +91,9 @@ public class Model_Recurring_Expense_Payment_Monitor extends Model {
     }
 
     public int getBillMonth() {
+        if(getValue("nBillMnth") == null || "".equals(getValue("nBillMnth"))){
+            return 0;
+        }
         return (int) getValue("nBillMnth");
     }
 

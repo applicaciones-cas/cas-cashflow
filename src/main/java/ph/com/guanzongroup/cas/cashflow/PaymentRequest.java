@@ -540,11 +540,13 @@ public class PaymentRequest extends Transaction {
     }
 
     public JSONObject AddDetail() throws CloneNotSupportedException {
-        if (Detail(getDetailCount() - 1).getParticularID().isEmpty()) {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "Last row has empty item.");
-            return poJSON;
+        if (getDetailCount() > 0) {
+            if (Detail(getDetailCount() - 1).getParticularID().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has empty item.");
+                return poJSON;
+            }
         }
         return addDetail();
     }
@@ -988,11 +990,16 @@ public class PaymentRequest extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
-                    if ((Detail(lnRow).getParticularID().equals(object.getModel().getParticularID()))) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Particular: " + object.getModel().getDescription() + " already exist in table at row " + (lnRow + 1) + ".");
-                        poJSON.put("tableRow", lnRow);
-                        return poJSON;
+                    if (Detail(lnRow).getParticularID().equals(object.getModel().getParticularID())) {
+                        if(!Detail(row).isReverse()){
+                            Detail(row).isReverse(true);
+                            return poJSON;
+                        } else {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Particular: " + object.getModel().getDescription() + " already exist in table at row " + (lnRow + 1) + ".");
+                            poJSON.put("tableRow", lnRow);
+                            return poJSON;
+                        }
                     }
                 }
             }
@@ -1015,6 +1022,36 @@ public class PaymentRequest extends Transaction {
     @Override
     public Model_Payment_Request_Detail Detail(int row) {
         return (Model_Payment_Request_Detail) paDetail.get(row);
+    }
+    
+    public void ReloadDetail() throws CloneNotSupportedException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getParticularID() == null || "".equals(Detail(lnCtr).getParticularID())){
+                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    deleteDetail(lnCtr); 
+                }
+            }
+            lnCtr--;
+        }
+        
+        if(PaymentRequestStaticData.recurring_expense_payment.equals(Master().getSourceCode())){
+            return;
+        }
+
+        if ((getDetailCount() - 1) >= 0) {
+            if(Detail(0).getRecurringNo() != null && !"".equals(Detail(0).getRecurringNo())){
+                return;
+            }
+            
+            if (Detail(getDetailCount() - 1).getParticularID() != null && !"".equals(Detail(getDetailCount() - 1).getParticularID())){
+                AddDetail();
+            }
+        }
+
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+        }
     }
 
     @Override
@@ -1624,9 +1661,16 @@ public class PaymentRequest extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("row", 0);
         
-        if (Master().getSourceNo() != null && !"".equals(Master().getSourceNo())) {
-            if(!Master().getSourceNo().equals(transactionNo)){
-                poJSON.put("message", "PRF has ongoing transaction.");
+        if(pnEditMode == EditMode.UPDATE){
+            poJSON.put("message", "PRF transaction source cannot change in update mode cancellation of PRF will be require.");
+            poJSON.put("result", "error");
+            poJSON.put("warning", "true");
+            return poJSON;
+        }
+        
+        if(Master().getSourceCode() != null && !"".equals(Master().getSourceCode())){
+            if(!InvTransCons.PURCHASE_ORDER.equals(Master().getSourceCode())){
+                poJSON.put("message", "PRF transaction source cannot be mix with other expenses.");
                 poJSON.put("result", "error");
                 poJSON.put("warning", "true");
                 return poJSON;
@@ -1659,20 +1703,9 @@ public class PaymentRequest extends Transaction {
             }
             
         }
-
-        int lnRow = 0;
-        boolean lbExist = false;
-        // Check if the particular already exists in the details
-        for (lnRow = 0; lnRow < getDetailCount(); lnRow++) {
-            // Skip if the particular ID is empty
-            if ((Detail(lnRow).getParticularID() != null && !"".equals(Detail(lnRow).getParticularID())) || getDetailCount() > 1) {
-                poJSON.put("message", "PRF has ongoing transaction.");
-                poJSON.put("result", "error");
-                poJSON.put("warning", "true");
-                return poJSON;
-            }
-        }
         
+        Detail().clear();
+        AddDetail();
         Master().setPayeeID(loPayee.getPayeeID());
         Master().setSourceNo(loObject.getTransactionNo());
         Master().setSourceCode(InvTransCons.PURCHASE_ORDER);
