@@ -133,6 +133,15 @@ public class Model_Payment_Request_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nAddDiscx")));
     }
     
+    //Duplicated already use in old sript
+    public JSONObject setVatable(String vatable) {
+        return setValue("cVATaxabl", vatable);
+    }
+
+    public String getVatable() {
+        return (String) getValue("cVATaxabl");
+    }
+    
     public JSONObject isVatable(boolean isReverse) {
         return setValue("cVATaxabl", isReverse ? "1" : "0");
     }
