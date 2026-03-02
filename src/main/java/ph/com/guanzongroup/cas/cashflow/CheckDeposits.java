@@ -583,7 +583,7 @@ public class CheckDeposits extends Transaction {
         
         
         if (lsTransNo != null && !lsTransNo.trim().isEmpty()) {
-            lsFilter.add(" a.sTransNox = " + SQLUtil.toSQL(lsTransNo));
+            lsFilter.add(" a.sTransNox LIKE " + SQLUtil.toSQL("%"+ lsTransNo));
         }
         if (lsBankAccount != null && !lsBankAccount.trim().isEmpty()) {
             lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + lsBankAccount));
