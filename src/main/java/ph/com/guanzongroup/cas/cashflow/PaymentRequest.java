@@ -1440,6 +1440,7 @@ public class PaymentRequest extends Transaction {
                     paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                     paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
                     paAttachments.get(lnCtr).setWithParentClass(true);
+                    System.out.println("CHECK ATTACHMENT RECORD STAT : " + paAttachments.get(lnCtr).getModel().getRecordStatus());
                     poJSON = paAttachments.get(lnCtr).saveRecord();
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -1889,7 +1890,7 @@ public class PaymentRequest extends Transaction {
             return poJSON;
         }
 
-        poJSON = Detail(row).setDiscount(fdblAdditionalDiscount);   
+        poJSON = Detail(row).setAddDiscount(fdblAdditionalDiscount);   
         return poJSON;   
     }
 
