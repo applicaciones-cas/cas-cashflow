@@ -47,8 +47,6 @@ public class Model_Check_Release_Detail extends Model{
             poEntity.absolute(1);
             
             //Step 6. set row properties
-            poEntity.updateNull("sSourceNo");
-            poEntity.updateNull("sSourceCd");
             poEntity.updateObject("nEntryNox", 1);
             poEntity.updateObject("cReversex", "+");
             poEntity.updateObject("dModified", poGRider.getServerDate());
@@ -143,4 +141,5 @@ public class Model_Check_Release_Detail extends Model{
         poCheckPayment.initialize();
         return this.poCheckPayment;
     }
+    
 }

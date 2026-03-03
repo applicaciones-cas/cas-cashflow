@@ -11,11 +11,16 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
+import ph.com.guanzongroup.cas.cashflow.CheckDeposit;
+import ph.com.guanzongroup.cas.cashflow.CheckDeposits;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.CheckPrintingRequest;
+import ph.com.guanzongroup.cas.cashflow.CheckReleases;
 import ph.com.guanzongroup.cas.cashflow.CheckStatusUpdate;
+import ph.com.guanzongroup.cas.cashflow.CheckTransfer;
+import ph.com.guanzongroup.cas.cashflow.CheckTransfers;
 import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DisbursementVoucher;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
@@ -519,14 +524,74 @@ public class CashflowControllers {
         poCashAdvance.setWithParent(false);
         return poCashAdvance;
     }
+    
+    public CheckTransfers CheckTransfers() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckTransfers: Application driver is not set.");
+            return null;
+        }
 
+        if (poCheckTransfer != null) {
+            return poCheckTransfer;
+        }
+
+        poCheckTransfer = new CheckTransfers();
+        poCheckTransfer.setApplicationDriver(poGRider);
+        poCheckTransfer.setBranchCode(poGRider.getBranchCode());
+        poCheckTransfer.setLogWrapper(poLogWrapper);
+        poCheckTransfer.setVerifyEntryNo(true);
+        poCheckTransfer.setWithParent(false);
+        return poCheckTransfer;
+    }
+    
+    public CheckDeposits CheckDeposits() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckDeposits: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckDeposit != null) {
+            return poCheckDeposit;
+        }
+
+        poCheckDeposit = new CheckDeposits();
+        poCheckDeposit.setApplicationDriver(poGRider);
+        poCheckDeposit.setBranchCode(poGRider.getBranchCode());
+        poCheckDeposit.setLogWrapper(poLogWrapper);
+        poCheckDeposit.setVerifyEntryNo(true);
+        poCheckDeposit.setWithParent(false);
+        return poCheckDeposit;
+    }
+    
+    public CheckReleases CheckReleases() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckRelease: Application driver is not set.");
+            return null;
+        }
+
+        if (poCheckRelease != null) {
+            return poCheckRelease;
+        }
+
+        poCheckRelease = new CheckReleases();
+        poCheckRelease.setApplicationDriver(poGRider);
+        poCheckRelease.setBranchCode(poGRider.getBranchCode());
+        poCheckRelease.setLogWrapper(poLogWrapper);
+        poCheckRelease.setVerifyEntryNo(true);
+        poCheckRelease.setWithParent(false);
+        return poCheckRelease;
+    }
+
+    
     @Override
     protected void finalize() throws Throwable {
         try {
             poCachePayable = null;
             poBankAccountMaster = null;
             poRecurringIssuance = null;
-
+            poCheckTransfer = null;
+            poCheckDeposit = null;
+            poCheckRelease= null;
             poParticular = null;
             poPayee = null;
             poRecurringIssuance = null;
@@ -588,4 +653,7 @@ public class CashflowControllers {
     private WithholdingTax poWithholdingTax;
     private WithholdingTaxDeductions poWithholdingTaxDeductions;
     private CashAdvance poCashAdvance;
+    private CheckTransfers poCheckTransfer;
+    private CheckDeposits poCheckDeposit;
+    private CheckReleases poCheckRelease;
 }

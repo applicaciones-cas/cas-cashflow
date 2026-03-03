@@ -9,6 +9,7 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
@@ -28,6 +29,8 @@ public class Model_Check_Deposit_Master extends Model {
     Model_Industry poIndustry;
     Model_Bank_Account_Master poBankAccount;
     Model_Branch poBranch;
+    Model_Banks poBanks;
+    private String bankid = "";
 
     @Override
     public void initialize() {
@@ -41,7 +44,6 @@ public class Model_Check_Deposit_Master extends Model {
 
             poEntity.updateObject("dTransact", poGRider.getServerDate());
             poEntity.updateObject("dReferDte", poGRider.getServerDate());
-            poEntity.updateNull("sBnkActID");
             poEntity.updateDouble("nTotalDep", 0.00d);
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateString("cPrintedx", "0");
@@ -52,6 +54,7 @@ public class Model_Check_Deposit_Master extends Model {
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
             this.poBankAccount = (new CashflowModels(this.poGRider)).Bank_Account_Master();
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
+            this.poBanks = (new ParamModels(this.poGRider)).Banks();
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
@@ -213,6 +216,15 @@ public class Model_Check_Deposit_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
+    
+    public String setBanks(String bankidx) {
+        return bankid = bankidx;
+    }
+
+    public String getBanks() {
+        return bankid;
+    }
 
     @Override
     public String getNextCode() {
@@ -235,6 +247,26 @@ public class Model_Check_Deposit_Master extends Model {
         this.poBankAccount.initialize();
         return this.poBankAccount;
     }
+    
+    public Model_Banks Banks() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue(bankid))) {
+            if (poBanks.getEditMode() == EditMode.READY
+                    && poBanks.getBankID().equals(bankid)) {
+                return poBanks;
+            } else {
+                poJSON = poBanks.openRecord(bankid);
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poBanks;
+                } else {
+                    poBanks.initialize();
+                    return poBanks;
+                }
+            }
+        } else {
+            poBanks.initialize();
+            return poBanks;
+        }
+    }
 
     public Model_Branch Branch() throws SQLException, GuanzonException {
         if (!"".equals(getValue("sTransNox"))) {
@@ -252,6 +284,8 @@ public class Model_Check_Deposit_Master extends Model {
         this.poBranch.initialize();
         return this.poBranch;
     }
+    
+    
 
     public Model_Industry Industry() throws SQLException, GuanzonException {
         if (!"".equals(getValue("sIndstCdx"))) {

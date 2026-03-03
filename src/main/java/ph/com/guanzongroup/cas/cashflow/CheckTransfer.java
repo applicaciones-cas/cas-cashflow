@@ -342,37 +342,37 @@ public class CheckTransfer extends Transaction {
 
     @Override
     protected JSONObject isEntryOkay(String status) {
-        psApprovalUser = "";
-
-        poJSON = new JSONObject();
-        GValidator loValidator = CheckTransferValidatorFactory.make(getMaster().getIndustryId());
-
-        loValidator.setApplicationDriver(poGRider);
-        loValidator.setTransactionStatus(status);
-        loValidator.setMaster(poMaster);
-        ArrayList laDetailList = new ArrayList<>(getDetailList());
-        loValidator.setDetail(laDetailList);
-
-        poJSON = loValidator.validate();
-        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                } else {
-                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "User is not an authorized approving officer.");
-                        return poJSON;
-                    }
-                    psApprovalUser = poJSON.get("sUserIDxx") != null
-                            ? poJSON.get("sUserIDxx").toString()
-                            : poGRider.getUserID();
-                }
-            } else {
-                psApprovalUser = poGRider.getUserID();
-            }
-        }
+//        psApprovalUser = "";
+//
+//        poJSON = new JSONObject();
+//        GValidator loValidator = CheckTransferValidatorFactory.make(getMaster().getIndustryId());
+//
+//        loValidator.setApplicationDriver(poGRider);
+//        loValidator.setTransactionStatus(status);
+//        loValidator.setMaster(poMaster);
+//        ArrayList laDetailList = new ArrayList<>(getDetailList());
+//        loValidator.setDetail(laDetailList);
+//
+//        poJSON = loValidator.validate();
+//        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                poJSON = ShowDialogFX.getUserApproval(poGRider);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                } else {
+//                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "User is not an authorized approving officer.");
+//                        return poJSON;
+//                    }
+//                    psApprovalUser = poJSON.get("sUserIDxx") != null
+//                            ? poJSON.get("sUserIDxx").toString()
+//                            : poGRider.getUserID();
+//                }
+//            } else {
+//                psApprovalUser = poGRider.getUserID();
+//            }
+//        }
         return poJSON;
     }
 
@@ -1040,80 +1040,83 @@ public class CheckTransfer extends Transaction {
     }
 
     public JSONObject loadCheckList(String fsDateFrom, String fsDateThru)
-            throws SQLException, GuanzonException, CloneNotSupportedException {
+        throws SQLException, GuanzonException, CloneNotSupportedException {
 
-        if (getMaster().getIndustryId() == null
-                || getMaster().getIndustryId().isEmpty()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No industry is set.");
-            return poJSON;
-        }
-        paCheckList.clear();
-        initSQL();
-        String lsSQL = CheckTransferRecords.CheckPaymentRecord();
+    // 1️⃣ Reset everything
+    paCheckList = new ArrayList<>();
+    poJSON = new JSONObject();
 
-        //only retrieve current selected Industry 
-        if (getDetail(1).CheckPayment().getIndustryID() != null
-                && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(getDetail(1).CheckPayment().getIndustryID()));
-            psIndustryCode = getDetail(1).CheckPayment().getIndustryID();
-            getMaster().setIndustryId(psIndustryCode);
-        }
-//        if (!psIndustryCode.isEmpty()) {
-//            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(psIndustryCode));
-//        }
-
-        if (poBank.getBankID() != null) {
-            if (!poBank.getBankID().isEmpty()) {
-                lsSQL = MiscUtil.addCondition(lsSQL, " a.sBankIDxx = " + SQLUtil.toSQL(poBank.getBankID()));
-            }
-        }
-        lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckTransferStatus.OPEN));
-        lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
-        lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat = " + SQLUtil.toSQL(CheckTransferStatus.CONFIRMED));
-        if (!fsDateFrom.isEmpty()) {
-            lsSQL = MiscUtil.addCondition(lsSQL, " a.dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom) + "AND "
-                    + SQLUtil.toSQL(fsDateThru));
-        }
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        System.out.println("Load Transaction list query is " + lsSQL);
-
-        if (MiscUtil.RecordCount(loRS)
-                <= 0) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record found.");
-            return poJSON;
-        }
-        Set<String> processedTrans = new HashSet<>();
-
-        while (loRS.next()) {
-            String transNo = loRS.getString("sTransNox");
-
-            // Skip if we already processed this transaction number
-            if (processedTrans.contains(transNo)) {
-                continue;
-            }
-
-            Model_Check_Payments loInventoryRequest
-                    = new CashflowModels(poGRider).CheckPayments();
-
-            poJSON = loInventoryRequest.openRecord(transNo);
-
-            if ("success".equals((String) poJSON.get("result"))) {
-                paCheckList.add((Model) loInventoryRequest);
-
-                // Mark this transaction as processed
-                processedTrans.add(transNo);
-            } else {
-                return poJSON;
-            }
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
+    if (getMaster().getIndustryId() == null || getMaster().getIndustryId().isEmpty()) {
+        poJSON.put("result", "error");
+        poJSON.put("message", "No industry is set.");
         return poJSON;
     }
 
+    initSQL();
+
+    String lsSQL = CheckTransferRecords.CheckPaymentRecord();
+
+    // Only retrieve current selected Industry 
+    if (getDetail(1).CheckPayment().getIndustryID() != null
+            && !getDetail(1).CheckPayment().getIndustryID().isEmpty()) {
+        String industryID = getDetail(1).CheckPayment().getIndustryID();
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCdx = " + SQLUtil.toSQL(industryID));
+        psIndustryCode = industryID;
+        getMaster().setIndustryId(psIndustryCode);
+    }
+
+    // Filter by Bank
+    if (poBank.getBankID() != null && !poBank.getBankID().isEmpty()) {
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBankIDxx = " + SQLUtil.toSQL(poBank.getBankID()));
+    }
+
+    lsSQL = MiscUtil.addCondition(lsSQL, "a.cReleased = " + SQLUtil.toSQL(CheckTransferStatus.OPEN));
+    lsSQL = MiscUtil.addCondition(lsSQL, "a.cLocation = " + SQLUtil.toSQL(RecordStatus.ACTIVE));
+    lsSQL = MiscUtil.addCondition(lsSQL, "a.cTranStat = " + SQLUtil.toSQL(CheckTransferStatus.CONFIRMED));
+
+    if (!fsDateFrom.isEmpty()) {
+        lsSQL = MiscUtil.addCondition(lsSQL, "a.dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom) + " AND "
+                + SQLUtil.toSQL(fsDateThru));
+    }
+
+    ResultSet loRS = poGRider.executeQuery(lsSQL);
+    System.out.println("Load Transaction list query is " + lsSQL);
+
+    if (MiscUtil.RecordCount(loRS) <= 0) {
+        poJSON.put("result", "error");
+        poJSON.put("message", "No record found.");
+        return poJSON;
+    }
+
+    // Track unique transaction numbers
+    Set<String> processedTrans = new HashSet<>();
+
+    while (loRS.next()) {
+        String transNo = loRS.getString("sTransNox");
+
+        // Skip duplicates in the current click
+        if (processedTrans.contains(transNo)) continue;
+
+        // Use a fresh model instance
+        Model_Check_Payments loInventoryRequest = new CashflowModels(poGRider).CheckPayments();
+
+        // Load the record into this model
+        JSONObject recordResult = loInventoryRequest.openRecord(transNo);
+
+        if ("success".equals(recordResult.get("result"))) {
+            paCheckList.add((Model) loInventoryRequest);
+            processedTrans.add(transNo); // Mark as processed
+        } else {
+            return recordResult; // Stop on error
+        }
+    }
+
+    poJSON = new JSONObject();
+    poJSON.put("result", "success");
+    poJSON.put("count", paCheckList.size()); // debug count
+    return poJSON;
+}
+    
     public JSONObject loadTransactionListConfirmation(String value, String column)
             throws SQLException, GuanzonException, CloneNotSupportedException {
 
@@ -1289,10 +1292,10 @@ public class CheckTransfer extends Transaction {
                         return;
                     }
                     if (!getMaster().isPrintedStatus()) {
-                        if (!isJSONSuccess(PrintTransaction(), "Print Record",
-                                "Initialize Record Print! ")) {
-                            return;
-                        }
+                        poJSON = PrintTransaction();
+                         if ("error".equals((String) poJSON.get("result"))) {
+                                return;
+                         }
                     }
                     if (getMaster().getTransactionStatus().equals(CheckTransferStatus.OPEN)) {
                         if (!isJSONSuccess(CloseTransaction(), "Print Record",
@@ -1310,11 +1313,10 @@ public class CheckTransfer extends Transaction {
             @Override
             public void onReportExport() {
                 System.out.println("Report exported.");
-                if (!isJSONSuccess(poReportJasper.exportReportbyExcel(), "Export Record",
-                        "Initialize Record Export! ")) {
-                    return;
+                poJSON = poReportJasper.exportReportbyExcel();
+                if ("error".equals((String) poJSON.get("result"))) {
+                       return;
                 }
-
 //                poReportJasper.CloseReportUtil();
                 //if used a model or array please create function 
             }
@@ -1335,7 +1337,7 @@ public class CheckTransfer extends Transaction {
         poReportJasper.addParameter("TransactionNo", getMaster().getTransactionNo());
         poReportJasper.addParameter("TransactionDate", SQLUtil.dateFormat(getMaster().getTransactionDate(), SQLUtil.FORMAT_LONG_DATE));
         poReportJasper.addParameter("Remarks", getMaster().getRemarks());
-        poReportJasper.addParameter("Destination", getMaster().BranchDestination().getBranchName());
+        poReportJasper.addParameter("Destination", getMaster().Branch().getBranchName());
         poReportJasper.addParameter("Department", getMaster().Department().getDescription() != null ? getMaster().Department().getDescription() : "");
 //        poReportJasper.addParameter("PreparedBy", getMaster().getPreparedBy() != null ? poGRider.Decrypt(getMaster().getPreparedBy()) : "");
         poReportJasper.addParameter("PreparedBy", "Sheryl Rabanal");

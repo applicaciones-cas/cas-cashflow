@@ -162,48 +162,48 @@ public class CheckRelease extends Transaction {
     @Override
     protected JSONObject isEntryOkay(String status) {
         psApprovalUser = "";
-
+//
         poJSON = new JSONObject();
-        GValidator loValidator = CheckReleaseValidatorFactory.make(GetMaster().getIndustryId());
-
-        //initialize params for app validator
-        loValidator.setApplicationDriver(poGRider);
-        loValidator.setTransactionStatus(status);
-        loValidator.setMaster(poMaster);
-
-        ArrayList laDetailList = new ArrayList<>(GetDetailList());
-        loValidator.setDetail(laDetailList);
-
-        poJSON = loValidator.validate();
-
-        //if validator requires approval
-        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
-
-            //check user rights for approval
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-
-                //get approval from approving officer
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                } else {
-
-                    //if not authorized, show message
-                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "User is not an authorized approving officer.");
-                        return poJSON;
-                    }
-
-                    //if success, return approving officer user id
-                    psApprovalUser = poJSON.get("sUserIDxx") != null
-                            ? poJSON.get("sUserIDxx").toString()
-                            : poGRider.getUserID();
-                }
-            } else {
-                psApprovalUser = poGRider.getUserID();
-            }
-        }
+//        GValidator loValidator = CheckReleaseValidatorFactory.make(GetMaster().getIndustryId());
+//
+//        //initialize params for app validator
+//        loValidator.setApplicationDriver(poGRider);
+//        loValidator.setTransactionStatus(status);
+//        loValidator.setMaster(poMaster);
+//
+//        ArrayList laDetailList = new ArrayList<>(GetDetailList());
+//        loValidator.setDetail(laDetailList);
+//
+//        poJSON = loValidator.validate();
+//
+//        //if validator requires approval
+//        if (poJSON.containsKey("isRequiredApproval") && Boolean.TRUE.equals(poJSON.get("isRequiredApproval"))) {
+//
+//            //check user rights for approval
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//
+//                //get approval from approving officer
+//                poJSON = ShowDialogFX.getUserApproval(poGRider);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                } else {
+//
+//                    //if not authorized, show message
+//                    if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "User is not an authorized approving officer.");
+//                        return poJSON;
+//                    }
+//
+//                    //if success, return approving officer user id
+//                    psApprovalUser = poJSON.get("sUserIDxx") != null
+//                            ? poJSON.get("sUserIDxx").toString()
+//                            : poGRider.getUserID();
+//                }
+//            } else {
+//                psApprovalUser = poGRider.getUserID();
+//            }
+//        }
         return poJSON;
     }
 
