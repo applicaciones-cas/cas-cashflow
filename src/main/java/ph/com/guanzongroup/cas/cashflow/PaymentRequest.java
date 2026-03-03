@@ -33,7 +33,6 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
@@ -61,7 +60,9 @@ import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.PaymentRequestValidator;
 
 public class PaymentRequest extends Transaction {
-
+    private String psIndustryId = "";
+    private String psCompanyId = "";
+    
     List<TransactionAttachment> paAttachments;
     List<Model_PO_Master> paPOMaster;
 //    List<Model_Recurring_Issuance> paRecurring;
@@ -82,6 +83,14 @@ public class PaymentRequest extends Transaction {
 //        poRecurringIssuances = new ArrayList<>();
 
         return initialize();
+    }
+    
+    public void setIndustryId(String industryId) {
+        psIndustryId = industryId;
+    }
+
+    public void setCompanyId(String companyId) {
+        psCompanyId = companyId;
     }
 
     public JSONObject NewTransaction() throws CloneNotSupportedException {
@@ -937,12 +946,23 @@ public class PaymentRequest extends Transaction {
             lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
         }
         initSQL();
-        String lsFilterCondition = String.join(" AND ", "a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()),
-                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
-        if (!psTranStat.isEmpty()) {
+//        String lsFilterCondition = String.join(" AND ", "a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()),
+//                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        String lsFilterAll = "";
+        if (psIndustryId != null && !"".equals(psIndustryId)) {
+            lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+        if (psCompanyId != null && !"".equals(psCompanyId)) {
+            lsFilterAll += " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
+        }
+        if (psTranStat != null && !"".equals(psTranStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
+        if (!lsFilterAll.isEmpty() && !"".equals(lsFilterAll)) {
+            lsSQL = lsSQL + lsFilterAll;
+        }
+        
         lsSQL = lsSQL + " GROUP BY a.sTransNox";
         System.out.println("SQL EXECUTED: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
@@ -1845,15 +1865,26 @@ public class PaymentRequest extends Transaction {
             lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
         }
         initSQL();
-        String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
-                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID),
-                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
-        if (!psTranStat.isEmpty()) {
+//        String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
+//                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+//                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID),
+//                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                                                        + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
+        String lsFilterAll = "";
+        if (psIndustryId != null && !"".equals(psIndustryId)) {
+            lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+        if (psCompanyId != null && !"".equals(psCompanyId)) {
+            lsFilterAll += " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
+        }
+        if (psTranStat != null && !"".equals(psTranStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
-        lsSQL = lsSQL + " GROUP BY a.sTransNox";
+        if (!lsFilterAll.isEmpty() && !"".equals(lsFilterAll)) {
+            lsSQL = lsSQL + lsFilterAll;
+        }
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
         System.out.println("SQL EXECUTED: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
@@ -2189,14 +2220,14 @@ public class PaymentRequest extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
         
-        showStatusHistoryUI("Purchase Order", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Payment Request", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM PO_Master a "
+                        + " FROM Payment_Request_Master a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
