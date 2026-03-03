@@ -209,21 +209,21 @@ public class Model_Payment_Request_Master extends Model {
         return Double.parseDouble(String.valueOf(getValue("nAmtPaidx")));
     }
 
-    public JSONObject setVatAmount(double vatAmount) {
-        return setValue("nTaxAmntx", vatAmount);
-    }
-
-    public double getVatAmount() {
-        return Double.parseDouble(String.valueOf(getValue("nTaxAmntx")));
-    }
-
-    public JSONObject setVatExempt(double vatExempt) {
-        return setValue("nTaxAmntx", vatExempt);
-    }
-
-    public double getVatExempt() {
-        return Double.parseDouble(String.valueOf(getValue("nTaxAmntx")));
-    }
+//    public JSONObject setVatAmount(double vatAmount) {
+//        return setValue("nTaxAmntx", vatAmount);
+//    }
+//
+//    public double getVatAmount() {
+//        return Double.parseDouble(String.valueOf(getValue("nTaxAmntx")));
+//    }
+//
+//    public JSONObject setVatExempt(double vatExempt) {
+//        return setValue("nTaxAmntx", vatExempt);
+//    }
+//
+//    public double getVatExempt() {
+//        return Double.parseDouble(String.valueOf(getValue("nTaxAmntx")));
+//    }
 
     public JSONObject setEntryNo(int entryNo) {
         return setValue("nEntryNox", entryNo);

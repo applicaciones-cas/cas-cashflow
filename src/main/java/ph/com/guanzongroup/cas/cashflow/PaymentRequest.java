@@ -758,6 +758,7 @@ public class PaymentRequest extends Transaction {
             }
         }
         
+        int lnError = 0; //Use for handling error code
         String lsRecurringNo = "";
         boolean lbExist = false;
         boolean lbAddedNew = false;
@@ -776,46 +777,32 @@ public class PaymentRequest extends Transaction {
                     if(Master().getPayeeID() != null && !"".equals(Master().getPayeeID())){
                         if(Detail(lnRow).getRecurringNo() != null && !"".equals(Detail(lnRow).getRecurringNo())){
                             if(!Master().getPayeeID().equals(Detail(lnRow).RecurringExpensePaymentMonitor().RecurringExpenseSchedule().getPayeeId())){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
-                                return poJSON;
+                                lnError = 1; //Recurring schedule payee must be equal to the payment request payee.
+                                break;
                             }
-                            
                             if(Detail(lnRow).RecurringExpensePaymentMonitor().getBillMonth() != loObject.getBillMonth()){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Bill month must be the same with the existing recurring expense in PRF detail.");
-                                return poJSON;
+                                lnError = 2; //Bill month must be the same with the existing recurring expense in PRF detail.
+                                break;
                             }
-                            
                             if(Detail(lnRow).RecurringExpensePaymentMonitor().RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
-                                return poJSON;
+                                lnError = 3; //Due day must be the same with the existing recurring expense in PRF detail.
+                                break;
                             }
                         } else {
                             if(!PaymentRequestStaticData.recurring_expense_payment.equals(Master().getSourceCode())){    
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Recurring expense schedule cannot be mix with non recurring expense transaction source.");
-                                return poJSON;
+                                lnError = 4; //Recurring expense schedule cannot be mix with non recurring expense transaction source.
+                                break;
                             }
-                            
                             if(!Master().getPayeeID().equals(loObject.RecurringExpenseSchedule().getPayeeId())){
-                                poJSON.put("result", "error");
-                                poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
-                                return poJSON;
+                                lnError = 1; //Recurring schedule payee must be equal to the payment request payee.
                             }
-                            
                             if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
                                 if(Master().RecurringExpensePaymentMonitor().getBillMonth() != loObject.getBillMonth()){
-                                    poJSON.put("result", "error");
-                                    poJSON.put("message", "Bill month must be the same with the existing recurring expense in PRF detail.");
-                                    return poJSON;
+                                    lnError = 2; //Bill month must be the same with the existing recurring expense in PRF detail.
                                 }
-
                                 if(Master().RecurringExpensePaymentMonitor().RecurringExpenseSchedule().getDueDay() != loObject.RecurringExpenseSchedule().getDueDay()){
-                                    poJSON.put("result", "error");
-                                    poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
-                                    return poJSON;
+                                    lnError = 3; //Due day must be the same with the existing recurring expense in PRF detail.
+                                    break;
                                 }
                             }
                         }
@@ -830,6 +817,26 @@ public class PaymentRequest extends Transaction {
                     }
                     break;
                 } 
+            }
+            
+            //Check if there's a error match
+            switch(lnError){
+                case 1:
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Recurring schedule payee must be equal to the payment request payee.");
+                    return poJSON;
+                case 2:
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Bill month must be the same with the existing recurring expense in PRF detail.");
+                    return poJSON;
+                case 3:
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Due day must be the same with the existing recurring expense in PRF detail.");
+                    return poJSON;
+                case 4:
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Recurring expense schedule cannot be mix with non recurring expense transaction source.");
+                    return poJSON;
             }
             
             if(!lbExist){
@@ -866,7 +873,7 @@ public class PaymentRequest extends Transaction {
         return poJSON;
     }
     
-    /**
+    /** Arsiela 02-27-2026
      * Check Existing Recurring No PRF
      * @param recurringNo
      * @return 
@@ -1086,20 +1093,49 @@ public class PaymentRequest extends Transaction {
     public JSONObject willSave() throws CloneNotSupportedException, SQLException, GuanzonException {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
-        boolean lbUpdated = false;
+        //Re update transaction no
+        if(Master().getEditMode() == EditMode.ADDNEW){
+            System.out.println("Will Save : " + Master().getNextCode());
+            Master().setTransactionNo(Master().getNextCode());
+        }
+        
+        Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+        Master().setModifiedDate(poGRider.getServerDate());
+        
+        
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
-
             double amount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-
-            if (amount <= 0) {
+            if (amount <= 0.0000 || ( item.getEditMode() == EditMode.ADDNEW && "-".equals((String) item.getValue("cReversex")) )) {
                 detail.remove(); // Correctly remove the item
             }
         }
-
+        
+        if(getDetailCount() <= 0 ){
+            AddDetail();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
+        }
+        
+        if(Master().getNetTotal() <= 0.0000){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Invalid net total.");
+            return poJSON;
+        }
+        
+        if (getDetailCount() == 1) {
+            //do not allow a single item detail with no quantity order
+            if (Detail(0).getAmount() == 0.00) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Particular has 0 amount.");
+                return poJSON;
+            }
+        }
         if (PaymentRequestStatus.RETURNED.equals(Master().getTransactionStatus())) {
+            boolean lbUpdated = false;
             PaymentRequest loRecord = new CashflowControllers(poGRider, null).PaymentRequest();
             loRecord.InitTransaction();
             loRecord.OpenTransaction(Master().getTransactionNo());
@@ -1139,7 +1175,7 @@ public class PaymentRequest extends Transaction {
             Master().setTransactionStatus(PaymentRequestStatus.OPEN); //If edited update trasaction status into open
         }
         
-        //Arsiela 02-26-2026
+        //Arsiela 02-26-2026 functionality for recurring expense and purchase order payments
         switch(Master().getSourceCode()){
             case InvTransCons.PURCHASE_ORDER:
                 Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
@@ -1176,20 +1212,13 @@ public class PaymentRequest extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             
-            if(Detail(lnCtr).getRecurringNo() != null && !"".equals(Detail(lnCtr).getRecurringNo())){
-                poJSON = checkExistingPRF(Detail(lnCtr).getRecurringNo());
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
+            if(Detail(lnCtr).isReverse()){
+                if(Detail(lnCtr).getRecurringNo() != null && !"".equals(Detail(lnCtr).getRecurringNo())){
+                    poJSON = checkExistingPRF(Detail(lnCtr).getRecurringNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                 }
-            }
-        }
-
-        if (getDetailCount() == 1) {
-            //do not allow a single item detail with no quantity order
-            if (Detail(0).getAmount() == 0.00) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Particular has 0 amount.");
-                return poJSON;
             }
         }
 
@@ -1259,7 +1288,7 @@ public class PaymentRequest extends Transaction {
                     }
                 }
             } catch (Exception ex) {
-                Logger.getLogger(PurchaseOrderReceiving.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             }
             
         }
@@ -1404,12 +1433,12 @@ public class PaymentRequest extends Transaction {
     @Override
     public JSONObject saveOthers() {
         poJSON = new JSONObject();
-        int lnCtr;
         try {
             //Save Attachments
-            for (lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
+            for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
                 if (paAttachments.get(lnCtr).getEditMode() == EditMode.ADDNEW || paAttachments.get(lnCtr).getEditMode() == EditMode.UPDATE) {
-
+                    paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                    paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
                     paAttachments.get(lnCtr).setWithParentClass(true);
                     poJSON = paAttachments.get(lnCtr).saveRecord();
                     if ("error".equals((String) poJSON.get("result"))) {
@@ -1424,7 +1453,7 @@ public class PaymentRequest extends Transaction {
 //                return poJSON;
 //            }
         } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
-            Logger.getLogger(PaymentRequest.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
 
         poJSON.put("result", "success");
@@ -1779,28 +1808,89 @@ public class PaymentRequest extends Transaction {
         double ldblTransactionTotal = 0.0000;
         double ldblNetTotal = 0.0000;
         double ldblDiscountAmount = 0.0000;
-        double ldblVatAmount = 0.0000;
-        double ldblVatExempt = 0.0000;
+//        double ldblVatAmount = 0.0000; //Disable vat computation for PRF as per ma'am she 03-03-2026
+//        double ldblVatExempt = 0.0000;
 
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if(Detail(lnCtr).isReverse()){
                 ldblTransactionTotal += Detail(lnCtr).getAmount();
                 ldblNetTotal += Detail(lnCtr).getNetTotal();
                 ldblDiscountAmount += Detail(lnCtr).getAddDiscount();
-                if(Detail(lnCtr).isVatable()){
-                    ldblVatAmount += Detail(lnCtr).getVatAmount();
-                } else {
-                    ldblVatExempt += Detail(lnCtr).getNetTotal();
-                }
+//                if(Detail(lnCtr).isVatable()){
+//                    ldblVatAmount += Detail(lnCtr).getVatAmount();
+//                } else {
+//                    ldblVatExempt += Detail(lnCtr).getNetTotal();
+//                }
             }
         }
         
         Master().setTranTotal(ldblTransactionTotal);
         Master().setDiscountAmount(ldblDiscountAmount);
-        Master().setVatAmount(ldblVatAmount);
-        Master().setVatExempt(ldblVatExempt);
+//        Master().setVatAmount(ldblVatAmount);
+//        Master().setVatExempt(ldblVatExempt);
         Master().setNetTotal(ldblNetTotal);
         return poJSON;
+    }
+    
+    /** Arsiela 03-03-2026
+     * Validate setting of discount rate
+     * @param fdblDiscountRate
+     * @param row
+     * @return 
+     */
+    public JSONObject setDiscountRate(double fdblDiscountRate, int row) {
+        poJSON = new JSONObject();
+        if (Detail(row).getAmount() <= 0.0000) {
+            poJSON.put("message", "You're not allowed to enter discount rate, no amount entered.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        if (fdblDiscountRate < 0.00 || fdblDiscountRate > 1.00) {
+            poJSON.put("message", "Invalid Discount Rate. Must be between 0.00 and 1.00 (1.00 = 100%)");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        double ldblDetailDiscountRate = Detail(row).getAmount() * (fdblDiscountRate / 100);
+        if(Detail(row).getAmount() < (Detail(row).getAddDiscount() + ldblDetailDiscountRate)){
+            poJSON.put("message", "Computed total discount cannot be greater than the detail amount.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        // Store rate (e.g., 0.10 = 10%) and amount
+        poJSON = Detail(row).setDiscount(fdblDiscountRate);        // decimal: 1.00 = 100%
+        return poJSON;
+    }
+
+    /** Arsiela 03-03-2026
+     * Validate setting of discount amount
+     * @param fdblAdditionalDiscount
+     * @param row
+     * @return 
+     */
+    public JSONObject setDiscountAmount(double fdblAdditionalDiscount, int row) {
+        poJSON = new JSONObject();
+        
+        if (Detail(row).getAmount() <= 0.0000) {
+            poJSON.put("message", "You're not allowed to enter discount rate, no amount entered.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+
+        if (fdblAdditionalDiscount < 0.0000 || fdblAdditionalDiscount > Detail(row).getAmount()) {
+            poJSON.put("message", "Invalid discount amount.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+
+        double ldblDetailDiscountRate = Detail(row).getAmount() * (Detail(row).getDiscount() / 100);
+        if(Detail(row).getAmount() < (fdblAdditionalDiscount + ldblDetailDiscountRate)){
+            poJSON.put("message", "Computed total discount cannot be greater than the detail amount.");
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+
+        poJSON = Detail(row).setDiscount(fdblAdditionalDiscount);   
+        return poJSON;   
     }
 
     public JSONObject isDetailHasZeroAmount() {
@@ -1917,16 +2007,25 @@ public class PaymentRequest extends Transaction {
         }
 
         initSQL();
-        String lsFilterCondition = String.join(" AND ", "a.sIndstCdx = " + SQLUtil.toSQL(Master().getIndustryID()),
-                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
+        String lsFilterCondition = String.join(" AND ",
                 " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
-
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
-        if (!psTranStat.isEmpty()) {
+        
+        String lsFilterAll = "";
+        if (psIndustryId != null && !"".equals(psIndustryId)) {
+            lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+        }
+        if (psCompanyId != null && !"".equals(psCompanyId)) {
+            lsFilterAll += " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
+        }
+        if (psTranStat != null && !"".equals(psTranStat)) {
             lsSQL = lsSQL + lsTransStat;
+        }
+        if (!lsFilterAll.isEmpty() && !"".equals(lsFilterAll)) {
+            lsSQL = lsSQL + lsFilterAll;
         }
         lsSQL = lsSQL + " GROUP BY  a.sTransNox"
                 + " ORDER BY dTransact ASC";
@@ -2001,7 +2100,7 @@ public class PaymentRequest extends Transaction {
 //                }
 //
 //        } catch (SQLException  | GuanzonException ex) {
-//            Logger.getLogger(PaymentRequest.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
 //            poJSON.put("result", "error");
 //            poJSON.put("message", MiscUtil.getException(ex));
 //            return poJSON;

@@ -168,11 +168,11 @@ public class Model_Payment_Request_Detail extends Model {
     }
     
     public double getNetTotal(){
-        if(isVatable()){
-            return (getAmount() + getVatAmount()) - getTotalDiscount();
-        } else {
+//        if(isVatable()){
+//            return (getAmount() + getVatAmount()) - getTotalDiscount();
+//        } else {
             return getAmount() - getTotalDiscount();
-        }
+//        }
     }
 
     public JSONObject setWithHoldingTax(double withHoldingTax) {
