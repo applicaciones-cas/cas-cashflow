@@ -852,6 +852,8 @@ public class PaymentRequest extends Transaction {
             return poJSON;
         }
         
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     
@@ -871,28 +873,26 @@ public class PaymentRequest extends Transaction {
                             ", a.cTranStat " +
                             ", b.sRecurrNo " +
                             ", b.sPrtclrID " +
+                            ", d.sRecurrNo AS xRecurringNo " +
                             ", c.sDescript AS sPrtclrDc " +
                             " FROM Payment_Request_Master a " +
                             " LEFT JOIN Payment_Request_Detail b ON b.sTransNox = a.sTransNox " +
                             " LEFT JOIN  Particular c ON c.sPrtclrID = b.sPrtclrID " +
-                            " INNER JOIN Recurring_Expense_Payment_Monitor d ON (d.sTransNox = b.sRecurrNo OR d.sTransNox = a.sSourceNo ) AND (d.sBatchNox IS NULL OR d.sBatchNox = '') ";
+                            " LEFT JOIN Recurring_Expense_Payment_Monitor d ON (d.sTransNox = b.sRecurrNo OR (d.sTransNox  = a.sSourceNo AND a.sSourceCd = "+ SQLUtil.toSQL(PaymentRequestStaticData.recurring_expense_payment) + ")) ";
             lsSQL = MiscUtil.addCondition(lsSQL, 
                                 " a.sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
                                 + " AND ( b.sRecurrNo = " + SQLUtil.toSQL(recurringNo)
                                 + " OR ( a.sSourceNo = " + SQLUtil.toSQL(recurringNo)
                                 + " AND a.sSourceCd = " + SQLUtil.toSQL(PaymentRequestStaticData.recurring_expense_payment)
-                                + ")) AND a.cTranStat IN (" + PaymentRequestStatus.OPEN + "," + PaymentRequestStatus.CONFIRMED + ")");
+                                + ")) AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
+                                + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if (loRS.next()) {
-                    String lsRecurringNo = loRS.getString("sRecurrNo"); //Default
-                    if(lsRecurringNo == null || "".equals(lsRecurringNo)){
-                        lsRecurringNo = loRS.getString("sSourceNo");
-                    }
-
                     poJSON.put("result", "error");
-                    poJSON.put("message", "Recurring monitor no " + lsRecurringNo + " is already exist in PRF " + loRS.getString("sSeriesNo"));
+                    poJSON.put("message", "Recurring no " + loRS.getString("xRecurringNo") + " is already exists in PRF " + loRS.getString("sSeriesNo"));
+                    MiscUtil.close(loRS);
                     return poJSON;
                 }
             }
@@ -1624,7 +1624,7 @@ public class PaymentRequest extends Transaction {
                         + " LEFT JOIN Branch c ON c.sBranchCd = a.sBranchCd       "
                         + " LEFT JOIN Category d ON d.sCategrCd = a.sCategrCd     "
                         + " LEFT JOIN Client_Master e ON e.sClientID = a.sSupplier "
-                        + " LEFT JOIN Payee f ON f.sClientID = a.sSupplier " ;
+                        + " LEFT JOIN Payee f ON (f.sClientID = a.sSupplier OR f.sAPClntID = a.sSupplier) " ;
 
         lsSQL = MiscUtil.addCondition(lsSQL, " a.nAmtPaidx > 0.0000 AND a.nNetTotal > a.nAmtPaidx "
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.VOID)
