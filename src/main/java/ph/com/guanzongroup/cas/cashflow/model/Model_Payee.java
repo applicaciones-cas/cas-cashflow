@@ -56,6 +56,11 @@ public class Model_Payee extends Model {
             System.exit(1);
         }
     }
+    
+    @Override
+    public String getNextCode() {
+        return MiscUtil.getNextCode(this.getTable(), ID, false, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+    }
 
     public JSONObject setPayeeID(String payeeId) {
         return setValue("sPayeeIDx", payeeId);
