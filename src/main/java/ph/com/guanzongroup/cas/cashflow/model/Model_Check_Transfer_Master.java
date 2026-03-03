@@ -2,11 +2,17 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.client.model.Model_Client_Master;
@@ -47,8 +53,6 @@ public class Model_Check_Transfer_Master extends Model {
             poEntity.updateNull("sDeptIDxx");
             poEntity.updateNull("sPrepared");
             poEntity.updateNull("dPrepared");
-            poEntity.updateNull("sReceived");
-            poEntity.updateNull("dReceived");
             poEntity.updateString("cPrintedx", "0");
             poEntity.updateObject("dModified", poGRider.getServerDate());
             poEntity.updateString("cTranStat", CheckTransferStatus.OPEN);
@@ -178,13 +182,51 @@ public class Model_Check_Transfer_Master extends Model {
     }
 
     //dPrepared
-    public JSONObject setReceivedDate(LocalDateTime receivedDate) {
-        return setValue("dReceived", Timestamp.valueOf(receivedDate));
-    }
+    
+    public JSONObject setReceivedDate(Date receivedDate) {
+    if (poEntity == null)
+        throw new IllegalStateException("poEntity is not initialized");
 
-    public Date getReceivedDate() {
-        return (Date) getValue("dReceived");
+    if (receivedDate == null) {
+        try {
+            poEntity.updateNull("dReceived");
+            return null;
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+            return null;
+        }
     }
+    return setValue("dReceived", receivedDate);
+}
+
+public Date getReceivedDate() {
+    if (poEntity == null)
+        throw new IllegalStateException("poEntity is not initialized");
+
+    Object value = getValue("dReceived");
+    if (value == null) return null;
+
+    if (value instanceof Date) {
+        return (Date) value;
+    } else if (value instanceof String) {
+        String s = ((String) value).trim();
+        if (s.isEmpty()) return null; // skip empty string
+        try {
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(SQLUtil.FORMAT_SHORT_DATE);
+            LocalDate localDate = LocalDate.parse(s, formatter);
+            return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        } catch (Exception e) {
+            Logger.getLogger(getClass().getName())
+                  .log(Level.SEVERE, "Invalid date string in dReceived", e);
+            return null;
+        }
+    } else {
+        Logger.getLogger(getClass().getName())
+              .log(Level.WARNING, "dReceived is not a Date or String");
+        return null;
+    }
+}
+    
 
     //nTranTotl
     public JSONObject setTransactionTotal(Double transactionTotal) {

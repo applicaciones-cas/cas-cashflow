@@ -1,6 +1,7 @@
 package ph.com.guanzongroup.cas.cashflow.validator;
 
 import java.sql.SQLException;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -11,6 +12,9 @@ import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Transfer_Master;
 import ph.com.guanzongroup.cas.cashflow.status.CheckTransferStatus;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 
 public class CheckTransferValidatorFactory implements GValidator {
 
@@ -119,6 +123,9 @@ public class CheckTransferValidatorFactory implements GValidator {
 
     private JSONObject validatePosted() {
         poJSON = new JSONObject();
+
+        
+
 
         poJSON.put("result", "success");
         return poJSON;
