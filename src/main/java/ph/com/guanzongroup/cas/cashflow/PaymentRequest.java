@@ -1023,7 +1023,11 @@ public class PaymentRequest extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         poJSON.put("row", row);
         if ("success".equals((String) poJSON.get("result"))) {
+            int lnRowCount = 0;
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
+                if(Detail(lnRow).isReverse()){
+                    lnRowCount++;
+                }
                 if (lnRow != row) {
                     if (Detail(lnRow).getParticularID().equals(object.getModel().getParticularID())) {
                         if(!Detail(lnRow).isReverse()){
@@ -1032,7 +1036,7 @@ public class PaymentRequest extends Transaction {
                             return poJSON;
                         } else {
                             poJSON.put("result", "error");
-                            poJSON.put("message", "Particular: " + object.getModel().getDescription() + " already exist in table at row " + (lnRow + 1) + ".");
+                            poJSON.put("message", "Particular: " + object.getModel().getDescription() + " already exist in table at row " + lnRowCount + ".");
                             poJSON.put("row", lnRow);
                             return poJSON;
                         }
