@@ -1021,18 +1021,19 @@ public class PaymentRequest extends Transaction {
         object.setRecordStatus("1");
 
         poJSON = object.searchRecord(value, byCode);
-
+        poJSON.put("row", row);
         if ("success".equals((String) poJSON.get("result"))) {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
                     if (Detail(lnRow).getParticularID().equals(object.getModel().getParticularID())) {
                         if(!Detail(lnRow).isReverse()){
                             Detail(lnRow).isReverse(true);
+                            poJSON.put("row", lnRow);
                             return poJSON;
                         } else {
                             poJSON.put("result", "error");
                             poJSON.put("message", "Particular: " + object.getModel().getDescription() + " already exist in table at row " + (lnRow + 1) + ".");
-                            poJSON.put("tableRow", lnRow);
+                            poJSON.put("row", lnRow);
                             return poJSON;
                         }
                     }
@@ -1041,6 +1042,9 @@ public class PaymentRequest extends Transaction {
             Detail(row).setParticularID(object.getModel().getParticularID());
         }
 
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        poJSON.put("row", row);
         return poJSON;
     }
 
