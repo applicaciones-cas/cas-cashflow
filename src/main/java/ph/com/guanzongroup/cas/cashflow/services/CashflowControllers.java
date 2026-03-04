@@ -29,6 +29,8 @@ import ph.com.guanzongroup.cas.cashflow.OtherPaymentStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.OtherPayments;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
+import ph.com.guanzongroup.cas.cashflow.RecurringExpense;
+import ph.com.guanzongroup.cas.cashflow.RecurringExpenseSchedule;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
 import ph.com.guanzongroup.cas.cashflow.SOATagging;
 import ph.com.guanzongroup.cas.cashflow.SubClass.Disbursement_PRF;
@@ -581,7 +583,43 @@ public class CashflowControllers {
         poCheckRelease.setWithParent(false);
         return poCheckRelease;
     }
+    
+    public RecurringExpense RecurringExpense() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.RecurringExpense: Application driver is not set.");
+            return null;
+        }
 
+        if (poRecurringExpense != null) {
+            return poRecurringExpense;
+        }
+
+        poRecurringExpense = new RecurringExpense();
+        poRecurringExpense.setApplicationDriver(poGRider);
+        poRecurringExpense.setWithParentClass(false);
+        poRecurringExpense.setLogWrapper(poLogWrapper);
+        poRecurringExpense.initialize();
+        poRecurringExpense.newRecord();
+        return poRecurringExpense;
+    }
+
+    public RecurringExpenseSchedule RecurringExpenseSchedule() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.RecurringExpenseSchedule: Application driver is not set.");
+            return null;
+        }
+
+        if (poRecurringExpenseSchedule != null) {
+            return poRecurringExpenseSchedule;
+        }
+
+        poRecurringExpenseSchedule = new RecurringExpenseSchedule();
+        poRecurringExpenseSchedule.setApplicationDriver(poGRider);
+        poRecurringExpenseSchedule.setWithParentClass(false);
+        poRecurringExpenseSchedule.setLogWrapper(poLogWrapper);
+        poRecurringExpenseSchedule.initialize();
+        return poRecurringExpenseSchedule;
+    }
     
     @Override
     protected void finalize() throws Throwable {
@@ -616,6 +654,8 @@ public class CashflowControllers {
             poOtherPayments = null;
             poOtherPaymentStatusUpdate = null;
             poCashAdvance = null;
+            poRecurringExpense = null;
+            poRecurringExpenseSchedule = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -656,4 +696,6 @@ public class CashflowControllers {
     private CheckTransfers poCheckTransfer;
     private CheckDeposits poCheckDeposit;
     private CheckReleases poCheckRelease;
+    private RecurringExpense poRecurringExpense;
+    private RecurringExpenseSchedule poRecurringExpenseSchedule;
 }
