@@ -1026,8 +1026,8 @@ public class PaymentRequest extends Transaction {
             for (int lnRow = 0; lnRow <= getDetailCount() - 1; lnRow++) {
                 if (lnRow != row) {
                     if (Detail(lnRow).getParticularID().equals(object.getModel().getParticularID())) {
-                        if(!Detail(row).isReverse()){
-                            Detail(row).isReverse(true);
+                        if(!Detail(lnRow).isReverse()){
+                            Detail(lnRow).isReverse(true);
                             return poJSON;
                         } else {
                             poJSON.put("result", "error");
