@@ -1790,11 +1790,11 @@ public class DisbursementVoucher extends Transaction {
                             lsPOTransNo = Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceNo();
                         }
                     } else if(SOATaggingStatic.POReceiving.equals(Detail(lnRow).SOADetail().getSourceCode())){
-                    poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getDetailSource());
-                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getDetailSource());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                         return poJSON;
-                    }
-                    return poJSON;
                     }
                 break;
     //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
@@ -1834,6 +1834,7 @@ public class DisbursementVoucher extends Transaction {
         Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
         poJSON = loObject.openRecord(fsTransNo);
         if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", (String) poJSON.get("message") + "\nWhile reloading PO Receiving Master." );
             return poJSON;
         }
         
@@ -1845,6 +1846,7 @@ public class DisbursementVoucher extends Transaction {
             Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
             poJSON = loDetail.openRecord(fsTransNo,(lnCtr+1) );
             if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
                 return poJSON;
             }
             
@@ -1869,11 +1871,14 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
         Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
         for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
-            poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
+                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+                if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+                    return poJSON;
+                }
+                pdblAdvancesAmount += loObject.getAmountPaid().doubleValue();
             }
-            pdblAdvancesAmount += loObject.getAmountPaid().doubleValue();
         }
         
         poJSON.put("result", "success");
