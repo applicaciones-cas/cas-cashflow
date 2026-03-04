@@ -1,5 +1,6 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
@@ -34,9 +35,13 @@ public class RecurringExpense extends Parameter {
     public void setPayeeID(String payeeId) { psPayeeId = payeeId; }
 
     @Override
-    public JSONObject isEntryOkay() throws SQLException {
+    public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-
+        
+        poModel.setIndustryCode(poGRider.getIndustry());
+        poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+        poModel.setModifiedDate(poGRider.getServerDate());
+        
         if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
             poJSON.put("result", "error");
             poJSON.put("message", "User is not allowed to save record.");
@@ -62,11 +67,40 @@ public class RecurringExpense extends Parameter {
                 return poJSON;
             }
         }
-
-        poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-        poModel.setModifiedDate(poGRider.getServerDate());
-
+        
+        poJSON = checkExistingRecurring();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    public JSONObject checkExistingRecurring() throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()), 
+                                                                    " sRecurrID != " + SQLUtil.toSQL(getModel().getRecurringId())
+                                                                    + " AND sPrtclrID = " + SQLUtil.toSQL(getModel().getParticularId())
+                                                                    + " AND sPayeeIDx = " + SQLUtil.toSQL(getModel().getPayeeId())
+                                                                    + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryCode())
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sRecurrID") != null && !"".equals(loRS.getString("sRecurrID"))){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Payee with the selected particular already exists in the database.\nCheck recurring ID : <" + loRS.getString("sRecurrID") + ">");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
         return poJSON;
     }
 
