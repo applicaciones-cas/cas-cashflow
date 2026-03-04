@@ -86,6 +86,12 @@ import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.model.Model_POR_Detail;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.model.Model_PO_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
+import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
@@ -99,6 +105,8 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -108,7 +116,6 @@ import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
-import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
@@ -1115,7 +1122,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
+        System.out.println(" value " + value);
         poJSON = object.searchRecordbyClientID(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
@@ -1454,7 +1461,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
         poJSON.put("column", "");
-        
+        pdblAdvancesAmount = 0.0000;
         Double ldblTransactionTotal = 0.0000;
         Double ldblVATSalesTotal = 0.0000;
         Double ldblVATAmountTotal = 0.0000;
@@ -1482,6 +1489,12 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     }
                 }
+                
+                poJSON = getAdvancesAmount(lnCntr);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+               
 //            } else {
 //                ldblAppliedAmt = Detail(lnCntr).getAmountApplied();
 //                ldblVATSales = Detail(lnCntr).getDetailVatSales();
@@ -1630,7 +1643,7 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
-        if(ldblTotalBaseAmount > Master().getTransactionTotal()){
+        if(ldblTotalBaseAmount > Master().getVATSale()){
             poJSON.put("result", "error");
             poJSON.put("message", "Base amount cannot be greater than the transaction total.");
             return poJSON;
@@ -1753,6 +1766,114 @@ public class DisbursementVoucher extends Transaction {
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
             Detail(fnRow).setDetailVatExempt(Detail(fnRow).getAmountApplied());
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private double pdblAdvancesAmount = 0.0000;
+    public double getAdvancesAmount(){
+        return pdblAdvancesAmount;
+    }
+    
+    private JSONObject getAdvancesAmount(int lnRow){
+        poJSON = new JSONObject();
+        try {
+            List<String> llistPurchaseOrder = new ArrayList<>();
+            String lsPOTransNo = "";
+            switch(Detail(lnRow).getSourceCode()){
+                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                    if(SOATaggingStatic.PaymentRequest.equals(Detail(lnRow).SOADetail().getSourceCode())){
+                        if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceCode())){
+                            lsPOTransNo = Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceNo();
+                        }
+                    } else if(SOATaggingStatic.POReceiving.equals(Detail(lnRow).SOADetail().getSourceCode())){
+                    poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getDetailSource());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    return poJSON;
+                    }
+                break;
+    //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).PRF().getSourceCode())){
+                        lsPOTransNo = Detail(lnRow).PRF().getSourceNo();
+                    }
+                    break;
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getSourceNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    return poJSON;
+            }
+
+            if(!llistPurchaseOrder.contains(lsPOTransNo)){
+                llistPurchaseOrder.add(lsPOTransNo);
+            }
+
+            poJSON = getAdvancePayment(llistPurchaseOrder);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        } 
+        return poJSON;
+    }
+    
+    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+        poJSON = loObject.openRecord(fsTransNo);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(!PurchaseOrderReceivingStatus.Purpose.REGULAR.equals(loObject.getPurpose())){
+            return poJSON;
+        }
+        List<String> llistPurchaseOrder = new ArrayList<>();
+        for(int lnCtr = 0;lnCtr < loObject.getEntryNo();lnCtr++){
+            Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
+            poJSON = loDetail.openRecord(fsTransNo,(lnCtr+1) );
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            
+            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
+                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
+                    llistPurchaseOrder.add(loDetail.getOrderNo());
+                } 
+            }
+        }
+        
+        
+        poJSON = getAdvancePayment(llistPurchaseOrder);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
+        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+            poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            pdblAdvancesAmount += loObject.getAmountPaid().doubleValue();
         }
         
         poJSON.put("result", "success");
@@ -3428,8 +3549,21 @@ public class DisbursementVoucher extends Transaction {
         }
         
         Double ldblBalance = loController.Master().getNetTotal().doubleValue() - loController.Master().getAmountPaid().doubleValue();
+        String lsPayeeId = loController.Master().getIssuedTo();
+        if(lsPayeeId == null || "".equals(lsPayeeId)){
+            Model_Payee loPayee = new CashflowModels(poGRider).Payee();
+            poJSON = loPayee.openRecordByReference(loController.Master().getClientId());
+            if ("error".equals((String) poJSON.get("result"))) {
+                poJSON.put("row", 0);
+                poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loController.Master().Supplier().getCompanyName() + "."));
+                return poJSON;
+            } else {
+                lsPayeeId = loPayee.getPayeeID();
+            }
+        }
+        
         //Validate transaction to be add in DV Detail
-        poJSON = validateDetail(ldblBalance,  loController.Master().getIssuedTo(), loController.Master().getClientId(),loController.Master().getIndustryId());
+        poJSON = validateDetail(ldblBalance,  lsPayeeId, loController.Master().getClientId(),loController.Master().getIndustryId());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
@@ -3833,6 +3967,15 @@ public class DisbursementVoucher extends Transaction {
             if(Master().getSupplierClientID() == null || "".equals(Master().getSupplierClientID())){
                 Master().setSupplierClientID(fsClientId);
                 setSearchClient(Master().Payee().Client().getCompanyName());
+                
+                if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
+                    Master().setPayeeID(Master().Payee().getPayeeID());
+                    setSearchPayee(Master().Payee().getPayeeName());
+                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                        CheckPayments().getModel().setPayeeID(Master().getPayeeID());
+                    }
+                }
+                
             } else {
                 if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
                     && Detail(getDetailCount() - 1).getAmountApplied() <= 0.0000
@@ -4658,7 +4801,9 @@ public class DisbursementVoucher extends Transaction {
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + "AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+                + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
@@ -4728,7 +4873,9 @@ public class DisbursementVoucher extends Transaction {
                 + lsIndustry
                 + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + "AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+                + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
                 + "GROUP BY a.sTransNox ";
     }
