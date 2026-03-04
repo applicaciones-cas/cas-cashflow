@@ -432,6 +432,7 @@ public class DisbursementVoucher extends Transaction {
             if(lsCheck != null && !"".equals(lsCheck)){
                 OtherPayments loObject = new CashflowControllers(poGRider, logwrapr).OtherPayments();
                 loObject.initialize();
+                loObject.setWithParentClass(true);
                 poJSON = loObject.openRecord(lsCheck);
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -448,6 +449,7 @@ public class DisbursementVoucher extends Transaction {
             if(lsCheck != null && !"".equals(lsCheck)){
                 CheckPayments loObject = new CashflowControllers(poGRider, logwrapr).CheckPayments();
                 loObject.initialize();
+                loObject.setWithParentClass(true);
                 poJSON = loObject.openRecord(lsCheck);
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -1645,13 +1647,13 @@ public class DisbursementVoucher extends Transaction {
         
         if(ldblTotalBaseAmount > Master().getVATSale()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Base amount cannot be greater than the transaction total.");
+            poJSON.put("message", "Base amount cannot be greater than the net vatable sales.");
             return poJSON;
         }
         
-        if(ldblTaxAmount > Master().getTransactionTotal()){
+        if(ldblTaxAmount > Master().getVATSale()){
             poJSON.put("result", "error");
-            poJSON.put("message", "Tax amount cannot be greater than the transaction total.");
+            poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
             return poJSON;
         }
         
@@ -3035,6 +3037,11 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
             System.out.println("-----------------------------------------------------------------------");
+            
+            poJSON = updatePaymentsStatus();
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
             
         } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
