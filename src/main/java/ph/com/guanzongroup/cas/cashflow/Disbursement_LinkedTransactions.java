@@ -303,6 +303,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
+        ldblAmountPaid = ldblAmountPaid + loModel.getAmountPaid().doubleValue();
+        
         //Validate Amount paid do not allow when payment is greater than the transaction net total
         if(ldblAmountPaid > loModel.getNetTotal().doubleValue()){
             poJSON.put("result", "error");

@@ -21,7 +21,8 @@ public class Model_Payment_Request_Detail extends Model {
 
     Model_Particular poParticular;
     Model_Recurring_Issuance poRecurring;
-
+    Model_Recurring_Expense_Payment_Monitor poRecurringExpense;
+    
     @Override
     public void initialize() {
         try {
@@ -39,6 +40,7 @@ public class Model_Payment_Request_Detail extends Model {
             poEntity.updateObject("nAddDiscx", 0.0000);
             poEntity.updateObject("nTWithHld", 0.0000);
             poEntity.updateObject("cVATaxabl", "0");
+            poEntity.updateObject("cReversex", "+");
 
             //end - assign default values
             poEntity.insertRow();
@@ -52,6 +54,7 @@ public class Model_Payment_Request_Detail extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poParticular = cashFlow.Particular();
             poRecurring = cashFlow.Recurring_Issuance();
+            poRecurringExpense = cashFlow.Recurring_Expense_Payment_Monitor();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -90,6 +93,14 @@ public class Model_Payment_Request_Detail extends Model {
         return (String) getValue("sPrtclrID");
     }
 
+    public JSONObject setRecurringNo(String recurringNo) {
+        return setValue("sRecurrNo", recurringNo);
+    }
+
+    public String getRecurringNo() {
+        return (String) getValue("sRecurrNo");
+    }
+
     public JSONObject setPRFRemarks(String prfRemarks) {
         return setValue("sPRFRemxx", prfRemarks);
     }
@@ -121,13 +132,47 @@ public class Model_Payment_Request_Detail extends Model {
     public double getAddDiscount() {
         return Double.parseDouble(String.valueOf(getValue("nAddDiscx")));
     }
-
+    
+    //Duplicated already use in old sript
     public JSONObject setVatable(String vatable) {
         return setValue("cVATaxabl", vatable);
     }
 
     public String getVatable() {
         return (String) getValue("cVATaxabl");
+    }
+    
+    public JSONObject isVatable(boolean isReverse) {
+        return setValue("cVATaxabl", isReverse ? "1" : "0");
+    }
+
+    public boolean isVatable() {
+        return ((String) getValue("cVATaxabl")).equals("1");
+    }
+    
+    public double getTotalDiscount(){
+        double ldblDetailDiscountRate = 0.00;
+        if(getDiscount() > 0){
+            ldblDetailDiscountRate = getAmount() * (getDiscount() / 100);
+        }
+        return ldblDetailDiscountRate + getAddDiscount();
+    }
+    
+    public double getVatAmount(){
+        double ldblDetailTotal = getAmount() - getTotalDiscount();
+        if(ldblDetailTotal > 0.0000){
+            return ldblDetailTotal * 0.12;
+        } else {
+            return 0.0000;
+        }
+    }
+    
+    public double getNetTotal(){
+//        if(isVatable()){
+//            return (getAmount() + getVatAmount()) - getTotalDiscount();
+//        } else {
+            return getAmount() - getTotalDiscount();
+//        }
     }
 
     public JSONObject setWithHoldingTax(double withHoldingTax) {
@@ -138,6 +183,13 @@ public class Model_Payment_Request_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nTWithHld")));
     }
     
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
+    }
 
     public JSONObject setModifiedDate(Date modifiedDate) {
         return setValue("dModified", modifiedDate);
@@ -185,6 +237,26 @@ public class Model_Payment_Request_Detail extends Model {
         } else {
             poRecurring.initialize();
             return poRecurring;
+        }
+    }
+    
+    public Model_Recurring_Expense_Payment_Monitor RecurringExpensePaymentMonitor() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sRecurrNo"))) {
+            if (poRecurringExpense.getEditMode() == EditMode.READY
+                    && poRecurringExpense.getTransactionNo().equals((String) getValue("sRecurrNo"))) {
+                return poRecurringExpense;
+            } else {
+                poJSON = poRecurringExpense.openRecord((String) getValue("sRecurrNo"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poRecurringExpense;
+                } else {
+                    poRecurringExpense.initialize();
+                    return poRecurringExpense;
+                }
+            }
+        } else {
+            poRecurringExpense.initialize();
+            return poRecurringExpense;
         }
     }
 

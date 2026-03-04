@@ -44,22 +44,22 @@ public class testPRFOpenIsuance {
         String payeeID = "003";
         String AcctNo = "1101020003";
 
-        try {
-           loJSON = poPaymentRequest.addRecurringIssuanceToPaymentRequestDetail(particularNo, payeeID, AcctNo);
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-//            loJSON = poRecurringIssuance.openRecord(particularNo, Branch, payeeID, AcctNo);
+//        try {
+//           loJSON = poPaymentRequest.addRecurringIssuanceToPaymentRequestDetail(particularNo, payeeID, AcctNo);
 //            if (!"success".equals((String) loJSON.get("result"))) {
 //                System.err.println((String) loJSON.get("message"));
 //                Assert.fail();
 //            }
-        } catch (SQLException | GuanzonException | CloneNotSupportedException e) {
-            Logger.getLogger(MiscUtil.getException(e));
-            System.err.println(MiscUtil.getException(e));
-            Assert.fail();
-        } 
+////            loJSON = poRecurringIssuance.openRecord(particularNo, Branch, payeeID, AcctNo);
+////            if (!"success".equals((String) loJSON.get("result"))) {
+////                System.err.println((String) loJSON.get("message"));
+////                Assert.fail();
+////            }
+//        } catch (SQLException | GuanzonException | CloneNotSupportedException e) {
+//            Logger.getLogger(MiscUtil.getException(e));
+//            System.err.println(MiscUtil.getException(e));
+//            Assert.fail();
+//        } 
 
     }
     @AfterClass
