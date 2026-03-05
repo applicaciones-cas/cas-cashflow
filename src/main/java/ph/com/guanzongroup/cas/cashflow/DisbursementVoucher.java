@@ -3423,7 +3423,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         int lnRow = getDetailCount() - 1; //set default value 
-        Double ldblBalance = loController.Master().getTranTotal() - loController.Master().getAmountPaid();
+        Double ldblBalance = loController.Master().getNetTotal() - loController.Master().getAmountPaid();
         //Validate transaction to be add in DV Detail
         poJSON = validateDetail(ldblBalance, loController.Master().getPayeeID(), loController.Master().Payee().getClientID(),loController.Master().getIndustryID());
         if ("error".equals((String) poJSON.get("result"))) {
@@ -3649,7 +3649,7 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     }
 
-                    ldblSourceBalance = loPRF.Master().getTranTotal() - loPRF.Master().getAmountPaid();
+                    ldblSourceBalance = loPRF.Master().getNetTotal() - loPRF.Master().getAmountPaid();
                     ldblVatExempt = ldblSourceBalance;
                     //Validate transaction to be add in DV Detail
                     poJSON = validateDetail(ldblSourceBalance, loPRF.Master().getPayeeID(), loPRF.Master().Payee().getClientID(),loPRF.Master().getIndustryID());
@@ -5479,7 +5479,7 @@ public class DisbursementVoucher extends Transaction {
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
-                params.put("nCheckAmountxx", Master().CheckPayments().getAmount());
+                params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
                 params.put("sPrepared", poGRider.getLogName());
                 params.put("sChecked", "Rex Adversalo");
                 params.put("sApproved", "Guanson Lo");
