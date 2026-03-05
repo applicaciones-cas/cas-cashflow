@@ -71,30 +71,30 @@ public class Model_Account_Chart extends Model {
     public String getParentAccountCode() {
         return (String) getValue("sParentCd");
     }
-
-    public JSONObject isBasedAccount(boolean value) {
-        return setValue("cBasedAct", value ? "1" : "0");
-    }
-
-    public boolean isBasedAccount() {
-        return (boolean) getValue("cBasedAct").equals("1");
-    }
-
-    public JSONObject setAccountGroup(String accountGroup) {
-        return setValue("sAcctGrpx", accountGroup);
-    }
-
-    public String getAccountGroup() {
-        return (String) getValue("sAcctGrpx");
-    }
-
-    public JSONObject setReportGroup(String reportGroup) {
-        return setValue("sReprtGrp", reportGroup);
-    }
-
-    public String getReportGroup() {
-        return (String) getValue("sReprtGrp");
-    }
+//
+//    public JSONObject isBasedAccount(boolean value) {
+//        return setValue("cBasedAct", value ? "1" : "0");
+//    }
+//
+//    public boolean isBasedAccount() {
+//        return (boolean) getValue("cBasedAct").equals("1");
+//    }
+//
+//    public JSONObject setAccountGroup(String accountGroup) {
+//        return setValue("sAcctGrpx", accountGroup);
+//    }
+//
+//    public String getAccountGroup() {
+//        return (String) getValue("sAcctGrpx");
+//    }
+//
+//    public JSONObject setReportGroup(String reportGroup) {
+//        return setValue("sReprtGrp", reportGroup);
+//    }
+//
+//    public String getReportGroup() {
+//        return (String) getValue("sReprtGrp");
+//    }
 
     public JSONObject setAccountType(String accountType) {
         return setValue("cAcctType", accountType);
@@ -103,15 +103,7 @@ public class Model_Account_Chart extends Model {
     public String getAccountType() {
         return (String) getValue("cAcctType");
     }
-
-    public JSONObject setBaseAccount(String balanceType) {
-        return setValue("cBasedAct", balanceType);
-    }
-
-    public String getBaseAccount() {
-        return (String) getValue("cBasedAct");
-    }
-
+    
     public JSONObject setBalanceType(String balanceType) {
         return setValue("cBalTypex", balanceType);
     }
@@ -119,6 +111,47 @@ public class Model_Account_Chart extends Model {
     public String getBalanceType() {
         return (String) getValue("cBalTypex");
     }
+    
+    public JSONObject setContraTo(String contraTo) {
+        return setValue("sContraTo", contraTo);
+    }
+
+    public String getContraTo() {
+        return (String) getValue("sContraTo");
+    }
+    
+    public JSONObject setNature(String nature) {
+        return setValue("cNaturexx", nature);
+    }
+
+    public String getNature() {
+        return (String) getValue("cNaturexx");
+    }
+    
+    public JSONObject setRemarks(String remarks) {
+        return setValue("sRemarksx", remarks);
+    }
+
+    public String getRemarks() {
+        return (String) getValue("sRemarksx");
+    }
+    
+        public JSONObject isCash(boolean iscash) {
+        return setValue("cIsCashxx", iscash ? "1" : "0");
+    }
+    
+    public boolean isCash() {
+        Object value = getValue("cIsCashxx");
+        return "1".equals(String.valueOf(value));
+    }
+
+//    public JSONObject setBaseAccount(String balanceType) {
+//        return setValue("cBasedAct", balanceType);
+//    }
+//
+//    public String getBaseAccount() {
+//        return (String) getValue("cBasedAct");
+//    }
 
     public JSONObject setGLCode(String glCode) {
         return setValue("sGLCodexx", glCode);

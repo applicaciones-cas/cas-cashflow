@@ -110,21 +110,15 @@ public class Model_Check_Transfer_Detail extends Model {
     }
 
     //cReceived
-    public JSONObject setReceived(String received) {
-        return setValue("cReceived", received);
+    public JSONObject isReceived(boolean isRequired) {
+        return setValue("cReceived", isRequired ? "1" : "0");
     }
-
-    public String getReceived() {
-        return (String) getValue("cReceived");
-    }
-
+    
     public boolean isReceived() {
-        return RecordStatus.ACTIVE.equals(getValue("cReceived"));
+        Object value = getValue("cReceived");
+        return "1".equals(String.valueOf(value));
     }
 
-    public JSONObject setReceived(boolean received) {
-        return setValue("cReceived", received == true ? "1" : "0");
-    }
     
     public JSONObject isReverse(boolean isReverse) {
         return setValue("cReversex", isReverse ? "+" : "-");
