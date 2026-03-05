@@ -32,37 +32,37 @@ public class testPRFLoadRecurringInssuance {
         poPaymentRequest = new CashflowControllers(poApp, null);
     }
 
-    @Test
-    public void testLoadRecurringInssuance() {
-        JSONObject loJSON;
-        try {
-            loJSON = poPaymentRequest.PaymentRequest().InitTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-
-            poPaymentRequest.PaymentRequest().Master().setBranchCode("M001");
-            loJSON = poPaymentRequest.PaymentRequest().loadRecurringIssuance();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-
-            for (int lnCntr = 0; lnCntr <= poPaymentRequest.PaymentRequest().getRecurring_IssuanceCount() - 1; lnCntr++) {
-                System.out.println("Particular ID: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).getParticularID());
-                System.out.println("Particular Name: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).Particular().getDescription());
-                System.out.println("Payee ID: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).getPayeeID());
-                System.out.println("Payee Name: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).Payee().getPayeeName());
-            }
-
-//            System.out.println((String) loJSON.get("message"));
-        } catch (SQLException | GuanzonException e) {
-            System.err.println(MiscUtil.getException(e));
-            Assert.fail();
-        }
-
-    }
+//    @Test
+//    public void testLoadRecurringInssuance() {
+//        JSONObject loJSON;
+//        try {
+//            loJSON = poPaymentRequest.PaymentRequest().InitTransaction();
+//            if (!"success".equals((String) loJSON.get("result"))) {
+//                System.err.println((String) loJSON.get("message"));
+//                Assert.fail();
+//            }
+//
+//            poPaymentRequest.PaymentRequest().Master().setBranchCode("M001");
+//            loJSON = poPaymentRequest.PaymentRequest().loadRecurringIssuance();
+//            if (!"success".equals((String) loJSON.get("result"))) {
+//                System.err.println((String) loJSON.get("message"));
+//                Assert.fail();
+//            }
+//
+//            for (int lnCntr = 0; lnCntr <= poPaymentRequest.PaymentRequest().getRecurring_IssuanceCount() - 1; lnCntr++) {
+//                System.out.println("Particular ID: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).getParticularID());
+//                System.out.println("Particular Name: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).Particular().getDescription());
+//                System.out.println("Payee ID: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).getPayeeID());
+//                System.out.println("Payee Name: " + poPaymentRequest.PaymentRequest().Recurring_Issuance(lnCntr).Payee().getPayeeName());
+//            }
+//
+////            System.out.println((String) loJSON.get("message"));
+//        } catch (SQLException | GuanzonException e) {
+//            System.err.println(MiscUtil.getException(e));
+//            Assert.fail();
+//        }
+//
+//    }
 
     @AfterClass
     public static void tearDownClass() {

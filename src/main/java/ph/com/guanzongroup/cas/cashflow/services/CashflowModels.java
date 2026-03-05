@@ -33,6 +33,9 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Payment_Monitor;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Schedule;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Transaction_Account_Chart;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax;
@@ -653,7 +656,56 @@ public class CashflowModels {
 
         return poCheckReleaseDetail;
     }
+    public Model_Recurring_Expense Recurring_Expense(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Recurring_Expense: Application driver is not set.");
+            return null;
+        }
+        
+        if (poRecurringExpense == null){
+            poRecurringExpense = new Model_Recurring_Expense();
+            poRecurringExpense.setApplicationDriver(poGRider);
+            poRecurringExpense.setXML("Model_Recurring_Expense");
+            poRecurringExpense.setTableName("Recurring_Expense");
+            poRecurringExpense.initialize();
+        }
+
+        return poRecurringExpense;
+    }
     
+    public Model_Recurring_Expense_Schedule Recurring_Expense_Schedule(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Recurring_Expense_Schedule: Application driver is not set.");
+            return null;
+        }
+        
+        if (poRecurringExpenseSchedule == null){
+            poRecurringExpenseSchedule = new Model_Recurring_Expense_Schedule();
+            poRecurringExpenseSchedule.setApplicationDriver(poGRider);
+            poRecurringExpenseSchedule.setXML("Model_Recurring_Expense_Schedule");
+            poRecurringExpenseSchedule.setTableName("Recurring_Expense_Schedule");
+            poRecurringExpenseSchedule.initialize();
+        }
+
+        return poRecurringExpenseSchedule;
+    }
+    
+    public Model_Recurring_Expense_Payment_Monitor Recurring_Expense_Payment_Monitor(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Recurring_Expense_Monitor: Application driver is not set.");
+            return null;
+        }
+        
+        if (poRecurringExpenseMonitor == null){
+            poRecurringExpenseMonitor = new Model_Recurring_Expense_Payment_Monitor();
+            poRecurringExpenseMonitor.setApplicationDriver(poGRider);
+            poRecurringExpenseMonitor.setXML("Model_Recurring_Expense_Payment_Monitor");
+            poRecurringExpenseMonitor.setTableName("Recurring_Expense_Payment_Monitor");
+            poRecurringExpenseMonitor.initialize();
+        }
+
+        return poRecurringExpenseMonitor;
+    }
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -682,6 +734,9 @@ public class CashflowModels {
             poCheckDepositDetail= null;
             poCheckReleaseDetail = null;
             poCheckReleaseMaster = null;
+            poRecurringExpense = null;
+            poRecurringExpenseSchedule = null;
+            poRecurringExpenseMonitor = null;
             poPettyCash = null;
 
             poGRider = null;
@@ -728,4 +783,7 @@ public class CashflowModels {
     private Model_Check_Deposit_Detail poCheckDepositDetail;    
     private Model_Check_Release_Master poCheckReleaseMaster;    
     private Model_Check_Release_Detail poCheckReleaseDetail;
+    private Model_Recurring_Expense poRecurringExpense;
+    private Model_Recurring_Expense_Schedule poRecurringExpenseSchedule;
+    private Model_Recurring_Expense_Payment_Monitor poRecurringExpenseMonitor;
 }
