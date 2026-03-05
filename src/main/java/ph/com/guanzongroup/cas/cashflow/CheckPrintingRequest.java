@@ -126,12 +126,13 @@ public class CheckPrintingRequest extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
+        poGRider.commitTrans();
         poJSON = new JSONObject();
         poJSON.put("result", "success");
 
@@ -269,15 +270,18 @@ public class CheckPrintingRequest extends Transaction {
             poJSON.put("message", "Transaction was already voided.");
             return poJSON;
         }
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
-               return poJSON; 
-            }
-            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer..");
-                return poJSON;
+        
+        if(!Master().getTransactionStatus().equals(CheckPrintRequestStatus.OPEN)){
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                   return poJSON; 
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
             }
         }
 
@@ -288,11 +292,28 @@ public class CheckPrintingRequest extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+            Model_Check_Printing_Request_Detail loDetail = Detail(lnCtr);
+           
+            if (loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
+                continue;
+            }
+
+            poJSON = updateCheck(loDetail);
+
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+        }
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -303,6 +324,28 @@ public class CheckPrintingRequest extends Transaction {
             poJSON.put("message", "Transaction voiding request submitted successfully.");
         }
 
+        return poJSON;
+    }
+    public JSONObject updateCheck(Model_Check_Printing_Request_Detail loDetail)
+            throws SQLException, GuanzonException {
+
+        JSONObject poJSON = new JSONObject();
+
+        Model_Check_Payments loCheckPayment = loDetail.DisbursementMaster().CheckPayments();
+
+        if (loCheckPayment.getEditMode() == EditMode.READY) {
+            System.out.println("Check to update : " +  loCheckPayment.getTransactionNo());
+            loCheckPayment.updateRecord();
+            loCheckPayment.setProcessed("0");
+
+            poJSON = loCheckPayment.saveRecord();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
         return poJSON;
     }
 
@@ -621,6 +664,23 @@ public class CheckPrintingRequest extends Transaction {
         MiscUtil.close(loRS);
         return loJSON;
     }
+    public int getCheckCount() {
+        if (paCheckPayment == null) {
+            return 0;
+        }
+        return paCheckPayment.size();
+    }
+    
+    public JSONObject computeMasterFields() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        double totalAmount = 0.0000;
+
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            totalAmount += Detail(lnCtr).CheckPayments().getAmount();
+        }
+        Master().setTotalAmount(totalAmount);
+        return poJSON;
+    }
 
     public JSONObject getDVwithAuthorizeCheckPayment(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
@@ -656,7 +716,7 @@ public class CheckPrintingRequest extends Transaction {
                 " c.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID));
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
-
+        lsSQL = lsSQL + " ORDER BY a.dTransact DESC";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
@@ -1381,7 +1441,7 @@ public class CheckPrintingRequest extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
         
-        showStatusHistoryUI("Purchase Order", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Bank Printing", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -1441,5 +1501,7 @@ public class CheckPrintingRequest extends Transaction {
         } 
         return lsEntry;
     }
+    
+    
 
 }
