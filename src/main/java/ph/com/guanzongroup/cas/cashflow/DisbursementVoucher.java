@@ -2124,7 +2124,7 @@ public class DisbursementVoucher extends Transaction {
                     lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
                 }
 
-                List loList = loAttachment.getAttachments(Detail(lnRow).getSourceCode(), lsSourceNo);
+                List loList = loAttachment.getAttachments(lsSourceCode, lsSourceNo);
                 for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
                     paAttachmentsSource.add(getSourceCodeDescription(Detail(lnRow).getSourceCode()) + " - " + getReferenceNo(lnRow));
                     paAttachments.add(TransactionAttachment());
