@@ -54,11 +54,11 @@ public class AccountChart extends Parameter {
 //                poJSON.put("message", "GL code must not be empty.");
 //                return poJSON;
 //            }
-            if (poModel.getBaseAccount() == null || poModel.getBaseAccount().isEmpty()) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Base Account must not be empty.");
-                return poJSON;
-            }
+//            if (poModel.getBaseAccount() == null || poModel.getBaseAccount().isEmpty()) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Base Account must not be empty.");
+//                return poJSON;
+//            }
 
             if (poModel.getAccountType() == null || poModel.getAccountType().isEmpty()) {
                 poJSON.put("result", "error");

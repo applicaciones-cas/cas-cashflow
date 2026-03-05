@@ -347,7 +347,7 @@ public class CheckTransfers extends Transaction {
 //        receivedCheck((String) poMaster.getValue("sTransNox"));
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             Model_Check_Transfer_Detail loDetail = Detail(lnCtr);
-            
+           
             if (loDetail.getSourceNo() == null || loDetail.getSourceNo().isEmpty()) {
                 continue;
             }
@@ -363,8 +363,9 @@ public class CheckTransfers extends Transaction {
                 return poJSON;
             }
         }
-       
-        poJSON = updateTransferMaster();
+        Date lsDate = Master().getReceivedDate();
+        Model_Check_Transfer_Master loMaster = Master();
+        poJSON = updateTransferMaster(loMaster,lsDate );
         if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -384,15 +385,14 @@ public class CheckTransfers extends Transaction {
         return poJSON;
     }
 
-    public JSONObject updateTransferMaster() throws GuanzonException, SQLException {
+    public JSONObject updateTransferMaster( Model_Check_Transfer_Master loMaster, Date dReceive) throws GuanzonException, SQLException {
         JSONObject poJSON = new JSONObject();
-        Model_Check_Transfer_Master loMaster = new Model_Check_Transfer_Master();
-        loMaster.initialize();
-        loMaster.openRecord(Master().getTransactionNo());
         loMaster.updateRecord();
-
-         loMaster.setReceivedDate(Master().getReceivedDate());
+        System.out.println("MASTER RECEIVED DATE : " + Master().getReceivedDate());
+//        Date dreceived = Master().getReceivedDate();
+        loMaster.setReceivedDate(dReceive);
         loMaster.setReceivedBy(poGRider.getUserID());
+        loMaster.setTransactionStatus(CheckTransferStatus.POSTED);
         loMaster.saveRecord();
 
         poJSON.put("result", "success");
