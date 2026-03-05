@@ -1644,14 +1644,14 @@ public class DisbursementVoucher extends Transaction {
                 ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
             }
         }
-        
-        if(ldblTotalBaseAmount > Master().getVATSale()){
+        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
+        if(ldblTotalBaseAmount > ldblVatSales){
             poJSON.put("result", "error");
             poJSON.put("message", "Base amount cannot be greater than the net vatable sales.");
             return poJSON;
         }
         
-        if(ldblTaxAmount > Master().getVATSale()){
+        if(ldblTaxAmount > ldblVatSales){
             poJSON.put("result", "error");
             poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
             return poJSON;

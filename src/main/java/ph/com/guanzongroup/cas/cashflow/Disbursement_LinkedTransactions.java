@@ -18,8 +18,10 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.cas.purchasing.controller.PurchaseOrder;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderControllers;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
 import org.json.simple.JSONObject;
@@ -258,7 +260,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(pbIsUpdateAmountPaid){
-            if(Detail(row).PRF().getSourceNo() != null && !"".equals(Detail(row).PRF().getSourceNo())){
+            if(Detail(row).PRF().getSourceNo() != null && !"".equals(Detail(row).PRF().getSourceNo())
+                && DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(row).PRF().getSourceCode())){
                 poJSON = savePOMaster(row, isAdd);
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
@@ -331,7 +334,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-    
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
