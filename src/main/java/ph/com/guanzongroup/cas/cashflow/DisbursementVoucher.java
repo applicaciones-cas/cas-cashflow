@@ -1463,7 +1463,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
         poJSON.put("column", "");
-        pdblAdvancesAmount = 0.0000;
+//        pdblAdvancesAmount = 0.0000;
         Double ldblTransactionTotal = 0.0000;
         Double ldblVATSalesTotal = 0.0000;
         Double ldblVATAmountTotal = 0.0000;
@@ -1473,10 +1473,18 @@ public class DisbursementVoucher extends Transaction {
         Double ldblVATExempt = 0.0000;
         Double ldblZeroVATSales = 0.0000;
         Double ldblAppliedAmt = 0.0000;
+        Double ldblTotalAdvancesAmount = 0.0000;
         computeTaxAmount();
         computeDetailFields(isValidate);
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+                poJSON = Detail(lnCntr).setDetailAdvances();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                ldblTotalAdvancesAmount += Detail(lnCntr).getDetailAdvances();
+                
 //            if(Detail(lnCntr).getAmountApplied() > 0.0000){
                 ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
                 ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
@@ -1491,11 +1499,10 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     }
                 }
-                
-                poJSON = getAdvancesAmount(lnCntr);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
+//                poJSON = getAdvancesAmount(lnCntr);
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    return poJSON;
+//                }
                
 //            } else {
 //                ldblAppliedAmt = Detail(lnCntr).getAmountApplied();
@@ -1594,6 +1601,7 @@ public class DisbursementVoucher extends Transaction {
         Master().setVATExmpt(ldblVATExemptTotal);
         Master().setZeroVATSales(ldblZeroVATSales);
         Master().setNetTotal(lnNetAmountDue);
+        Master().setAdvancesTotal(ldblTotalAdvancesAmount);
 
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
@@ -1658,7 +1666,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         Master().setWithTaxTotal(ldblTaxAmount);
-        System.out.println("Withholding tax total : " + Master().getWithTaxTotal());
+//        System.out.println("Withholding tax total : " + Master().getWithTaxTotal());
         
         poJSON.put("result", "success");
         poJSON.put("message", "Tax computed successfully");
@@ -1709,7 +1717,9 @@ public class DisbursementVoucher extends Transaction {
     private JSONObject computeDetail(int fnRow){
         poJSON = new JSONObject();
         Double ldblAmountApplied = Detail(fnRow).getAmountApplied();
-        Double ldblVATExempt = Detail(fnRow).getDetailVatExempt();
+        Double ldblAdvances = Detail(fnRow).getDetailAdvances();
+        Double ldblAppliedAmtWithAdv = ldblAmountApplied + ldblAdvances;
+        Double ldblVATExempt = Detail(fnRow).getDetailVatExempt() ;
         Double ldblVATSales = 0.0000;
         Double ldblVATAmount = 0.0000;
         
@@ -1717,14 +1727,15 @@ public class DisbursementVoucher extends Transaction {
             if(ldblVATExempt > 0.0000){
                 Detail(fnRow).setDetailVatAmount(0.0000);
                 Detail(fnRow).setDetailVatSales(0.0000);
-                Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
+                Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
                 Detail(fnRow).isWithVat(false);
 
                 poJSON.put("result", "error");
-                poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount.");
+                poJSON.put("message", "Vat Exempt amount cannot be greater than (applied amount plus advances amount).");
                 return poJSON;
             }
             
+            ldblAppliedAmtWithAdv = ldblAppliedAmtWithAdv * -1;
             ldblAmountApplied = ldblAmountApplied * -1;
         } else {
             if(ldblVATExempt < 0.0000){
@@ -1737,25 +1748,25 @@ public class DisbursementVoucher extends Transaction {
             ldblVATExempt = ldblVATExempt * -1;
         } 
         
-        if(ldblVATExempt > ldblAmountApplied){
+        if(ldblVATExempt > ldblAppliedAmtWithAdv){
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
-            Detail(fnRow).setDetailVatExempt(ldblAmountApplied);
+            Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
             Detail(fnRow).isWithVat(false);
             
             poJSON.put("result", "error");
-            poJSON.put("message", "Vat Exempt amount cannot be greater than applied amount.");
+            poJSON.put("message", "Vat Exempt amount cannot be greater than (applied amount plus advances amount).");
             return poJSON;
-        } else if(ldblVATExempt < ldblAmountApplied){
+        } else if(ldblVATExempt < ldblAppliedAmtWithAdv){
             Detail(fnRow).isWithVat(true);
-        } else if (Objects.equals(ldblVATExempt, ldblAmountApplied)){
+        } else if (Objects.equals(ldblVATExempt, ldblAppliedAmtWithAdv)){
             Detail(fnRow).isWithVat(false);
         }
 
         if(Detail(fnRow).isWithVat()){
-            ldblAmountApplied = ldblAmountApplied - ldblVATExempt;
-            ldblVATAmount = ldblAmountApplied - (ldblAmountApplied / 1.12);
-            ldblVATSales = ldblAmountApplied - ldblVATAmount;
+            ldblAppliedAmtWithAdv = ldblAppliedAmtWithAdv - ldblVATExempt;
+            ldblVATAmount = ldblAppliedAmtWithAdv - (ldblAppliedAmtWithAdv / 1.12);
+            ldblVATSales = ldblAppliedAmtWithAdv - ldblVATAmount;
             
             if(Detail(fnRow).getAmountApplied() < 0){
                 ldblVATAmount = -ldblVATAmount;
@@ -1767,7 +1778,7 @@ public class DisbursementVoucher extends Transaction {
         } else {
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
-            Detail(fnRow).setDetailVatExempt(Detail(fnRow).getAmountApplied());
+            Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
         }
         
         poJSON.put("result", "success");
@@ -1775,118 +1786,119 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-    private double pdblAdvancesAmount = 0.0000;
-    public double getAdvancesAmount(){
-        return pdblAdvancesAmount;
-    }
-    
-    private JSONObject getAdvancesAmount(int lnRow){
-        poJSON = new JSONObject();
-        try {
-            List<String> llistPurchaseOrder = new ArrayList<>();
-            String lsPOTransNo = "";
-            switch(Detail(lnRow).getSourceCode()){
-                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                    if(SOATaggingStatic.PaymentRequest.equals(Detail(lnRow).SOADetail().getSourceCode())){
-                        if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceCode())){
-                            lsPOTransNo = Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceNo();
-                        }
-                    } else if(SOATaggingStatic.POReceiving.equals(Detail(lnRow).SOADetail().getSourceCode())){
-                        poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getDetailSource());
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                        return poJSON;
-                    }
-                break;
-    //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                    if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).PRF().getSourceCode())){
-                        lsPOTransNo = Detail(lnRow).PRF().getSourceNo();
-                    }
-                    break;
-                case DisbursementStatic.SourceCode.PO_RECEIVING:
-                    poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getSourceNo());
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                    return poJSON;
-            }
-
-            if(!llistPurchaseOrder.contains(lsPOTransNo)){
-                llistPurchaseOrder.add(lsPOTransNo);
-            }
-
-            poJSON = getAdvancePayment(llistPurchaseOrder);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
-            }
-
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            poJSON.put("result", "error");
-            poJSON.put("message", MiscUtil.getException(ex));
-            return poJSON;
-        } 
-        return poJSON;
-    }
-    
-    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
-        poJSON = new JSONObject();
-        Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
-        poJSON = loObject.openRecord(fsTransNo);
-        if ("error".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", (String) poJSON.get("message") + "\nWhile reloading PO Receiving Master." );
-            return poJSON;
-        }
-        
-        if(!PurchaseOrderReceivingStatus.Purpose.REGULAR.equals(loObject.getPurpose())){
-            return poJSON;
-        }
-        List<String> llistPurchaseOrder = new ArrayList<>();
-        for(int lnCtr = 0;lnCtr < loObject.getEntryNo();lnCtr++){
-            Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
-            poJSON = loDetail.openRecord(fsTransNo,(lnCtr+1) );
-            if ("error".equals((String) poJSON.get("result"))) {
-            poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
-                return poJSON;
-            }
-            
-            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
-                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
-                    llistPurchaseOrder.add(loDetail.getOrderNo());
-                } 
-            }
-        }
-        
-        
-        poJSON = getAdvancePayment(llistPurchaseOrder);
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
-    
-    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
-        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
-        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
-            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
-                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
-                    return poJSON;
-                }
-                pdblAdvancesAmount += loObject.getAmountPaid().doubleValue();
-            }
-        }
-        
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
+    //Moved to Model DV Detail need to add advances computation for detail
+//    private double pdblAdvancesAmount = 0.0000;
+//    public double getAdvancesAmount(){
+//        return pdblAdvancesAmount;
+//    }
+//    
+//    private JSONObject getAdvancesAmount(int lnRow){
+//        poJSON = new JSONObject();
+//        try {
+//            List<String> llistPurchaseOrder = new ArrayList<>();
+//            String lsPOTransNo = "";
+//            switch(Detail(lnRow).getSourceCode()){
+//                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+//                    if(SOATaggingStatic.PaymentRequest.equals(Detail(lnRow).SOADetail().getSourceCode())){
+//                        if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceCode())){
+//                            lsPOTransNo = Detail(lnRow).SOADetail().PaymentRequestMaster().getSourceNo();
+//                        }
+//                    } else if(SOATaggingStatic.POReceiving.equals(Detail(lnRow).SOADetail().getSourceCode())){
+//                        poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getDetailSource());
+//                        if ("error".equals((String) poJSON.get("result"))) {
+//                            return poJSON;
+//                        }
+//                        return poJSON;
+//                    }
+//                break;
+//    //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+//                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+//                    if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(lnRow).PRF().getSourceCode())){
+//                        lsPOTransNo = Detail(lnRow).PRF().getSourceNo();
+//                    }
+//                    break;
+//                case DisbursementStatic.SourceCode.PO_RECEIVING:
+//                    poJSON = getPOAdvancesInPOReceiving(Detail(lnRow).getSourceNo());
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        return poJSON;
+//                    }
+//                    return poJSON;
+//            }
+//
+//            if(!llistPurchaseOrder.contains(lsPOTransNo)){
+//                llistPurchaseOrder.add(lsPOTransNo);
+//            }
+//
+//            poJSON = getAdvancePayment(llistPurchaseOrder);
+//            if ("error".equals((String) poJSON.get("result"))) {
+//                return poJSON;
+//            }
+//
+//        } catch (SQLException | GuanzonException ex) {
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//            poJSON.put("result", "error");
+//            poJSON.put("message", MiscUtil.getException(ex));
+//            return poJSON;
+//        } 
+//        return poJSON;
+//    }
+//    
+//    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
+//        poJSON = new JSONObject();
+//        Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+//        poJSON = loObject.openRecord(fsTransNo);
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            poJSON.put("message", (String) poJSON.get("message") + "\nWhile reloading PO Receiving Master." );
+//            return poJSON;
+//        }
+//        
+//        if(!PurchaseOrderReceivingStatus.Purpose.REGULAR.equals(loObject.getPurpose())){
+//            return poJSON;
+//        }
+//        List<String> llistPurchaseOrder = new ArrayList<>();
+//        for(int lnCtr = 0;lnCtr < loObject.getEntryNo();lnCtr++){
+//            Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
+//            poJSON = loDetail.openRecord(fsTransNo,(lnCtr+1) );
+//            if ("error".equals((String) poJSON.get("result"))) {
+//            poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
+//                return poJSON;
+//            }
+//            
+//            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
+//                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
+//                    llistPurchaseOrder.add(loDetail.getOrderNo());
+//                } 
+//            }
+//        }
+//        
+//        
+//        poJSON = getAdvancePayment(llistPurchaseOrder);
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
+//    
+//    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
+//        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+//        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+//            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
+//                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+//                    return poJSON;
+//                }
+//                pdblAdvancesAmount += loObject.getAmountPaid().doubleValue();
+//            }
+//        }
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
     
     /**
      * Load Transaction list based on supplier, reference no, bankId, bankaccountId or check no
@@ -2120,8 +2132,9 @@ public class DisbursementVoucher extends Transaction {
                 lsSourceNo = Detail(lnRow).getSourceNo();
                 lsSourceCode = Detail(lnRow).getSourceCode();
                 if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
-                    lsSourceNo = Detail(lnRow).getDetailSource();
-                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
+//                    lsSourceNo = Detail(lnRow).getDetailSource();
+//                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
+                    continue; //if source is from SOA / Account Payable no need to display the attachment based on ma'am she - 03-04-2026
                 }
 
                 List loList = loAttachment.getAttachments(lsSourceCode, lsSourceNo);
@@ -2882,24 +2895,24 @@ public class DisbursementVoucher extends Transaction {
                             System.out.println("-----------------------------------");
                             
                             System.out.println("----------ACCOUNT MASTER / LEDGER----------");
-                            try {
-                                //GL Transaction Account Ledger
-                                GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
-                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
-                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-                                    loGLTrans.addDetail(Journal().Master().getBranchCode(), 
-                                            Journal().Detail(lnCtr).getAccountCode(),
-                                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
-                                            Journal().Detail(lnCtr).getDebitAmount(), 
-                                            Journal().Detail(lnCtr).getCreditAmount());
-                                }
-                                loGLTrans.saveTransaction();
-                            } catch (GuanzonException | SQLException  ex) {
-                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                                poJSON.put("result", "error");
-                                poJSON.put("message", MiscUtil.getException(ex));
-                                return poJSON;
-                            }
+//                            try {
+//                                //GL Transaction Account Ledger
+//                                GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+//                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+//                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+//                                    loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+//                                            Journal().Detail(lnCtr).getAccountCode(),
+//                                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+//                                            Journal().Detail(lnCtr).getDebitAmount(), 
+//                                            Journal().Detail(lnCtr).getCreditAmount());
+//                                }
+//                                loGLTrans.saveTransaction();
+//                            } catch (GuanzonException | SQLException  ex) {
+//                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//                                poJSON.put("result", "error");
+//                                poJSON.put("message", MiscUtil.getException(ex));
+//                                return poJSON;
+//                            }
                             System.out.println("-----------------------------------");
                         }
                         
@@ -3433,7 +3446,9 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setSourceCode(loController.getSourceCode());
         Detail(lnRow).setAmount(ldblBalance);
         Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
-        Detail(lnRow).setDetailVatExempt(ldblBalance);
+        
+        Detail(lnRow).setDetailAdvances();
+        Detail(lnRow).setDetailVatExempt(ldblBalance + Detail(lnRow).getDetailAdvances());
         AddDetail();
     
         poJSON.put("result", "success");
@@ -3524,6 +3539,7 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnRow).setDetailVatSales(loController.Master().getVATSales());
             Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt());
         }
+        
         Detail(lnRow).setDetailVatRates(loController.Master().getVATRates());
         Detail(lnRow).setDetailZeroVat(loController.Master().getZeroRated());
         
@@ -3708,6 +3724,11 @@ public class DisbursementVoucher extends Transaction {
                         }
                     }
                 break;
+            }
+            
+            Detail(lnRow).setDetailAdvances();
+            if(DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Detail(lnRow).SOADetail().getSourceCode())){
+                ldblVatExempt = ldblVatExempt + Detail(lnRow).getDetailAdvances(); //Default to add advances in vat exempt
             }
             
             Detail(lnRow).setDetailVatAmount(ldblVatAmount);
