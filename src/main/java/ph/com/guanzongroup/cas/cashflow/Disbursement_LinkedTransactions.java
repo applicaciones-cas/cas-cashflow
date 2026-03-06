@@ -448,7 +448,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
-            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
+            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount ; 
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
@@ -481,6 +481,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         System.out.println("Cache Payable Update Mode : " + loModel.getEditMode());
         
         if(pbIsUpdateAmountPaid){
+            ldblAmountPaid = ldblAmountPaid + loModel.getAmountPaid();
             loModel.setAmountPaid(ldblAmountPaid);
         }
         
@@ -806,6 +807,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
     private JSONObject paidLinkedTransaction(String fsSourceNo, String fsSourceCode) throws SQLException, ParseException, CloneNotSupportedException, GuanzonException{
         switch(fsSourceCode){
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                System.out.println("---------------PRF TAGGING AS PAID-------------");
                 PaymentRequest loPRF = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
                 poJSON = loPRF.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -822,8 +824,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: 
+                System.out.println("---------------ACCOUNT PAYABLE TAGGING AS PAID-------------");
                 SOATagging loSOA = new CashflowControllers(poGRider, logwrapr).SOATagging();
                 poJSON = loSOA.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -841,8 +846,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.PO_RECEIVING: 
+                System.out.println("---------------PO RECEIVING TAGGING AS PAID-------------");
                 PurchaseOrderReceiving loPOReceiving = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
                 poJSON = loPOReceiving.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -858,9 +866,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
-                
             case DisbursementStatic.SourceCode.CASH_PAYABLE: 
+                System.out.println("---------------CACHE PAYABLE TAGGING AS PAID-------------");
                 CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
                 poJSON = loCachePayable.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -879,8 +889,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
+                System.out.println("---------------AP ADJUSTMENT TAGGING AS PAID-------------");
                 APPaymentAdjustment loAPAdjustment = new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();
                 poJSON = loAPAdjustment.OpenTransaction(fsSourceNo);
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -893,6 +906,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
         } 
     

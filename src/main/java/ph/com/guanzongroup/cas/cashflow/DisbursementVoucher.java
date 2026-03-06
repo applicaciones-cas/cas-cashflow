@@ -256,7 +256,7 @@ public class DisbursementVoucher extends Transaction {
                     }
                 break;
         }
-        
+        computeFields(false); //Recompute fields
         return poJSON;
     }
 
@@ -1716,8 +1716,12 @@ public class DisbursementVoucher extends Transaction {
     
     private JSONObject computeDetail(int fnRow){
         poJSON = new JSONObject();
+        poJSON = Detail(fnRow).setDetailAdvances();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        Double ldblAdvances = Detail(fnRow).getDetailAdvances() - Detail(fnRow).getDetailSourceDiscount();
         Double ldblAmountApplied = Detail(fnRow).getAmountApplied();
-        Double ldblAdvances = Detail(fnRow).getDetailAdvances();
         Double ldblAppliedAmtWithAdv = ldblAmountApplied + ldblAdvances;
         Double ldblVATExempt = Detail(fnRow).getDetailVatExempt() ;
         Double ldblVATSales = 0.0000;
@@ -3448,7 +3452,7 @@ public class DisbursementVoucher extends Transaction {
         Detail(lnRow).setAmountApplied(ldblBalance); //Set transaction balance as default applied amount
         
         Detail(lnRow).setDetailAdvances();
-        Detail(lnRow).setDetailVatExempt(ldblBalance + Detail(lnRow).getDetailAdvances());
+        Detail(lnRow).setDetailVatExempt(ldblBalance + (Detail(lnRow).getDetailAdvances() - Detail(lnRow).getDetailSourceDiscount())); //Do not add discount amount from the souce for vat computations
         AddDetail();
     
         poJSON.put("result", "success");
@@ -3728,7 +3732,7 @@ public class DisbursementVoucher extends Transaction {
             
             Detail(lnRow).setDetailAdvances();
             if(DisbursementStatic.SourceCode.PAYMENT_REQUEST.equals(Detail(lnRow).SOADetail().getSourceCode())){
-                ldblVatExempt = ldblVatExempt + Detail(lnRow).getDetailAdvances(); //Default to add advances in vat exempt
+                ldblVatExempt = ldblVatExempt + (Detail(lnRow).getDetailAdvances() - Detail(lnRow).getDetailSourceDiscount()); //Default to add advances in vat exempt
             }
             
             Detail(lnRow).setDetailVatAmount(ldblVatAmount);

@@ -282,16 +282,23 @@ public class Model_Disbursement_Detail extends Model {
     }
     
     public JSONObject setDetailAdvances() {
-        pdblAdvancesAmount = 0.0000;
         return getAdvancesAmount();
     }
+    
     private double pdblAdvancesAmount = 0.0000;
     public double getDetailAdvances() {
         return pdblAdvancesAmount;
     }
     
+    private double pdblDiscountAmount = 0.0000;
+    public double getDetailSourceDiscount() {
+        return pdblDiscountAmount;
+    }
+    
     private JSONObject getAdvancesAmount(){
         poJSON = new JSONObject();
+        pdblAdvancesAmount = 0.0000;
+        pdblDiscountAmount = 0.0000;
         try {
             List<String> llistPurchaseOrder = new ArrayList<>();
             String lsPOTransNo = "";
@@ -351,13 +358,13 @@ public class Model_Disbursement_Detail extends Model {
                     return poJSON;
                 }
                 
-                poJSON = getPRFDiscount(faPOTransNo.get(lnCtr));
+                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
                 if ("error".equals((String) poJSON.get("result"))) {
                     poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
                     return poJSON;
                 }
-                
-                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue() - (Double) poJSON.get("discount"));
+                pdblDiscountAmount += (Double) poJSON.get("discount");
+                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
             }
         }
         
@@ -366,7 +373,7 @@ public class Model_Disbursement_Detail extends Model {
         return poJSON;
     }
     
-    private JSONObject getPRFDiscount(String fsPOTransNo){
+    private JSONObject setPRFDiscount(String fsPOTransNo){
         String lsSQL = "";
         double ldDiscount = 0.0000;
         try {

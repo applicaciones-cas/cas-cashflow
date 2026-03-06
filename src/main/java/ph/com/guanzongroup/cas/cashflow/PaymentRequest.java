@@ -1687,6 +1687,7 @@ public class PaymentRequest extends Transaction {
         lsSQL = MiscUtil.addCondition(lsSQL, " a.nAmtPaidx > 0.0000 AND a.nNetTotal > a.nAmtPaidx "
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.VOID)
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.CANCELLED)
+                                    +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.POSTED)
                                     +   " AND a.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                                     +   " AND f.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()));
         lsSQL = lsSQL + " ORDER BY a.dTransact, e.sCompnyNm ASC ";
@@ -1824,7 +1825,6 @@ public class PaymentRequest extends Transaction {
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if(Detail(lnCtr).isReverse()){
                 ldblTransactionTotal += Detail(lnCtr).getAmount();
-                ldblNetTotal += Detail(lnCtr).getNetTotal();
                 
                 ldblDetailDiscountRate = 0.0000;
                 if(Detail(lnCtr).getDiscount() > 0.0000){
@@ -1832,6 +1832,8 @@ public class PaymentRequest extends Transaction {
                     ldblDetailDiscountRate = Detail(lnCtr).getAmount() * Detail(lnCtr).getDiscount();
                 }
                 ldblDiscountAmount += (Detail(lnCtr).getAddDiscount() + ldblDetailDiscountRate);
+                
+                ldblNetTotal += Detail(lnCtr).getNetTotal();
                 
 //                if(Detail(lnCtr).isVatable()){
 //                    ldblVatAmount += Detail(lnCtr).getVatAmount();
