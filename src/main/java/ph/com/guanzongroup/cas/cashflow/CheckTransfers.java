@@ -9,6 +9,7 @@ import java.awt.Container;
 import java.awt.event.ActionListener;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -75,6 +76,7 @@ public class CheckTransfers extends Transaction {
     List<CheckPayments> poChecks;
     private ObservableList<Model_Check_Transfer_Detail> poReceiveList;
     private boolean pbApproval = false;
+    LocalDateTime pdDateTime;
 
     public JSONObject InitTransaction() {
         SOURCE_CODE = "Dlvr";
@@ -326,6 +328,11 @@ public class CheckTransfers extends Transaction {
             poJSON.put("message", "Transaction was already posted.");
             return poJSON;
         }
+//        LocalDateTime received = Master().getReceivedDate();
+//        Timestamp ts = Timestamp.valueOf(received);
+        
+        
+        System.out.println("DATE TIME " + pdDateTime);
 
         poJSON = isEntryOkay(CheckTransferStatus.POSTED);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -363,9 +370,9 @@ public class CheckTransfers extends Transaction {
                 return poJSON;
             }
         }
-        Date lsDate = Master().getReceivedDate();
+        
         Model_Check_Transfer_Master loMaster = Master();
-        poJSON = updateTransferMaster(loMaster,lsDate );
+        poJSON = updateTransferMaster(loMaster,pdDateTime );
         if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -385,16 +392,27 @@ public class CheckTransfers extends Transaction {
         return poJSON;
     }
 
-    public JSONObject updateTransferMaster( Model_Check_Transfer_Master loMaster, Date dReceive) throws GuanzonException, SQLException {
+    public JSONObject updateTransferMaster( Model_Check_Transfer_Master loMaster, LocalDateTime  dReceive) throws GuanzonException, SQLException {
         JSONObject poJSON = new JSONObject();
-        loMaster.updateRecord();
-        System.out.println("MASTER RECEIVED DATE : " + Master().getReceivedDate());
-//        Date dreceived = Master().getReceivedDate();
-        loMaster.setReceivedDate(dReceive);
-        loMaster.setReceivedBy(poGRider.getUserID());
-        loMaster.setTransactionStatus(CheckTransferStatus.POSTED);
-        loMaster.saveRecord();
+        
+        String lsSQL = "UPDATE "
+                + poMaster.getTable()
+                + " SET   dReceived = " + SQLUtil.toSQL(dReceive)                
+                + "    ,sReceived = " + SQLUtil.toSQL(poGRider.getUserID())                
+                + "    ,cTranStat = " + SQLUtil.toSQL(CheckTransferStatus.POSTED)   
+                + " WHERE sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo());
 
+        Long lnResult = poGRider.executeQuery(lsSQL,
+                poMaster.getTable(),
+                poGRider.getBranchCode(), "", "");
+        if (lnResult <= 0L) {
+            poGRider.rollbackTrans();
+
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -1521,4 +1539,26 @@ public class CheckTransfers extends Transaction {
             
         return lsList;
     }
+        /**
+     * Returns the selected date from a DatePicker as LocalDateTime,
+     * combining it with the current system time. If no date is selected,
+     * returns the current date and time.
+     *
+     * Example return: 2026-03-06T09:30:29 (ready for DATETIME storage)
+     */
+    public static LocalDateTime getDateTime(LocalDate selectedDate) {
+        LocalDateTime now = LocalDateTime.now();
+
+        if (selectedDate != null) {
+           
+            return selectedDate.atTime(now.getHour(), now.getMinute(), now.getSecond());
+        }
+        
+        return now; // no selection → current timestamp
+    }
+    public void updateDateTime(LocalDate selectedDate) {
+        // Call the static method and store the result in pdDateTime
+        this.pdDateTime = getDateTime(selectedDate);
+    }
 }
+

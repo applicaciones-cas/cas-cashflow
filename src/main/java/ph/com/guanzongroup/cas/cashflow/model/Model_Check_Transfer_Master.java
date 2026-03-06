@@ -180,52 +180,39 @@ public class Model_Check_Transfer_Master extends Model {
     public String getPreparedBy() {
         return (String) getValue("sPrepared");
     }
-
-    //dPrepared
     
-    public JSONObject setReceivedDate(Date receivedDate) {
-    if (poEntity == null)
-        throw new IllegalStateException("poEntity is not initialized");
-
-    if (receivedDate == null) {
-        try {
-            poEntity.updateNull("dReceived");
-            return null;
-        } catch (SQLException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
-            return null;
-        }
+    public JSONObject setReceivedDate(LocalDateTime receivedDate) {
+        return setValue("dReceived", receivedDate);
     }
-    return setValue("dReceived", receivedDate);
-}
 
-public Date getReceivedDate() {
-    if (poEntity == null)
-        throw new IllegalStateException("poEntity is not initialized");
+    public LocalDateTime getReceivedDate() {
+        Object value = getValue("dReceived");
 
-    Object value = getValue("dReceived");
-    if (value == null) return null;
-
-    if (value instanceof Date) {
-        return (Date) value;
-    } else if (value instanceof String) {
-        String s = ((String) value).trim();
-        if (s.isEmpty()) return null; // skip empty string
-        try {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(SQLUtil.FORMAT_SHORT_DATE);
-            LocalDate localDate = LocalDate.parse(s, formatter);
-            return Date.from(localDate.atStartOfDay(ZoneId.systemDefault()).toInstant());
-        } catch (Exception e) {
-            Logger.getLogger(getClass().getName())
-                  .log(Level.SEVERE, "Invalid date string in dReceived", e);
+        if (value == null) {
             return null;
         }
-    } else {
-        Logger.getLogger(getClass().getName())
-              .log(Level.WARNING, "dReceived is not a Date or String");
+
+        if (value instanceof LocalDateTime) {
+            return (LocalDateTime) value;
+        }
+
+        if (value instanceof Timestamp) {
+            return ((Timestamp) value).toLocalDateTime();
+        }
+
+        if (value instanceof String) {
+            String str = ((String) value).trim();
+            if (str.isEmpty()) {
+                return null; // empty string → null
+            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            return LocalDateTime.parse(str, formatter);
+        }
+
         return null;
     }
-}
+
+    //dPrepared
     
 
     //nTranTotl
