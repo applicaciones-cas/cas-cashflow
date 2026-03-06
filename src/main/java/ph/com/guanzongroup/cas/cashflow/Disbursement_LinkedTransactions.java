@@ -301,8 +301,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
             return poJSON;
         }
         
-        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
-            ldblAmountPaid = ldblOtherPayment + Detail(row).getAmountApplied(); 
+        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction and add the discount amount reflected from PRF 
+            ldblAmountPaid = ldblOtherPayment + Detail(row).getAmountApplied() + Detail(row).PRF().getDiscountAmount(); 
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
@@ -950,6 +950,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return ldPayment;
     }
     
+    
     /**
      * Get the paid amount from OTHER DV Transaction
      * @param sourceNo the source no of DV Detail
@@ -965,6 +966,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
             lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
                     " sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND sSourceCd = " + SQLUtil.toSQL(sourceCode)
+//                    + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PaidAmount in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.RETURNED)
@@ -975,10 +977,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
             if (MiscUtil.RecordCount(loRS) >= 0) {
                 while (loRS.next()) {
                     // Print the result set
-                    System.out.println("--------------------------DV--------------------------");
+                    System.out.println("--------------------------PRF--------------------------");
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
+                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
                     System.out.println("------------------------------------------------------------------------------");
-                    ldPayment = ldPayment + getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
+                    ldPayment = ldPayment + loRS.getDouble("nAmtPaidx") + loRS.getDouble("nDiscAmtx"); //getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
                 }
             }
             MiscUtil.close(loRS);
@@ -988,6 +992,45 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         return ldPayment;
     }
+    
+//    /**
+//     * Get the paid amount from OTHER DV Transaction
+//     * @param sourceNo the source no of DV Detail
+//     * @param sourceCode the source code of DV Detail
+//     * @return Double total of the paid amount from OTHER DV Transaction
+//     */
+//    private double getPRFPayment(String sourceNo, String sourceCode) {
+//        String lsSQL = "";
+//        double ldPayment = 0.0000;
+//        try {
+//            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
+//            loModel.initialize();
+//            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
+//                    " sSourceNo = " + SQLUtil.toSQL(sourceNo)
+//                    + " AND sSourceCd = " + SQLUtil.toSQL(sourceCode)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.RETURNED)
+//            );
+//            System.out.println("Executing SQL: " + lsSQL);
+//            ResultSet loRS = poGRider.executeQuery(lsSQL);
+//            poJSON = new JSONObject();
+//            if (MiscUtil.RecordCount(loRS) >= 0) {
+//                while (loRS.next()) {
+//                    // Print the result set
+//                    System.out.println("--------------------------DV--------------------------");
+//                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+//                    System.out.println("------------------------------------------------------------------------------");
+//                    ldPayment = ldPayment + getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", e.getMessage());
+//        }
+//        return ldPayment;
+//    }
     
     /**
      * get Inventory Type Code value

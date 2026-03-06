@@ -1254,10 +1254,10 @@ public class SOATagging extends Transaction {
                 lsIssuedTo = loPaymentRequest.Master().getPayeeID();
                 lsTransNo = loPaymentRequest.Master().getTransactionNo();
                 lsSourceCd = loPaymentRequest.getSourceCode();
-                ldblTranTotal = loPaymentRequest.Master().getTranTotal();
-                ldblDebitAmt = loPaymentRequest.Master().getTranTotal();
+                ldblTranTotal = loPaymentRequest.Master().getNetTotal();
+                ldblDebitAmt = loPaymentRequest.Master().getNetTotal();
                 lsClientId = loPaymentRequest.Master().Payee().getClientID();
-                ldblBalance = loPaymentRequest.Master().getTranTotal() - loPaymentRequest.Master().getAmountPaid();
+                ldblBalance = loPaymentRequest.Master().getNetTotal() - loPaymentRequest.Master().getAmountPaid();
                 
                 if ((lsCompanyId == null || lsCompanyId.isEmpty()) && (Master().getCompanyId() == null || "".equals(Master().getCompanyId()))){
                     poJSON.put("result", "error");
