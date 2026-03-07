@@ -6,17 +6,22 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.cas.inv.InvTransCons;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.model.Model_PO_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
@@ -33,6 +38,7 @@ public class Model_Payment_Request_Master extends Model {
     Model_Industry poIndustry;
     Model_Company poCompany;
     Model_Recurring_Expense_Payment_Monitor poRecurringExpense;
+    Model_PO_Master poPOMaster;
 
     @Override
     public void initialize() {
@@ -74,6 +80,8 @@ public class Model_Payment_Request_Master extends Model {
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
             poRecurringExpense = cashFlow.Recurring_Expense_Payment_Monitor();
+            
+            poPOMaster = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
 
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
@@ -411,6 +419,26 @@ public class Model_Payment_Request_Master extends Model {
         } else {
             poRecurringExpense.initialize();
             return poRecurringExpense;
+        }
+    }
+    
+    public Model_PO_Master PurchaseOrder() throws GuanzonException, SQLException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poPOMaster.getEditMode() == EditMode.READY
+                    && poPOMaster.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPOMaster;
+            } else {
+                poJSON = poPOMaster.openRecord((String) getValue("sSourceNo"));
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOMaster;
+                } else {
+                    poPOMaster.initialize();
+                    return poPOMaster;
+                }
+            }
+        } else {
+            poPOMaster.initialize();
+            return poPOMaster;
         }
     }
 }
