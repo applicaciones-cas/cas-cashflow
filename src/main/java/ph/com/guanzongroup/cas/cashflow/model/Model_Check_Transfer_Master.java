@@ -2,11 +2,17 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.client.model.Model_Client_Master;
@@ -47,8 +53,6 @@ public class Model_Check_Transfer_Master extends Model {
             poEntity.updateNull("sDeptIDxx");
             poEntity.updateNull("sPrepared");
             poEntity.updateNull("dPrepared");
-            poEntity.updateNull("sReceived");
-            poEntity.updateNull("dReceived");
             poEntity.updateString("cPrintedx", "0");
             poEntity.updateObject("dModified", poGRider.getServerDate());
             poEntity.updateString("cTranStat", CheckTransferStatus.OPEN);
@@ -176,15 +180,40 @@ public class Model_Check_Transfer_Master extends Model {
     public String getPreparedBy() {
         return (String) getValue("sPrepared");
     }
+    
+    public JSONObject setReceivedDate(LocalDateTime receivedDate) {
+        return setValue("dReceived", receivedDate);
+    }
+
+    public LocalDateTime getReceivedDate() {
+        Object value = getValue("dReceived");
+
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof LocalDateTime) {
+            return (LocalDateTime) value;
+        }
+
+        if (value instanceof Timestamp) {
+            return ((Timestamp) value).toLocalDateTime();
+        }
+
+        if (value instanceof String) {
+            String str = ((String) value).trim();
+            if (str.isEmpty()) {
+                return null; // empty string → null
+            }
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            return LocalDateTime.parse(str, formatter);
+        }
+
+        return null;
+    }
 
     //dPrepared
-    public JSONObject setReceivedDate(LocalDateTime receivedDate) {
-        return setValue("dReceived", Timestamp.valueOf(receivedDate));
-    }
-
-    public Date getReceivedDate() {
-        return (Date) getValue("dReceived");
-    }
+    
 
     //nTranTotl
     public JSONObject setTransactionTotal(Double transactionTotal) {
