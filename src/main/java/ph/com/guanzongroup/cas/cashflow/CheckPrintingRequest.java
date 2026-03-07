@@ -21,6 +21,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
+import org.guanzon.appdriver.base.CommonUtils;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -51,6 +52,8 @@ public class CheckPrintingRequest extends Transaction {
     List<Model_Check_Printing_Request_Master> poCheckPrinting;
     List<Model_Check_Payments> paCheckPayment;
     List<CheckPayments> poCheckPayments;
+    List<CheckPayments> poRemoveCheckPayments;
+    CheckPayments loCheck;
     private String psIndustryId = "";
     private String psCompanyId = "";
 
@@ -62,13 +65,13 @@ public class CheckPrintingRequest extends Transaction {
         psCompanyId = companyID;
     }
 
-    public JSONObject InitTransaction() {
+    public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "chK";
 
         poMaster = new CashflowModels(poGRider).CheckPrintingRequestMaster();
         poDetail = new CashflowModels(poGRider).CheckPrintingRequestDetail();
         paDetail = new ArrayList<>();
-
+        loCheck = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         poCheckPayments = new ArrayList<>();
 
         return initialize();
@@ -473,6 +476,8 @@ public class CheckPrintingRequest extends Transaction {
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
+        
+        
 
         poJSON.put("result", "success");
         return poJSON;
@@ -489,10 +494,46 @@ public class CheckPrintingRequest extends Transaction {
             String remarks = Detail(lnCtr).getdetailRemarks();
             updateDV(sourceno,remarks);
         }
+        for (String lsTransactionNo : poTransactionNos) {
+            
+            updateRemoveCheck(lsTransactionNo);
+        }
 
         poJSON.put("result", "success");
         return poJSON;
     }
+    
+    private void updateRemoveCheck(String lsTransactionNo) //transaction no ito ng check
+            throws GuanzonException, SQLException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        
+        loCheck.initialize();
+        loCheck.openRecord(lsTransactionNo);
+        loCheck.updateRecord();
+        loCheck.getModel().setProcessed(CheckStatus.FLOAT);
+        loCheck.getModel().setModifyingId(poGRider.getUserID());
+        loCheck.getModel().setModifiedDate(poGRider.getServerDate());
+        poCheckPaymentsToRemove.add(loCheck);
+        ;
+    }
+
+    private JSONObject saveRemoveUpdates(String status)
+            throws CloneNotSupportedException, GuanzonException, SQLException {
+        poJSON = new JSONObject();
+
+        for (CheckPayments loCheckItem : poCheckPaymentsToRemove) {
+            poJSON = loCheckItem.saveRecord();
+            if ("error".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+
+        
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    private List<CheckPayments> poCheckPaymentsToRemove = new ArrayList<>();
 
     private JSONObject saveUpdates(String status)
             throws CloneNotSupportedException, GuanzonException, SQLException {
@@ -546,6 +587,13 @@ public class CheckPrintingRequest extends Transaction {
                 poGRider.rollbackTrans();
                 return poJSON;
             }
+            
+            poJSON = saveRemoveUpdates(CheckStatus.PrintStatus.PRINTED);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+            poCheckPaymentsToRemove.clear();
         } catch (CloneNotSupportedException | SQLException | GuanzonException ex) {
             Logger.getLogger(CheckPrintingRequest.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -834,7 +882,13 @@ public class CheckPrintingRequest extends Transaction {
         return poJSON;
     }
     
-    
+    private List<String> poTransactionNos = new ArrayList<>();
+
+    public void addTransactionNoToRemove(String lsTransactionNo) {
+        if (lsTransactionNo != null && !lsTransactionNo.isEmpty()) {
+            poTransactionNos.add(lsTransactionNo);
+        }
+    }
     
 
     public JSONObject addCheckPaymentToCheckPrintRequestx(String stransNox)
