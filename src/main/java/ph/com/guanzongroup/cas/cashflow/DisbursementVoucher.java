@@ -2809,7 +2809,7 @@ public class DisbursementVoucher extends Transaction {
             System.out.println("Amount : " + Detail(lnCtr).getAmount());
             System.out.println("-----------------------------------------------------------------------");
         }
-        
+        computeFields(false); //Recompute
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
