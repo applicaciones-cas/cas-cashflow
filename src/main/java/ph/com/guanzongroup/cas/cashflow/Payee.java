@@ -72,7 +72,7 @@ public class Payee extends Parameter {
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
-
+        System.out.println("PAYEE : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
@@ -223,7 +223,7 @@ public class Payee extends Parameter {
     } 
         
     public JSONObject searchPayee(String clientID) throws SQLException {
-    String lsSQL = "SELECT sPayeeIDx FROM payee";
+    String lsSQL = "SELECT sPayeeIDx FROM Payee";
     lsSQL = MiscUtil.addCondition(lsSQL,
             " sClientID = " + SQLUtil.toSQL(clientID)
             + " ORDER BY sPayeeIDx DESC LIMIT 1");

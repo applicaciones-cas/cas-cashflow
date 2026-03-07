@@ -564,7 +564,8 @@ public class SOATagging extends Transaction {
         }
 
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                                                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
         if (lsTransStat != null && !"".equals(lsTransStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
@@ -622,7 +623,8 @@ public class SOATagging extends Transaction {
 
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
-                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
+                                                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + sReferenceNo));
         if (lsTransStat != null && !"".equals(lsTransStat)) {
@@ -861,7 +863,8 @@ public class SOATagging extends Transaction {
 
             initSQL();
             String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
-                    + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                    + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                     + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                     + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
                     + " AND a.cProcessd = '0' "
@@ -1251,10 +1254,10 @@ public class SOATagging extends Transaction {
                 lsIssuedTo = loPaymentRequest.Master().getPayeeID();
                 lsTransNo = loPaymentRequest.Master().getTransactionNo();
                 lsSourceCd = loPaymentRequest.getSourceCode();
-                ldblTranTotal = loPaymentRequest.Master().getTranTotal();
-                ldblDebitAmt = loPaymentRequest.Master().getTranTotal();
+                ldblTranTotal = loPaymentRequest.Master().getNetTotal();
+                ldblDebitAmt = loPaymentRequest.Master().getNetTotal();
                 lsClientId = loPaymentRequest.Master().Payee().getClientID();
-                ldblBalance = loPaymentRequest.Master().getTranTotal() - loPaymentRequest.Master().getAmountPaid();
+                ldblBalance = loPaymentRequest.Master().getNetTotal() - loPaymentRequest.Master().getAmountPaid();
                 
                 if ((lsCompanyId == null || lsCompanyId.isEmpty()) && (Master().getCompanyId() == null || "".equals(Master().getCompanyId()))){
                     poJSON.put("result", "error");
@@ -2489,7 +2492,7 @@ public class SOATagging extends Transaction {
             System.out.println("Dept ID : " + poGRider.getDepartment());
             Master().setBranchCode(poGRider.getBranchCode());
             Master().setIndustryId(psIndustryId);
-//            Master().setCompanyId(psCompanyId);
+            Master().setCompanyId(psCompanyId);
             Master().setTransactionDate(poGRider.getServerDate());
             Master().setTransactionStatus(SOATaggingStatus.OPEN);
 
@@ -2513,6 +2516,7 @@ public class SOATagging extends Transaction {
                 + " , a.sCompnyID  "
                 + " , a.sClientID  "
                 + " , a.sSOANoxxx  "
+                + " , a.sCompnyID  "
                 + " , b.sCompnyNm  AS sSupplrNm"
                 + " , c.sCompnyNm  AS sCompnyNm"
                 + " , d.sDescript  AS sIndustry"

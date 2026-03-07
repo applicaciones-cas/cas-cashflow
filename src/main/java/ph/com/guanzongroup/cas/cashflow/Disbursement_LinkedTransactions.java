@@ -18,8 +18,10 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.cas.purchasing.controller.PurchaseOrder;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderControllers;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
 import org.json.simple.JSONObject;
@@ -258,7 +260,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(pbIsUpdateAmountPaid){
-            if(Detail(row).PRF().getSourceNo() != null && !"".equals(Detail(row).PRF().getSourceNo())){
+            if(Detail(row).PRF().getSourceNo() != null && !"".equals(Detail(row).PRF().getSourceNo())
+                && DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(Detail(row).PRF().getSourceCode())){
                 poJSON = savePOMaster(row, isAdd);
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
@@ -298,8 +301,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
             return poJSON;
         }
         
-        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
-            ldblAmountPaid = ldblOtherPayment + Detail(row).getAmountApplied(); 
+        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction and add the discount amount reflected from PRF 
+            ldblAmountPaid = ldblOtherPayment + Detail(row).getAmountApplied() + Detail(row).PRF().getDiscountAmount(); 
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
@@ -331,7 +334,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-    
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -445,7 +448,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         
         if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
-            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
+            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount ; 
         } else { //Get only the other paid amount from OTHER DV
             ldblAmountPaid = ldblOtherPayment; 
         }
@@ -478,6 +481,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         System.out.println("Cache Payable Update Mode : " + loModel.getEditMode());
         
         if(pbIsUpdateAmountPaid){
+            ldblAmountPaid = ldblAmountPaid + loModel.getAmountPaid();
             loModel.setAmountPaid(ldblAmountPaid);
         }
         
@@ -803,6 +807,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
     private JSONObject paidLinkedTransaction(String fsSourceNo, String fsSourceCode) throws SQLException, ParseException, CloneNotSupportedException, GuanzonException{
         switch(fsSourceCode){
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                System.out.println("---------------PRF TAGGING AS PAID-------------");
                 PaymentRequest loPRF = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
                 poJSON = loPRF.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -819,8 +824,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE: 
+                System.out.println("---------------ACCOUNT PAYABLE TAGGING AS PAID-------------");
                 SOATagging loSOA = new CashflowControllers(poGRider, logwrapr).SOATagging();
                 poJSON = loSOA.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -838,8 +846,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.PO_RECEIVING: 
+                System.out.println("---------------PO RECEIVING TAGGING AS PAID-------------");
                 PurchaseOrderReceiving loPOReceiving = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
                 poJSON = loPOReceiving.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -855,9 +866,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
-                
             case DisbursementStatic.SourceCode.CASH_PAYABLE: 
+                System.out.println("---------------CACHE PAYABLE TAGGING AS PAID-------------");
                 CachePayable loCachePayable = new CashflowControllers(poGRider, logwrapr).CachePayable();
                 poJSON = loCachePayable.InitTransaction();
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -876,8 +889,11 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
             case DisbursementStatic.SourceCode.AP_ADJUSTMENT: 
+                System.out.println("---------------AP ADJUSTMENT TAGGING AS PAID-------------");
                 APPaymentAdjustment loAPAdjustment = new CashflowControllers(poGRider, logwrapr).APPaymentAdjustment();
                 poJSON = loAPAdjustment.OpenTransaction(fsSourceNo);
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -890,6 +906,8 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
                 break;
         } 
     
@@ -947,6 +965,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
         return ldPayment;
     }
     
+    
     /**
      * Get the paid amount from OTHER DV Transaction
      * @param sourceNo the source no of DV Detail
@@ -962,6 +981,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
             lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
                     " sSourceNo = " + SQLUtil.toSQL(sourceNo)
                     + " AND sSourceCd = " + SQLUtil.toSQL(sourceCode)
+//                    + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PaidAmount in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.RETURNED)
@@ -972,10 +992,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
             if (MiscUtil.RecordCount(loRS) >= 0) {
                 while (loRS.next()) {
                     // Print the result set
-                    System.out.println("--------------------------DV--------------------------");
+                    System.out.println("--------------------------PRF--------------------------");
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
+                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
                     System.out.println("------------------------------------------------------------------------------");
-                    ldPayment = ldPayment + getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
+                    ldPayment = ldPayment + loRS.getDouble("nAmtPaidx") + loRS.getDouble("nDiscAmtx"); //getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
                 }
             }
             MiscUtil.close(loRS);
@@ -985,6 +1007,45 @@ public class Disbursement_LinkedTransactions extends Transaction {
         }
         return ldPayment;
     }
+    
+//    /**
+//     * Get the paid amount from OTHER DV Transaction
+//     * @param sourceNo the source no of DV Detail
+//     * @param sourceCode the source code of DV Detail
+//     * @return Double total of the paid amount from OTHER DV Transaction
+//     */
+//    private double getPRFPayment(String sourceNo, String sourceCode) {
+//        String lsSQL = "";
+//        double ldPayment = 0.0000;
+//        try {
+//            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
+//            loModel.initialize();
+//            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
+//                    " sSourceNo = " + SQLUtil.toSQL(sourceNo)
+//                    + " AND sSourceCd = " + SQLUtil.toSQL(sourceCode)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.RETURNED)
+//            );
+//            System.out.println("Executing SQL: " + lsSQL);
+//            ResultSet loRS = poGRider.executeQuery(lsSQL);
+//            poJSON = new JSONObject();
+//            if (MiscUtil.RecordCount(loRS) >= 0) {
+//                while (loRS.next()) {
+//                    // Print the result set
+//                    System.out.println("--------------------------DV--------------------------");
+//                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+//                    System.out.println("------------------------------------------------------------------------------");
+//                    ldPayment = ldPayment + getOtherPayment(loRS.getString("sTransNox"), DisbursementStatic.SourceCode.PAYMENT_REQUEST, "");
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", e.getMessage());
+//        }
+//        return ldPayment;
+//    }
     
     /**
      * get Inventory Type Code value

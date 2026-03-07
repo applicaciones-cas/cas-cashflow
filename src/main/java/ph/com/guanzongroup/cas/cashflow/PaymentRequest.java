@@ -1687,6 +1687,7 @@ public class PaymentRequest extends Transaction {
         lsSQL = MiscUtil.addCondition(lsSQL, " a.nAmtPaidx > 0.0000 AND a.nNetTotal > a.nAmtPaidx "
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.VOID)
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.CANCELLED)
+                                    +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.POSTED)
                                     +   " AND a.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                                     +   " AND f.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()));
         lsSQL = lsSQL + " ORDER BY a.dTransact, e.sCompnyNm ASC ";
@@ -1820,11 +1821,20 @@ public class PaymentRequest extends Transaction {
 //        double ldblVatAmount = 0.0000; //Disable vat computation for PRF as per ma'am she 03-03-2026
 //        double ldblVatExempt = 0.0000;
 
+        double ldblDetailDiscountRate = 0.0000;
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if(Detail(lnCtr).isReverse()){
                 ldblTransactionTotal += Detail(lnCtr).getAmount();
+                
+                ldblDetailDiscountRate = 0.0000;
+                if(Detail(lnCtr).getDiscount() > 0.0000){
+//                    ldblDetailDiscountRate = Detail(lnCtr).getAmount()* (Detail(lnCtr).getDiscount() / 100);
+                    ldblDetailDiscountRate = Detail(lnCtr).getAmount() * Detail(lnCtr).getDiscount();
+                }
+                ldblDiscountAmount += (Detail(lnCtr).getAddDiscount() + ldblDetailDiscountRate);
+                
                 ldblNetTotal += Detail(lnCtr).getNetTotal();
-                ldblDiscountAmount += Detail(lnCtr).getAddDiscount();
+                
 //                if(Detail(lnCtr).isVatable()){
 //                    ldblVatAmount += Detail(lnCtr).getVatAmount();
 //                } else {
@@ -1859,7 +1869,8 @@ public class PaymentRequest extends Transaction {
             poJSON.put("result", "error");
             return poJSON;
         }
-        double ldblDetailDiscountRate = Detail(row).getAmount() * (fdblDiscountRate / 100);
+//        double ldblDetailDiscountRate = Detail(row).getAmount() * (fdblDiscountRate / 100);
+        double ldblDetailDiscountRate = Detail(row).getAmount() * fdblDiscountRate;
         if(Detail(row).getAmount() < (Detail(row).getAddDiscount() + ldblDetailDiscountRate)){
             poJSON.put("message", "Computed total discount cannot be greater than the detail amount.");
             poJSON.put("result", "error");
@@ -1891,7 +1902,8 @@ public class PaymentRequest extends Transaction {
             return poJSON;
         }
 
-        double ldblDetailDiscountRate = Detail(row).getAmount() * (Detail(row).getDiscount() / 100);
+//        double ldblDetailDiscountRate = Detail(row).getAmount() * (Detail(row).getDiscount() / 100);
+        double ldblDetailDiscountRate = Detail(row).getAmount() * Detail(row).getDiscount();
         if(Detail(row).getAmount() < (fdblAdditionalDiscount + ldblDetailDiscountRate)){
             poJSON.put("message", "Computed total discount cannot be greater than the detail amount.");
             poJSON.put("result", "error");

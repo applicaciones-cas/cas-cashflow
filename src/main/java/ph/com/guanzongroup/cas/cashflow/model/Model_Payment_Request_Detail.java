@@ -153,7 +153,8 @@ public class Model_Payment_Request_Detail extends Model {
     public double getTotalDiscount(){
         double ldblDetailDiscountRate = 0.00;
         if(getDiscount() > 0){
-            ldblDetailDiscountRate = getAmount() * (getDiscount() / 100);
+//            ldblDetailDiscountRate = getAmount() * (getDiscount() / 100);
+            ldblDetailDiscountRate = getAmount() * getDiscount();
         }
         return ldblDetailDiscountRate + getAddDiscount();
     }

@@ -601,6 +601,7 @@ public class APPaymentAdjustment extends Parameter {
             poJSON = new JSONObject();
             poModel.setBranchCode(poGRider.getBranchCode());
             poModel.setIndustryId(psIndustryId);
+            poModel.setCompanyId(psCompanyId);
             poModel.setTransactionDate(poGRider.getServerDate());
             poModel.setTransactionStatus(APPaymentAdjustmentStatus.OPEN);
             poModel.isProcessed(false);
@@ -692,7 +693,8 @@ public class APPaymentAdjustment extends Parameter {
             }
         }
         String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
-                " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId));
+                " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
         if (lsTransStat != null && !"".equals(lsTransStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
@@ -734,6 +736,7 @@ public class APPaymentAdjustment extends Parameter {
         }
         String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                 " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%"+ value));
         
         if (lsTransStat != null && !"".equals(lsTransStat)) {
@@ -792,7 +795,8 @@ public class APPaymentAdjustment extends Parameter {
         }
         String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                 " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
-                + " AND d.sCompnyNm LIKE " + SQLUtil.toSQL("%" + companyName)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                + " AND d.sCompnyNm LIKE " + SQLUtil.toSQL("%" + companyName)
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplierName)
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
                 ) ;
@@ -859,7 +863,8 @@ public class APPaymentAdjustment extends Parameter {
 
             String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                     " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                    + " AND d.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
+                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                    + " AND d.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                     + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                     + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
                     + " AND a.cProcessd = '0' "
@@ -1060,6 +1065,7 @@ public class APPaymentAdjustment extends Parameter {
                 + " a.dTransact "
                 + " , a.sTransNox "
                 + " , a.sIndstCdx "
+                + " , a.sCompnyID "
                 + " , b.sCompnyNm  AS sSupplrNm "
                 + " , c.sPayeeNme  AS sPayeeNme "
                 + " , d.sCompnyNm  AS sCompnyNm "

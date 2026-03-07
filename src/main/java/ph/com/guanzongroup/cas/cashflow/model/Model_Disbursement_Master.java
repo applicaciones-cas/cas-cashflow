@@ -38,6 +38,7 @@ public class Model_Disbursement_Master extends Model {
     private String searchParticularID = "";
     private String searchBranchID = "";
     private String searchPayee = "";
+    private double advancesTotal = 0.0000;
 
     @Override
     public void initialize() {
@@ -380,6 +381,14 @@ public class Model_Disbursement_Master extends Model {
 
     public String getSupplierClientID() {
         return this.supplierClientID;
+    }
+    
+    public void setAdvancesTotal(Double fdblAdvancesTotal) {
+        this.advancesTotal = fdblAdvancesTotal;
+    }
+
+    public double getAdvancesTotal() {
+        return this.advancesTotal;
     }
 
     public Model_Payee Payee() throws GuanzonException, SQLException {

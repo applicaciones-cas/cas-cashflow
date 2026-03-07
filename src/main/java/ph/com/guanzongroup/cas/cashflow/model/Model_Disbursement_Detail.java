@@ -4,20 +4,32 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.parameter.model.Model_Inv_Type;
 import org.guanzon.cas.parameter.model.Model_Tax_Code;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.model.Model_POR_Detail;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.model.Model_PO_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
+import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
+import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 
 /**
  *
@@ -267,6 +279,174 @@ public class Model_Disbursement_Detail extends Model {
 
     public String getInvType() {
         return this.InvType;
+    }
+    
+    public JSONObject setDetailAdvances() {
+        return getAdvancesAmount();
+    }
+    
+    private double pdblAdvancesAmount = 0.0000;
+    public double getDetailAdvances() {
+        return pdblAdvancesAmount;
+    }
+    
+    private double pdblDiscountAmount = 0.0000;
+    public double getDetailSourceDiscount() {
+        return pdblDiscountAmount;
+    }
+    
+    private JSONObject getAdvancesAmount(){
+        poJSON = new JSONObject();
+        pdblAdvancesAmount = 0.0000;
+        pdblDiscountAmount = 0.0000;
+        try {
+            List<String> llistPurchaseOrder = new ArrayList<>();
+            String lsPOTransNo = "";
+            switch(getSourceCode()){
+                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                    if(SOATaggingStatic.PaymentRequest.equals(SOADetail().getSourceCode())){
+                        if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(SOADetail().PaymentRequestMaster().getSourceCode())){
+                            lsPOTransNo = SOADetail().PaymentRequestMaster().getSourceNo();
+                        }
+                    } else if(SOATaggingStatic.POReceiving.equals(SOADetail().getSourceCode())){
+                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                        return poJSON;
+                    }
+                break;
+    //            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    if(DisbursementStatic.SourceCode.PURCHASE_ORDER.equals(PRF().getSourceCode())){
+                        lsPOTransNo = PRF().getSourceNo();
+                    }
+                    break;
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    return poJSON;
+            }
+
+            if(!llistPurchaseOrder.contains(lsPOTransNo)){
+                llistPurchaseOrder.add(lsPOTransNo);
+            }
+
+            poJSON = getAdvancePayment(llistPurchaseOrder);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+            return poJSON;
+        } 
+        return poJSON;
+    }
+    
+    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
+        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
+                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+                if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+                    return poJSON;
+                }
+                
+                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
+                if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+                    return poJSON;
+                }
+                pdblDiscountAmount += (Double) poJSON.get("discount");
+                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
+            }
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject setPRFDiscount(String fsPOTransNo){
+        String lsSQL = "";
+        double ldDiscount = 0.0000;
+        try {
+            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
+            loModel.initialize();
+            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
+                    " sSourceNo = " + SQLUtil.toSQL(fsPOTransNo)
+                    + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
+                    + " AND cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PAID in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
+            );
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+            if (MiscUtil.RecordCount(loRS) >= 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------PRF--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
+                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    ldDiscount = ldDiscount + loRS.getDouble("nDiscAmtx"); 
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON.put("discount", ldDiscount);
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+        poJSON.put("discount", ldDiscount);
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
+        poJSON = loObject.openRecord(fsTransNo);
+        if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", (String) poJSON.get("message") + "\nWhile reloading PO Receiving Master." );
+            return poJSON;
+        }
+        
+        if(!PurchaseOrderReceivingStatus.Purpose.REGULAR.equals(loObject.getPurpose())){
+            return poJSON;
+        }
+        List<String> llistPurchaseOrder = new ArrayList<>();
+        for(int lnCtr = 0;lnCtr < loObject.getEntryNo();lnCtr++){
+            Model_POR_Detail loDetail = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
+            poJSON = loDetail.openRecord(fsTransNo,(lnCtr+1) );
+            if ("error".equals((String) poJSON.get("result"))) {
+            poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
+                return poJSON;
+            }
+            
+            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
+                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
+                    llistPurchaseOrder.add(loDetail.getOrderNo());
+                } 
+            }
+        }
+        
+        
+        poJSON = getAdvancePayment(llistPurchaseOrder);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
 
     public Model_Particular Particular() throws SQLException, GuanzonException {

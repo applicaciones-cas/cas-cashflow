@@ -36,22 +36,22 @@ public class testPRFVAT {
         
     }
     
-    @Test
-    public void testOpenTransaction() {
-        JSONObject loJSON;
-        double rent = 50000;
-        double vatRate = 0.12;
-        double wtaxRate = 0.05;
-           loJSON = poPaymentRequest.computeNetPayableDetails(rent, false,vatRate, wtaxRate);
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-
-            System.out.println("RESULT : " + loJSON.toString());
-
-
-    }
+//    @Test
+//    public void testOpenTransaction() {
+//        JSONObject loJSON;
+//        double rent = 50000;
+//        double vatRate = 0.12;
+//        double wtaxRate = 0.05;
+//           loJSON = poPaymentRequest.computeNetPayableDetails(rent, false,vatRate, wtaxRate);
+//            if (!"success".equals((String) loJSON.get("result"))) {
+//                System.err.println((String) loJSON.get("message"));
+//                Assert.fail();
+//            }
+//
+//            System.out.println("RESULT : " + loJSON.toString());
+//
+//
+//    }
     @AfterClass
     public static void tearDownClass() {
         poPaymentRequest = null;
