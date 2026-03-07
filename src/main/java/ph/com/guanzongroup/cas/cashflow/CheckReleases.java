@@ -474,7 +474,7 @@ public class CheckReleases extends Transaction {
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
-
+            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
 
         if (CheckTransferStatus.CONFIRMED.equals(Master().getTransactionStatus())) {

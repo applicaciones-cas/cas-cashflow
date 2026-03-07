@@ -1,10 +1,12 @@
 package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.json.simple.JSONObject;
@@ -34,6 +36,7 @@ public class Model_Check_Deposit_Detail extends Model {
             poEntity.moveToCurrentRow();
 
             poEntity.absolute(1);
+            poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 
             poEntity.updateObject("nEntryNox", 0);         
             poEntity.updateObject("cReversex", "+");
@@ -49,13 +52,10 @@ public class Model_Check_Deposit_Detail extends Model {
             System.exit(1);
         }
     }
-    //Getter & Setter 
-    //sTransNox
-    //nEntryNox*
-    //sSourceCd*
-    //sSourceNo*
-    //sRemarksx*
-
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return sdf.format(fdValue);
+    }
     //sTransNox
     public JSONObject setTransactionNo(String transactionNo) {
         return setValue("sTransNox", transactionNo);

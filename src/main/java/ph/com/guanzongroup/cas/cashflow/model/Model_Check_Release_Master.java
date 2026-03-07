@@ -6,10 +6,12 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Industry;
@@ -55,9 +57,9 @@ public class Model_Check_Release_Master extends Model{
             poEntity.updateDouble("nTranTotl", 0.00);
             poEntity.updateString("cPrintedx", "0");
             poEntity.updateString("cTranStat", CheckReleaseStatus.OPEN);
-            poEntity.updateNull("sReceived");
-            poEntity.updateNull("sModified");
-            poEntity.updateObject("dModified", poGRider.getServerDate());
+            poEntity.updateNull("sReceived");    
+            poEntity.updateObject("sModified", poGRider.getUserID());
+            poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 
             //Step 7. get primary id from metadata, and initialized to variable as row id
             ID = poEntity.getMetaData().getColumnLabel(1);
@@ -72,6 +74,15 @@ public class Model_Check_Release_Master extends Model{
             logwrapr.severe(e.getMessage());
             System.exit(1);
         }
+    }
+            /**
+     * Converts a Date to a string in yyyy-MM-dd format.
+     * @param fdValue Date value
+     * @return formatted date string
+     */
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return sdf.format(fdValue);
     }
     
     //sTransNox

@@ -2,11 +2,13 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Banks;
@@ -47,8 +49,9 @@ public class Model_Check_Deposit_Master extends Model {
             poEntity.updateDouble("nTotalDep", 0.00d);
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateString("cPrintedx", "0");
-            poEntity.updateString("nClearing", "0");
-            poEntity.updateObject("dModified", poGRider.getServerDate());
+            poEntity.updateString("nClearing", "0");    
+            poEntity.updateObject("sModified", poGRider.getUserID());
+            poEntity.updateNull("dModified");
             poEntity.updateString("cTranStat", CheckDepositStatus.OPEN);
 
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
@@ -71,18 +74,16 @@ public class Model_Check_Deposit_Master extends Model {
             System.exit(1);
         }
     }
-    //Getter & Setter 
-    //sTransNox
-    //sIndstCdx
-    //dTransact
-    //dReferDte*
-    //sBnkActID
-    //nEntryNox*
-    //nTotalDep*
-    //sRemarksx
-    //nClearing
-    //cTranStat
-    //cPrintedx
+        /**
+     * Converts a Date to a string in yyyy-MM-dd format.
+     * @param fdValue Date value
+     * @return formatted date string
+     */
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return sdf.format(fdValue);
+    }
+
 
     //sTransNox
     public JSONObject setTransactionNo(String transactionNo) {

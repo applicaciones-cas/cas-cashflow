@@ -471,6 +471,7 @@ public class CheckPrintingRequest extends Transaction {
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNumber(lnCtr + 1);
+            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
 
         poJSON.put("result", "success");
