@@ -2899,24 +2899,24 @@ public class DisbursementVoucher extends Transaction {
                             System.out.println("-----------------------------------");
                             
                             System.out.println("----------ACCOUNT MASTER / LEDGER----------");
-//                            try {
-//                                //GL Transaction Account Ledger
-//                                GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
-//                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
-//                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-//                                    loGLTrans.addDetail(Journal().Master().getBranchCode(), 
-//                                            Journal().Detail(lnCtr).getAccountCode(),
-//                                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
-//                                            Journal().Detail(lnCtr).getDebitAmount(), 
-//                                            Journal().Detail(lnCtr).getCreditAmount());
-//                                }
-//                                loGLTrans.saveTransaction();
-//                            } catch (GuanzonException | SQLException  ex) {
-//                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-//                                poJSON.put("result", "error");
-//                                poJSON.put("message", MiscUtil.getException(ex));
-//                                return poJSON;
-//                            }
+                            try {
+                                //GL Transaction Account Ledger
+                                GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+                                    loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+                                            Journal().Detail(lnCtr).getAccountCode(),
+                                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                            Journal().Detail(lnCtr).getDebitAmount(), 
+                                            Journal().Detail(lnCtr).getCreditAmount());
+                                }
+                                loGLTrans.saveTransaction();
+                            } catch (GuanzonException | SQLException  ex) {
+                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                                poJSON.put("result", "error");
+                                poJSON.put("message", MiscUtil.getException(ex));
+                                return poJSON;
+                            }
                             System.out.println("-----------------------------------");
                         }
                         
