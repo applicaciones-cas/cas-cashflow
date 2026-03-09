@@ -2,6 +2,7 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -53,9 +54,9 @@ public class Model_Check_Transfer_Master extends Model {
             poEntity.updateNull("sDeptIDxx");
             poEntity.updateNull("sPrepared");
             poEntity.updateNull("dPrepared");
-            poEntity.updateString("cPrintedx", "0");
-            poEntity.updateObject("dModified", poGRider.getServerDate());
-            poEntity.updateString("cTranStat", CheckTransferStatus.OPEN);
+            poEntity.updateString("cPrintedx", "0");            
+            poEntity.updateObject("sModified", poGRider.getUserID());
+            poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 
             this.poBranchDestination = (new ParamModels(this.poGRider)).Branch();
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
@@ -77,21 +78,16 @@ public class Model_Check_Transfer_Master extends Model {
             System.exit(1);
         }
     }
-    //Getter & Setter 
-    //sTransNox
-    //sIndstCdx
-    //dTransact
-    //sDestinat*
-    //sDeptIDxx
-    //nEntryNox*
-    //nTranTotl*
-    //sRemarksx
-    //sPrepared
-    //dPrepared
-    //cTranStat
-    //cPrintedx
-    //sReceived
-    //dReceived
+
+        /**
+     * Converts a Date to a string in yyyy-MM-dd format.
+     * @param fdValue Date value
+     * @return formatted date string
+     */
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        return sdf.format(fdValue);
+    }
 
     //sTransNox
     public JSONObject setTransactionNo(String transactionNo) {
@@ -272,6 +268,7 @@ public class Model_Check_Transfer_Master extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
     
     public String setBanks(String bankidx) {
         return bankid = bankidx;

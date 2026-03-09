@@ -47,8 +47,9 @@ public class Model_Check_Printing_Request_Master extends Model {
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateObject("nTotalAmt", CheckPrintRequestStatus.DefaultValues.default_value_double_0000);
             poEntity.updateObject("cIsUpload", CheckPrintRequestStatus.OPEN);
-            poEntity.updateObject("cTranStat", CheckPrintRequestStatus.OPEN);
-            poEntity.updateObject("dModified", poGRider.getServerDate());
+            poEntity.updateObject("cTranStat", CheckPrintRequestStatus.OPEN);  
+            poEntity.updateObject("sModified", poGRider.getUserID());
+            poEntity.updateNull("dModified");
 
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
