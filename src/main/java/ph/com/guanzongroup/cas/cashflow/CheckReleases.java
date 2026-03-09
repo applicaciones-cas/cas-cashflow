@@ -38,20 +38,14 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
-import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CheckReleaseRecords;
 import ph.com.guanzongroup.cas.cashflow.status.CheckReleaseStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckTransferStatus;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Master;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckReleaseValidatorFactory;
-import org.guanzon.cas.inv.warehouse.report.ReportUtil;
-import org.guanzon.cas.inv.warehouse.report.ReportUtilListener;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -61,8 +55,6 @@ import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Release_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
-import ph.com.guanzongroup.cas.cashflow.services.CheckController;
-import ph.com.guanzongroup.cas.cashflow.validator.CheckTransferValidatorFactory;
 
 /**
  *
