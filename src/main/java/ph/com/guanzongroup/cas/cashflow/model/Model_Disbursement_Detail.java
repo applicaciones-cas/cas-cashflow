@@ -309,10 +309,11 @@ public class Model_Disbursement_Detail extends Model {
                             lsPOTransNo = SOADetail().PaymentRequestMaster().getSourceNo();
                         }
                     } else if(SOATaggingStatic.POReceiving.equals(SOADetail().getSourceCode())){
-                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
+                        pdblAdvancesAmount += SOADetail().PurchasOrderReceivingMaster().getAmountPaid().doubleValue(); //Only get the amount paid reflected at PO Receiving during POSTING
+//                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
+//                        if ("error".equals((String) poJSON.get("result"))) {
+//                            return poJSON;
+//                        }
                         return poJSON;
                     }
                 break;
@@ -323,10 +324,11 @@ public class Model_Disbursement_Detail extends Model {
                     }
                     break;
                 case DisbursementStatic.SourceCode.PO_RECEIVING:
-                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
+                    pdblAdvancesAmount += POReceiving().getAmountPaid().doubleValue();  //Only get the amount paid reflected at PO Receiving during POSTING
+//                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        return poJSON;
+//                    }
                     return poJSON;
             }
 
