@@ -454,6 +454,11 @@ public class CheckPrintingRequest extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
 
+        
+        for (String lsTransactionNo : poTransactionNos) {
+            
+            updateRemoveCheck(lsTransactionNo);
+        }
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -477,6 +482,14 @@ public class CheckPrintingRequest extends Transaction {
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
         
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            System.out.println(
+            Detail(lnCtr).getTransactionNo()+ "\n" +
+            Detail(lnCtr).getEntryNumber()+ "\n" +
+            Detail(lnCtr).DisbursementMaster().getVoucherNo()
+            );
+        }
+        
         
 
         poJSON.put("result", "success");
@@ -494,10 +507,6 @@ public class CheckPrintingRequest extends Transaction {
             String remarks = Detail(lnCtr).getdetailRemarks();
             updateDV(sourceno,remarks);
         }
-        for (String lsTransactionNo : poTransactionNos) {
-            
-            updateRemoveCheck(lsTransactionNo);
-        }
 
         poJSON.put("result", "success");
         return poJSON;
@@ -506,6 +515,8 @@ public class CheckPrintingRequest extends Transaction {
     private void updateRemoveCheck(String lsTransactionNo) //transaction no ito ng check
             throws GuanzonException, SQLException, CloneNotSupportedException {
         poJSON = new JSONObject();
+        
+
         
         loCheck.initialize();
         loCheck.openRecord(lsTransactionNo);
@@ -1556,7 +1567,4 @@ public class CheckPrintingRequest extends Transaction {
         } 
         return lsEntry;
     }
-    
-    
-
 }

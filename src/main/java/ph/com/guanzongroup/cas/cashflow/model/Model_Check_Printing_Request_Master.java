@@ -274,4 +274,5 @@ public class Model_Check_Printing_Request_Master extends Model {
             return poBankAccountMaster;
         }
     }
+    
 }
