@@ -106,6 +106,7 @@ public class CheckDeposits extends Transaction {
             poJSON = object.searchRecord(value, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
                 Master().setBankAccount(object.getModel().getBankAccountId());  
+                Master().setBanks(object.getModel().getBankId());
             }
         } else {
             poJSON = object.searchRecordbyBanks(value, Master().getBanks(), byCode);
@@ -892,6 +893,8 @@ public class CheckDeposits extends Transaction {
             poJSON.put("message", (String) poJSON.get("message"));
             return poJSON;
         }
+        
+
 
         // Check if the particular already exists in the details
         for (lnRow = 0; lnRow < getDetailCount(); lnRow++) {
