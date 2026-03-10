@@ -5445,6 +5445,44 @@ public class DisbursementVoucher extends Transaction {
                 return "PURCHASES";
         }
     }
+    
+    public JSONObject getUpdateStatusBy(String fsStatus) throws SQLException, GuanzonException {
+        String lsUpdateBy = "";
+        String lsDate = "";
+        String lsSQL = "SELECT b.sModified,b.dModified FROM "+Master().getTable()+" a "
+                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
+                     + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+                    if(loRS.getString("sModified").length() > 10){
+                        lsUpdateBy = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+                    } else {
+                        lsUpdateBy = getSysUser(loRS.getString("sModified")); 
+                    }
+                    // Get the LocalDateTime from your result set
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsDate =  dModified.format(formatter);
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return poJSON;
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("sUpdateByx", lsUpdateBy);
+        poJSON.put("sUpdateDte", lsDate);
+        return poJSON;
+    }
 
     public JSONObject printTransaction(List<String> fsTransactionNos)
             throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -5507,9 +5545,52 @@ public class DisbursementVoucher extends Transaction {
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
-                params.put("sPrepared", poGRider.getLogName());
-                params.put("sChecked", "Rex Adversalo");
-                params.put("sApproved", "Guanson Lo");
+                
+                //Set Default value to empty to prevent null in display
+                params.put("sEncoder","");
+                params.put("sVerifier","");
+                params.put("sCertifier","");
+                params.put("sAuthorizer","");
+                
+                //Get Encoder
+                JSONObject loJSONEntry = getEntryBy();
+                if("error".equals((String) loJSONEntry.get("result"))){
+                    return loJSONEntry;
+                }
+                if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
+                    params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
+                }
+                //Get Verifiers
+                JSONObject loJSONVerified = getUpdateStatusBy(DisbursementStatic.VERIFIED);
+                if("error".equals((String) loJSONVerified.get("result"))){
+                    return loJSONVerified;
+                } else {
+                    if((String) loJSONVerified.get("sUpdateByx") != null && !"".equals((String) loJSONVerified.get("sUpdateByx"))){
+                        params.put("sVerifier", (String) loJSONVerified.get("sUpdateByx") + " " + String.valueOf((String) loJSONVerified.get("sUpdateDte"))); 
+                    }
+                }
+                //Get Certifier
+                JSONObject loJSONCertified = getUpdateStatusBy(DisbursementStatic.CERTIFIED);
+                if("error".equals((String) loJSONCertified.get("result"))){
+                    return loJSONCertified;
+                } else {
+                    if((String) loJSONCertified.get("sUpdateByx") != null && !"".equals((String) loJSONCertified.get("sUpdateByx"))){
+                        params.put("sCertifier", (String) loJSONCertified.get("sUpdateByx") + " " + String.valueOf((String) loJSONCertified.get("sUpdateDte"))); 
+                    }
+                }
+                //Get Authorizer
+                JSONObject loJSONAuthorize = getUpdateStatusBy(DisbursementStatic.AUTHORIZED);
+                if("error".equals((String) loJSONAuthorize.get("result"))){
+                    return loJSONAuthorize;
+                } else {
+                    if((String) loJSONAuthorize.get("sUpdateByx") != null && !"".equals((String) loJSONAuthorize.get("sUpdateByx"))){
+                        params.put("sAuthorizer", (String) loJSONAuthorize.get("sUpdateByx") + " " + String.valueOf((String) loJSONAuthorize.get("sUpdateDte"))); 
+                    }
+                }
+                
+//                params.put("sPrepared", poGRider.getLogName());
+//                params.put("sChecked", "Rex Adversalo");
+//                params.put("sApproved", "Guanson Lo");
                 
                 if(Master().isPrinted()){
                     watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
@@ -5554,7 +5635,7 @@ public class DisbursementVoucher extends Transaction {
                         1,
                         lsParticular,
                         "",
-                        Master().getNetTotal()
+                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", ""))
                 ));
                 
                 JasperPrint currentPrint = JasperFillManager.fillReport(
