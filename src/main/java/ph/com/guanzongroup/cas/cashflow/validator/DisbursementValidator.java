@@ -109,6 +109,16 @@ public class DisbursementValidator implements GValidator{
             poJSON.put("message", "Payee is missing or not set.");
             return poJSON;
         }
+        
+        if (poMaster.getTransactionTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Transaction total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getNetTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Invalid net total.");
+            return poJSON;
+        }
          
         if (poMaster.getVATAmount() < 0.0000 ) { //|| poMaster.getVATAmount() > poMaster.getTransactionTotal()
             poJSON.put("message", "Vat Amount cannot be greater than net total or lesser than zero.");
@@ -169,6 +179,16 @@ public class DisbursementValidator implements GValidator{
         
         if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
             poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getTransactionTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Transaction total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getNetTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Invalid net total.");
             return poJSON;
         }
          
@@ -237,6 +257,16 @@ public class DisbursementValidator implements GValidator{
         
         if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
             poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getTransactionTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Transaction total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getNetTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Invalid net total.");
             return poJSON;
         }
          
@@ -320,6 +350,16 @@ public class DisbursementValidator implements GValidator{
         
         if (poMaster.getPayeeID()== null || poMaster.getPayeeID().isEmpty()) {
             poJSON.put("message", "Payee is missing or not set.");
+            return poJSON;
+        }
+        
+        if (poMaster.getTransactionTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Transaction total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (poMaster.getNetTotal() <= 0.0000 ) { 
+            poJSON.put("message", "Invalid net total.");
             return poJSON;
         }
          
