@@ -6,9 +6,7 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Printing_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
-import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
 public class CheckPrintingValidator implements GValidator{
     GRiderCAS poGrider;
