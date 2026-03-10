@@ -55,10 +55,12 @@ public class testCheckPrintbyBankRemoveDetail {
             poPrint.CheckPrintingRequest().Detail().remove(0);
             
             for (int lnCtr = 0; lnCtr <=  poPrint.CheckPrintingRequest().getDetailCount() - 1; lnCtr++) {
-            System.out.println(
+            System.out.println("\n-----------------------------\n" +
+                      "------old details after remove------\n" +
              poPrint.CheckPrintingRequest().Detail(lnCtr).getTransactionNo()+ "\n" +
              poPrint.CheckPrintingRequest().Detail(lnCtr).getEntryNumber()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()
+             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
+                    "\n-----------------------------"
             );
         }
             

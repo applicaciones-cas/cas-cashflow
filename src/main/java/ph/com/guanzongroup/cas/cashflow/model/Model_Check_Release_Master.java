@@ -143,14 +143,18 @@ public class Model_Check_Release_Master extends Model{
     public JSONObject setPrintStatus(String printStatus) {
         return setValue("cPrintedx", printStatus);
     }
-
-    public String getPrintStatus() {
-        return (String) getValue("cPrintedx");
-    }
     
-    public boolean isPrintedStatus() {
-        return RecordStatus.ACTIVE.equals(getValue("cPrintedx"));
+    
+    
+    public JSONObject isPrintedStatus(boolean isActive) {
+        return setValue("cPrintedx", isActive ? "1" : "0");
     }
+
+    public boolean isPrintedStatus() {
+        Object value = getValue("cPrintedx");
+        return "1".equals(String.valueOf(value));
+    }
+
     
     //cTranStat
     public JSONObject setTransactionStatus(String transactionStatus) {

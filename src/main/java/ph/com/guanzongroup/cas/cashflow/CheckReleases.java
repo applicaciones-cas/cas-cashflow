@@ -461,6 +461,12 @@ public class CheckReleases extends Transaction {
                 detail.remove();
             }
         }
+        
+        if(getDetailCount() <= 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
+        }
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
@@ -886,13 +892,15 @@ public class CheckReleases extends Transaction {
             parameters.put("dDatexxx", new java.sql.Date(poGRider.getServerDate().getTime()));
 
             switch (Master().getTransactionStatus()) {
-                case PurchaseOrderStatus.POSTED:
-                case PurchaseOrderStatus.APPROVED:
+                case CheckTransferStatus.CONFIRMED:
                     if ("1".equals(Master().isPrintedStatus())) {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approvedreprint.png";
                     } else {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approved.png";
                     }
+                    break;
+                case CheckTransferStatus.VOID:
+                    watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\cancelled.png";
                     break;
             }
             parameters.put("watermarkImagePath", watermarkPath);
@@ -1048,8 +1056,8 @@ public class CheckReleases extends Transaction {
         private void PrintTransaction(boolean fbIsPrinted) throws SQLException, CloneNotSupportedException, GuanzonException {
             poJSON = new JSONObject();
             if (fbIsPrinted) {
-                if (((String) poMaster.getValue("cTranStat")).equals(PurchaseOrderStatus.APPROVED)) {
-                    poJSON = OpenTransaction((String) poMaster.getValue("sTransNox"));
+                if (((String) poMaster.getValue("cTranStat")).equals(CheckReleaseStatus.CONFIRMED)) {
+                    poJSON = OpenTransaction(Master().getTransactionNo());
                     if ("error".equals((String) poJSON.get("result"))) {
                         Platform.runLater(() -> {
                             ShowMessageFX.Warning((String) poJSON.get("message"), "Print Purchase Order", null);
@@ -1065,10 +1073,13 @@ public class CheckReleases extends Transaction {
                         });
                         fbIsPrinted = false;
                     }
-
-                    poMaster.setValue("dModified", poGRider.getServerDate());
-                    poMaster.setValue("sModified", poGRider.getUserID());
-                    poMaster.setValue("cPrintxxx", Logical.YES);
+                    Master().setModifiedDate(poGRider.getServerDate());
+                    Master().setModifyingId(poGRider.getUserID());
+                    Master().isPrintedStatus(true);
+                    
+//                    poMaster.setValue("dModified", poGRider.getServerDate());
+//                    poMaster.setValue("sModified", poGRider.getUserID());
+//                    poMaster.setValue("cPrintxxx", 1);
 
                     poJSON = SaveTransaction();
                     if ("error".equals((String) poJSON.get("result"))) {

@@ -482,11 +482,15 @@ public class CheckPrintingRequest extends Transaction {
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
         
+        
+        /*new details*/
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            System.out.println(
+            System.out.println("\n-----------------------------\n" +
+                    "------new details------\n" +
             Detail(lnCtr).getTransactionNo()+ "\n" +
             Detail(lnCtr).getEntryNumber()+ "\n" +
-            Detail(lnCtr).DisbursementMaster().getVoucherNo()
+            Detail(lnCtr).DisbursementMaster().getVoucherNo()+
+                    "\n-----------------------------"
             );
         }
         
