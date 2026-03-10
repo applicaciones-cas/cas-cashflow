@@ -1483,22 +1483,24 @@ public class DisbursementVoucher extends Transaction {
                     return poJSON;
                 }
                 
-                ldblTotalAdvancesAmount += Detail(lnCntr).getDetailAdvances();
-                
-//            if(Detail(lnCntr).getAmountApplied() > 0.0000){
-                ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
-                ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
-                ldblVATAmountTotal += Detail(lnCntr).getDetailVatAmount();
-                ldblVATExemptTotal += Detail(lnCntr).getDetailVatExempt();
-                
-                if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
-                    poJSON.put("result", "error");
-                    poJSON.put("column", "nAmtAppld");
-                    poJSON.put("message", "Invalid Applied Amount.");
-                    if(isValidate){
-                        return poJSON;
+                //Compute vat amounts when amount paid is not equal to 0.0000
+                if(Detail(lnCntr).getAmountApplied() != 0.0000){
+                    ldblTransactionTotal += Detail(lnCntr).getAmountApplied();
+                    ldblTotalAdvancesAmount += Detail(lnCntr).getDetailAdvances();
+                    ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
+                    ldblVATAmountTotal += Detail(lnCntr).getDetailVatAmount();
+                    ldblVATExemptTotal += Detail(lnCntr).getDetailVatExempt();
+                    
+                    if (Detail(lnCntr).getAmountApplied() > Detail(lnCntr).getAmount()) {
+                        poJSON.put("result", "error");
+                        poJSON.put("column", "nAmtAppld");
+                        poJSON.put("message", "Invalid Applied Amount.");
+                        if(isValidate){
+                            return poJSON;
+                        }
                     }
                 }
+                
 //                poJSON = getAdvancesAmount(lnCntr);
 //                if ("error".equals((String) poJSON.get("result"))) {
 //                    return poJSON;
@@ -1731,7 +1733,14 @@ public class DisbursementVoucher extends Transaction {
             if(ldblVATExempt > 0.0000){
                 Detail(fnRow).setDetailVatAmount(0.0000);
                 Detail(fnRow).setDetailVatSales(0.0000);
-                Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+                //Check original value of vat exempt
+                if(Detail(fnRow).getDetailVatExempt() < 0.0000){
+                    Detail(fnRow).setDetailVatExempt(-ldblAppliedAmtWithAdv);
+                } else {
+                    if(ldblAppliedAmtWithAdv != 0.000){
+                        Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+                    }
+                }
                 Detail(fnRow).isWithVat(false);
 
                 poJSON.put("result", "error");
@@ -1755,7 +1764,14 @@ public class DisbursementVoucher extends Transaction {
         if(ldblVATExempt > ldblAppliedAmtWithAdv){
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
-            Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+            //Check original value of vat exempt
+            if(Detail(fnRow).getDetailVatExempt() < 0.0000){
+                Detail(fnRow).setDetailVatExempt(-ldblAppliedAmtWithAdv);
+            } else {
+                if(ldblAppliedAmtWithAdv != 0.000){
+                    Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+                }
+            }
             Detail(fnRow).isWithVat(false);
             
             poJSON.put("result", "error");
@@ -1782,7 +1798,14 @@ public class DisbursementVoucher extends Transaction {
         } else {
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
-            Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+            //Check original value of vat exempt
+            if(Detail(fnRow).getDetailVatExempt() < 0.0000){
+                Detail(fnRow).setDetailVatExempt(-ldblAppliedAmtWithAdv);
+            } else {
+                if(ldblAppliedAmtWithAdv != 0.000){
+                    Detail(fnRow).setDetailVatExempt(ldblAppliedAmtWithAdv);
+                }
+            }
         }
         
         poJSON.put("result", "success");
@@ -2911,7 +2934,7 @@ public class DisbursementVoucher extends Transaction {
                                             Journal().Detail(lnCtr).getCreditAmount());
                                 }
                                 loGLTrans.saveTransaction();
-                            } catch (GuanzonException | SQLException  ex) {
+                            } catch (GuanzonException | SQLException | NullPointerException ex) {
                                 Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
                                 poJSON.put("result", "error");
                                 poJSON.put("message", MiscUtil.getException(ex));
@@ -3060,7 +3083,7 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
             
-        } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException ex) {
+        } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException | NullPointerException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
             poJSON.put("message", MiscUtil.getException(ex));
