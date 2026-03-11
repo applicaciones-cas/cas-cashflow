@@ -568,10 +568,6 @@ public class CheckReleases extends Transaction {
         }
 
 
-        
-        
-  
-
         // Append WHERE clause if any filter exists
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
             lsSQL += " WHERE " + String.join(" AND ", lsFilter);
