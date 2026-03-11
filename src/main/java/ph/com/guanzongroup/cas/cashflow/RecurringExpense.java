@@ -131,7 +131,7 @@ public class RecurringExpense extends Parameter {
         if(psPayeeId != null && !"".equals(psPayeeId)){
             lsSQL = lsSQL + " AND a.sPayeeIDx = " + SQLUtil.toSQL(psPayeeId);
         }
-        
+        System.out.println("Execute SQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
