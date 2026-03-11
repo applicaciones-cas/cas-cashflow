@@ -480,10 +480,21 @@ public class CheckReleases extends Transaction {
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
+            
         }
-        
-      
-
+        if (CheckReleaseStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+            }
+        }
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -567,10 +578,6 @@ public class CheckReleases extends Transaction {
             lsFilter.add(" sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
         }
 
-
-        
-        
-  
 
         // Append WHERE clause if any filter exists
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {

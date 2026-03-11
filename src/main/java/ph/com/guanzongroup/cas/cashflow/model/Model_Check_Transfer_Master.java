@@ -3,13 +3,9 @@ package ph.com.guanzongroup.cas.cashflow.model;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -54,7 +50,9 @@ public class Model_Check_Transfer_Master extends Model {
             poEntity.updateNull("sDeptIDxx");
             poEntity.updateNull("sPrepared");
             poEntity.updateNull("dPrepared");
-            poEntity.updateString("cPrintedx", "0");            
+            poEntity.updateNull("dReceived");
+            poEntity.updateString("cPrintedx", "0"); 
+            poEntity.updateString("cTranStat", CheckTransferStatus.OPEN);           
             poEntity.updateObject("sModified", poGRider.getUserID());
             poEntity.updateObject("dModified", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
 
