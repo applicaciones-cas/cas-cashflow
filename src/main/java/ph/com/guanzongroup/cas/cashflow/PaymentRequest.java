@@ -154,7 +154,7 @@ public class PaymentRequest extends Transaction {
         Model_Recurring_Expense_Payment_Monitor loObject = new CashflowModels(poGRider).Recurring_Expense_Payment_Monitor();
         if(Detail(getDetailCount() - 1).getRecurringNo() != null && !"".equals(Detail(getDetailCount() - 1).getRecurringNo())){
             for(int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++){
-                if(Detail(lnCtr).getRecurringNo() != null && !"".equals(Detail(lnCtr).getRecurringNo())){
+                if(Detail(lnCtr).getRecurringNo() != null && !"".equals(Detail(lnCtr).getRecurringNo()) && Detail(lnCtr).isReverse()){
                     poJSON = checkExistingPRF(Detail(lnCtr).getRecurringNo());
                     if ("error".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -901,7 +901,8 @@ public class PaymentRequest extends Transaction {
                                 + " OR ( a.sSourceNo = " + SQLUtil.toSQL(recurringNo)
                                 + " AND a.sSourceCd = " + SQLUtil.toSQL(PaymentRequestStaticData.recurring_expense_payment)
                                 + ")) AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.CANCELLED)
-                                + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID));
+                                + " AND a.cTranStat != " + SQLUtil.toSQL(PaymentRequestStatus.VOID)
+                                + " AND b.cReversex = " + SQLUtil.toSQL(PaymentRequestStaticData.Reverse.INCLUDE));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) > 0) {
