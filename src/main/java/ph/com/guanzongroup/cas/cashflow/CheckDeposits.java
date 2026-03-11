@@ -673,8 +673,21 @@ public class CheckDeposits extends Transaction {
             }
         }
         
+        if (CheckDepositStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+            }
+        }
         
-
+        Master().setBanks(null);
         poJSON.put("result", "success");
         return poJSON;
     }
