@@ -255,7 +255,7 @@ public class RecurringExpenseSchedule extends Parameter{
         paDetail = new ArrayList<>();
         AddDetail();
         if(Master().isAllBranches()){
-            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript FROM Branch ORDER BY sBranchNm ASC";
+            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript, sCompnyID FROM Branch WHERE sCompnyID IS NOT NULL AND sCompnyID <> ''  ORDER BY sBranchNm ASC";
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
