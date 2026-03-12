@@ -352,7 +352,7 @@ public class PaymentRequest extends Transaction {
 
         //Arsiela 02-27-2026
         for(int lnCtr = 0; lnCtr < laRecurringObj.size(); lnCtr++){
-            poJSON = loObject.openRecord(Detail(lnCtr).getRecurringNo()); 
+            poJSON = loObject.openRecord(laRecurringObj.get(lnCtr)); 
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
