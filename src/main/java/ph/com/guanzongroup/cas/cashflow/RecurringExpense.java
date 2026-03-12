@@ -171,7 +171,7 @@ public class RecurringExpense extends Parameter {
         if(psPayeeId != null && !"".equals(psPayeeId)){
             lsSQL = lsSQL + " AND a.sPayeeIDx = " + SQLUtil.toSQL(psPayeeId);
         }
-        
+        System.out.println("Search By Particular : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
@@ -205,7 +205,7 @@ public class RecurringExpense extends Parameter {
     public JSONObject SearchParticular(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
+        object.setIndustryID(psIndustryId);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             poModel.setParticularId(object.getModel().getParticularID());
