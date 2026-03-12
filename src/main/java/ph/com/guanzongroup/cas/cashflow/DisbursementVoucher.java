@@ -2648,15 +2648,6 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
-        if(!DisbursementStatic.OPEN.equals(Master().getTransactionStatus())) {
-            if(!pbWthParent){
-                poJSON = callApproval();
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-            }
-        }
-        
         //Seek Approval
 //        poJSON = callApproval();
 //        if (!"success".equals((String) poJSON.get("result"))) {
