@@ -13,6 +13,7 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
@@ -27,6 +28,7 @@ public class Model_Recurring_Expense_Schedule extends Model {
     Model_Payee poPayee;
     Model_Client_Master poClient;
     Model_Department poDepartment;
+    Model_Company poCompany;
     Model_Recurring_Expense poRecurringExpense;
 
     @Override
@@ -63,6 +65,7 @@ public class Model_Recurring_Expense_Schedule extends Model {
             poIndustry = model.Industry();
             poBranch = model.Branch();
             poDepartment = model.Department();
+            poCompany = model.Company();
 
             CashflowModels gl = new CashflowModels(poGRider);
             poParticular = gl.Particular();
@@ -311,6 +314,27 @@ public class Model_Recurring_Expense_Schedule extends Model {
         } else {
             poBranch.initialize();
             return poBranch;
+        }
+    }
+    
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(Branch().getCompanyId())) {
+            if (poCompany.getEditMode() == EditMode.READY
+                    && poCompany.getCompanyId().equals(Branch().getCompanyId())) {
+                return poCompany;
+            } else {
+                poJSON = poCompany.openRecord(Branch().getCompanyId());
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poCompany;
+                } else {
+                    poCompany.initialize();
+                    return poCompany;
+                }
+            }
+        } else {
+            poCompany.initialize();
+            return poCompany;
         }
     }
 
