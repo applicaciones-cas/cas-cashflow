@@ -182,6 +182,10 @@ public class CheckDeposits extends Transaction {
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
+    @Override
+    public JSONObject deleteDetail(int rowNumber) {
+        return super.deleteDetail(rowNumber);
+    }
 
     public JSONObject ConfirmTransaction(String remarks) throws  SQLException, GuanzonException, CloneNotSupportedException {
 
@@ -489,27 +493,6 @@ public class CheckDeposits extends Transaction {
         }
         System.out.println("--------------------------------------------");
 
-//        System.out.println("----------AP CLIENT MASTER----------");
-//        //Insert AP Client
-//        APTransaction loAPTrans = new APTransaction(poGRider, Master().getTransactionNo().substring(0, 4));
-//        //get detail per category to pass on payment issue category
-////                            List<String> laPerCategory = getCategoryDetail();
-////                            for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
-////                            }
-//        String lsClientId = Detail(rowNo).CheckPayment().Payee().getAPClientID();
-//        if (lsClientId == null || "".equals(lsClientId)) {
-//            lsClientId = Detail(rowNo).CheckPayment().Payee().getClientID();
-//        }
-//        poJSON = loAPTrans.PaymentIssue(lsClientId,
-//                "",
-//                Detail(rowNo).CheckPayment().getSourceNo(),
-//                Detail(rowNo).CheckPayment().getTransactionDate(),
-//                Detail(rowNo).CheckPayment().getAmount(),
-//                false);
-//        if ("error".equals(poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//        System.out.println("-----------------------------------");
 
         System.out.println("----------ACCOUNT MASTER / LEDGER----------");
         try {

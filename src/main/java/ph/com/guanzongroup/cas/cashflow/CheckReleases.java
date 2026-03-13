@@ -1,5 +1,6 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import com.google.gson.JsonObject;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.event.ActionListener;
@@ -120,8 +121,17 @@ public class CheckReleases extends Transaction {
         poJSON = object.searchRecordwithFilter(fsCheckTransNo, fsCheckNo, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-            Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
-            computeMasterFields();
+            try {
+                JSONObject loJSON = new JSONObject();
+                loJSON = addCheckPaymentToDetail(object.getModel().getTransactionNo());
+                if (!"success".equals((String) poJSON.get("result"))) {
+                 return loJSON;
+                }
+//                Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
+                computeMasterFields();
+            } catch (CloneNotSupportedException ex) {
+                Logger.getLogger(CheckReleases.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
 
         return poJSON;
@@ -368,6 +378,54 @@ public class CheckReleases extends Transaction {
                 + " cTranStat "
                 + " FROM Check_Release_Master";
     }
+    public JSONObject SearchTransaction(String fsTransNo,String fsReceivedBy) throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        List<String> lsFilter = new ArrayList<>();
+
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+           lsFilter.add( "  cTranStat IN (" + lsTransStat.substring(2) + ")");
+        } else {
+            lsFilter.add("  cTranStat = " + SQLUtil.toSQL(psTranStat));
+        }
+        
+        if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
+            lsFilter.add(" sTransNox  = " + SQLUtil.toSQL( fsTransNo));
+        }
+        if (fsReceivedBy != null && !fsReceivedBy.trim().isEmpty()) {
+            lsFilter.add(" sReceived  LIKE " + SQLUtil.toSQL( "%" + fsReceivedBy + "%"));
+        }
+        initSQL();
+        
+        String lsSQL = SQL_BROWSE;
+        
+        // Append WHERE clause if any filter exists
+        if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+        lsSQL = lsSQL + " GROUP BY sTransNox";
+        System.out.println("SQL EXECUTED: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "", 
+                "Transaction Date»Transaction No»Receiver»Amount",
+                "dTransact»sTransNox»sReceived»nTranTotl",
+                "dTransact»sTransNox»sReceived»nTranTotl",
+                1);
+
+        if (poJSON != null) {
+            
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
     
     public JSONObject SearchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -401,6 +459,7 @@ public class CheckReleases extends Transaction {
                 1);
 
         if (poJSON != null) {
+            
             return OpenTransaction((String) poJSON.get("sTransNox"));
         } else {
             poJSON = new JSONObject();
@@ -498,6 +557,10 @@ public class CheckReleases extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
+    @Override
+    public JSONObject deleteDetail(int rowNumber) {
+        return super.deleteDetail(rowNumber);
+    }
 
     @Override
     public JSONObject save() {
@@ -572,7 +635,7 @@ public class CheckReleases extends Transaction {
         
 
         if (fsDestination != null && !fsDestination.trim().isEmpty()) {
-            lsFilter.add(" sReceived = " + SQLUtil.toSQL(fsDestination));
+            lsFilter.add(" sReceived LIKE " + SQLUtil.toSQL("%" +fsDestination + "%"));
         }
         if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
             lsFilter.add(" sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
@@ -618,7 +681,7 @@ public class CheckReleases extends Transaction {
     }
     
     
-    public JSONObject loadCheckPayment(String Bank, LocalDate dateFrom, LocalDate dateThru) throws SQLException, GuanzonException {
+    public JSONObject loadCheckPayment(String fscheckno,String fspayee, LocalDate dateFrom, LocalDate dateThru) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsSQL = "SELECT DISTINCT "
                 + "  a.sTransNox, "
@@ -640,8 +703,11 @@ public class CheckReleases extends Transaction {
         // Build filter conditions dynamically
         List<String> lsFilter = new ArrayList<>();
 
-        if (Bank != null && !Bank.trim().isEmpty()) {
-            lsFilter.add("b.sBankName LIKE " + SQLUtil.toSQL(Bank + "%"));
+        if (fscheckno != null && !fscheckno.trim().isEmpty()) {
+            lsFilter.add("b.sBankName LIKE " + SQLUtil.toSQL(fscheckno + "%"));
+        }
+        if (fspayee != null && !fspayee.trim().isEmpty()) {
+            lsFilter.add("d.sPayeeNme LIKE " + SQLUtil.toSQL(fspayee + "%"));
         }
 
         if (dateFrom != null && dateThru != null) {
@@ -865,7 +931,7 @@ public class CheckReleases extends Transaction {
             }
             
             if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
-                parameters.put("sCompnyNm", "Prepared by: "+ (String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
+                parameters.put("sCompnyNm",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
             }
             
             JSONObject loJSONConfirm = getConfirmedBy();
@@ -873,7 +939,7 @@ public class CheckReleases extends Transaction {
                 return loJSONConfirm;
             } else {
                 if((String) loJSONConfirm.get("sConfirmed") != null && !"".equals((String) loJSONConfirm.get("sConfirmed"))){
-                    parameters.put("sConfirmed", "Confirmed by: "+ (String) loJSONConfirm.get("sConfirmed") + " " + String.valueOf((String) loJSONConfirm.get("sConfrmDte"))); 
+                    parameters.put("sConfirmed",  (String) loJSONConfirm.get("sConfirmed") + " " + String.valueOf((String) loJSONConfirm.get("sConfrmDte"))); 
                 }
             }
             
@@ -1153,7 +1219,7 @@ public class CheckReleases extends Transaction {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM PO_Master a "
+                        + " FROM Check_Release_Master a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
@@ -1190,8 +1256,8 @@ public class CheckReleases extends Transaction {
     public JSONObject getConfirmedBy() throws SQLException, GuanzonException {
         String lsConfirm = "";
         String lsDate = "";
-        String lsSQL = "SELECT b.sModified,b.dModified FROM PO_Master a "
-                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = 'PO_Master' "
+        String lsSQL = "SELECT b.sModified,b.dModified FROM Check_Release_Master a "
+                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = 'Check_Release_Master' "
                      + " AND ( b.cRefrStat = "+ SQLUtil.toSQL(PurchaseOrderStatus.CONFIRMED) 
                      + " OR (ASCII(b.cRefrStat) - 64)  = "+ SQLUtil.toSQL(PurchaseOrderStatus.CONFIRMED) + " )";
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
@@ -1316,5 +1382,21 @@ public class CheckReleases extends Transaction {
         }
         
         showStatusHistoryUI("Check Release", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+    }
+    
+    public JSONObject seekApproval() throws SQLException, GuanzonException {
+    if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+    poJSON.put("result", "success");
+    return poJSON;
     }
 }

@@ -391,6 +391,7 @@ public class CheckPayments extends Parameter {
                 + ", a.cIsCrossx"
                 + ", a.cIsPayeex"
                 + ", a.cTranStat"
+                + ", a.cPrintxxx"
                 + ", a.sModified"
                 + ", a.dModified"
                 + ", IFNULL(b.sBankName, '') xBankName"
@@ -547,7 +548,7 @@ public class CheckPayments extends Parameter {
         // Always-required filters
         conditions.add("a.cReleased = '0'");
         conditions.add("a.cTranStat <> 3");
-
+        conditions.add("a.cPrintxxx = '1'");
         // Join all conditions
         String lsFilterCondition = String.join(" AND ", conditions);
 

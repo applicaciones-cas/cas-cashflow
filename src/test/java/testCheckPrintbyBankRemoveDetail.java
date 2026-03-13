@@ -12,7 +12,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testCheckPrintbyBankRemoveDetail {
@@ -40,7 +39,7 @@ public class testCheckPrintbyBankRemoveDetail {
                 Assert.fail();
             }
 
-            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000006");
+            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000005");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
