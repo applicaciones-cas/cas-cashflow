@@ -92,6 +92,10 @@ public class CheckPrintingRequest extends Transaction {
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
+    @Override
+    public JSONObject deleteDetail(int rowNumber) {
+        return super.deleteDetail(rowNumber);
+    }
 
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
