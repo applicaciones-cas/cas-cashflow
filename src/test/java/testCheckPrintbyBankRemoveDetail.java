@@ -61,8 +61,23 @@ public class testCheckPrintbyBankRemoveDetail {
              poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
                     "\n-----------------------------"
             );
-        }
+            }
             
+             loJSON = (JSONObject)poPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest("GCO126000017");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            for (int lnCtr = 0; lnCtr <=  poPrint.CheckPrintingRequest().getDetailCount() - 1; lnCtr++) {
+            System.out.println("\n-----------------------------\n" +
+                      "------new details after add------\n" +
+             poPrint.CheckPrintingRequest().Detail(lnCtr).getTransactionNo()+ "\n" +
+             poPrint.CheckPrintingRequest().Detail(lnCtr).getEntryNumber()+ "\n" +
+             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
+                    "\n-----------------------------"
+            );
+            }
 
             loJSON = poPrint.CheckPrintingRequest().SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
