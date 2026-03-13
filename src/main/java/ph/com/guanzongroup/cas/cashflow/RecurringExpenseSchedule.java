@@ -255,7 +255,7 @@ public class RecurringExpenseSchedule extends Parameter{
         paDetail = new ArrayList<>();
         AddDetail();
         if(Master().isAllBranches()){
-            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript FROM Branch ORDER BY sBranchNm ASC";
+            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript, sCompnyID FROM Branch WHERE sCompnyID IS NOT NULL AND sCompnyID <> ''  ORDER BY sBranchNm ASC";
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -558,7 +558,10 @@ public class RecurringExpenseSchedule extends Parameter{
             Model_Recurring_Expense_Schedule item = detail.next(); // Store the item before checking conditions
             paOrigDetail.add(item); //Store original value;
             if (( "".equals((String) item.getValue("sBranchCd")) || (String) item.getValue("sBranchCd") == null)
-                    || Double.parseDouble(String.valueOf(item.getValue("nAmountxx"))) <= 0.0000) {
+                    || ( Double.parseDouble(String.valueOf(item.getValue("nAmountxx"))) <= 0.0000
+                         && Integer.parseInt(String.valueOf(item.getValue("nBillDayx"))) <= 0 
+                         && Integer.parseInt(String.valueOf(item.getValue("nDueDayxx"))) <= 0 )
+                    ) {
                 detail.remove(); // Correctly remove the item
             }
         }
@@ -631,6 +634,15 @@ public class RecurringExpenseSchedule extends Parameter{
             poJSON = Detail(lnCtr).saveRecord();
             if ("success".equals(poJSON.get("result"))) {
                 poGRider.commitTrans(); 
+                
+                poJSON = Detail(lnCtr).openRecord(Detail(lnCtr).getRecurringNo());
+                if (!"success".equals(poJSON.get("result"))) {
+                    return poJSON;
+                }
+                poJSON = Detail(lnCtr).updateRecord();
+                if (!"success".equals(poJSON.get("result"))) {
+                    return poJSON;
+                }
             } else {
                 poGRider.rollbackTrans();
                 paDetail = paOrigDetail; //Store the original values when error occur.
@@ -690,50 +702,71 @@ public class RecurringExpenseSchedule extends Parameter{
     
     protected JSONObject isEntryOkay(int fnRow){
         poJSON = new JSONObject();
+        int lnRow = paOrigDetail.indexOf(Detail(fnRow));
         
         if (Detail(fnRow).getRecurringId() == null || "".equals(Detail(fnRow).getRecurringId())){
             poJSON.put("result", "error");
-            poJSON.put("message", "Recurring must not be empty at row "+(fnRow+1)+".");
+            poJSON.put("message", "Recurring must not be empty at row "+(lnRow+1)+".");
             return poJSON;
         }
         
         if (Detail(fnRow).getBranchCode() == null || "".equals(Detail(fnRow).getBranchCode())){
             poJSON.put("result", "error");
-            poJSON.put("message", "Branch Code must not be empty at row "+(fnRow+1)+".");
+            poJSON.put("message", "Branch Code must not be empty at row "+(lnRow+1)+".");
             return poJSON;
         }
         
-        if (Detail(fnRow).getAmount() > 0.0000){
+//        if (Detail(fnRow).getAmount() > 0.0000 || Detail(fnRow).getBillDay() > 0 || Detail(fnRow).getDueDay() > 0){
+//        }
+        
+        try {
             if (Detail(fnRow).getPayeeId() == null || "".equals(Detail(fnRow).getPayeeId())){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Payee must not be empty at row "+(fnRow+1)+".");
+                poJSON.put("message", "Payee must not be empty at row "+(lnRow+1)+".");
                 return poJSON;
             }
             if (Detail(fnRow).getDateFrom() == null || "".equals(Detail(fnRow).getDateFrom())){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Date from must not be empty at row "+(fnRow+1)+".");
+                poJSON.put("message", "Date from must not be empty at row "+(lnRow+1)+".");
                 return poJSON;
             }
-            if (Detail(fnRow).getDepartmentId() == null || "".equals(Detail(fnRow).getDepartmentId())){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Department must not be empty at row "+(fnRow+1)+".");
-                return poJSON;
+            if (Detail(fnRow).Branch().isMainOffice() || Detail(fnRow).Branch().isWarehouse()){
+                if (Detail(fnRow).getDepartmentId() == null || "".equals(Detail(fnRow).getDepartmentId())){
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Department must not be empty at row "+(lnRow+1)+".");
+                    return poJSON;
+                }
             }
             if (Detail(fnRow).getAccountable() == null || "".equals(Detail(fnRow).getAccountable())){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Accountable must not be empty at row "+(fnRow+1)+".");
+                poJSON.put("message", "Accountable must not be empty at row "+(lnRow+1)+".");
                 return poJSON;
             }
             if (Detail(fnRow).getBillDay() <= 0){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Invalid bill day at row "+(fnRow+1)+".");
+                poJSON.put("message", "Invalid bill day at row "+(lnRow+1)+".");
                 return poJSON;
             }
             if (Detail(fnRow).getDueDay() <= 0){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Invalid due day at row "+(fnRow+1)+".");
+                poJSON.put("message", "Invalid due day at row "+(lnRow+1)+".");
                 return poJSON;
             }
+            if (Detail(fnRow).getBillDay() > Detail(fnRow).getDueDay()){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Bill day cannot be greater than the due day at row "+(lnRow+1)+".");
+                return poJSON;
+            }
+            if (Detail(fnRow).getAmount() <= 0.0000){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid amount at row "+(lnRow+1)+".");
+                return poJSON;
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("result", MiscUtil.getException(ex));
+            return poJSON;
         }
         
         poJSON.put("result", "success");

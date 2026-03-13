@@ -13,6 +13,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Particular extends Parameter{
+    public String psIndustryId = "";
     Model_Particular poModel;
     
     @Override
@@ -24,6 +25,8 @@ public class Particular extends Parameter{
         
         super.initialize();
     }
+    
+    public void setIndustryID(String industryId) { psIndustryId = industryId; }
     
     @Override
     public JSONObject isEntryOkay() throws SQLException {
@@ -70,7 +73,10 @@ public class Particular extends Parameter{
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException{
         String lsSQL = getSQ_Browse();
-        
+        if(psIndustryId != null && !"".equals(psIndustryId)){
+            lsSQL = lsSQL + " AND b.sIndstCde = " + SQLUtil.toSQL(psIndustryId);
+        }
+        System.out.println("PARTICULAR : " + lsSQL );
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
@@ -110,6 +116,7 @@ public class Particular extends Parameter{
                             ", a.cRecdStat" +
                             ", a.sModified" +
                             ", a.dModified" +
+                            ", b.sIndstCde" +
                             ", IFNULL(b.sDescript, '') xAcctDesc" +
                         " FROM Particular a" +
                             " LEFT JOIN Account_Chart b ON a.sAcctCode = b.sAcctCode";

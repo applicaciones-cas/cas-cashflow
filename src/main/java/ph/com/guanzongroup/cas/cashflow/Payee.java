@@ -38,21 +38,33 @@ public class Payee extends Parameter {
         } else {
             poJSON = new JSONObject();
 
-            if (poModel.getPayeeID().isEmpty()) {
+            if (poModel.getPayeeID() == null || "".equals(poModel.getPayeeID())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Payee ID must not be empty.");
                 return poJSON;
             }
 
-            if (poModel.getPayeeName() == null || poModel.getPayeeName().isEmpty()) {
+            if (poModel.getPayeeName() == null || "".equals(poModel.getPayeeName())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Payee name must not be empty.");
                 return poJSON;
             }
 
-            if (poModel.getParticularID().isEmpty()) {
+            if (poModel.getParticularID() == null || "".equals(poModel.getParticularID())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Particular ID must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getAPClientID() == null || "".equals(poModel.getAPClientID())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "AP Client must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getClientID() == null || "".equals(poModel.getClientID())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Client must not be empty.");
                 return poJSON;
             }
         }
