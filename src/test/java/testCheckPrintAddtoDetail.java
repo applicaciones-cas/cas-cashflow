@@ -50,6 +50,7 @@ public class testCheckPrintAddtoDetail {
             }
             poCheckPrint.CheckPrintingRequest().Master().setBankID(bankid);
             System.out.println("MASTER BANK ID : " + poCheckPrint.CheckPrintingRequest().Master().getBankID());
+            
             loJSON = poCheckPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest(transactionNo);
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));

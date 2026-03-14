@@ -39,7 +39,7 @@ public class testCheckPrintbyBankRemoveDetail {
                 Assert.fail();
             }
 
-            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000005");
+            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000006");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -50,34 +50,62 @@ public class testCheckPrintbyBankRemoveDetail {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
+            System.out.println("=================START TEST====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getEntryNumber());
+                System.out.println("CheckPayment Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("DV Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionNo());
+                System.out.println("DV Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionDate());
+                System.out.println("DV AMount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getNetTotal());
+                System.out.println("Check No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+                System.out.println("Check Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+                System.out.println("Check Amount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+                System.out.println("===============================================");
+            }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST=====================");
             
             poPrint.CheckPrintingRequest().Detail().remove(0);
-            
-            for (int lnCtr = 0; lnCtr <=  poPrint.CheckPrintingRequest().getDetailCount() - 1; lnCtr++) {
-            System.out.println("\n-----------------------------\n" +
-                      "------old details after remove------\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getTransactionNo()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getEntryNumber()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
-                    "\n-----------------------------"
-            );
+            System.out.println("=================START TEST REMOVE====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getEntryNumber());
+                System.out.println("CheckPayment Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("DV Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionNo());
+                System.out.println("DV Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionDate());
+                System.out.println("DV AMount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getNetTotal());
+                System.out.println("Check No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+                System.out.println("Check Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+                System.out.println("Check Amount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+                System.out.println("===============================================");
             }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST REMOVE=====================");
             
-             loJSON = (JSONObject)poPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest("GCO126000017");
+            
+             loJSON = (JSONObject)poPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest("GCO126000027");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            
-            for (int lnCtr = 0; lnCtr <=  poPrint.CheckPrintingRequest().getDetailCount() - 1; lnCtr++) {
-            System.out.println("\n-----------------------------\n" +
-                      "------new details after add------\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getTransactionNo()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getEntryNumber()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
-                    "\n-----------------------------"
-            );
+            System.out.println(" ");
+            System.out.println("=================START TEST ADD====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getEntryNumber());
+                System.out.println("CheckPayment Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("DV Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionNo());
+                System.out.println("DV Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getTransactionDate());
+                System.out.println("DV AMount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().getNetTotal());
+                System.out.println("Check No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+                System.out.println("Check Date : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+                System.out.println("Check Amount : " + poPrint.CheckPrintingRequest().Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+                System.out.println("===============================================");
             }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST ADD=====================");
+         
 
             loJSON = poPrint.CheckPrintingRequest().SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {

@@ -497,6 +497,21 @@ public class CheckPrintingRequest extends Transaction {
                     "\n-----------------------------"
             );
         }
+        System.out.println("=================START TEST SAVE====================");
+            for (int lnCntr = 0; lnCntr <= getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + Detail(lnCntr).getEntryNumber());
+                System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getTransactionNo());
+                System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
+                System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
+                System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
+                System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
+                System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
+                System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+                System.out.println("===============================================");
+            }
+            computeFields();
+            System.out.println("==================END TEST SAVE=====================");
         
         
 
