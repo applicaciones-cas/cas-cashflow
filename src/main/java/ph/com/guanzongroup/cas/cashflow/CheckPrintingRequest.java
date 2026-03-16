@@ -487,27 +487,13 @@ public class CheckPrintingRequest extends Transaction {
         }
         
         
-        /*new details*/
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            System.out.println("\n-----------------------------\n" +
-                    "------new details------\n" +
-            Detail(lnCtr).getTransactionNo()+ "\n" +
-            Detail(lnCtr).getEntryNumber()+ "\n" +
-            Detail(lnCtr).DisbursementMaster().getVoucherNo()+
-                    "\n-----------------------------"
-            );
-        }
+
         System.out.println("=================START TEST SAVE====================");
             for (int lnCntr = 0; lnCntr <= getDetailCount()- 1; lnCntr++) {    
                 System.out.println("===============================================");
                 System.out.println("No : " + Detail(lnCntr).getEntryNumber());
-                System.out.println("CheckPayment Transaction No. : " + Detail(lnCntr).getTransactionNo());
-                System.out.println("DV Transaction No. : " + Detail(lnCntr).DisbursementMaster().getTransactionNo());
-                System.out.println("DV Date : " + Detail(lnCntr).DisbursementMaster().getTransactionDate());
-                System.out.println("DV AMount : " + Detail(lnCntr).DisbursementMaster().getNetTotal());
-                System.out.println("Check No : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckNo());
-                System.out.println("Check Date : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getCheckDate());
-                System.out.println("Check Amount : " + Detail(lnCntr).DisbursementMaster().CheckPayments().getAmount());
+                System.out.println("Transaction No. : " + Detail(lnCntr).getTransactionNo());
+                System.out.println("Source No. : " + Detail(lnCntr).getSourceNo());
                 System.out.println("===============================================");
             }
             computeFields();
@@ -561,8 +547,6 @@ public class CheckPrintingRequest extends Transaction {
                 return poJSON;
             }
         }
-
-        
 
         poJSON.put("result", "success");
         return poJSON;
@@ -715,7 +699,7 @@ public class CheckPrintingRequest extends Transaction {
         );
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
 
-        System.out.println("Executing SQL: " + lsSQL);
+//        System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         int lnCtr = 0;
@@ -800,7 +784,7 @@ public class CheckPrintingRequest extends Transaction {
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
         lsSQL = lsSQL + " ORDER BY a.dTransact DESC";
-        System.out.println("Executing SQL: " + lsSQL);
+//        System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         int lnCtr = 0;
@@ -1033,7 +1017,7 @@ public class CheckPrintingRequest extends Transaction {
         }
         lsSQL = lsSQL + " GROUP BY  a.sTransNox"
                 + " ORDER BY a.dTransact ASC";
-        System.out.println("Executing SQL: " + lsSQL);
+//        System.out.println("Executing SQL: " + lsSQL);
 
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
@@ -1416,7 +1400,7 @@ public class CheckPrintingRequest extends Transaction {
                 + " AND sSourceCd = 'DISb' "
                 + " ORDER BY sTransNox DESC LIMIT 1");
 
-        System.out.println("EXECUTING SQL: " + lsSQL);
+//        System.out.println("EXECUTING SQL: " + lsSQL);
 
         try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
             JSONObject result = new JSONObject();
@@ -1438,7 +1422,7 @@ public class CheckPrintingRequest extends Transaction {
             + " AND sSourceCd = 'DISb' " 
             + " ORDER BY sTransNox DESC LIMIT 1");
 
-    System.out.println("EXECUTING SQL: " + lsSQL);
+//    System.out.println("EXECUTING SQL: " + lsSQL);
 
     try (ResultSet loRS = poGRider.executeQuery(lsSQL)) {
         JSONObject result = new JSONObject();
@@ -1590,4 +1574,5 @@ public class CheckPrintingRequest extends Transaction {
         } 
         return lsEntry;
     }
+
 }
