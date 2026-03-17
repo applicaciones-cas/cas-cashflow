@@ -115,6 +115,11 @@ public class CashFund extends Parameter {
             }
         }
         
+        poJSON = updateRecord();
+        if ("error".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }
+        
         poJSON = getModel().setValue("cTranStat", lsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -132,14 +137,11 @@ public class CashFund extends Parameter {
         if ("success".equals((String) poJSON.get("result"))){
             if (!pbWthParent) poGRider.commitTrans();
         } else {
-            if (!pbWthParent) poGRider.rollbackTrans();
+            if (!pbWthParent){
+                poGRider.rollbackTrans();
+                return poJSON;
+            } 
         }
-        
-        //change status
-//        poJSON = statusChange(poModel.getTable(),poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -176,7 +178,7 @@ public class CashFund extends Parameter {
             return poJSON;
         }
         
-        if (poModel.getBalance() != 0.00 || CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
+        if (poModel.getBalance() != 0.0000 || !CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
             poJSON.put("result", "error");
             poJSON.put("message", "Deactivation is only allowed if status is confirmed and balance is 0.00");
             return poJSON;
@@ -205,6 +207,12 @@ public class CashFund extends Parameter {
             }
         }
         
+        poJSON = updateRecord();
+        if ("error".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }
+        
+        //change status
         poJSON = getModel().setValue("cTranStat", lsStatus);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -218,18 +226,14 @@ public class CashFund extends Parameter {
         }
 
         poJSON =  getModel().saveRecord();
-        
         if ("success".equals((String) poJSON.get("result"))){
             if (!pbWthParent) poGRider.commitTrans();
         } else {
-            if (!pbWthParent) poGRider.rollbackTrans();
+            if (!pbWthParent){
+                poGRider.rollbackTrans();
+                return poJSON;
+            } 
         }
-        
-        //change status
-//        poJSON = statusChange(poModel.getTable(), poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
