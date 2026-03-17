@@ -10,6 +10,7 @@ import org.json.simple.parser.ParseException;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
+import org.junit.Test;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.runners.MethodSorters;
 import ph.com.guanzongroup.cas.cashflow.CashFund;
@@ -54,7 +55,7 @@ public class testCashFund {
      * Initializes the controller, sets required fields, and attempts
      * to save the record. Fails the test if any operation is unsuccessful.
      */
-//    @Test
+    @Test
     public void testNewTransaction() {
         JSONObject loJSON;
         try {
@@ -64,7 +65,11 @@ public class testCashFund {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             } 
-            
+//            poController.getModel().setIndustryId(instance.getIndustry());
+//            poController.getModel().setCompanyId(instance.getCompnyId());
+//            poController.getModel().setBranchCode(instance.getBranchCode());
+//            poController.getModel().setDepartment(instance.getDepartment());
+//            poController.getModel().setBeginningDate(instance.getServerDate());
             poController.getModel().setCashFundManager(instance.getClientID());
             poController.getModel().setDescription("Rsie Test");
             poController.getModel().setBeginningBalance(1000.00);

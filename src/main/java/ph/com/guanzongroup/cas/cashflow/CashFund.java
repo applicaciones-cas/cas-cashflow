@@ -54,7 +54,6 @@ public class CashFund extends Parameter {
     public JSONObject initFields()
             throws SQLException,
             GuanzonException {
-        poJSON = new JSONObject();
         
         poModel.setIndustryId(poGRider.getIndustry());
         poModel.setCompanyId(poGRider.getCompnyId());
