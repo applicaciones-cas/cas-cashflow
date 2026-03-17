@@ -10,13 +10,21 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 
 public class CashFund extends Parameter {
 
     Model_Cash_Fund poModel;
-
+    
+    /**
+    * Initializes the Cash Fund controller and its model.
+    *
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
     @Override
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
@@ -26,7 +34,176 @@ public class CashFund extends Parameter {
 
         super.initialize();
     }
+    
+    /**
+    * Initializes default values for Cash Fund fields.
+    *
+    * @return JSONObject result container
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    @Override
+    public JSONObject initFields()
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+        
+        poModel.setIndustryId(poGRider.getIndustry());
+        poModel.setCompanyId(poGRider.getCompnyId());
+        poModel.setBranchCode(poGRider.getBranchCode());
+        poModel.setDepartment(poGRider.getDepartment());
+        poModel.setBeginningDate(poGRider.getServerDate());
+        
+        return poJSON;
+    }
+    
+    /**
+    * Activate the current Cash Fund record.
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject ActivateRecord() throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
 
+        String lsStatus = CashFundStatus.CONFIRMED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(poModel.getTransactionStatus())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Record was already active.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Record activate successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Deactivate the current Cash Fund record.
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject DeactivateRecord() throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CashFundStatus.CANCELLED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(poModel.getTransactionStatus())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Record was already deactivate.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Record deactivate successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Void the current Cash Fund record.
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject VoidRecord() throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CashFundStatus.VOID;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(poModel.getTransactionStatus())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Record was already voided.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Record voided successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Validates if the Cash Fund entry is ready to be saved.
+    *
+    * @return JSONObject containing validation result and message if invalid
+    * @throws SQLException if a database error occurs
+    */
     @Override
     public JSONObject isEntryOkay() throws SQLException {
         poJSON = new JSONObject();
@@ -95,19 +272,32 @@ public class CashFund extends Parameter {
             }
         }
 
-//        poModel.setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedBy(poGRider.getUserID());
         poModel.setModifiedDate(poGRider.getServerDate());
 
         poJSON.put("result", "success");
         return poJSON;
     }
-
+    
+    /**
+     * Returns the Cash Fund model instance.
+     *
+     * @return Model_Cash_Fund object
+     */
     @Override
     public Model_Cash_Fund getModel() {
         return poModel;
     }
-
+    
+    /**
+    * Searches a Cash Fund record using the given value.
+    *
+    * @param value   the search key
+    * @param byCode  true to search by code, false to search by description
+    * @return JSONObject containing the selected record or an error message if none was selected
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
@@ -130,6 +320,15 @@ public class CashFund extends Parameter {
         }
     }
     
+    /**
+    * Searches a Cash Fund custodian using the given value.
+    *
+    * @param value   the search key
+    * @param byCode  true to search by code, false to search by description
+    * @return JSONObject containing the selected record or an error message if none was selected
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
     public JSONObject searchCustodian(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
         System.out.println("Cash fund : " + lsSQL);
@@ -150,7 +349,12 @@ public class CashFund extends Parameter {
             return poJSON;
         }
     }
-
+    
+    /**
+     * Builds the SQL query used for browsing Cash Fund records.
+     *
+     * @return SQL query string with record status condition applied
+     */
     @Override
     public String getSQ_Browse() {
         String lsCondition = "";
