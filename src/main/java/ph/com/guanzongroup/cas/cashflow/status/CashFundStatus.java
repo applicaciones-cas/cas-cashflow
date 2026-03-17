@@ -12,5 +12,5 @@ package ph.com.guanzongroup.cas.cashflow.status;
 public class CashFundStatus { 
     public static final String OPEN = "0";
     public static final  String ACTIVE = "1";
-    public static final  String DEACTIVE = "3";
+    public static final  String DEACTIVATED = "3";
 }

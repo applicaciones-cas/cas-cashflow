@@ -126,7 +126,7 @@ public class CashFund extends Parameter {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashFundStatus.DEACTIVE;
+        String lsStatus = CashFundStatus.DEACTIVATED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -387,7 +387,7 @@ public class CashFund extends Parameter {
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
                                                 + " AND a.sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartment())
-                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
+//                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
                                             );
         lsSQL = lsSQL + " GROUP BY sEmployID ";
         System.out.println("Executing SQL: " + lsSQL);
@@ -417,7 +417,7 @@ public class CashFund extends Parameter {
     /**
     * Returns a readable status of the current Cash Fund transaction.
     *
-    * @return String representing the transaction status (e.g., "OPEN", "ACTIVE", "DEACTIVE", or "UNKNOWN")
+    * @return String representing the transaction status (e.g., "OPEN", "ACTIVE", "DEACTIVATED", or "UNKNOWN")
     */
     public String getStatus(){
         switch(poModel.getTransactionStatus()){
@@ -425,7 +425,7 @@ public class CashFund extends Parameter {
                 return "OPEN";
             case CashFundStatus.ACTIVE:
                 return "ACTIVE";
-            case CashFundStatus.DEACTIVE:
+            case CashFundStatus.DEACTIVATED:
                 return "INACTIVE";
             default:
                 return "UNKNOWN";
@@ -509,7 +509,7 @@ public class CashFund extends Parameter {
                 case CashFundStatus.ACTIVE:
                     crs.updateString("cRefrStat", "ACTIVE");
                     break;
-                case CashFundStatus.DEACTIVE:
+                case CashFundStatus.DEACTIVATED:
                     crs.updateString("cRefrStat", "INACTIVE");
                     break;
                 default:
@@ -525,7 +525,7 @@ public class CashFund extends Parameter {
                         case CashFundStatus.ACTIVE:
                             crs.updateString("cRefrStat", "ACTIVE");
                             break;
-                        case CashFundStatus.DEACTIVE:
+                        case CashFundStatus.DEACTIVATED:
                             crs.updateString("cRefrStat", "INACTIVE");
                             break;
                     }
