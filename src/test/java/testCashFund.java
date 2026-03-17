@@ -159,49 +159,6 @@ public class testCashFund {
     }  
     
     /**
-    * Tests voiding an existing Cash Fund record.
-    * <p>
-    * Initializes the controller, opens a record, prints its fields and related entity details,
-    * and attempts to void it. Fails the test if any operation is unsuccessful.
-    */
-//    @Test
-    public void testVoidRecord() {
-        JSONObject loJSON;
-        
-        try {
-            poController.initialize();
-
-            loJSON = poController.openRecord("");
-            if (!"success".equals((String) loJSON.get("result"))){
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            } 
-
-            //retreiving using column index
-            for (int lnCol = 1; lnCol <= poController.getModel().getColumnCount(); lnCol++){
-                System.out.println(poController.getModel().getColumn(lnCol) + " ->> " + poController.getModel().getValue(lnCol));
-            }
-            //retreiving using field descriptions
-            System.out.println(poController.getModel().Branch().getBranchName());
-            System.out.println(poController.getModel().Company().getCompanyName());
-            System.out.println(poController.getModel().Industry().getDescription());
-
-            loJSON = poController.VoidRecord();
-            if (!"success".equals((String) loJSON.get("result"))){
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            } 
-            
-            System.out.println((String) loJSON.get("message"));
-        } catch (CloneNotSupportedException |ParseException e) {
-            System.err.println(MiscUtil.getException(e));
-            Assert.fail();
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
-        }
-    }   
-    
-    /**
     * Tests deactivating an existing Cash Fund record.
     * <p>
     * Initializes the controller, opens a record, prints its fields and related entity details,

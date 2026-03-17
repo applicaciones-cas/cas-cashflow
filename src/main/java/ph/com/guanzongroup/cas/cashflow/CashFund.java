@@ -2,6 +2,9 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -77,7 +80,7 @@ public class CashFund extends Parameter {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashFundStatus.CONFIRMED;
+        String lsStatus = CashFundStatus.ACTIVE;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -124,7 +127,7 @@ public class CashFund extends Parameter {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashFundStatus.CANCELLED;
+        String lsStatus = CashFundStatus.DEACTIVE;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -153,53 +156,6 @@ public class CashFund extends Parameter {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Record deactivate successfully.");
-        return poJSON;
-    }
-    
-    /**
-    * Void the current Cash Fund record.
-    *
-    * @return JSONObject containing the result of the confirmation process
-    * @throws ParseException if date parsing fails
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    * @throws CloneNotSupportedException if cloning is not supported
-    */
-    public JSONObject VoidRecord() throws ParseException,
-            SQLException,
-            GuanzonException,
-            CloneNotSupportedException {
-        poJSON = new JSONObject();
-
-        String lsStatus = CashFundStatus.VOID;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Record was already voided.");
-            return poJSON;
-        }
-
-        //validator
-        poJSON = isEntryOkay();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        //change status
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Record voided successfully.");
         return poJSON;
     }
     
@@ -460,6 +416,24 @@ public class CashFund extends Parameter {
     }
     
     /**
+    * Returns a readable status of the current Cash Fund transaction.
+    *
+    * @return String representing the transaction status (e.g., "OPEN", "ACTIVE", "DEACTIVE", or "UNKNOWN")
+    */
+    public String getStatus(){
+        switch(poModel.getTransactionStatus()){
+            case CashFundStatus.OPEN:
+                return "OPEN";
+            case CashFundStatus.ACTIVE:
+                return "ACTIVE";
+            case CashFundStatus.DEACTIVE:
+                return "INACTIVE";
+            default:
+                return "UNKNOWN";
+        }
+    }
+    
+    /**
      * Builds the SQL query used for browsing Cash Fund records.
      *
      * @return SQL query string with record status condition applied
@@ -508,4 +482,143 @@ public class CashFund extends Parameter {
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
+    
+    /**
+     * Displays the status history of the current Cash Fund record.
+     * <p>
+     * Retrieves status changes, maps internal codes to readable values,
+     * fetches the entry user and date, and displays the history via the UI.
+     *
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     * @throws Exception for other unexpected errors
+     */
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+        CachedRowSet crs = getStatusHistory();
+        
+        crs.beforeFirst();
+        
+        while(crs.next()){
+            
+            switch(crs.getString("cRefrStat")){
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case CashFundStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case CashFundStatus.ACTIVE:
+                    crs.updateString("cRefrStat", "ACTIVE");
+                    break;
+                case CashFundStatus.DEACTIVE:
+                    crs.updateString("cRefrStat", "INACTIVE");
+                    break;
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+                    switch (stat){
+                        case "":
+                            crs.updateString("cRefrStat", "-");
+                            break;
+                        case CashFundStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case CashFundStatus.ACTIVE:
+                            crs.updateString("cRefrStat", "ACTIVE");
+                            break;
+                        case CashFundStatus.DEACTIVE:
+                            crs.updateString("cRefrStat", "INACTIVE");
+                            break;
+                    }
+            }
+            crs.updateRow(); 
+        }
+        
+        JSONObject loJSON  = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+        
+        if ("success".equals((String) loJSON.get("result"))){
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        
+        showStatusHistoryUI("Cash Fund", (String) poModel.getValue("sCashFIDx"), entryBy, entryDate, crs);
+    }
+    
+    /**
+    * Retrieves information about who created the current Cash Fund record and when.
+    *
+    * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (date) if successful
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public JSONObject getEntryBy() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL =  " SELECT b.sModified, b.dModified " 
+                        + " FROM "+ SQLUtil.toSQL(poModel.getTable())+" a "
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(poModel.getCashFundId())) ;
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+                    if(loRS.getString("sModified").length() > 10){
+                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+                    } else {
+                        lsEntry = getSysUser(loRS.getString("sModified")); 
+                    }
+                    // Get the LocalDateTime from your result set
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsEntryDate =  dModified.format(formatter);
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return poJSON;
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+    
+    /**
+    * Retrieves the company name of a system user based on their user ID.
+    *
+    * @param fsId the system user ID
+    * @return the company name of the user
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
+                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                lsEntry = loRS.getString("sCompnyNm");
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+        } 
+        return lsEntry;
+    }
+    
 }
