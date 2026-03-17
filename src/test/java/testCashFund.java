@@ -75,7 +75,7 @@ public class testCashFund {
             poController.getModel().setBeginningBalance(1000.00);
             poController.getModel().setBalance(1000.00);
 
-            loJSON = poController.saveRecord();
+            loJSON = poController.saveRecord(); //Comment the validation for sysadmin to save the record
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -148,7 +148,7 @@ public class testCashFund {
             System.out.println(poController.getModel().Company().getCompanyName());
             System.out.println(poController.getModel().Industry().getDescription());
 
-            loJSON = poController.ActivateRecord();
+            loJSON = poController.ActivateRecord();//Comment the validation for sysadmin to save the record
             if (!"success".equals((String) loJSON.get("result"))){
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -191,7 +191,7 @@ public class testCashFund {
             System.out.println(poController.getModel().Company().getCompanyName());
             System.out.println(poController.getModel().Industry().getDescription());
 
-            loJSON = poController.DeactivateRecord();
+            loJSON = poController.DeactivateRecord();//Comment the validation for sysadmin to save the record
             if (!"success".equals((String) loJSON.get("result"))){
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
