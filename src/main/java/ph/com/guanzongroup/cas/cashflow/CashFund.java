@@ -115,11 +115,31 @@ public class CashFund extends Parameter {
             }
         }
         
-        //change status
-        poJSON = statusChange(poModel.getTable(),poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        poJSON = getModel().setValue("cTranStat", lsStatus);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        if (!pbWthParent) {
+            poGRider.beginTrans((String) poEvent.get("event"), 
+                        getModel().getTable(), 
+                        SOURCE_CODE, 
+                        String.valueOf(getModel().getValue(1)));
+        }
+
+        poJSON =  getModel().saveRecord();
+        
+        if ("success".equals((String) poJSON.get("result"))){
+            if (!pbWthParent) poGRider.commitTrans();
+        } else {
+            if (!pbWthParent) poGRider.rollbackTrans();
+        }
+        
+        //change status
+//        poJSON = statusChange(poModel.getTable(),poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
+//        if (!"success".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -155,6 +175,12 @@ public class CashFund extends Parameter {
             poJSON.put("message", "Record was already deactivate.");
             return poJSON;
         }
+        
+        if (poModel.getBalance() != 0.00 || CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Deactivation is only allowed if status is confirmed and balance is 0.00");
+            return poJSON;
+        }
 
         //validator
         poJSON = isEntryOkay();
@@ -179,11 +205,31 @@ public class CashFund extends Parameter {
             }
         }
         
-        //change status
-        poJSON = statusChange(poModel.getTable(), poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        poJSON = getModel().setValue("cTranStat", lsStatus);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        if (!pbWthParent) {
+            poGRider.beginTrans((String) poEvent.get("event"), 
+                        getModel().getTable(), 
+                        SOURCE_CODE, 
+                        String.valueOf(getModel().getValue(1)));
+        }
+
+        poJSON =  getModel().saveRecord();
+        
+        if ("success".equals((String) poJSON.get("result"))){
+            if (!pbWthParent) poGRider.commitTrans();
+        } else {
+            if (!pbWthParent) poGRider.rollbackTrans();
+        }
+        
+        //change status
+//        poJSON = statusChange(poModel.getTable(), poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
+//        if (!"success".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
