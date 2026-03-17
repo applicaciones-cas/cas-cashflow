@@ -65,6 +65,30 @@ public class CashFund extends Parameter {
     }
     
     /**
+    * Requests user approval for the current transaction.
+    *
+    * @return JSONObject containing approval result and message
+    */
+    public JSONObject callApproval(){
+        poJSON = new JSONObject();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer.");
+                return poJSON;
+            }
+        }   
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    /**
     * Activate the current Cash Fund record.
     *
     * @return JSONObject containing the result of the confirmation process
@@ -101,47 +125,44 @@ public class CashFund extends Parameter {
         }
         
         if(!pbWthParent){
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                } else {
-                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "User is not an authorized approving officer.");
-                        return poJSON;
-                    }
-                }
+            poJSON = callApproval();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
         }
         
-        poJSON = updateRecord();
-        if ("error".equals((String) poJSON.get("result"))){
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
-        poJSON = getModel().setValue("cTranStat", lsStatus);
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        if (!pbWthParent) {
-            poGRider.beginTrans((String) poEvent.get("event"), 
-                        getModel().getTable(), 
-                        SOURCE_CODE, 
-                        String.valueOf(getModel().getValue(1)));
-        }
-
-        poJSON =  getModel().saveRecord();
-        
-        if ("success".equals((String) poJSON.get("result"))){
-            if (!pbWthParent) poGRider.commitTrans();
-        } else {
-            if (!pbWthParent){
-                poGRider.rollbackTrans();
-                return poJSON;
-            } 
-        }
+//        poJSON = updateRecord();
+//        if ("error".equals((String) poJSON.get("result"))){
+//            return poJSON;
+//        }
+//        
+//        poJSON = getModel().setValue("cTranStat", lsStatus);
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
+//        
+//        if (!pbWthParent) {
+//            poGRider.beginTrans((String) poEvent.get("event"), 
+//                        getModel().getTable(), 
+//                        SOURCE_CODE, 
+//                        String.valueOf(getModel().getValue(1)));
+//        }
+//
+//        poJSON =  getModel().saveRecord();
+//        
+//        if ("success".equals((String) poJSON.get("result"))){
+//            if (!pbWthParent) poGRider.commitTrans();
+//        } else {
+//            if (!pbWthParent){
+//                poGRider.rollbackTrans();
+//                return poJSON;
+//            } 
+//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -180,7 +201,7 @@ public class CashFund extends Parameter {
         
         if (poModel.getBalance() != 0.0000 || !CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Deactivation is only allowed if status is confirmed and balance is 0.00");
+            poJSON.put("message", "Deactivation is only allowed if status is active and balance is 0.00");
             return poJSON;
         }
 
@@ -192,48 +213,45 @@ public class CashFund extends Parameter {
         
         if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
-                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                    poJSON = ShowDialogFX.getUserApproval(poGRider);
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    } else {
-                        if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "User is not an authorized approving officer.");
-                            return poJSON;
-                        }
-                    }
+                poJSON = callApproval();
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
                 }
             }
         }
         
-        poJSON = updateRecord();
-        if ("error".equals((String) poJSON.get("result"))){
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
-        //change status
-        poJSON = getModel().setValue("cTranStat", lsStatus);
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        if (!pbWthParent) {
-            poGRider.beginTrans((String) poEvent.get("event"), 
-                        getModel().getTable(), 
-                        SOURCE_CODE, 
-                        String.valueOf(getModel().getValue(1)));
-        }
-
-        poJSON =  getModel().saveRecord();
-        if ("success".equals((String) poJSON.get("result"))){
-            if (!pbWthParent) poGRider.commitTrans();
-        } else {
-            if (!pbWthParent){
-                poGRider.rollbackTrans();
-                return poJSON;
-            } 
-        }
+//        poJSON = updateRecord();
+//        if ("error".equals((String) poJSON.get("result"))){
+//            return poJSON;
+//        }
+//        
+//        //change status
+//        poJSON = getModel().setValue("cTranStat", lsStatus);
+//        if ("error".equals((String) poJSON.get("result"))) {
+//            return poJSON;
+//        }
+//        
+//        if (!pbWthParent) {
+//            poGRider.beginTrans((String) poEvent.get("event"), 
+//                        getModel().getTable(), 
+//                        SOURCE_CODE, 
+//                        String.valueOf(getModel().getValue(1)));
+//        }
+//
+//        poJSON =  getModel().saveRecord();
+//        if ("success".equals((String) poJSON.get("result"))){
+//            if (!pbWthParent) poGRider.commitTrans();
+//        } else {
+//            if (!pbWthParent){
+//                poGRider.rollbackTrans();
+//                return poJSON;
+//            } 
+//        }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
