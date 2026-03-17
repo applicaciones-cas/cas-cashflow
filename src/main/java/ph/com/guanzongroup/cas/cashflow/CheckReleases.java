@@ -809,15 +809,20 @@ public class CheckReleases extends Transaction {
     }
 
     public JSONObject computeMasterFields() throws SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        double totalAmount = 0.0000;
+    poJSON = new JSONObject();
+    double totalAmount = 0.0000;
 
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+    for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+
+        // include only reversed ("+")
+        if (Detail(lnCtr).isReverse()) {
             totalAmount += Detail(lnCtr).CheckPayment().getAmount();
         }
-        Master().setTransactionTotal(totalAmount);
-        return poJSON;
     }
+
+    Master().setTransactionTotal(totalAmount);
+    return poJSON;
+}
 
     private Model_Check_Release_Master CheckReleaseMasterList() {
         return new CashflowModels(poGRider).CheckReleaseMaster();
@@ -965,14 +970,14 @@ public class CheckReleases extends Transaction {
             parameters.put("dDatexxx", new java.sql.Date(poGRider.getServerDate().getTime()));
 
             switch (Master().getTransactionStatus()) {
-                case CheckTransferStatus.CONFIRMED:
+                case CheckReleaseStatus.CONFIRMED:
                     if ("1".equals(Master().isPrintedStatus())) {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approvedreprint.png";
                     } else {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approved.png";
                     }
                     break;
-                case CheckTransferStatus.VOID:
+                case CheckReleaseStatus.VOID:
                     watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\cancelled.png";
                     break;
             }

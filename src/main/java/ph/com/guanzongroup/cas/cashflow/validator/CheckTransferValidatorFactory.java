@@ -79,7 +79,12 @@ public class CheckTransferValidatorFactory implements GValidator {
             poJSON = new JSONObject();
 
             if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
-                poJSON.put("message", "Industry isnot set");
+                poJSON.put("message", "Industry is not set");
+                return poJSON;
+            }
+            
+            if (poMaster.getDestination()== null || poMaster.getDestination().isEmpty()) {
+                poJSON.put("message", "Distination is not set");
                 return poJSON;
             }
 //

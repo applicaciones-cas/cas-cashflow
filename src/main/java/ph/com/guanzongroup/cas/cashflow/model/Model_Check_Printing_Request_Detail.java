@@ -201,7 +201,5 @@ public class Model_Check_Printing_Request_Detail extends Model {
             return poCheckPayments;
         }
     }
-    
-    
  
 }
