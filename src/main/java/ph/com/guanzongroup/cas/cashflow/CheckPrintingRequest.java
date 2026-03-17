@@ -1575,4 +1575,206 @@ public class CheckPrintingRequest extends Transaction {
         return lsEntry;
     }
 
+    
+    private boolean hasRightToSave() {
+      return true;
+    }
+    
+    @Override
+    protected JSONObject saveTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+        this.poJSON = new JSONObject();
+        if (!this.pbInitTran) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "Object is not initialized.");
+            return this.poJSON;
+        }
+        if (this.pnEditMode == 1) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "Saving of unmodified transaction is not allowed.");
+            return this.poJSON;
+        }
+        if (!hasRightToSave()) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "User has no right to save.");
+            return this.poJSON;
+        }
+
+        this.poJSON = willSave();
+        if ("error".equals(this.poJSON.get("result"))) {
+            return this.poJSON;
+        }
+
+        if (getEditMode() == 0 || getEditMode() == 2) {
+            this.pdModified = this.poGRider.getServerDate();
+            this.poMaster.setValue("sModified", this.poGRider.Encrypt(this.poGRider.getUserID()));
+        }
+
+        if (!this.pbWthParent) {
+            this.poGRider.beginTrans((String) this.poEvent.get("event"), this.poMaster.getTable(), this.SOURCE_CODE, String.valueOf(this.poMaster.getValue(1)));
+        }
+
+        this.poJSON = save();
+
+        if ("success".equals(this.poJSON.get("result"))) {
+
+            if (this.pbVerifyEntryNo) {
+                this.poMaster.setValue("nEntryNox", Integer.valueOf(this.paDetail.size()));
+            }
+
+            if (this.pnEditMode == 0 || this.pnEditMode == 2) {
+
+                this.poMaster.setValue("dModified", this.pdModified);
+                this.poJSON = this.poMaster.saveRecord();
+
+                if ("error".equals(this.poJSON.get("result"))) {
+                    if (!this.pbWthParent) {
+                        this.poGRider.rollbackTrans();
+                    }
+                    return this.poJSON;
+                }
+
+                if (this.pnEditMode == 0) {
+
+                    for (int lnCtr = 0; lnCtr <= this.paDetail.size() - 1; lnCtr++) {
+                        ((Model) this.paDetail.get(lnCtr)).setValue("dModified", this.pdModified);
+                        this.poJSON = ((Model) this.paDetail.get(lnCtr)).saveRecord();
+
+                        if ("error".equals(this.poJSON.get("result"))) {
+                            if (!this.pbWthParent) {
+                                this.poGRider.rollbackTrans();
+                            }
+                            return this.poJSON;
+                        }
+                    }
+
+                } else {
+
+                    String lsSQL = "SELECT * FROM " + this.poDetail.getTable()
+                            + " WHERE sTransNox = "
+                            + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                            + " ORDER BY nEntryNox";
+
+                    ResultSet loRS = this.poGRider.executeQuery(lsSQL);
+                    long lnRow = MiscUtil.RecordCount(loRS);
+
+                    if (lnRow <= this.paDetail.size()) {
+
+                        for (int lnCtr = 0; lnCtr <= this.paDetail.size() - 1; lnCtr++) {
+
+                            boolean lbDelete = false;
+
+                            if (lnCtr <= lnRow - 1L) {
+
+                                this.poDetail.openRecord(
+                                        (String) this.poMaster.getValue(this.poDetail.getColumn("sTransNox")),
+                                        lnCtr + 1
+                                );
+
+                                Object loOld = this.poDetail.getValue(this.poDetail.getColumn("sSourceNo"));
+                                Object loNew = ((Model) this.paDetail.get(lnCtr)).getValue(this.poDetail.getColumn("sSourceNo"));
+
+                                if (loOld == null || !loOld.equals(loNew)) {
+                                    lbDelete = true;
+                                }
+                            }
+
+                            if (lbDelete) {
+
+                                lsSQL = "DELETE FROM " + this.poDetail.getTable()
+                                        + " WHERE sTransNox = "
+                                        + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                                        + " AND nEntryNox = " + SQLUtil.toSQL(lnCtr + 1);
+
+                                if (this.poGRider.executeQuery(lsSQL, this.poDetail.getTable(), this.psBranchCode, this.psDestination, "") <= 0L) {
+                                    if (!this.pbWthParent) {
+                                        this.poGRider.rollbackTrans();
+                                    }
+                                    this.poJSON.put("result", "error");
+                                    this.poJSON.put("message", "Unable to remove old records.");
+                                    return this.poJSON;
+                                }
+
+                                ((Model) this.paDetail.get(lnCtr)).setEditMode(0);
+
+                            } else {
+
+                                if (lnCtr <= lnRow - 1L) {
+                                    ((Model) this.paDetail.get(lnCtr)).setEditMode(2);
+                                } else {
+                                    ((Model) this.paDetail.get(lnCtr)).setEditMode(0);
+                                }
+                            }
+
+                            ((Model) this.paDetail.get(lnCtr)).setValue("dModified", this.pdModified);
+                            this.poJSON = ((Model) this.paDetail.get(lnCtr)).saveRecord();
+
+                            if ("error".equals(this.poJSON.get("result"))) {
+                                if (!this.pbWthParent) {
+                                    this.poGRider.rollbackTrans();
+                                }
+                                return this.poJSON;
+                            }
+                        }
+
+                    } else {
+
+                        lsSQL = "DELETE FROM " + this.poDetail.getTable()
+                                + " WHERE sTransNox = "
+                                + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                                + " AND nEntryNox > " + this.paDetail.size();
+
+                        if (this.poGRider.executeQuery(lsSQL, this.poDetail.getTable(), this.psBranchCode, this.psDestination, "") <= 0L) {
+                            if (!this.pbWthParent) {
+                                this.poGRider.rollbackTrans();
+                            }
+                            this.poJSON.put("result", "error");
+                            this.poJSON.put("message", "Unable to remove old records.");
+                            return this.poJSON;
+                        }
+                    }
+                }
+
+            } else {
+
+                if (!this.pbWthParent) {
+                    this.poGRider.rollbackTrans();
+                }
+
+                this.poJSON.put("result", "error");
+                this.poJSON.put("message", "Edit mode is not allowed to save transaction.");
+                return this.poJSON;
+            }
+
+        } else {
+
+            if (!this.pbWthParent) {
+                this.poGRider.rollbackTrans();
+            }
+
+            return this.poJSON;
+        }
+
+        this.poJSON = saveOthers();
+
+        if ("error".equals(this.poJSON.get("result"))) {
+            if (!this.pbWthParent) {
+                this.poGRider.rollbackTrans();
+            }
+            return this.poJSON;
+        }
+
+        if (!this.pbWthParent) {
+            this.poGRider.commitTrans();
+        }
+
+        saveComplete();
+        this.pnEditMode = -1;
+        this.pbRecordExist = true;
+
+        this.poJSON = new JSONObject();
+        this.poJSON.put("result", "success");
+        this.poJSON.put("message", "Transaction saved successfully.");
+
+        return this.poJSON;
+    }
 }

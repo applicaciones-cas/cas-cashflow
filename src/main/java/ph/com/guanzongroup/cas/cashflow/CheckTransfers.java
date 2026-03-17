@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.IntStream;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
 import javax.sql.rowset.CachedRowSet;
@@ -181,6 +182,17 @@ public class CheckTransfers extends Transaction {
                 return poJSON;
             }
         }
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (!Detail(lnCtr).isReverse()) continue;
+            if (Detail(lnCtr).CheckPayment().getLocation() != null
+                    && !"0".equals(Detail(lnCtr).CheckPayment().getLocation())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Unable to proceed with confirmation. Check No. "
+                        + Detail(lnCtr).CheckPayment().getCheckNo()
+                        + " has already been transferred.");
+                return poJSON;
+            }
+        }
         poJSON = setValueToOthers(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -257,7 +269,7 @@ public class CheckTransfers extends Transaction {
 
     public JSONObject VoidTransaction(String remarks) throws  SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-
+        String status = (String) poMaster.getValue("cTranStat");
         String lsStatus = CheckTransferStatus.VOID;
         boolean lbConfirm = true;
 
@@ -291,11 +303,30 @@ public class CheckTransfers extends Transaction {
             }
         }
         
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        if (CheckTransferStatus.CONFIRMED.equals(status)) {
+            poJSON = setValueToOthers(lsStatus);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
+        
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        
+        if (CheckTransferStatus.CONFIRMED.equals(status)) {
+            poJSON = saveUpdates();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+        }
+        
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -326,9 +357,21 @@ public class CheckTransfers extends Transaction {
             poJSON.put("message", "Transaction was already posted.");
             return poJSON;
         }
-//        LocalDateTime received = Master().getReceivedDate();
-//        Timestamp ts = Timestamp.valueOf(received);
-        
+
+        boolean allNotReceived = true;
+
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (Detail(lnCtr).isReceived()) {
+                allNotReceived = false; 
+                break; 
+            }
+        }
+
+        if (allNotReceived) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "At least one detail must be received.");
+            return poJSON;
+        }
         
         System.out.println("DATE TIME " + pdDateTime);
 
@@ -473,7 +516,7 @@ public class CheckTransfers extends Transaction {
                 + " k.sPayeeNme, "
                 + " f.sBankName "
                 + " FROM Check_Transfer_Master a "
-                + " INNER JOIN Check_Transfer_Detail b "
+                + " LEFT JOIN Check_Transfer_Detail b "
                 + "   ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Branch c "
                 + "   ON LEFT(a.sTransNox, 4) = c.sBranchCd "
@@ -494,13 +537,15 @@ public class CheckTransfers extends Transaction {
     public JSONObject SearchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
+        List<String> lsFilter = new ArrayList<>();
+        
         if (psTranStat.length() > 1) {
             for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                 lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
             }
-            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+           lsFilter.add( "  a.cTranStat IN (" + lsTransStat.substring(2) + ")");
         } else {
-            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            lsFilter.add("  a.cTranStat = " + SQLUtil.toSQL(psTranStat));
         }
         initSQL();
 //        String lsFilterCondition = String.join(" AND ", "a.sDestinat = " + SQLUtil.toSQL(fsDistinantion),
@@ -509,8 +554,8 @@ public class CheckTransfers extends Transaction {
 //
 //        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
         String lsSQL = SQL_BROWSE;
-        if (!psTranStat.isEmpty()) {
-            lsSQL = lsSQL + lsTransStat;
+        if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
         }
 
         lsSQL = lsSQL + " GROUP BY a.sTransNox";
@@ -521,6 +566,52 @@ public class CheckTransfers extends Transaction {
                 "Transaction Date»Transaction No»Branch»Payee»Payee",
                 "a.dTransact»a.sTransNox»xBranchNm»k.sPayeeNme»f.sBankName",
                 "a.dTransact»a.sTransNox»c.sBranchNm»k.sPayeeNme»f.sBankName",
+                1);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
+    public JSONObject SearchTransaction(String lsValue, boolean byCode) throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        String lsFilterCondition = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " AND a.cTranStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " AND a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+        }
+        initSQL();
+        if(byCode){
+            lsFilterCondition = String.join(" AND ", "d.sBranchNm LIKE " + SQLUtil.toSQL(lsValue + "%"));
+        }else{
+            lsFilterCondition = String.join(" AND ", "a.sTransNox LIKE " + SQLUtil.toSQL("%" + lsValue + "%"));
+        }
+        
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+//        String lsSQL = SQL_BROWSE;
+        if (!psTranStat.isEmpty()) {
+            lsSQL = lsSQL + lsTransStat;
+        }
+
+        lsSQL = lsSQL + " GROUP BY a.sTransNox";
+        System.out.println("SQL EXECUTED: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "", 
+                "Transaction Date»Transaction No»Destination»Payee»Payee",
+                "a.dTransact»a.sTransNox»xDestinat»k.sPayeeNme»f.sBankName",
+                "a.dTransact»a.sTransNox»d.sBranchNm»k.sPayeeNme»f.sBankName",
                 1);
 
         if (poJSON != null) {
@@ -545,7 +636,10 @@ public class CheckTransfers extends Transaction {
 
         return poJSON;
     }
-
+    @Override
+    public JSONObject deleteDetail(int rowNumber) {
+        return super.deleteDetail(rowNumber);
+    }
     
     @Override
     public String getSourceCode() {
@@ -582,12 +676,22 @@ public class CheckTransfers extends Transaction {
                 detail.remove();
             }
         }
+        if(getDetailCount() <= 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
+        }
 
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
+            Detail(lnCtr).setSourceCode(Detail(lnCtr).CheckPayment().getSourceCode());
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+        }
+        if(getEditMode() == EditMode.ADDNEW){
+            Master().setPreparedBy(poGRider.getUserID());
+            Master().setPreparedDate(poGRider.getSysDate());
         }
 
         if (CheckTransferStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
@@ -597,7 +701,30 @@ public class CheckTransfers extends Transaction {
             }
         }
         
-      
+        if (CheckTransferStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+            }
+        }
+        
+        System.out.println("=================START TEST SAVE====================");
+            for (int lnCntr = 0; lnCntr <= getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + Detail(lnCntr).getEntryNo());
+                System.out.println("Transaction No. : " + Detail(lnCntr).getTransactionNo());
+                System.out.println("Source No. : " + Detail(lnCntr).getSourceNo());
+                System.out.println("REVERSE. : " + Detail(lnCntr).isReverse());
+                System.out.println("===============================================");
+            }
+            System.out.println("==================END TEST SAVE=====================");
 
         poJSON.put("result", "success");
         return poJSON;
@@ -760,7 +887,7 @@ public class CheckTransfers extends Transaction {
         
 
         if (fsDestination != null && !fsDestination.trim().isEmpty()) {
-            lsFilter.add(" a.sDestinat = " + SQLUtil.toSQL(fsDestination));
+            lsFilter.add(" b.sBranchNm LIKE " + SQLUtil.toSQL(fsDestination + "%"));
         }
         if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
             lsFilter.add(" a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransNo));
@@ -940,9 +1067,14 @@ public class CheckTransfers extends Transaction {
         poJSON = new JSONObject();
         double totalAmount = 0.0000;
 
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+
+            // include only reversed ("+")
+            if (Detail(lnCtr).isReverse()) {
+                totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+            }
         }
+
         Master().setTransactionTotal(totalAmount);
         return poJSON;
     }
@@ -967,7 +1099,7 @@ public class CheckTransfers extends Transaction {
 //
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             String fsCheckTransNo = Detail(lnCtr).getSourceNo();
-            updateCheckPayments(fsCheckTransNo);
+            updateCheckPayments(fsCheckTransNo,status);
         }
         poJSON.put("result", "success");
         return poJSON;
@@ -993,7 +1125,7 @@ public class CheckTransfers extends Transaction {
         return poJSON;
     }
     
-    private void updateCheckPayments(String fsCheckTransNo)
+    private void updateCheckPayments(String fsCheckTransNo,String fsstatus)
             throws GuanzonException, SQLException, CloneNotSupportedException {
 
         CheckPayments issuance = CheckPayments();
@@ -1004,14 +1136,21 @@ public class CheckTransfers extends Transaction {
         JSONObject record = issuance.poModel.openRecord(fsCheckTransNo);
 
         issuance.poModel.updateRecord();
-
+        
+        if(CheckTransferStatus.CONFIRMED.equals(fsstatus)){
         // Set updated values
-        issuance.poModel.setReleased("1");
-        issuance.poModel.setBranchCode(Master().getDestination());
-        issuance.poModel.setLocation("4");
-        issuance.poModel.setModifyingId(poGRider.getUserID());
-        issuance.poModel.setModifiedDate(poGRider.getServerDate());
-
+            issuance.poModel.setReleased("1");
+            issuance.poModel.setBranchCode(Master().getDestination());
+            issuance.poModel.setLocation("4");
+            issuance.poModel.setModifyingId(poGRider.getUserID());
+            issuance.poModel.setModifiedDate(poGRider.getServerDate());
+        }else if(CheckTransferStatus.VOID.equals(fsstatus)){
+            issuance.poModel.setReleased("0");
+            issuance.poModel.setBranchCode(Master().getDestination());
+            issuance.poModel.setLocation("0");
+            issuance.poModel.setModifyingId(poGRider.getUserID());
+            issuance.poModel.setModifiedDate(poGRider.getServerDate());
+        }
     }
     
         private JSONObject receivedCheck(String fstransNox)
@@ -1073,9 +1212,8 @@ public class CheckTransfers extends Transaction {
             if("error".equals((String) loJSONEntry.get("result"))){
                 return loJSONEntry;
             }
-            
             if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
-                parameters.put("sCompnyNm", "Prepared by: "+ (String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
+                parameters.put("sCompnyNm",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
             }
             
             JSONObject loJSONConfirm = getConfirmedBy();
@@ -1083,7 +1221,7 @@ public class CheckTransfers extends Transaction {
                 return loJSONConfirm;
             } else {
                 if((String) loJSONConfirm.get("sConfirmed") != null && !"".equals((String) loJSONConfirm.get("sConfirmed"))){
-                    parameters.put("sConfirmed", "Confirmed by: "+ (String) loJSONConfirm.get("sConfirmed") + " " + String.valueOf((String) loJSONConfirm.get("sConfrmDte"))); 
+                    parameters.put("sConfirmed",  (String) loJSONConfirm.get("sConfirmed") + " " + String.valueOf((String) loJSONConfirm.get("sConfrmDte"))); 
                 }
             }
             
@@ -1100,7 +1238,7 @@ public class CheckTransfers extends Transaction {
             parameters.put("sApprval2", "");
             parameters.put("sApprval3", "");
             //Update value when approved
-            if(Master().getTransactionStatus().equals(PurchaseOrderStatus.APPROVED)){
+            if(Master().getTransactionStatus().equals(CheckTransferStatus.POSTED)){
                 List<String> lsList = getApprover();
                 for(int lnCtr = 0;lnCtr <= lsList.size() - 1;lnCtr++){
                     parameters.put("sApprval"+(lnCtr+1),lsList.get(lnCtr)); 
@@ -1111,13 +1249,16 @@ public class CheckTransfers extends Transaction {
             parameters.put("dDatexxx", new java.sql.Date(poGRider.getServerDate().getTime()));
 
             switch (Master().getTransactionStatus()) {
-                case PurchaseOrderStatus.POSTED:
-                case PurchaseOrderStatus.APPROVED:
+                case CheckTransferStatus.POSTED:
+                case CheckTransferStatus.CONFIRMED:
                     if ("1".equals(Master().isPrintedStatus())) {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approvedreprint.png";
                     } else {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approved.png";
                     }
+                    break;
+                case CheckTransferStatus.VOID:
+                    watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\cancelled.png";
                     break;
             }
             parameters.put("watermarkImagePath", watermarkPath);
@@ -1126,7 +1267,7 @@ public class CheckTransfers extends Transaction {
             double lnTotal = 0.0000;
             
             for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-                
+                if (!Detail(lnCtr).isReverse()) continue;
                 orderDetails.add(new OrderDetail(lnCtr + 1,
                     safeString(Detail(lnCtr).getSourceNo()), // Source No
                         safeString(Detail(lnCtr).CheckPayment().getCheckNo()), // Barcode
@@ -1367,7 +1508,7 @@ public class CheckTransfers extends Transaction {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM PO_Master a "
+                        + " FROM Check_Transfer_Master a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
@@ -1404,10 +1545,10 @@ public class CheckTransfers extends Transaction {
     public JSONObject getConfirmedBy() throws SQLException, GuanzonException {
         String lsConfirm = "";
         String lsDate = "";
-        String lsSQL = "SELECT b.sModified,b.dModified FROM PO_Master a "
-                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = 'PO_Master' "
-                     + " AND ( b.cRefrStat = "+ SQLUtil.toSQL(PurchaseOrderStatus.CONFIRMED) 
-                     + " OR (ASCII(b.cRefrStat) - 64)  = "+ SQLUtil.toSQL(PurchaseOrderStatus.CONFIRMED) + " )";
+        String lsSQL = "SELECT b.sModified,b.dModified FROM Check_Transfer_Master a "
+                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = 'Check_Transfer_Master' "
+                     + " AND ( b.cRefrStat = "+ SQLUtil.toSQL(CheckTransferStatus.CONFIRMED) 
+                     + " OR (ASCII(b.cRefrStat) - 64)  = "+ SQLUtil.toSQL(CheckTransferStatus.CONFIRMED) + " )";
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -1558,5 +1699,210 @@ public class CheckTransfers extends Transaction {
         // Call the static method and store the result in pdDateTime
         this.pdDateTime = getDateTime(selectedDate);
     }
+    
+    
+    
+    private boolean hasRightToSave() {
+      return true;
+    }
+    
+    @Override
+    protected JSONObject saveTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+        this.poJSON = new JSONObject();
+        if (!this.pbInitTran) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "Object is not initialized.");
+            return this.poJSON;
+        }
+        if (this.pnEditMode == 1) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "Saving of unmodified transaction is not allowed.");
+            return this.poJSON;
+        }
+        if (!hasRightToSave()) {
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", "User has no right to save.");
+            return this.poJSON;
+        }
+
+        this.poJSON = willSave();
+        if ("error".equals(this.poJSON.get("result"))) {
+            return this.poJSON;
+        }
+
+        if (getEditMode() == 0 || getEditMode() == 2) {
+            this.pdModified = this.poGRider.getServerDate();
+            this.poMaster.setValue("sModified", this.poGRider.Encrypt(this.poGRider.getUserID()));
+        }
+
+        if (!this.pbWthParent) {
+            this.poGRider.beginTrans((String) this.poEvent.get("event"), this.poMaster.getTable(), this.SOURCE_CODE, String.valueOf(this.poMaster.getValue(1)));
+        }
+
+        this.poJSON = save();
+
+        if ("success".equals(this.poJSON.get("result"))) {
+
+            if (this.pbVerifyEntryNo) {
+                this.poMaster.setValue("nEntryNox", Integer.valueOf(this.paDetail.size()));
+            }
+
+            if (this.pnEditMode == 0 || this.pnEditMode == 2) {
+
+                this.poMaster.setValue("dModified", this.pdModified);
+                this.poJSON = this.poMaster.saveRecord();
+
+                if ("error".equals(this.poJSON.get("result"))) {
+                    if (!this.pbWthParent) {
+                        this.poGRider.rollbackTrans();
+                    }
+                    return this.poJSON;
+                }
+
+                if (this.pnEditMode == 0) {
+
+                    for (int lnCtr = 0; lnCtr <= this.paDetail.size() - 1; lnCtr++) {
+                        ((Model) this.paDetail.get(lnCtr)).setValue("dModified", this.pdModified);
+                        this.poJSON = ((Model) this.paDetail.get(lnCtr)).saveRecord();
+
+                        if ("error".equals(this.poJSON.get("result"))) {
+                            if (!this.pbWthParent) {
+                                this.poGRider.rollbackTrans();
+                            }
+                            return this.poJSON;
+                        }
+                    }
+
+                } else {
+
+                    String lsSQL = "SELECT * FROM " + this.poDetail.getTable()
+                            + " WHERE sTransNox = "
+                            + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                            + " ORDER BY nEntryNox";
+
+                    ResultSet loRS = this.poGRider.executeQuery(lsSQL);
+                    long lnRow = MiscUtil.RecordCount(loRS);
+
+                    if (lnRow <= this.paDetail.size()) {
+
+                        for (int lnCtr = 0; lnCtr <= this.paDetail.size() - 1; lnCtr++) {
+
+                            boolean lbDelete = false;
+
+                            if (lnCtr <= lnRow - 1L) {
+
+                                this.poDetail.openRecord(
+                                        (String) this.poMaster.getValue(this.poDetail.getColumn("sTransNox")),
+                                        lnCtr + 1
+                                );
+
+                                Object loOld = this.poDetail.getValue(this.poDetail.getColumn("sSourceNo"));
+                                Object loNew = ((Model) this.paDetail.get(lnCtr)).getValue(this.poDetail.getColumn("sSourceNo"));
+
+                                if (loOld == null || !loOld.equals(loNew)) {
+                                    lbDelete = true;
+                                }
+                            }
+
+                            if (lbDelete) {
+
+                                lsSQL = "DELETE FROM " + this.poDetail.getTable()
+                                        + " WHERE sTransNox = "
+                                        + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                                        + " AND nEntryNox = " + SQLUtil.toSQL(lnCtr + 1);
+
+                                if (this.poGRider.executeQuery(lsSQL, this.poDetail.getTable(), this.psBranchCode, this.psDestination, "") <= 0L) {
+                                    if (!this.pbWthParent) {
+                                        this.poGRider.rollbackTrans();
+                                    }
+                                    this.poJSON.put("result", "error");
+                                    this.poJSON.put("message", "Unable to remove old records.");
+                                    return this.poJSON;
+                                }
+
+                                ((Model) this.paDetail.get(lnCtr)).setEditMode(0);
+
+                            } else {
+
+                                if (lnCtr <= lnRow - 1L) {
+                                    ((Model) this.paDetail.get(lnCtr)).setEditMode(2);
+                                } else {
+                                    ((Model) this.paDetail.get(lnCtr)).setEditMode(0);
+                                }
+                            }
+
+                            ((Model) this.paDetail.get(lnCtr)).setValue("dModified", this.pdModified);
+                            this.poJSON = ((Model) this.paDetail.get(lnCtr)).saveRecord();
+
+                            if ("error".equals(this.poJSON.get("result"))) {
+                                if (!this.pbWthParent) {
+                                    this.poGRider.rollbackTrans();
+                                }
+                                return this.poJSON;
+                            }
+                        }
+
+                    } else {
+
+                        lsSQL = "DELETE FROM " + this.poDetail.getTable()
+                                + " WHERE sTransNox = "
+                                + SQLUtil.toSQL(this.poMaster.getValue(this.poDetail.getColumn("sTransNox")))
+                                + " AND nEntryNox > " + this.paDetail.size();
+
+                        if (this.poGRider.executeQuery(lsSQL, this.poDetail.getTable(), this.psBranchCode, this.psDestination, "") <= 0L) {
+                            if (!this.pbWthParent) {
+                                this.poGRider.rollbackTrans();
+                            }
+                            this.poJSON.put("result", "error");
+                            this.poJSON.put("message", "Unable to remove old records.");
+                            return this.poJSON;
+                        }
+                    }
+                }
+
+            } else {
+
+                if (!this.pbWthParent) {
+                    this.poGRider.rollbackTrans();
+                }
+
+                this.poJSON.put("result", "error");
+                this.poJSON.put("message", "Edit mode is not allowed to save transaction.");
+                return this.poJSON;
+            }
+
+        } else {
+
+            if (!this.pbWthParent) {
+                this.poGRider.rollbackTrans();
+            }
+
+            return this.poJSON;
+        }
+
+        this.poJSON = saveOthers();
+
+        if ("error".equals(this.poJSON.get("result"))) {
+            if (!this.pbWthParent) {
+                this.poGRider.rollbackTrans();
+            }
+            return this.poJSON;
+        }
+
+        if (!this.pbWthParent) {
+            this.poGRider.commitTrans();
+        }
+
+        saveComplete();
+        this.pnEditMode = -1;
+        this.pbRecordExist = true;
+
+        this.poJSON = new JSONObject();
+        this.poJSON.put("result", "success");
+        this.poJSON.put("message", "Transaction saved successfully.");
+
+        return this.poJSON;
+    }
+
 }
 
