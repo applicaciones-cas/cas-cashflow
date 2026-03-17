@@ -1,5 +1,6 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
@@ -8,7 +9,11 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
+import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
+import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Department;
+import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
@@ -203,9 +208,10 @@ public class CashFund extends Parameter {
     *
     * @return JSONObject containing validation result and message if invalid
     * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
     */
     @Override
-    public JSONObject isEntryOkay() throws SQLException {
+    public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
         if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
@@ -271,11 +277,53 @@ public class CashFund extends Parameter {
                 }
             }
         }
+        
+        poJSON = checkExistingCashFund();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
 
         poModel.setModifiedBy(poGRider.getUserID());
         poModel.setModifiedDate(poGRider.getServerDate());
-
+        
         poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Checks if a similar Cash Fund record already exists in the database.
+     *
+     * @return JSONObject indicating whether a duplicate record was found
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
+    public JSONObject checkExistingCashFund() throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()), 
+                                                                    " sCashFIDx != " + SQLUtil.toSQL(getModel().getCashFundId())
+                                                                    + " AND sBranchCD = " + SQLUtil.toSQL(getModel().getBranchCode())
+                                                                    + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
+                                                                    + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
+                                                                    + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
+                                                                    + " AND sCashFMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
+                                                                    + " AND sCashFDsc = " + SQLUtil.toSQL(getModel().getDescription())
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sRecurrID") != null && !"".equals(loRS.getString("sRecurrID"))){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
         return poJSON;
     }
     
@@ -306,8 +354,8 @@ public class CashFund extends Parameter {
                 lsSQL,
                 value,
                 "ID»Description»Branch»Department»Custodian",
-                "sCashFIDx»sPayeeNme»xPrtclrNm»xClientNm",
-                "a.sPayeeIDx»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                "sCashFIDx»sCashFDsc»xBranchNm»xDeptName»xCustdian",
+                "a.sPayeeIDx»a.sCashFDsc»IFNULL(d.sBranchNm, '')»IFNULL(e.sDeptName, '')»f.sCompnyNm",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
@@ -321,6 +369,50 @@ public class CashFund extends Parameter {
     }
     
     /**
+    * Searches for a branch and assigns it to the current Cash Fund model.
+    *
+    * @param value     the search key
+    * @param byCode    true to search by code, false to search by description
+    * @param isSearch  indicates if the action is triggered from search
+    * @return JSONObject containing the search result
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setBranchCode(object.getModel().getBranchCode());
+        }
+
+        return poJSON;
+    }
+    
+    /**
+    * Searches for a department and assigns it to the current Cash Fund model.
+    *
+    * @param value   the search key
+    * @param byCode  true to search by code, false to search by description
+    * @return JSONObject containing the search result
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Department object = new ParamControllers(poGRider, logwrapr).Department();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setDepartment(object.getModel().getDepartmentId());
+        }
+        return poJSON;
+    }
+    
+    /**
     * Searches a Cash Fund custodian using the given value.
     *
     * @param value   the search key
@@ -330,24 +422,41 @@ public class CashFund extends Parameter {
     * @throws GuanzonException if a system error occurs
     */
     public JSONObject searchCustodian(String value, boolean byCode) throws SQLException, GuanzonException {
-        String lsSQL = getSQ_Browse();
-        System.out.println("Cash fund : " + lsSQL);
-        poJSON = ShowDialogFX.Search(poGRider,
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , a.sDeptIDxx "
+                + " , a.sBranchCd "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM Employee_Master001 a" //GGC_ISysDBF.
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
+                                                + " AND a.sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartment())
+                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
+                                            );
+        lsSQL = lsSQL + " GROUP BY sEmployID ";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 value,
-                "ID»Description»Branch»Department»Custodian",
-                "sCashFIDx»sPayeeNme»xPrtclrNm»xClientNm",
-                "a.sPayeeIDx»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
                 byCode ? 0 : 1);
-
-        if (poJSON != null) {
-            return poModel.openRecord((String) poJSON.get("sCashFIDx"));
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            poModel.setCashFundManager((String) loJSON.get("sEmployID"));
         } else {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record loaded.");
-            return poJSON;
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
         }
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
     
     /**
@@ -364,25 +473,38 @@ public class CashFund extends Parameter {
                 lsCondition += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
             }
 
-            lsCondition = "a.cRecdStat IN (" + lsCondition.substring(2) + ")";
+            lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
         } else {
-            lsCondition = "a.cRecdStat = " + SQLUtil.toSQL(psRecdStat);
+            lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psRecdStat);
         }
 
-        String lsSQL = "SELECT"
-                + "  a.sCashFIDx"
-                + ", a.sBranchCD"
-                + ", a.sPrtclrID"
-                + ", a.sAPClntID"
-                + ", a.sClientID"
-                + ", a.cRecdStat"
-                + ", a.sModified"
-                + ", a.dModified"
-                + ", IFNULL(b.sDescript, '') xPrtclrNm"
-                + ", IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm) xClientNm"
-                + " FROM Payee a"
-                + " LEFT JOIN Particular b ON a.sPrtclrID = b.sPrtclrID"
-                + " LEFT JOIN Client_Master c ON a.sClientID = c.sClientID";
+        String lsSQL = " SELECT         "
+                    + "    a.sCashFIDx "
+                    + "  , a.sBranchCD "
+                    + "  , a.sDeptIDxx "
+                    + "  , a.sCompnyID "
+                    + "  , a.sIndstCdx "
+                    + "  , a.sCashFDsc "
+                    + "  , a.nBalancex "
+                    + "  , a.nBegBalxx "
+                    + "  , a.dBegDatex "
+                    + "  , a.sCashFMgr "
+                    + "  , a.nLedgerNo "
+                    + "  , a.dLastTran "
+                    + "  , a.cTranStat "
+                    + "  , a.sModified "
+                    + "  , a.dModified "
+                    + "  , b.sDescript as xIndustry "     
+                    + "  , c.sCompnyNm as xCompanyx "     
+                    + "  , d.sBranchNm AS xBranchNm "     
+                    + "  , e.sDeptName AS xDeptName "     
+                    + "  , f.sCompnyNm AS xCustdian "     
+                    + " FROM CashFund a             "
+                    + " LEFT JOIN Industry b ON b.sIndstCdx = a.sIndstCdx      "
+                    + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID       "
+                    + " LEFT JOIN Branch d ON d.sBranchCd = a.sBranchCD        "
+                    + " LEFT JOIN Department e ON e.sDeptIDxx = a.sDeptIDxx    "
+                    + " LEFT JOIN Client_Master f ON f.sClientID = a.sCashFMgr ";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
