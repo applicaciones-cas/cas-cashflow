@@ -640,9 +640,9 @@ public class CashFund extends Parameter {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM "+ SQLUtil.toSQL(poModel.getTable())+" a "
-                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(poModel.getCashFundId())) ;
+                        + " FROM "+ poModel.getTable()+" a "
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sCashFIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sCashFIDx =  " + SQLUtil.toSQL(poModel.getCashFundId())) ;
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
