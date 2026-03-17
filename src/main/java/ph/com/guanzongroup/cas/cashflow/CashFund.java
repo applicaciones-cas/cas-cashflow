@@ -73,7 +73,8 @@ public class CashFund extends Parameter {
     * @throws GuanzonException if a system error occurs
     * @throws CloneNotSupportedException if cloning is not supported
     */
-    public JSONObject ActivateRecord() throws ParseException,
+    public JSONObject ActivateRecord()
+            throws ParseException,
             SQLException,
             GuanzonException,
             CloneNotSupportedException {
@@ -99,8 +100,23 @@ public class CashFund extends Parameter {
             return poJSON;
         }
         
+        if(!pbWthParent){
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                } else {
+                    if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "User is not an authorized approving officer.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
         //change status
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
+        poJSON = statusChange(poModel.getTable(),poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -146,8 +162,25 @@ public class CashFund extends Parameter {
             return poJSON;
         }
         
+        if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
+            if(!pbWthParent){
+                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                    poJSON = ShowDialogFX.getUserApproval(poGRider);
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    } else {
+                        if(Integer.parseInt(poJSON.get("nUserLevl").toString())<= UserRight.ENCODER){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "User is not an authorized approving officer.");
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        }
+        
         //change status
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), "", lsStatus, false, pbWthParent);
+        poJSON = statusChange(poModel.getTable(), poModel.getCashFundId(), "", lsStatus, false, pbWthParent);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
