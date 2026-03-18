@@ -5,8 +5,13 @@
  */
 package ph.com.guanzongroup.cas.cashflow.validator;
 
+import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.iface.GValidator;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
@@ -75,41 +80,55 @@ public class CashAdvanceValidator implements GValidator {
     }
 
     private JSONObject validateNew() {
-        poJSON = new JSONObject();
-
-        if (poMaster.getTransactionNo() == null || "".equals(poMaster.getTransactionNo())) {
+        try {
+            poJSON = new JSONObject();
+            
+            if (poMaster.getTransactionNo() == null || "".equals(poMaster.getTransactionNo())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Transaction No");
+                return poJSON;
+            }
+            
+            if (poMaster.getCashFundId() == null || "".equals(poMaster.getCashFundId())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Industry ID cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getDepartmentRequest() == null || "".equals(poMaster.getDepartmentRequest())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Requesting department cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Payee cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Remarks to cannot be empty.");
+                return poJSON;
+            }
+            
+            if (poMaster.getAdvanceAmount() <= 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Advance amount cannot be empty.");
+                return poJSON;
+            }
+            
+            if (poMaster.getAdvanceAmount() > poMaster.CashFund().getBalance()) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Advance amount cannot be greater than the cash fund balance.");
+                return poJSON;
+            }
+            
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction No");
-            return poJSON;
-        }
-
-        if (poMaster.getCashFundId() == null || "".equals(poMaster.getCashFundId())) {
-            poJSON.put("result","error");
-            poJSON.put("message", "Industry ID cannot be empty");
-            return poJSON;
-        }
-        
-        if (poMaster.getDepartmentRequest() == null || "".equals(poMaster.getDepartmentRequest())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Requesting department cannot be empty");
-            return poJSON;
-        }
-        
-        if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Payee cannot be empty");
-            return poJSON;
-        }
-
-        if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
-            poJSON.put("result","error");
-            poJSON.put("message", "Remarks to cannot be empty.");
-            return poJSON;
-        }
-        
-        if (poMaster.getAdvanceAmount() <= 0.0000) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Advance amount cannot be empty.");
+            poJSON.put("message", MiscUtil.getException(ex));
             return poJSON;
         }
         

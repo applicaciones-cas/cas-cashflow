@@ -37,6 +37,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
+import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 
 /**
@@ -178,6 +179,7 @@ public class CashAdvance extends Parameter {
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                                                                     + " AND sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartmentRequest())
+                                                                    + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
