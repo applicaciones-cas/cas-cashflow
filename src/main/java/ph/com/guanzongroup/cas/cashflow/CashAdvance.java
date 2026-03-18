@@ -466,18 +466,6 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
 
-        if (!CashAdvanceStatus.APPROVED.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Cash advance is not yet approved.");
-            return poJSON;
-        }
-        
-        if (poModel.getIssuedBy() != null && !"".equals(poModel.getIssuedBy())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Cash advance is already released.");
-            return poJSON;
-        }
-
         //validator
         poJSON = isEntryOkay(poModel.getTransactionStatus());
         if (!"success".equals((String) poJSON.get("result"))) {

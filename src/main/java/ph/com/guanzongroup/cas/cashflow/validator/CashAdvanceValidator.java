@@ -176,6 +176,18 @@ public class CashAdvanceValidator implements GValidator {
 
     private JSONObject validateReleased() {
         poJSON = new JSONObject();
+        
+        if (!CashAdvanceStatus.APPROVED.equals(poMaster.getTransactionStatus())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Cash advance is not yet approved.");
+            return poJSON;
+        }
+        
+        if (poMaster.getIssuedBy() != null && !"".equals(poMaster.getIssuedBy())) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Cash advance is already released.");
+            return poJSON;
+        }
 
         poJSON = validateNew();
         if("error".equals((String) poJSON.get("result"))){
