@@ -87,7 +87,7 @@ public class CashAdvance extends Parameter {
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartmentRequest(poGRider.getDepartment());
         poModel.setTransactionDate(poGRider.getServerDate());
-        poModel.setClientId(poGRider.getUserID());
+        poModel.setClientId(poGRider.getEmployeeNo());
         setCashFund(); //Set Cash Fund ID
         
         return poJSON;
