@@ -370,7 +370,7 @@ public class CashFund extends Parameter {
         try {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
-                    if(loRS.getString("sRecurrID") != null && !"".equals(loRS.getString("sRecurrID"))){
+                    if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
                         poJSON.put("result", "error");
                         poJSON.put("message", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
                     }
