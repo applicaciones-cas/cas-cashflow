@@ -87,6 +87,7 @@ public class CashAdvance extends Parameter {
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartmentRequest(poGRider.getDepartment());
         poModel.setTransactionDate(poGRider.getServerDate());
+        poModel.setClientId(poGRider.getUserID());
         setCashFund(); //Set Cash Fund ID
         
         return poJSON;
@@ -155,6 +156,11 @@ public class CashAdvance extends Parameter {
 
     public int getCashAdvanceCount() {
         return this.paMaster.size();
+    }
+    
+    //Reset Master
+    public void resetModel() {
+        poModel = new CashflowModels(poGRider).CashAdvanceMaster();
     }
     
     /**
@@ -679,7 +685,7 @@ public class CashAdvance extends Parameter {
                 lsSQL,
                 "",
                 "Transaction No»Transaction Date»Payee»Requesting Department",
-                "sTransNox»dTransact»sPayeeNme»sDeptName",
+                "sTransNox»dTransact»sPayeexxx»sDeptName",
                 "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
                 1);
 
@@ -691,6 +697,72 @@ public class CashAdvance extends Parameter {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    /**
+    * Loads a list of transactions filtered by company, industry, branch, department, payee, and transaction number.
+    *
+    * @param fsPayee          payee filter
+    * @param fsTransactionNo  transaction number filter
+    * @return JSONObject containing result status and message
+    */
+    public JSONObject loadTransactionList( String fsPayee, String fsTransactionNo){
+        poJSON = new JSONObject();
+        try {
+            if (fsPayee == null) {
+                fsPayee = "";
+            }
+            if (fsTransactionNo == null) {
+                fsTransactionNo = "";
+            }
+            String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchName())
+                + " AND a.sDeptReqs = " + SQLUtil.toSQL(poGRider.getDepartment())
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
+            );
+            
+            lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+
+            int lnctr = 0;
+
+            if (MiscUtil.RecordCount(loRS) >= 0) {
+                paMaster = new ArrayList<>();
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("dTransact: " + loRS.getDate("dTransact"));
+                    System.out.println("sPayeexxx: " + loRS.getString("sPayeexxx"));
+                    System.out.println("------------------------------------------------------------------------------");
+
+                    paMaster.add(CashAdvance());
+                    paMaster.get(paMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+                    lnctr++;
+                }
+
+                System.out.println("Records found: " + lnctr);
+                poJSON.put("result", "success");
+                poJSON.put("message", "Record loaded successfully.");
+            } else {
+                paMaster = new ArrayList<>();
+                paMaster.add(CashAdvance());
+                poJSON.put("result", "error");
+                poJSON.put("continue", true);
+                poJSON.put("message", "No record found.");
+            }
+            MiscUtil.close(loRS);
+        }catch (GuanzonException | SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+        }
+        poJSON.put("result", "success");
+        return poJSON;
     }
     
     /**
