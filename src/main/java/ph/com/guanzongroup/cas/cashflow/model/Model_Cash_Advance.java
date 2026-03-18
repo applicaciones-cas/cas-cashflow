@@ -91,11 +91,11 @@ public class Model_Cash_Advance extends Model {
     }
     
     public JSONObject setBranchCode(String branchCode) {
-        return setValue("sBranchCD", branchCode);
+        return setValue("sBranchCd", branchCode);
     }
 
     public String getBranchCode() {
-        return (String) getValue("sBranchCD");
+        return (String) getValue("sBranchCd");
     }
 
     public JSONObject setCompanyId(String companyId) {

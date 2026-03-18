@@ -82,10 +82,11 @@ public class CashAdvance extends Parameter {
             throws SQLException,
             GuanzonException {
         
-        poModel.setIndustryId(psIndustry);
+        poModel.setIndustryId(psIndustryId);
         poModel.setCompanyId(psCompanyId);
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartmentRequest(poGRider.getDepartment());
+        poModel.setTransactionDate(poGRider.getServerDate());
         setCashFund(); //Set Cash Fund ID
         
         return poJSON;
@@ -106,6 +107,9 @@ public class CashAdvance extends Parameter {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        poModel.setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
+        poModel.setModifiedDate(poGRider.getServerDate());
         
         return super.saveRecord();
     }
@@ -2124,7 +2128,7 @@ public class CashAdvance extends Parameter {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("Cash Advances", (String) poModel.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Cash Advance", (String) poModel.getValue("sTransNox"), entryBy, entryDate, crs);
     }
 
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
