@@ -717,7 +717,7 @@ public class CashAdvance extends Parameter {
             String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchName())
+                + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
                 + " AND a.sDeptReqs = " + SQLUtil.toSQL(poGRider.getDepartment())
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
