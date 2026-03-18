@@ -813,12 +813,14 @@ public class CashAdvance extends Parameter {
                         + " , d.sDeptName AS sDeptName "
                         + " , e.sCompnyNm AS sPayeexxx "
                         + " , f.sCashFDsc AS sCashFund "
+                        + ", g.sBranchNm AS sBranchNm "
                         + " FROM CashAdvance a         "
                         + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
                         + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
                         + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
                         + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                        + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      ";
+                        + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
+                        + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
