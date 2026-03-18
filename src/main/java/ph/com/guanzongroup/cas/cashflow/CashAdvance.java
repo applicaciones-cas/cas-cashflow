@@ -67,7 +67,9 @@ public class CashAdvance extends Parameter {
 
         CashflowModels model = new CashflowModels(poGRider);
         poModel = model.CashAdvanceMaster();
-
+        
+        paMaster = new ArrayList<>();
+        
         super.initialize();
     }
     
