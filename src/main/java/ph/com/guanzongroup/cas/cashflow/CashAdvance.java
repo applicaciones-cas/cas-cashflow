@@ -26,6 +26,7 @@ import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
+import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -33,6 +34,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
@@ -46,6 +48,7 @@ public class CashAdvance extends Parameter {
     public String psIndustryId = "";
     public String psCompanyId = "";
     public String psIndustry = "";
+    public String psBranch = "";
     public String psPayee = "";
     public List<Model> paMaster;
     
@@ -122,8 +125,10 @@ public class CashAdvance extends Parameter {
     public void setIndustryId(String industryId) { psIndustryId = industryId; }
     public void setCompanyId(String companyId) { psCompanyId = companyId; }
     public void setSearchIndustry(String industryName) { psIndustry = industryName; }
+    public void setSearchBranch(String branchName) { psBranch = branchName; }
     public void setSearchPayee(String payeeName) { psPayee = payeeName; }
     public String getSearchIndustry() { return psIndustry; }
+    public String getSearchBranch() { return psBranch; }
     public String getSearchPayee() { return psPayee; }
     
     /**
@@ -530,6 +535,56 @@ public class CashAdvance extends Parameter {
 
         return poJSON;
     }
+    
+    /**
+    * Searches for a branch and assigns it to the current Cash Fund model.
+    *
+    * @param value     the search key
+    * @param byCode    true to search by code, false to search by description
+    * @param isSearch  indicates if the action is triggered from search
+    * @return JSONObject containing the search result
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            if(isSearch){
+                setSearchBranch(object.getModel().getBranchName());
+            } else {
+                poModel.setBranchCode(object.getModel().getBranchCode());
+            }
+        }
+
+        return poJSON;
+    }
+    
+    /**
+    * Searches for a cash fund and assigns it to the current Cash Advance model.
+    *
+    * @param value     the search key
+    * @param byCode    true to search by code, false to search by description
+    * @return JSONObject containing the search result
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    */
+    public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            poModel.setCashFundId(object.getModel().getCashFundId());
+        }
+
+        return poJSON;
+    }
+    
     /**
     * Searches a department by code or name and sets the selected department ID if found.
     *
@@ -549,6 +604,48 @@ public class CashAdvance extends Parameter {
         if ("success".equals((String) poJSON.get("result"))) {
             poModel.setDepartmentRequest(object.getModel().getDepartmentId());
         }
+        return poJSON;
+    }
+    
+    public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM Employee_Master001 a" //GGC_ISysDBF.
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
+//                                                + " AND a.sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartmentRequest())
+//                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
+                                            );
+        lsSQL = lsSQL + " GROUP BY sEmployID";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
+                byCode ? 0 : 1);
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            if(isSearch){
+                setSearchPayee((String) loJSON.get("EmployNme"));
+            } else {
+                poModel.setClientId((String) loJSON.get("sEmployID"));
+            }
+        } else {
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
+        }
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
         return poJSON;
     }
     
@@ -579,7 +676,7 @@ public class CashAdvance extends Parameter {
                 "",
                 "Transaction No»Transaction Date»Payee»Requesting Department",
                 "sTransNox»dTransact»sPayeeNme»sDeptName",
-                "a.sTransNox»a.dTransact»a.sPayeeNme»d.sDeptName",
+                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
                 1);
 
         if (poJSON != null) {
@@ -622,9 +719,9 @@ public class CashAdvance extends Parameter {
             String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
-                + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-                + " AND a.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
-                + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
+                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
             );
             
             lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
@@ -641,7 +738,7 @@ public class CashAdvance extends Parameter {
                     // Print the result set
                     System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                     System.out.println("dTransact: " + loRS.getDate("dTransact"));
-                    System.out.println("sPayeeNme: " + loRS.getString("sPayeeNme"));
+                    System.out.println("sPayeexxx: " + loRS.getString("sPayeexxx"));
                     System.out.println("------------------------------------------------------------------------------");
 
                     paMaster.add(CashAdvance());
@@ -706,26 +803,22 @@ public class CashAdvance extends Parameter {
             lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psRecdStat);
         }
 
-        String lsSQL = " SELECT "
-                    + " a.sTransNox "
-                    + " , a.dTransact "
-                    + " , a.sVoucherx "
-                    + " , a.sVoucher1 "
-                    + " , a.sVoucher2 "
-                    + " , a.sPayeeNme "
-                    + " , b.sCompnyNm AS sCompanyx "
-                    + " , c.sDescript AS sIndustry "
-                    + " , d.sDeptName AS sDeptName "
-                    + " , e.sCompnyNm AS sPayeexxx "
-                    + " , IFNULL(g.sCompnyNm,h.sPayeeNme) AS sCreditTo "
-                    + " FROM CashAdvance a "
-                    + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID "
-                    + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx "
-                    + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs "
-                    + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                    + " LEFT JOIN Payee f ON f.sPayeeIDx = a.sClientID "
-                    + " LEFT JOIN Client_Master g ON g.sClientID = a.sCrdtedTo "
-                    + " LEFT JOIN Payee h ON h.sPayeeIDx = a.sCrdtedTo ";
+        String lsSQL =  " SELECT        "
+                        + " a.sTransNox   "
+                        + " , a.dTransact "
+                        + " , a.sCashFIDx "
+                        + " , a.cTranStat "
+                        + " , b.sCompnyNm AS sCompanyx "
+                        + " , c.sDescript AS sIndustry "
+                        + " , d.sDeptName AS sDeptName "
+                        + " , e.sCompnyNm AS sPayeexxx "
+                        + " , f.sCashFDsc AS sCashFund "
+                        + " FROM CashAdvance a         "
+                        + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
+                        + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
+                        + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
+                        + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
+                        + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      ";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
