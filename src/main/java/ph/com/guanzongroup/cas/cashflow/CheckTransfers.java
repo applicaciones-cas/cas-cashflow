@@ -1067,7 +1067,7 @@ public class CheckTransfers extends Transaction {
         poJSON = new JSONObject();
         double totalAmount = 0.0000;
 
-        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+        for (int lnCtr = 0; lnCtr < getDetailCount()-1; lnCtr++) {
 
             // include only reversed ("+")
             if (Detail(lnCtr).isReverse()) {

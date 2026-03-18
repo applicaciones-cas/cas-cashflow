@@ -14,6 +14,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
@@ -28,6 +29,8 @@ import ph.com.guanzongroup.cas.cashflow.status.CheckReleaseStatus;
 public class Model_Check_Release_Master extends Model{
     
     private Model_Industry poIndustry;
+    Model_Company poCompany;
+    private String compnyID;
 
     @Override
     public void initialize() {
@@ -67,6 +70,7 @@ public class Model_Check_Release_Master extends Model{
             //add model here
             ParamModels model = new ParamModels(poGRider);
             poIndustry = model.Industry();
+            poCompany= model.Company();
             
             pnEditMode = EditMode.UNKNOWN;
             
@@ -192,6 +196,14 @@ public class Model_Check_Release_Master extends Model{
         return (Date) getValue("dModified");
     }
     
+    public String setCompany(String bankidx) {
+        return compnyID = bankidx;
+    }
+
+    public String getCompany() {
+        return compnyID;
+    }
+    
     @Override
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
@@ -216,5 +228,21 @@ public class Model_Check_Release_Master extends Model{
             poIndustry.initialize();
             return poIndustry;
         }
+    }
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(compnyID)) {
+            if (this.poCompany.getEditMode() == 1 && this.poCompany
+                    .getCompanyId().equals(compnyID)) {
+                return this.poCompany;
+            }
+            this.poJSON = this.poCompany.openRecord(this.getCompany());
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poCompany;
+            }
+            this.poCompany.initialize();
+            return this.poCompany;
+        }
+        this.poCompany.initialize();
+        return this.poCompany;
     }
 }
