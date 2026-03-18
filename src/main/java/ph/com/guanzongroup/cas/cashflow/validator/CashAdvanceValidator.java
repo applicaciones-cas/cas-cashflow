@@ -64,8 +64,8 @@ public class CashAdvanceValidator implements GValidator {
                 return validateCancelled();
             case CashAdvanceStatus.VOID:
                 return validateVoid();
-            case CashAdvanceStatus.RELEASED:
-                return validateReleased();
+            case CashAdvanceStatus.APPROVED:
+                return validateApproved();
             default:
                 poJSON = new JSONObject();
                 poJSON.put("result", "success");
@@ -83,47 +83,21 @@ public class CashAdvanceValidator implements GValidator {
             return poJSON;
         }
 
-        if (poMaster.getIndustryId() == null || "".equals(poMaster.getIndustryId())) {
+        if (poMaster.getCashFundId() == null || "".equals(poMaster.getCashFundId())) {
             poJSON.put("result","error");
             poJSON.put("message", "Industry ID cannot be empty");
             return poJSON;
         }
         
-        if (poMaster.getCompanyId() == null || "".equals(poMaster.getCompanyId())) {
+        if (poMaster.getDepartmentRequest() == null || "".equals(poMaster.getDepartmentRequest())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Company ID cannot be empty");
-            return poJSON;
-        }
-
-        if (poMaster.getBranchCode() == null || "".equals(poMaster.getBranchCode())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Branch cannot be empty");
+            poJSON.put("message", "Requesting department cannot be empty");
             return poJSON;
         }
         
-        if (poMaster.getPettyCashId() == null || "".equals(poMaster.getPettyCashId())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Petty Cash cannot be empty");
-            return poJSON;
-        }
-        
-        if (poMaster.getPayeeName() == null || "".equals(poMaster.getPayeeName())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Payee Name cannot be empty");
-            return poJSON;
-        }
-
         if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
-            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
-                poJSON.put("result","error");
-                poJSON.put("message", "Credited to cannot be empty.");
-                return poJSON;
-            }
-        }
-
-        if (poMaster.getVoucher() == null || "".equals(poMaster.getVoucher())) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Voucher No cannot be empty");
+            poJSON.put("message", "Payee cannot be empty");
             return poJSON;
         }
 
@@ -145,7 +119,12 @@ public class CashAdvanceValidator implements GValidator {
 
     private JSONObject validateConfirmed() {
         poJSON = new JSONObject();
-
+        
+        poJSON = validateNew();
+        if("error".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -164,9 +143,26 @@ public class CashAdvanceValidator implements GValidator {
         return poJSON;
     }
 
+    private JSONObject validateApproved() {
+        poJSON = new JSONObject();
+
+        poJSON = validateNew();
+        if("error".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
     private JSONObject validateReleased() {
         poJSON = new JSONObject();
 
+        poJSON = validateNew();
+        if("error".equals((String) poJSON.get("result"))){
+            return poJSON;
+        }
+        
         poJSON.put("result", "success");
         return poJSON;
     }
