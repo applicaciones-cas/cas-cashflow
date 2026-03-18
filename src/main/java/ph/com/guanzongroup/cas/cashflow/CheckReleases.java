@@ -171,6 +171,18 @@ public class CheckReleases extends Transaction {
             poJSON.put("message", "Transaction was already confirmed.");
             return poJSON;
         }
+        
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (!Detail(lnCtr).isReverse()) continue;
+            if (Detail(lnCtr).CheckPayment().getLocation() != null
+                    && !"0".equals(Detail(lnCtr).CheckPayment().getLocation())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Unable to proceed with confirmation. Check No. "
+                        + Detail(lnCtr).CheckPayment().getCheckNo()
+                        + " has already been transferred.");
+                return poJSON;
+            }
+        }
 
         //validator
         poJSON = isEntryOkay(CheckTransferStatus.CONFIRMED);
@@ -284,7 +296,7 @@ public class CheckReleases extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        if (CheckTransferStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
+        if (CheckReleaseStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
                 if ("error".equals((String) poJSON.get("result"))) {
@@ -534,13 +546,14 @@ public class CheckReleases extends Transaction {
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
 
-        if (CheckTransferStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+        if (CheckReleaseStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
             poJSON = setValueToOthers(Master().getTransactionStatus());
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
             
         }
+        
         if (CheckReleaseStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
             if (poGRider.getUserLevel() <= UserRight.ENCODER) {
                 poJSON = ShowDialogFX.getUserApproval(poGRider);
@@ -564,7 +577,7 @@ public class CheckReleases extends Transaction {
 
     @Override
     public JSONObject save() {
-        return isEntryOkay(CheckTransferStatus.OPEN);
+        return isEntryOkay(CheckReleaseStatus.OPEN);
     }
 
     @Override
@@ -807,22 +820,21 @@ public class CheckReleases extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-
     public JSONObject computeMasterFields() throws SQLException, GuanzonException {
-    poJSON = new JSONObject();
-    double totalAmount = 0.0000;
+        poJSON = new JSONObject();
+        double totalAmount = 0.0000;
 
-    for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+        for (int lnCtr = 0; lnCtr < getDetailCount()-1; lnCtr++) {
 
-        // include only reversed ("+")
-        if (Detail(lnCtr).isReverse()) {
-            totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+            // include only reversed ("+")
+            if (Detail(lnCtr).isReverse()) {
+                totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+            }
         }
-    }
 
-    Master().setTransactionTotal(totalAmount);
-    return poJSON;
-}
+        Master().setTransactionTotal(totalAmount);
+        return poJSON;
+    }
 
     private Model_Check_Release_Master CheckReleaseMasterList() {
         return new CashflowModels(poGRider).CheckReleaseMaster();
@@ -970,6 +982,7 @@ public class CheckReleases extends Transaction {
             parameters.put("dDatexxx", new java.sql.Date(poGRider.getServerDate().getTime()));
 
             switch (Master().getTransactionStatus()) {
+                case CheckReleaseStatus.RELEASED:
                 case CheckReleaseStatus.CONFIRMED:
                     if ("1".equals(Master().isPrintedStatus())) {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approvedreprint.png";
@@ -987,14 +1000,13 @@ public class CheckReleases extends Transaction {
             double lnTotal = 0.0000;
             
             for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-                
+                if (!Detail(lnCtr).isReverse()) continue;
                 orderDetails.add(new OrderDetail(lnCtr + 1,
                     safeString(Detail(lnCtr).getSourceNo()), // Source No
                         safeString(Detail(lnCtr).CheckPayment().getCheckNo()), // Barcode
                          safeString(Detail(lnCtr).CheckPayment().Payee().getPayeeName())
                 ));
             }
-
             // 3. Create data source
             JRBeanCollectionDataSource dataSource = new JRBeanCollectionDataSource(orderDetails);
 
@@ -1135,49 +1147,39 @@ public class CheckReleases extends Transaction {
             poJSON = new JSONObject();
             if (fbIsPrinted) {
                 if (((String) poMaster.getValue("cTranStat")).equals(CheckReleaseStatus.CONFIRMED)) {
-                    poJSON = OpenTransaction(Master().getTransactionNo());
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        Platform.runLater(() -> {
-                            ShowMessageFX.Warning((String) poJSON.get("message"), "Print Purchase Order", null);
-                            SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
-                        });
-                        fbIsPrinted = false;
-                    }
-                    poJSON = UpdateTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        Platform.runLater(() -> {
-                            ShowMessageFX.Warning((String) poJSON.get("message"), "Print Purchase Order", null);
-                            SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
-                        });
-                        fbIsPrinted = false;
-                    }
-                    Master().setModifiedDate(poGRider.getServerDate());
-                    Master().setModifyingId(poGRider.getUserID());
-                    Master().isPrintedStatus(true);
-                    
-//                    poMaster.setValue("dModified", poGRider.getServerDate());
-//                    poMaster.setValue("sModified", poGRider.getUserID());
-//                    poMaster.setValue("cPrintxxx", 1);
+                    poGRider.beginTrans("UPDATE STATUS", "Print Check Release", SOURCE_CODE, Master().getTransactionNo());
 
-                    poJSON = SaveTransaction();
-                    if ("error".equals((String) poJSON.get("result"))) {
+                    String lsSQL = "UPDATE Check_Release_Master SET "
+                            + "cPrintedx = '1' "
+                            + ",sModified = " + SQLUtil.toSQL(poGRider.getUserID())
+                            + ",dModified =  " + SQLUtil.toSQL(poGRider.getServerDate())
+                            + "WHERE sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo()) ;
+                    
+                     Long lnResult = poGRider.executeQuery(lsSQL,
+                            poMaster.getTable(),
+                            poGRider.getBranchCode(), "", "");
+                     
+                     if (lnResult <= 0L) {
+                        poGRider.rollbackTrans();
                         Platform.runLater(() -> {
-                            ShowMessageFX.Warning((String) poJSON.get("message"), "Print Purchase Order", null);
+                            ShowMessageFX.Warning((String) poJSON.get("message"), "Print Check Release", null);
                             SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
                         });
                         fbIsPrinted = false;
-                    }
+                        return;
+                     }
+                    poGRider.commitTrans();
                 }
             }
 
             if (fbIsPrinted) {
                 Platform.runLater(() -> {
-                    ShowMessageFX.Information("Transaction printed successfully.", "Print Purchase Order", null);
+                    ShowMessageFX.Information("Transaction printed successfully.", "Print Check Release", null);
                     SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
                 });
             } else {
                 Platform.runLater(() -> {
-                    ShowMessageFX.Information("Transaction printed aborted.", "Print Purchase Order", null);
+                    ShowMessageFX.Information("Transaction printed aborted.", "Print Check Release", null);
                     SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
                 });
             }
