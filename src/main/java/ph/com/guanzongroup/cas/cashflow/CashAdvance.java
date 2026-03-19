@@ -952,22 +952,16 @@ public class CashAdvance extends Parameter {
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
-    
-    public static String setIntegerValueToDecimalFormat(Object foObject, boolean fbIs4Decimal) {
-        String lsDecimalFormat = fbIs4Decimal ? "#,##0.0000" : "#,##0.00";
-        DecimalFormat format = new DecimalFormat(lsDecimalFormat);
-        try {
-            if (foObject != null) {
-                return format.format(Double.parseDouble(String.valueOf(foObject)));
-            }
-        } catch (NumberFormatException e) {
-            System.err.println("Error: Invalid number format for input - " + foObject);
-        } catch (Exception e) {
-            System.err.println("An unexpected error occurred: " + e.getMessage());
-        }
-        return fbIs4Decimal ? "0.0000" : "0.00";
-    }
-    
+    /**
+    * Displays the status history of a Cash Advance transaction.
+    *
+    * Retrieves status records, maps status codes to readable text, and
+    * shows them in the UI along with entry details.
+    *
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    * @throws Exception for other unexpected errors
+    */
     public void ShowStatusHistory() throws SQLException, GuanzonException, Exception {
         CachedRowSet crs = getStatusHistory();
 
@@ -1029,7 +1023,13 @@ public class CashAdvance extends Parameter {
 
         showStatusHistoryUI("Cash Advance", (String) poModel.getValue("sTransNox"), entryBy, entryDate, crs);
     }
-
+    /**
+     * Retrieves the user and timestamp of who created the current transaction.
+     *
+     * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (timestamp)
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
+     */
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsEntry = "";
@@ -1068,7 +1068,14 @@ public class CashAdvance extends Parameter {
         poJSON.put("sEntryDte", lsEntryDate);
         return poJSON;
     }
-
+    /**
+     * Retrieves the company name of a system user based on user ID.
+     *
+     * @param fsId User ID to lookup
+     * @return Company name of the user
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
+     */
     public String getSysUser(String fsId) throws SQLException, GuanzonException {
         String lsEntry = "";
         String lsSQL = " SELECT b.sCompnyNm from xxxSysUser a "
@@ -1089,7 +1096,12 @@ public class CashAdvance extends Parameter {
         }
         return lsEntry;
     }
-
+    /**
+     * Returns a readable string for a given Cash Advance status code.
+     *
+     * @param lsStatus Status code
+     * @return Human-readable status ("Open", "Confirmed", "Approved", "Cancelled", "Voided", or "Unknown")
+     */
     public String getStatus(String lsStatus) {
         switch (lsStatus) {
             case CashAdvanceStatus.VOID:
