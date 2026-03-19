@@ -2,8 +2,11 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Date;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
@@ -70,11 +73,37 @@ public class CashFund extends Parameter {
         return poJSON;
     }
     
-    
+    //Set default values for filtering data
     public void setIndustryId(String industryId) { psIndustryId = industryId; }
     public void setCompanyId(String companyId) { psCompanyId = companyId; }
     public void setBranchCode(String branchCode) { psBranchCode = branchCode; }
     public void setDepartmentId(String departmentId) { psDepartmentId = departmentId; }
+    
+    /**
+    * Creates a JSONObject with "result" and "message" fields.
+    *
+    * @param fsResult  The result value (e.g., "success", "error")
+    * @param fsMessage The message describing the result
+    * @return JSONObject containing the result and message
+    */
+   private JSONObject setJSON(String fsResult, String fsMessage) {
+       JSONObject loJSON = new JSONObject();
+       loJSON.put("result", fsResult);
+       loJSON.put("message", fsMessage);
+       return loJSON;
+   }
+
+   /**
+    * Checks whether a JSONObject indicates a successful result.
+    *
+    * Returns true if the "result" field equals "success" or is not "error".
+    *
+    * @param foJSON The JSONObject to check
+    * @return true if successful, false otherwise
+    */
+   public boolean checkJSONSuccess(JSONObject foJSON) {
+       return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
+   }
     
     /**
     * Requests user approval for the current transaction.
@@ -85,18 +114,16 @@ public class CashFund extends Parameter {
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer.");
+                poJSON = setJSON("error", "User is not an authorized approving officer.");
                 return poJSON;
             }
         }   
         
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
+        poJSON = setJSON("success","success");
         return poJSON;
     }
     
@@ -119,66 +146,35 @@ public class CashFund extends Parameter {
         String lsStatus = CashFundStatus.ACTIVE;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Record was already active.");
+            poJSON = setJSON("error", "Record was already active.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay();
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, "error",pbWthParent);
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-//        poJSON = updateRecord();
-//        if ("error".equals((String) poJSON.get("result"))){
-//            return poJSON;
-//        }
-//        
-//        poJSON = getModel().setValue("cTranStat", lsStatus);
-//        if ("error".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//        
-//        if (!pbWthParent) {
-//            poGRider.beginTrans((String) poEvent.get("event"), 
-//                        getModel().getTable(), 
-//                        SOURCE_CODE, 
-//                        String.valueOf(getModel().getValue(1)));
-//        }
-//
-//        poJSON =  getModel().saveRecord();
-//        
-//        if ("success".equals((String) poJSON.get("result"))){
-//            if (!pbWthParent) poGRider.commitTrans();
-//        } else {
-//            if (!pbWthParent){
-//                poGRider.rollbackTrans();
-//                return poJSON;
-//            } 
-//        }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Record activate successfully.");
+        poJSON = setJSON("success", "Record activate successfully.");
         return poJSON;
     }
     
@@ -200,74 +196,42 @@ public class CashFund extends Parameter {
         String lsStatus = CashFundStatus.DEACTIVATED;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Record was already deactivate.");
+            poJSON = setJSON("error", "Record was already deactivate.");
             return poJSON;
         }
         
         if (poModel.getBalance() != 0.0000 || !CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Deactivation is only allowed if status is active and balance is 0.00");
+            poJSON = setJSON("error", "Deactivation is only allowed if status is active and balance is 0.00");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay();
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!"success".equals((String) poJSON.get("result"))) {
+                if (!checkJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-//        poJSON = updateRecord();
-//        if ("error".equals((String) poJSON.get("result"))){
-//            return poJSON;
-//        }
-//        
-//        //change status
-//        poJSON = getModel().setValue("cTranStat", lsStatus);
-//        if ("error".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//        
-//        if (!pbWthParent) {
-//            poGRider.beginTrans((String) poEvent.get("event"), 
-//                        getModel().getTable(), 
-//                        SOURCE_CODE, 
-//                        String.valueOf(getModel().getValue(1)));
-//        }
-//
-//        poJSON =  getModel().saveRecord();
-//        if ("success".equals((String) poJSON.get("result"))){
-//            if (!pbWthParent) poGRider.commitTrans();
-//        } else {
-//            if (!pbWthParent){
-//                poGRider.rollbackTrans();
-//                return poJSON;
-//            } 
-//        }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Record deactivate successfully.");
+        poJSON = setJSON("success", "Record deactivate successfully.");
         return poJSON;
     }
     
@@ -283,78 +247,75 @@ public class CashFund extends Parameter {
         poJSON = new JSONObject();
 
         if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "User is not allowed to save record.");
+            poJSON = setJSON("error", "User is not allowed to save record.");
             return poJSON;
         } else {
             poJSON = new JSONObject();
 
             if (poModel.getCashFundId() == null || "".equals(poModel.getCashFundId())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Cash fund ID must not be empty.");
+                poJSON = setJSON("error", "Cash fund ID must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getIndustryId() == null || "".equals(poModel.getIndustryId())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Industry must not be empty.");
+                poJSON = setJSON("error", "Industry must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getCompanyId() == null || "".equals(poModel.getCompanyId())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Company must not be empty.");
+                poJSON = setJSON("error", "Company must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getBranchCode() == null || "".equals(poModel.getBranchCode())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Branch must not be empty.");
+                poJSON = setJSON("error", "Branch must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getDepartment() == null || "".equals(poModel.getDepartment())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Department must not be empty.");
+                poJSON = setJSON("error", "Department must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getDescription() == null || "".equals(poModel.getDescription())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Description must not be empty.");
+                poJSON = setJSON("error", "Description must not be empty.");
                 return poJSON;
             }
 
             if (poModel.getCashFundManager() == null || "".equals(poModel.getCashFundManager())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Custodian must not be empty.");
+                poJSON = setJSON("error", "Custodian must not be empty.");
                 return poJSON;
             }
             
             if (poModel.getBeginningBalance() <= 0.0000) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid beginning balance.");
+                poJSON = setJSON("error", "Invalid beginning balance.");
                 return poJSON;
             }
             
             if(poModel.getEditMode() == EditMode.ADDNEW){
                 if (poModel.getBalance() <= 0.0000) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Invalid balance.");
+                    poJSON = setJSON("error", "Invalid balance.");
                     return poJSON;
                 }
-            }
+                
+                LocalDate ldateServerDate = strToDate(xsDateShort(poGRider.getServerDate()));
+                LocalDate ldateBeginningDate = strToDate(xsDateShort(poModel.getBeginningDate()));
+                if (ldateBeginningDate.isBefore(ldateServerDate)) {
+                    poJSON = setJSON("error", "Back date is not allowed.");
+                    return poJSON;
+                }
+            } 
         }
         
         poJSON = checkExistingCashFund();
-        if ("error".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poModel.setModifiedBy(poGRider.getUserID());
         poModel.setModifiedDate(poGRider.getServerDate());
         
-        poJSON.put("result", "success");
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -383,8 +344,7 @@ public class CashFund extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
+                        poJSON = setJSON("error", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
                     }
                 }
             }
@@ -447,21 +407,20 @@ public class CashFund extends Parameter {
         if(!lsCondition.isEmpty()){
             lsSQL = lsSQL + " " + lsCondition;
         }
-        
+        System.out.println("MySQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
                 "ID»Description»Branch»Department»Custodian",
                 "sCashFIDx»sCashFDsc»xBranchNm»xDeptName»xCustdian",
-                "a.sPayeeIDx»a.sCashFDsc»IFNULL(d.sBranchNm, '')»IFNULL(e.sDeptName, '')»f.sCompnyNm",
+                "a.sCashFIDx»a.sCashFDsc»IFNULL(d.sBranchNm, '')»IFNULL(e.sDeptName, '')»f.sCompnyNm",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
             return poModel.openRecord((String) poJSON.get("sCashFIDx"));
         } else {
             poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record loaded.");
+            poJSON = setJSON("error", "No record loaded.");
             return poJSON;
         }
     }
@@ -482,7 +441,7 @@ public class CashFund extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             poModel.setBranchCode(object.getModel().getBranchCode());
         }
 
@@ -504,7 +463,7 @@ public class CashFund extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             poModel.setDepartment(object.getModel().getDepartmentId());
         }
         return poJSON;
@@ -524,8 +483,7 @@ public class CashFund extends Parameter {
         String lsFinance = getFinanceDepartment();
         
         if(lsFinance == null || "".equals(lsFinance)){
-            poJSON.put("result", "error");
-            poJSON.put("message", "No Finance Department.\nPlease contact System Administration.");
+            poJSON = setJSON("error", "No Finance Department.\nPlease contact System Administration.");
             return poJSON;
         }
         
@@ -554,14 +512,11 @@ public class CashFund extends Parameter {
             System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
             poModel.setCashFundManager((String) loJSON.get("sEmployID"));
         } else {
-            loJSON = new JSONObject();
-            loJSON.put("result", "error");
-            loJSON.put("message", "No record loaded.");
+            loJSON = setJSON("error", "No record loaded.");
             return loJSON;
         }
-    
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
+        
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -755,9 +710,8 @@ public class CashFund extends Parameter {
           }
           MiscUtil.close(loRS);
         } catch (SQLException e) {
-          poJSON.put("result", "error");
-          poJSON.put("message", e.getMessage());
-          return poJSON;
+            poJSON = setJSON("error", e.getMessage());
+            return poJSON;
         } 
         
         poJSON.put("result", "success");
@@ -789,10 +743,20 @@ public class CashFund extends Parameter {
           }
           MiscUtil.close(loRS);
         } catch (SQLException e) {
-          poJSON.put("result", "error");
-          poJSON.put("message", e.getMessage());
+            poJSON = setJSON("error", e.getMessage());
         } 
         return lsEntry;
     }
     
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
+    
+    private LocalDate strToDate(String val) {
+        DateTimeFormatter date_formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(val, date_formatter);
+        return localDate;
+    }
 }
