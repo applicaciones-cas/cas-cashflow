@@ -24,7 +24,11 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 
 public class CashFund extends Parameter {
-
+    public String psIndustryId = "";
+    public String psCompanyId = "";
+    public String psBranchCode = "";
+    public String psDepartmentId = "";
+    
     Model_Cash_Fund poModel;
     
     /**
@@ -63,6 +67,12 @@ public class CashFund extends Parameter {
         
         return poJSON;
     }
+    
+    
+    public void setIndustryId(String industryId) { psIndustryId = industryId; }
+    public void setCompanyId(String companyId) { psCompanyId = companyId; }
+    public void setBranchCode(String branchCode) { psBranchCode = branchCode; }
+    public void setDepartmentId(String departmentId) { psDepartmentId = departmentId; }
     
     /**
     * Requests user approval for the current transaction.
@@ -405,7 +415,37 @@ public class CashFund extends Parameter {
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
-        System.out.println("Cash fund : " + lsSQL);
+        String lsCondition = "";
+        
+        if(psCompanyId != null && !"".equals(psCompanyId)){
+            lsCondition = " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
+        }
+        if(psIndustryId != null && !"".equals(psIndustryId)){
+            if(lsCondition.isEmpty()){
+                lsCondition = " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+            } else {
+                lsCondition = lsCondition + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
+            }
+        }
+        if(psBranchCode != null && !"".equals(psBranchCode)){
+            if(lsCondition.isEmpty()){
+                lsCondition = " AND a.sBranchCD = " + SQLUtil.toSQL(psBranchCode);
+            } else {
+                lsCondition = lsCondition + " AND a.sBranchCD = " + SQLUtil.toSQL(psBranchCode);
+            }
+        
+        }
+        if(psDepartmentId != null && !"".equals(psDepartmentId)){
+            if(lsCondition.isEmpty()){
+                lsCondition = " AND a.sDeptIDxx = " + SQLUtil.toSQL(psDepartmentId);
+            } else {
+                lsCondition = lsCondition + " AND a.sDeptIDxx = " + SQLUtil.toSQL(psDepartmentId);
+            }
+        }
+        if(!lsCondition.isEmpty()){
+            lsSQL = lsSQL + " " + lsCondition;
+        }
+        
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,

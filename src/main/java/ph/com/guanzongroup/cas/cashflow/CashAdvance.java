@@ -578,6 +578,10 @@ public class CashAdvance extends Parameter {
     public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
         object.setRecordStatus(RecordStatus.ACTIVE);
+        object.setIndustryId(poModel.getIndustryId());
+        object.setCompanyId(poModel.getCompanyId());
+        object.setBranchCode(poModel.getBranchCode());
+        object.setDepartmentId(poModel.getDepartmentRequest());
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
