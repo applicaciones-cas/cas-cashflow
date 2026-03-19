@@ -123,7 +123,7 @@ public class CashAdvance extends Parameter {
         
         //validator
         poJSON = isEntryOkay(poModel.getTransactionStatus());
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
@@ -165,6 +165,32 @@ public class CashAdvance extends Parameter {
     public String getSearchIndustry() { return psIndustry; }
     public String getSearchBranch() { return psBranch; }
     public String getSearchPayee() { return psPayee; }
+    
+    /**
+    * Creates a JSONObject with "result" and "message" fields.
+    *
+    * @param fsResult  The result value (e.g., "success", "error")
+    * @param fsMessage The message describing the result
+    * @return JSONObject containing the result and message
+    */
+    private JSONObject setJSON(String fsResult, String fsMessage) {
+        JSONObject loJSON = new JSONObject();
+        loJSON.put("result", fsResult);
+        loJSON.put("message", fsMessage);
+        return loJSON;
+    }
+
+   /**
+    * Checks whether a JSONObject indicates a successful result.
+    *
+    * Returns true if the "result" field equals "success" or is not "error".
+    *
+    * @param foJSON The JSONObject to check
+    * @return true if successful, false otherwise
+    */
+    public boolean checkJSONSuccess(JSONObject foJSON) {
+        return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
+    }
     
     /**
      * Returns the Cash Advance model instance.
@@ -251,18 +277,16 @@ public class CashAdvance extends Parameter {
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer.");
+                poJSON = setJSON("error", "User is not an authorized approving officer.");
                 return poJSON;
             }
         }   
         
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
+        poJSON = setJSON("success", "success");
         return poJSON;
     } 
     
@@ -285,38 +309,35 @@ public class CashAdvance extends Parameter {
         String lsStatus = CashAdvanceStatus.CONFIRMED;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
+            poJSON = setJSON("error", "Transaction was already confirmed.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction confirmed successfully.");
+        poJSON = setJSON("success", "Transaction confirmed successfully.");
         return poJSON;
     }
     
@@ -339,38 +360,35 @@ public class CashAdvance extends Parameter {
         String lsStatus = CashAdvanceStatus.APPROVED;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already approved.");
+            poJSON = setJSON("error", "Transaction was already approved.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction approved successfully.");
+        poJSON = setJSON("success", "Transaction approved successfully.");
         return poJSON;
     }
     
@@ -393,40 +411,37 @@ public class CashAdvance extends Parameter {
         String lsStatus = CashAdvanceStatus.VOID;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already voided.");
+            poJSON = setJSON("error", "Transaction was already voided.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!"success".equals((String) poJSON.get("result"))) {
+                if (!checkJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction voided successfully.");
+        poJSON = setJSON("success", "Transaction voided successfully.");
         return poJSON;
     }
     
@@ -449,40 +464,37 @@ public class CashAdvance extends Parameter {
         String lsStatus = CashAdvanceStatus.CANCELLED;
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         if (lsStatus.equals(poModel.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already cancelled.");
+            poJSON = setJSON("error", "Transaction was already cancelled.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!"success".equals((String) poJSON.get("result"))) {
+                if (!checkJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction cancelled successfully.");
+        poJSON = setJSON("success", "Transaction cancelled successfully.");
         return poJSON;
     }
     
@@ -503,36 +515,35 @@ public class CashAdvance extends Parameter {
         poJSON = new JSONObject();
 
         if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record was loaded.");
+            poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
 
         //validator
         poJSON = isEntryOkay(poModel.getTransactionStatus());
-        if (!"success".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!"success".equals((String) poJSON.get("result"))) {
+            if (!checkJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = updateRecord();
-        if ("error".equals((String) poJSON.get("result"))){
+        if (!checkJSONSuccess(poJSON)){
             return poJSON;
         }
         
         poJSON = poModel.setIssuedBy(poGRider.getUserID());
-        if ("error".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         poJSON = poModel.setIssuedDate(poGRider.getServerDate());
-        if ("error".equals((String) poJSON.get("result"))) {
+        if (!checkJSONSuccess(poJSON)) {
             return poJSON;
         }
         
@@ -544,7 +555,7 @@ public class CashAdvance extends Parameter {
         }
 
         poJSON =  getModel().saveRecord();
-        if ("success".equals((String) poJSON.get("result"))){
+        if (checkJSONSuccess(poJSON)){
             if (!pbWthParent) poGRider.commitTrans();
         } else {
             if (!pbWthParent){
@@ -554,8 +565,7 @@ public class CashAdvance extends Parameter {
         }
 
         poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        poJSON.put("message", "Transaction released successfully.");
+        poJSON = setJSON("success", "Transaction released successfully.");
         return poJSON;
     }
     
@@ -573,7 +583,7 @@ public class CashAdvance extends Parameter {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             setSearchIndustry(object.getModel().getDescription());
         }
 
@@ -596,7 +606,7 @@ public class CashAdvance extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             if(isSearch){
                 setSearchBranch(object.getModel().getBranchName());
             } else {
@@ -626,7 +636,7 @@ public class CashAdvance extends Parameter {
         object.setDepartmentId(poModel.getDepartmentRequest());
 
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             poModel.setCashFundId(object.getModel().getCashFundId());
         }
 
@@ -649,7 +659,7 @@ public class CashAdvance extends Parameter {
         Department object = new ParamControllers(poGRider, logwrapr).Department();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
+        if (checkJSONSuccess(poJSON)) {
             poModel.setDepartmentRequest(object.getModel().getDepartmentId());
         }
         return poJSON;
@@ -703,8 +713,7 @@ public class CashAdvance extends Parameter {
             return loJSON;
         }
     
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -742,8 +751,7 @@ public class CashAdvance extends Parameter {
             return OpenTransaction((String) poJSON.get("sTransNox"));
         } else {
             poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record loaded.");
+            poJSON = setJSON("error", "No record loaded.");
             return poJSON;
         }
     }
@@ -796,14 +804,12 @@ public class CashAdvance extends Parameter {
                 }
 
                 System.out.println("Records found: " + lnctr);
-                poJSON.put("result", "success");
-                poJSON.put("message", "Record loaded successfully.");
+                poJSON = setJSON("success", "Record loaded successfully.");
             } else {
                 paMaster = new ArrayList<>();
                 paMaster.add(CashAdvance());
-                poJSON.put("result", "error");
+                poJSON = setJSON("error", "No record found.");
                 poJSON.put("continue", true);
-                poJSON.put("message", "No record found.");
             }
             MiscUtil.close(loRS);
         }catch (GuanzonException | SQLException ex) {
@@ -811,7 +817,7 @@ public class CashAdvance extends Parameter {
             poJSON.put("result", "error");
             poJSON.put("message", MiscUtil.getException(ex));
         }
-        poJSON.put("result", "success");
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -828,8 +834,7 @@ public class CashAdvance extends Parameter {
         poJSON = new JSONObject();
         try {
             if (fsIndustry == null || "".equals(fsIndustry)) { 
-                poJSON.put("result", "error");
-                poJSON.put("message", "Industry cannot be empty.");
+                poJSON = setJSON("error", "Industry cannot be empty.");
                 return poJSON;
             }
 
@@ -874,22 +879,19 @@ public class CashAdvance extends Parameter {
                 }
 
                 System.out.println("Records found: " + lnctr);
-                poJSON.put("result", "success");
-                poJSON.put("message", "Record loaded successfully.");
+                poJSON = setJSON("success", "Record loaded successfully.");
             } else {
                 paMaster = new ArrayList<>();
                 paMaster.add(CashAdvance());
-                poJSON.put("result", "error");
+                poJSON = setJSON("error", "No record found.");
                 poJSON.put("continue", true);
-                poJSON.put("message", "No record found.");
             }
             MiscUtil.close(loRS);
         }catch (GuanzonException | SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            poJSON.put("result", "error");
-            poJSON.put("message", MiscUtil.getException(ex));
+            poJSON = setJSON("error", MiscUtil.getException(ex));
         }
-        poJSON.put("result", "success");
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -1057,8 +1059,7 @@ public class CashAdvance extends Parameter {
             }
             MiscUtil.close(loRS);
         } catch (SQLException e) {
-            poJSON.put("result", "error");
-            poJSON.put("message", e.getMessage());
+            poJSON = setJSON("error", e.getMessage());
             return poJSON;
         }
 
@@ -1090,8 +1091,7 @@ public class CashAdvance extends Parameter {
             }
             MiscUtil.close(loRS);
         } catch (SQLException e) {
-            poJSON.put("result", "error");
-            poJSON.put("message", e.getMessage());
+            poJSON = setJSON("error", e.getMessage());
         }
         return lsEntry;
     }

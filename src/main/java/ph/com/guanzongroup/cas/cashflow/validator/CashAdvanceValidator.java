@@ -85,13 +85,31 @@ public class CashAdvanceValidator implements GValidator {
             
             if (poMaster.getTransactionNo() == null || "".equals(poMaster.getTransactionNo())) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Transaction No");
+                poJSON.put("message", "Transaction no cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getIndustryId() == null || "".equals(poMaster.getIndustryId())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Industry cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getCompanyId() == null || "".equals(poMaster.getCompanyId())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Company cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getBranchCode() == null || "".equals(poMaster.getBranchCode())) {
+                poJSON.put("result","error");
+                poJSON.put("message", "Branch code cannot be empty");
                 return poJSON;
             }
             
             if (poMaster.getCashFundId() == null || "".equals(poMaster.getCashFundId())) {
                 poJSON.put("result","error");
-                poJSON.put("message", "Industry ID cannot be empty");
+                poJSON.put("message", "Cash fund cannot be empty");
                 return poJSON;
             }
             
@@ -109,7 +127,7 @@ public class CashAdvanceValidator implements GValidator {
             
             if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
                 poJSON.put("result","error");
-                poJSON.put("message", "Remarks to cannot be empty.");
+                poJSON.put("message", "Remarks cannot be empty.");
                 return poJSON;
             }
             
