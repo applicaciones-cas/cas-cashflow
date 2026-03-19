@@ -28,7 +28,16 @@ public class testCashAdvance {
 
     static GRiderCAS instance;
     static CashAdvance poCashAdvance;
-
+    
+    /**
+    * Sets up the test class before any tests are run.
+    *
+    * Initializes system properties, connects to the database, and
+    * creates a Cash Advance controller instance for testing.
+    *
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if application-specific initialization fails
+    */
     @BeforeClass
     public static void setUpClass() throws SQLException, GuanzonException {
         System.setProperty("sys.default.path.metadata", "D:/GGC_Maven_Systems/config/metadata/new/");
@@ -37,7 +46,14 @@ public class testCashAdvance {
 
         poCashAdvance = new CashflowControllers(instance, null).CashAdvance();
     }
-
+    /**
+     * Tests creating and saving a new Cash Advance transaction.
+     *
+     * Initializes the transaction, sets required fields, and verifies
+     * that the record is successfully saved.
+     *
+     * Fails the test if any operation returns an error.
+     */
 //    @Test
     public void testNewTransaction() {
         JSONObject loJSON;
@@ -80,7 +96,12 @@ public class testCashAdvance {
             Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-    
+    /**
+    * Tests loading and iterating through the Cash Advance transaction list.
+    *
+    * Retrieves records based on filters and prints key details per entry.
+    * Fails the test if the transaction list cannot be loaded.
+    */
 //    @Test
     public void testCashAdvanceList() {
         try {
@@ -112,8 +133,51 @@ public class testCashAdvance {
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }/**
+    * Tests loading and iterating through the Cash Advance transaction list.
+    *
+    * Retrieves records based on filters and prints key details per entry.
+    * Fails the test if the transaction list cannot be loaded.
+    */
+//    @Test
+    public void testCashAdvanceList2() {
+        try {
+            JSONObject loJSON = new JSONObject();
+            poCashAdvance.initialize();
+            poCashAdvance.setCompanyId("M001"); //direct assignment of value
+            poCashAdvance.setRecordStatus("0");
+            loJSON = poCashAdvance.loadTransactionList("", "");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            //retreiving using column index
+            for (int lnCtr = 0; lnCtr <= poCashAdvance.getCashAdvanceCount() - 1; lnCtr++) {
+                try {
+                    print("Row No ->> " + lnCtr);
+                    print("Transaction No ->> " + poCashAdvance.CashAdvanceList(lnCtr).getTransactionNo());
+                    print("Transaction Date ->> " + poCashAdvance.CashAdvanceList(lnCtr).getTransactionDate());
+                    print("Branch ->> " + poCashAdvance.CashAdvanceList(lnCtr).Branch().getDescription());
+                    print("Company ->> " + poCashAdvance.CashAdvanceList(lnCtr).Company().getCompanyName());
+                    print("Cash Fund ->> " + poCashAdvance.CashAdvanceList(lnCtr).CashFund().getDescription());
+                    print("Payee ->> " + poCashAdvance.CashAdvanceList(lnCtr).Payee().getCompanyName());
+                    print("----------------------------------------------------------------------------------");
+                } catch (GuanzonException | SQLException ex) {
+                    Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+                }
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
-
+    /**
+     * Tests opening an existing Cash Advance transaction.
+     *
+     * Loads a transaction by its number and prints all field values,
+     * including related descriptions (industry, branch, company, cash fund).
+     * Fails the test if the transaction cannot be opened.
+     */
 //    @Test
     public void testOpenTransaction() {
         JSONObject loJSON;
@@ -144,7 +208,12 @@ public class testCashAdvance {
         }
 
     }
-    
+    /**
+    * Tests updating an existing Cash Advance transaction.
+    *
+    * Opens a transaction, switches it to update mode, modifies fields,
+    * and saves the changes. Fails the test if any step returns an error.
+    */
 //    @Test
     public void testUpdateTransaction() {
         JSONObject loJSON;
@@ -194,7 +263,12 @@ public class testCashAdvance {
         }
 
     }
-
+    /**
+     * Tests confirming a Cash Advance transaction.
+     * 
+     * Opens the transaction, prints its fields, and confirms it.
+     * Fails the test if any step returns an error.
+     */
 //    @Test
     public void testConfirmTransaction() {
         JSONObject loJSON;
@@ -229,7 +303,12 @@ public class testCashAdvance {
             Assert.fail();
         } 
     }
-
+    /**
+     * Tests cancelling a Cash Advance transaction.
+     * 
+     * Opens the transaction, prints its fields, and cancels it.
+     * Fails the test if any step returns an error.
+     */
 //    @Test
     public void testCancelTransaction() {
         JSONObject loJSON;
@@ -264,7 +343,12 @@ public class testCashAdvance {
             Assert.fail();
         } 
     }
-
+    /**
+     * Tests voiding a Cash Advance transaction.
+     * 
+     * Opens the transaction, prints its fields, and voids it.
+     * Fails the test if any step returns an error.
+     */
 //    @Test
     public void testVoidTransaction() {
         JSONObject loJSON;
@@ -299,7 +383,12 @@ public class testCashAdvance {
             Assert.fail();
         } 
     }
-
+    /**
+     * Tests approving a Cash Advance transaction.
+     * 
+     * Opens the transaction, prints its fields, and approves it.
+     * Fails the test if any step returns an error.
+     */
 //    @Test
     public void testApproveTransaction() {
         JSONObject loJSON;
@@ -334,7 +423,12 @@ public class testCashAdvance {
             Assert.fail();
         } 
     }
-
+    /**
+     * Tests releasing a Cash Advance transaction.
+     * 
+     * Opens the transaction, prints its fields, and releases it.
+     * Fails the test if any step returns an error.
+     */
 //    @Test
     public void testReleaseTransaction() {
         JSONObject loJSON;
@@ -369,14 +463,22 @@ public class testCashAdvance {
             Assert.fail();
         } 
     } 
-    
+    /**
+    * Checks the result of a JSONObject and fails the test if it indicates an error.
+    *
+    * @param loJSON The JSONObject to check, expected to contain "result" and "message" keys.
+    */
     public void checkJSON(JSONObject loJSON) {
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }
-
+    /**
+     * Prints a string to the standard output.
+     *
+     * @param toPrint The string to print.
+     */
     public void print(String toPrint) {
         System.out.println(toPrint);
     }

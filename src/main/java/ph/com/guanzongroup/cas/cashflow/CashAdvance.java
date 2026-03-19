@@ -95,12 +95,28 @@ public class CashAdvance extends Parameter {
         
         return poJSON;
     }
-    
+    /**
+    * Creates a new transaction record.
+    *
+    * @return JSONObject result of the operation
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    */
     public JSONObject NewTransaction()
             throws CloneNotSupportedException, SQLException, GuanzonException {
         return super.newRecord();
     }
-    
+    /**
+    * Saves the current transaction after validation.
+    *
+    * Validates entry, sets modification details, then persists the record.
+    *
+    * @return JSONObject result of the operation
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if validation or processing fails
+    * @throws CloneNotSupportedException if cloning fails
+    */
     public JSONObject SaveTransaction()
             throws SQLException,
             GuanzonException,
@@ -117,14 +133,26 @@ public class CashAdvance extends Parameter {
         
         return super.saveRecord();
     }
-
+    /**
+     * Opens an existing transaction by transaction number.
+     *
+     * @param transactionNo Transaction identifier
+     * @return JSONObject result of the operation
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
+     */
     public JSONObject OpenTransaction(String transactionNo)
             throws CloneNotSupportedException,
             SQLException,
             GuanzonException {
         return super.openRecord(transactionNo);
     }
-
+    /**
+     * Updates the current transaction record.
+     *
+     * @return JSONObject result of the operation
+     */
     public JSONObject UpdateTransaction() {
         return super.updateRecord();
     }
@@ -148,20 +176,35 @@ public class CashAdvance extends Parameter {
     public Model_Cash_Advance getModel() {
         return poModel;
     }
-    
+    /**
+    * Creates a new Cash Advance model instance.
+    *
+    * @return Model_Cash_Advance instance
+    */
     private Model_Cash_Advance CashAdvance() {
         return new CashflowModels(poGRider).CashAdvanceMaster();
     }
 
+    /**
+     * Retrieves a Cash Advance record by index.
+     *
+     * @param row Index of the record
+     * @return Model_Cash_Advance at the specified index
+     */
     public Model_Cash_Advance CashAdvanceList(int row) {
         return (Model_Cash_Advance) paMaster.get(row);
     }
 
+    /**
+     * Gets the total number of Cash Advance records.
+     *
+     * @return number of records
+     */
     public int getCashAdvanceCount() {
         return this.paMaster.size();
     }
     
-    //Reset Master
+    //Reset Model
     public void resetModel() {
         poModel = new CashflowModels(poGRider).CashAdvanceMaster();
     }
@@ -613,6 +656,19 @@ public class CashAdvance extends Parameter {
         return poJSON;
     }
     
+    /**
+    * Searches and selects a payee (employee).
+    *
+    * Displays matching records and returns the selected result.
+    * Updates either the search value or model based on parameters.
+    *
+    * @param value    Search keyword (Employee ID or Name)
+    * @param byCode   true = search by ID, false = search by Name
+    * @param isSearch true = set search value, false = set model ID
+    * @return JSONObject with "success" or "error" result
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    */
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         poJSON = new JSONObject();
 
@@ -620,11 +676,9 @@ public class CashAdvance extends Parameter {
         String lsSQL = "SELECT " 
                 + "   a.sEmployID "
                 + " , b.sCompnyNm AS EmployNme" 
-                + " FROM Employee_Master001 a" //GGC_ISysDBF.
-                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
+                + " FROM Employee_Master001 a" 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
-//                                                + " AND a.sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartmentRequest())
-//                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
                                             );
         lsSQL = lsSQL + " GROUP BY sEmployID";
         System.out.println("Executing SQL: " + lsSQL);
@@ -675,7 +729,7 @@ public class CashAdvance extends Parameter {
                 + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
                 + " AND a.sDeptReqs = " + SQLUtil.toSQL(poGRider.getDepartment()));
         
-        lsSQL = lsSQL + " GROUP BY a.sTransNox";
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
@@ -717,6 +771,7 @@ public class CashAdvance extends Parameter {
                 + " AND a.sDeptReqs = " + SQLUtil.toSQL(poGRider.getDepartment())
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
+                + " AND (a.sLiquidtd IS NULL OR TRIM(a.sLiquidtd) = '') " //Retrieve all unliquidated cash advance 
             );
             
             lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
@@ -794,6 +849,7 @@ public class CashAdvance extends Parameter {
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
                 + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
+                + " AND (a.sLiquidtd IS NULL OR TRIM(a.sLiquidtd) = '') " //Retrieve all unliquidated cash advance
             );
             
             lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";

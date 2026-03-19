@@ -65,11 +65,6 @@ public class testCashFund {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             } 
-//            poController.getModel().setIndustryId(instance.getIndustry());
-//            poController.getModel().setCompanyId(instance.getCompnyId());
-//            poController.getModel().setBranchCode(instance.getBranchCode());
-//            poController.getModel().setDepartment(instance.getDepartment());
-//            poController.getModel().setBeginningDate(instance.getServerDate());
             poController.getModel().setCashFundManager(instance.getClientID());
             poController.getModel().setDescription("Rsie Test");
             poController.getModel().setBeginningBalance(1000.00);
