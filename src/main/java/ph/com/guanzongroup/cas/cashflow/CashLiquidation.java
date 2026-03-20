@@ -1025,7 +1025,8 @@ public class CashLiquidation extends Transaction {
         }
 
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getParticular() != null && !"".equals(Detail(getDetailCount() - 1).getParticular())) {
+            if (Detail(getDetailCount() - 1).getParticular() != null && !"".equals(Detail(getDetailCount() - 1).getParticular())
+                && Detail(getDetailCount() - 1).getTransactionAmount() > 0.00) {
                 AddDetail();
             }
         }
