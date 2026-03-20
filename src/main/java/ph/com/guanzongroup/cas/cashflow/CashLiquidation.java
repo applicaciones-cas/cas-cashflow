@@ -519,7 +519,6 @@ public class CashLiquidation extends Transaction {
     public JSONObject SearchAccount(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
         AccountChart object = new CashflowControllers(poGRider, logwrapr).AccountChart();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             poJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
@@ -930,7 +929,7 @@ public class CashLiquidation extends Transaction {
      */
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode() == null || "".equals(Detail(getDetailCount() - 1).getAccountCode())) {
+            if (Detail(getDetailCount() - 1).getParticular() == null || "".equals(Detail(getDetailCount() - 1).getParticular())) {
                 poJSON = new JSONObject();
                 poJSON = setJSON("error", "Last row has empty item.");
                 return poJSON;
@@ -1016,24 +1015,16 @@ public class CashLiquidation extends Transaction {
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
-            if (Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular())) {
+            if ((Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
+                && (Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular()))) {
                 deleteDetail(lnCtr);
-            } else {
-                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Detail(lnCtr).getTransactionAmount() == 0.0000){
-                        deleteDetail(lnCtr);
-                    }
-                }
-            }
+            } 
             lnCtr--;
         }
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getParticular() != null && !"".equals(Detail(getDetailCount() - 1).getParticular())) {
-                if((Detail(getDetailCount() - 1).getTransactionAmount() == 0.0000 && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
-                    || ((Detail(getDetailCount() - 1).getTransactionAmount() < 0.0000 || Detail(getDetailCount() - 1).getTransactionAmount() > 0.0000) && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
-                    AddDetail();
-                }
+                AddDetail();
             }
         }
 
