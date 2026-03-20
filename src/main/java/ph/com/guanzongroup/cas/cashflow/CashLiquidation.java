@@ -158,7 +158,7 @@ public class CashLiquidation extends Transaction {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction attachments.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
-        
+        System.out.println("Liquidated Date : " + Master().getLiquidatedDate());
         poJSON = setJSON("success","success");
         return poJSON;
     }
@@ -1015,7 +1015,9 @@ public class CashLiquidation extends Transaction {
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
-            if ((Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
+            if ((Detail(lnCtr).getORNo() == null || "".equals(Detail(lnCtr).getORNo()))
+                && (Detail(lnCtr).getTransactionDate() == null || "".equals(Detail(lnCtr).getTransactionDate()) || "1900-01-01".equals(Detail(lnCtr).getTransactionDate()))
+                && (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
                 && (Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular()))) {
                 deleteDetail(lnCtr);
             } 
@@ -1295,26 +1297,41 @@ public class CashLiquidation extends Transaction {
             }
         }
 
-        String lsSQL =  " SELECT        "
-                        + " a.sTransNox   "
-                        + " , a.dTransact "
-                        + " , a.sCashFIDx "
-                        + " , a.cTranStat "
-                        + " , b.sCompnyNm AS sCompanyx "
-                        + " , c.sDescript AS sIndustry "
-                        + " , d.sDeptName AS sDeptName "
-                        + " , e.sCompnyNm AS sPayeexxx "
-                        + " , f.sCashFDsc AS sCashFund "
-                        + ", g.sBranchNm AS sBranchNm "
-                        + " FROM CashAdvance a         "
-                        + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
-                        + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
-                        + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
-                        + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                        + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
-                        + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
-
-        SQL_BROWSE = MiscUtil.addCondition(lsSQL, lsCondition);
+        SQL_BROWSE =   " SELECT "
+                    + "   a.sTransNox "
+                    + " , a.sCompnyID "
+                    + " , a.sBranchCd "
+                    + " , a.sIndstCdx "
+                    + " , a.dTransact "
+                    + " , a.sClientID "
+                    + " , a.sDeptReqs "
+                    + " , a.sCashFIDx "
+                    + " , a.sRemarksx "
+                    + " , a.nAdvAmtxx "
+                    + " , a.sIssuedxx "
+                    + " , a.dIssuedxx "
+                    + " , a.nLiqTotal "
+                    + " , a.sLiquidtd "
+                    + " , a.dLiquidtd "  
+                    + " , a.cTranStat "
+                    + " , a.sModified "
+                    + " , a.dModified "
+                    + " , b.sCompnyNm AS sCompanyx "
+                    + " , c.sDescript AS sIndustry "
+                    + " , d.sDeptName AS sDeptName "
+                    + " , e.sCompnyNm AS sPayeexxx "
+                    + " , f.sCashFDsc AS sCashFund "
+                    + " , g.sBranchNm AS sBranchNm "
+                    + " FROM CashAdvance a "
+                    + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID "
+                    + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx "
+                    + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs "
+                    + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
+                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx "
+                    + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
+        if(lsCondition != null && !"".equals(lsCondition)){
+            SQL_BROWSE = MiscUtil.addCondition(SQL_BROWSE, lsCondition);
+        }
     }
     
     /**

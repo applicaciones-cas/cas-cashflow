@@ -5,11 +5,14 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
+import java.sql.ResultSet;
 import java.util.Date;
 import java.sql.SQLException;
+import java.sql.SQLWarning;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
@@ -213,6 +216,17 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Date getLiquidatedDate() {
+        try {
+            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
+                                " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
+                                );
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            if (loRS.next()) {
+                return loRS.getDate("dLiquidtd");
+            }
+        } catch (SQLException e) {
+          return null;
+        } 
         return (Date) getValue("dLiquidtd");
     }
 
@@ -408,4 +422,23 @@ public class Model_Cash_Advance extends Model {
             return poLiquidated;
         }
     }
+    
+//    public String getSQLiquidatedDate() throws SQLException, GuanzonException{
+//        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
+//                                                                    " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
+//                                                                    );
+//        System.out.println("Executing SQL: " + lsSQL);
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//        try {
+//            if (MiscUtil.RecordCount(loRS) > 0) {
+//                if(loRS.next()){
+//                    return loRS.getDate("dLiquidtd") ;
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            System.out.println("No record loaded.");
+//        }
+//        return "";
+//    }
 }
