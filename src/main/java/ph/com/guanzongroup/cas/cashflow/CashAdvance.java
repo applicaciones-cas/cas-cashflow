@@ -1110,7 +1110,13 @@ public class CashAdvance extends Parameter {
             case CashAdvanceStatus.CONFIRMED:
                 return "Confirmed";
             case CashAdvanceStatus.APPROVED:
+//                if(getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE){
+                if(poModel.getIssuedBy() != null && !"".equals(poModel.getIssuedBy())){
+                    return "Released";
+                }
                 return "Approved";
+            case CashAdvanceStatus.LIQUIDATED:
+                return "Liquidated";
             case CashAdvanceStatus.OPEN:
                 return "Open";
             default:

@@ -133,7 +133,8 @@ public class testCashAdvance {
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
         }
-    }/**
+    }
+    /**
     * Tests loading and iterating through the Cash Advance transaction list.
     *
     * Retrieves records based on filters and prints key details per entry.
