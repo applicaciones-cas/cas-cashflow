@@ -123,7 +123,7 @@ public class CashAdvance extends Parameter {
         
         //validator
         poJSON = isEntryOkay(poModel.getTransactionStatus());
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
@@ -188,7 +188,7 @@ public class CashAdvance extends Parameter {
     * @param foJSON The JSONObject to check
     * @return true if successful, false otherwise
     */
-    public boolean checkJSONSuccess(JSONObject foJSON) {
+    public boolean isJSONSuccess(JSONObject foJSON) {
         return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
     }
     
@@ -277,7 +277,7 @@ public class CashAdvance extends Parameter {
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
@@ -320,19 +320,19 @@ public class CashAdvance extends Parameter {
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -371,19 +371,19 @@ public class CashAdvance extends Parameter {
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -422,21 +422,21 @@ public class CashAdvance extends Parameter {
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!checkJSONSuccess(poJSON)) {
+                if (!isJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -475,21 +475,21 @@ public class CashAdvance extends Parameter {
 
         //validator
         poJSON = isEntryOkay(lsStatus);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!checkJSONSuccess(poJSON)) {
+                if (!isJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -521,29 +521,29 @@ public class CashAdvance extends Parameter {
 
         //validator
         poJSON = isEntryOkay(poModel.getTransactionStatus());
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = updateRecord();
-        if (!checkJSONSuccess(poJSON)){
+        if (!isJSONSuccess(poJSON)){
             return poJSON;
         }
         
         poJSON = poModel.setIssuedBy(poGRider.getUserID());
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         poJSON = poModel.setIssuedDate(poGRider.getServerDate());
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
@@ -555,7 +555,7 @@ public class CashAdvance extends Parameter {
         }
 
         poJSON =  getModel().saveRecord();
-        if (checkJSONSuccess(poJSON)){
+        if (isJSONSuccess(poJSON)){
             if (!pbWthParent) poGRider.commitTrans();
         } else {
             if (!pbWthParent){
@@ -583,7 +583,7 @@ public class CashAdvance extends Parameter {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             setSearchIndustry(object.getModel().getDescription());
         }
 
@@ -606,7 +606,7 @@ public class CashAdvance extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             if(isSearch){
                 setSearchBranch(object.getModel().getBranchName());
             } else {
@@ -636,7 +636,7 @@ public class CashAdvance extends Parameter {
         object.setDepartmentId(poModel.getDepartmentRequest());
 
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             poModel.setCashFundId(object.getModel().getCashFundId());
         }
 
@@ -659,7 +659,7 @@ public class CashAdvance extends Parameter {
         Department object = new ParamControllers(poGRider, logwrapr).Department();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             poModel.setDepartmentRequest(object.getModel().getDepartmentId());
         }
         return poJSON;
@@ -1017,7 +1017,7 @@ public class CashAdvance extends Parameter {
         String entryBy = "";
         String entryDate = "";
 
-        if ("success".equals((String) loJSON.get("result"))) {
+        if (isJSONSuccess(loJSON)) {
             entryBy = (String) loJSON.get("sCompnyNm");
             entryDate = (String) loJSON.get("sEntryDte");
         }

@@ -101,7 +101,7 @@ public class CashFund extends Parameter {
     * @param foJSON The JSONObject to check
     * @return true if successful, false otherwise
     */
-   public boolean checkJSONSuccess(JSONObject foJSON) {
+   public boolean isJSONSuccess(JSONObject foJSON) {
        return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
    }
     
@@ -114,7 +114,7 @@ public class CashFund extends Parameter {
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
@@ -157,19 +157,19 @@ public class CashFund extends Parameter {
 
         //validator
         poJSON = isEntryOkay();
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(!pbWthParent){
             poJSON = callApproval();
-            if (!checkJSONSuccess(poJSON)) {
+            if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, "error",pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -212,21 +212,21 @@ public class CashFund extends Parameter {
 
         //validator
         poJSON = isEntryOkay();
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
-                if (!checkJSONSuccess(poJSON)) {
+                if (!isJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -308,7 +308,7 @@ public class CashFund extends Parameter {
         }
         
         poJSON = checkExistingCashFund();
-        if (!checkJSONSuccess(poJSON)) {
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
@@ -441,7 +441,7 @@ public class CashFund extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             poModel.setBranchCode(object.getModel().getBranchCode());
         }
 
@@ -463,7 +463,7 @@ public class CashFund extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
-        if (checkJSONSuccess(poJSON)) {
+        if (isJSONSuccess(poJSON)) {
             poModel.setDepartment(object.getModel().getDepartmentId());
         }
         return poJSON;
