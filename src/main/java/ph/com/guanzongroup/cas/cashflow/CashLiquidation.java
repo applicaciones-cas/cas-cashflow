@@ -183,6 +183,11 @@ public class CashLiquidation extends Transaction {
             return poJSON;
         }
         
+        if(Master().getLiquidatedBy() == null || "".equals(Master().getLiquidatedBy())){
+            Master().setLiquidatedBy(poGRider.Encrypt(poGRider.getUserID()));
+            Master().setLiquidatedDate(poGRider.getServerDate());
+        }
+        
         poJSON = setJSON("success","success");
         return poJSON;
     }
@@ -595,7 +600,7 @@ public class CashLiquidation extends Transaction {
         Double ldblTransactionTotal = 0.0000;
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-                ldblTransactionTotal += Detail(lnCntr).getTransactionAmount();
+            ldblTransactionTotal += Detail(lnCntr).getTransactionAmount();
         }
         
         if(ldblTransactionTotal < 0.0000) {
@@ -605,6 +610,8 @@ public class CashLiquidation extends Transaction {
                 return poJSON;
             }
         }
+        
+        Master().setLiquidationTotal(ldblTransactionTotal);
         poJSON = setJSON("success", "computed successfully");
         poJSON.put("column", "");
         return poJSON;
@@ -1136,8 +1143,6 @@ public class CashLiquidation extends Transaction {
         
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
-        Master().setLiquidatedBy(poGRider.Encrypt(poGRider.getUserID()));
-        Master().setLiquidatedDate(poGRider.getServerDate());
         
         //assign other info on attachment
         for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
