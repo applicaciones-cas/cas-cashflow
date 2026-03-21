@@ -216,17 +216,19 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Date getLiquidatedDate() {
-        try {
-            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
-                                " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
-                                );
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            if (loRS.next()) {
-                return loRS.getDate("dLiquidtd");
-            }
-        } catch (SQLException e) {
-          return null;
-        } 
+        if((Date) getValue("dLiquidtd") == null){
+            try {
+                String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
+                                    " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
+                                    );
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                if (loRS.next()) {
+                    setLiquidatedDate(loRS.getTimestamp("dLiquidtd"));
+                }
+            } catch (SQLException e) {
+                return (Date) getValue("dLiquidtd");
+            } 
+        }
         return (Date) getValue("dLiquidtd");
     }
 

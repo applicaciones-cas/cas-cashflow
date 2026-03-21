@@ -413,6 +413,9 @@ public class CashLiquidation extends Transaction {
         if(fsPayee != null && !"".equals(fsPayee)){
             lnSort = 2;
         }
+        if(fsTransactionNo != null && !"".equals(fsTransactionNo)){
+            lnSort = 0;
+        }
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
@@ -485,22 +488,49 @@ public class CashLiquidation extends Transaction {
     }
     
     /**
-     * Searches for an active Payee record using the Client.
-     * 
-     * @param value The search criteria.
-     * @param byCode {@code true} to search by ID.
-     * @return A {@link JSONObject} containing the search result.
-     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
-     */
+    * Searches and selects a payee (employee).
+    *
+    * Displays matching records and returns the selected result.
+    * Updates either the search value or model based on parameters.
+    *
+    * @param value    Search keyword (Employee ID or Name)
+    * @param byCode   true = search by ID, false = search by Name
+    * @return JSONObject with "success" or "error" result
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    */
     public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = new JSONObject();
 
-        poJSON = object.searchRecordbyClientID(value, byCode);
-        if (isJSONSuccess(poJSON)) {
-            setSearchPayee(object.getModel().getPayeeName()); 
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM Employee_Master001 a" 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
+                                            );
+        lsSQL = lsSQL + " GROUP BY sEmployID";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
+                byCode ? 0 : 1);
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            setSearchPayee((String) loJSON.get("EmployNme"));
+        } else {
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
         }
-
+    
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
 
@@ -998,10 +1028,6 @@ public class CashLiquidation extends Transaction {
         resetMaster();
         Detail().clear();
         paAttachments = new ArrayList<>();
-        
-        setSearchIndustry("");
-        setSearchBranch("");
-        setSearchPayee("");
     }
    
     /**
