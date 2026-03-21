@@ -363,7 +363,7 @@ public class CashLiquidation extends Transaction {
         }
         
         if (loObject.getTransactionStatus().equals(lsStatus)) {
-            poJSON = setJSON("error", "Transaction was already confirmed.");
+            poJSON = setJSON("error", "Transaction was already approved.");
             return poJSON;
         }
         
@@ -386,7 +386,7 @@ public class CashLiquidation extends Transaction {
         }
         
         poJSON = new JSONObject();
-        poJSON = setJSON("success", "Transaction confirmed successfully.");
+        poJSON = setJSON("success", "Transaction approved successfully.");
         return poJSON;
     }
     
