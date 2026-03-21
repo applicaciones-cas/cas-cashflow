@@ -639,7 +639,8 @@ public class CashLiquidation extends Transaction {
                 lnRow++;
             }
             if(fnRow != lnCtr){
-                if(fsParticular.equals(Detail(lnCtr).getParticular())){
+                if(fsParticular.equals(Detail(lnCtr).getParticular()) 
+                    && !fsParticular.equals(Detail(fnRow).getParticular())){
                     if(!Detail(lnCtr).isReverse()){
 //                        poJSON = setJSON("error", "Particular " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
 //                        poJSON.put("row", lnCtr);
