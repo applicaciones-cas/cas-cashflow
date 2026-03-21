@@ -184,12 +184,12 @@ public class CheckTransfers extends Transaction {
         }
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if (!Detail(lnCtr).isReverse()) continue;
-            if (Detail(lnCtr).CheckPayment().getLocation() != null
-                    && !"0".equals(Detail(lnCtr).CheckPayment().getLocation())) {
+            String loc = Detail(lnCtr).CheckPayment().getLocation();
+            if (loc != null && (loc.equals("1") || loc.equals("4"))) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Unable to proceed with confirmation. Check No. "
                         + Detail(lnCtr).CheckPayment().getCheckNo()
-                        + " has already been transferred.");
+                        + " has a location that is already transferred.");
                 return poJSON;
             }
         }
@@ -665,6 +665,7 @@ public class CheckTransfers extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         boolean lbUpdated = false;
+        boolean hasReverse = false;
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -688,6 +689,14 @@ public class CheckTransfers extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setSourceCode(Detail(lnCtr).CheckPayment().getSourceCode());
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+        if (Detail(lnCtr).isReverse()) {
+                hasReverse = true; // at least one is reversed
+            }
+        }
+        if (!hasReverse) {
+            poJSON.put("result", "error");
+            poJSON.put("message", " Cannot save the transaction. \nAt least one detail must be marked as reversed (active).");
+            return poJSON;
         }
         if(getEditMode() == EditMode.ADDNEW){
             Master().setPreparedBy(poGRider.getUserID());
@@ -1051,11 +1060,17 @@ public class CheckTransfers extends Transaction {
                 AddDetail();
             }
         } else {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
-            poJSON.put("tableRow", lnRow);
-            poJSON.put("warning", "false");
-            return poJSON;
+           if (!Detail(lnRow).isReverse()) {
+                Detail(lnRow).isReverse(true);
+                poJSON.put("result", "success");
+                return poJSON;
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
+                poJSON.put("tableRow", lnRow);
+                poJSON.put("warning", "false");
+                return poJSON;
+            }
         }
 
         // Return success
@@ -1114,7 +1129,7 @@ public class CheckTransfers extends Transaction {
         for (lnCtr = 0; lnCtr <= poChecks.size() - 1; lnCtr++) {
 
             poChecks.get(lnCtr).setWithParentClass(true);
-
+            poChecks.get(lnCtr).poModel.getReleased();
             poJSON = poChecks.get(lnCtr).poModel.saveRecord();
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -1147,7 +1162,13 @@ public class CheckTransfers extends Transaction {
         }else if(CheckTransferStatus.VOID.equals(fsstatus)){
             issuance.poModel.setReleased("0");
             issuance.poModel.setBranchCode(Master().getDestination());
-            issuance.poModel.setLocation("0");
+            issuance.poModel.setLocation("1");
+            issuance.poModel.setModifyingId(poGRider.getUserID());
+            issuance.poModel.setModifiedDate(poGRider.getServerDate());
+        }else if(CheckTransferStatus.POSTED.equals(fsstatus)){
+            issuance.poModel.setReleased("1");
+            issuance.poModel.setBranchCode(Master().getDestination());
+            issuance.poModel.setLocation("1");
             issuance.poModel.setModifyingId(poGRider.getUserID());
             issuance.poModel.setModifiedDate(poGRider.getServerDate());
         }
