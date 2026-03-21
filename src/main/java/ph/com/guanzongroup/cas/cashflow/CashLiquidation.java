@@ -82,18 +82,18 @@ public class CashLiquidation extends Transaction {
     * @throws SQLException If a database error occurs during model creation.
     * @throws GuanzonException If business logic validation fails.
     */
-   public JSONObject InitTransaction() throws SQLException, GuanzonException {
-       SOURCE_CODE = "CADV";
+    public JSONObject InitTransaction() throws SQLException, GuanzonException {
+        SOURCE_CODE = "CADV";
 
-       poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
-       poDetail = new CashflowModels(poGRider).CashAdvanceDetail();
+        poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
+        poDetail = new CashflowModels(poGRider).CashAdvanceDetail();
 
-       paMaster = new ArrayList<Model>();
-       paAttachments = new ArrayList<>();
+        paMaster = new ArrayList<Model>();
+        paAttachments = new ArrayList<>();
 
-       return initialize();
-   }
-    
+        return initialize();
+    }
+
     //Transaction Source Code 
     @Override
     public String getSourceCode() { return SOURCE_CODE; }
@@ -1128,11 +1128,21 @@ public class CashLiquidation extends Transaction {
         //Re-set the transaction no and voucher no
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
-//            Master().setVoucherNo(getVoucherNo());
         }
         
         poJSON = isEntryOkay(Master().getTransactionStatus());
         if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        if (Master().getLiquidationTotal() == 0.0000) {
+            poJSON = setJSON("error", "Liquidation total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (Master().getLiquidationTotal() > Master().CashFund().getBalance()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Advance amount cannot be greater than the cash fund balance.");
             return poJSON;
         }
         
@@ -1146,9 +1156,14 @@ public class CashLiquidation extends Transaction {
                 detail.remove(); // Correctly remove the item
             }
         }
+        
+        if (getDetailCount() <= 0) {
+            poJSON = setJSON("error", "Transaction amount cannot be zero.");
+            return poJSON;
+        }
 
         if (getDetailCount() == 1) {
-            //do not allow a single item detail with no quantity order
+            //do not allow a single item detail with transaction amount detail
             if (Detail(0).getTransactionAmount() == 0.0000) {
                 poJSON = setJSON("error", "Transaction amount cannot be zero.");
                 return poJSON;
@@ -1488,23 +1503,22 @@ public class CashLiquidation extends Transaction {
     }
     
     /**
-     * Displays the status history of the current transaction in a user interface.
-     * <p>
-     * This method retrieves the raw status history, maps short status codes to 
-     * human-readable descriptions (e.g., "OPEN", "CONFIRMED"), identifies the 
-     * original entry user, and launches the Status History UI.
-     * 
-     * @throws SQLException If a database error occurs while processing the rowset.
-     * @throws GuanzonException If framework-level business logic fails.
-     * @throws Exception For general processing or UI display errors.
-     */
-    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+    * Displays the status history of a Cash Advance transaction.
+    *
+    * Retrieves status records, maps status codes to readable text, and
+    * shows them in the UI along with entry details.
+    *
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    * @throws Exception for other unexpected errors
+    */
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception {
         CachedRowSet crs = getStatusHistory();
-        
+
         crs.beforeFirst();
-        
-        while(crs.next()){
-            switch (crs.getString("cRefrStat")){
+
+        while (crs.next()) {
+            switch (crs.getString("cRefrStat")) {
                 case "":
                     crs.updateString("cRefrStat", "-");
                     break;
@@ -1514,14 +1528,14 @@ public class CashLiquidation extends Transaction {
                 case CashAdvanceStatus.CONFIRMED:
                     crs.updateString("cRefrStat", "CONFIRMED");
                     break;
-                case CashAdvanceStatus.APPROVED:
-                    crs.updateString("cRefrStat", "APPROVED");
-                    break;
                 case CashAdvanceStatus.CANCELLED:
                     crs.updateString("cRefrStat", "CANCELLED");
                     break;
                 case CashAdvanceStatus.VOID:
                     crs.updateString("cRefrStat", "VOID");
+                    break;
+                case CashAdvanceStatus.APPROVED:
+                    crs.updateString("cRefrStat", "APPROVED");
                     break;
                 case CashAdvanceStatus.LIQUIDATED:
                     crs.updateString("cRefrStat", "LIQUIDATED");
@@ -1529,16 +1543,13 @@ public class CashLiquidation extends Transaction {
                 default:
                     char ch = crs.getString("cRefrStat").charAt(0);
                     String stat = String.valueOf((int) ch - 64);
-                    
-                    switch (stat){
+
+                    switch (stat) {
                         case CashAdvanceStatus.OPEN:
                             crs.updateString("cRefrStat", "OPEN");
                             break;
                         case CashAdvanceStatus.CONFIRMED:
                             crs.updateString("cRefrStat", "CONFIRMED");
-                            break;
-                        case CashAdvanceStatus.APPROVED:
-                            crs.updateString("cRefrStat", "APPROVED");
                             break;
                         case CashAdvanceStatus.CANCELLED:
                             crs.updateString("cRefrStat", "CANCELLED");
@@ -1546,97 +1557,97 @@ public class CashLiquidation extends Transaction {
                         case CashAdvanceStatus.VOID:
                             crs.updateString("cRefrStat", "VOID");
                             break;
+                        case CashAdvanceStatus.APPROVED:
+                            crs.updateString("cRefrStat", "APPROVED");
+                            break;
                         case CashAdvanceStatus.LIQUIDATED:
                             crs.updateString("cRefrStat", "LIQUIDATED");
                             break;
                     }
             }
-            crs.updateRow(); 
+            crs.updateRow();
         }
-        
-        JSONObject loJSON  = getEntryBy();
+
+        JSONObject loJSON = getEntryBy();
         String entryBy = "";
         String entryDate = "";
-        
-        if ("success".equals((String) loJSON.get("result"))){
+
+        if (isJSONSuccess(loJSON)) {
             entryBy = (String) loJSON.get("sCompnyNm");
             entryDate = (String) loJSON.get("sEntryDte");
         }
-        
+
         showStatusHistoryUI("Cash Advance", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
-    
     /**
-     * Retrieves the original creator and entry date of the current transaction.
-     * <p>
-     * Consults the audit logs for the "ADD NEW" event associated with the transaction 
-     * record, decrypts the user ID if necessary, and formats the entry timestamp.
-     * 
-     * @return A {@link JSONObject} containing the user's name (sCompnyNm) and formatted date (sEntryDte).
-     * @throws SQLException, GuanzonException If a database or framework error occurs.
+     * Retrieves the user and timestamp of who created the current transaction.
+     *
+     * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (timestamp)
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
      */
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsEntry = "";
         String lsEntryDate = "";
-        String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM "+Master().getTable()+" a "
-                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        String lsSQL = " SELECT b.sModified, b.dModified "
+                + " FROM "+Master().getTable()+" a "
+                + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo()));
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
-                    if(loRS.getString("sModified").length() > 10){
-                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
-                    } else {
-                        lsEntry = getSysUser(loRS.getString("sModified")); 
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                        if (loRS.getString("sModified").length() > 10) {
+                            lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                        } else {
+                            lsEntry = getSysUser(loRS.getString("sModified"));
+                        }
+                        // Get the LocalDateTime from your result set
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                        lsEntryDate = dModified.format(formatter);
                     }
-                    // Get the LocalDateTime from your result set
-                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
-                    lsEntryDate =  dModified.format(formatter);
                 }
-            } 
-          }
-          MiscUtil.close(loRS);
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
             poJSON = setJSON("error", e.getMessage());
             return poJSON;
-        } 
-        
+        }
+
         poJSON.put("result", "success");
         poJSON.put("sCompnyNm", lsEntry);
         poJSON.put("sEntryDte", lsEntryDate);
         return poJSON;
     }
-    
     /**
-     * Retrieves the company/person name associated with a specific System User ID.
-     * 
-     * @param fsId The unique ID of the system user.
-     * @return The name of the user from the client master.
-     * @throws SQLException, GuanzonException If the user record cannot be retrieved.
+     * Retrieves the company name of a system user based on user ID.
+     *
+     * @param fsId User ID to lookup
+     * @return Company name of the user
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
      */
     public String getSysUser(String fsId) throws SQLException, GuanzonException {
         String lsEntry = "";
-        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
-                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
-        System.out.println("SQL " + lsSQL);
+        String lsSQL = " SELECT b.sCompnyNm from xxxSysUser a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId));
+        System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                lsEntry = loRS.getString("sCompnyNm");
-            } 
-          }
-          MiscUtil.close(loRS);
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    lsEntry = loRS.getString("sCompnyNm");
+                }
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
             poJSON = setJSON("error", e.getMessage());
-        } 
+        }
         return lsEntry;
     }
 }

@@ -13,6 +13,7 @@ import org.junit.FixMethodOrder;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.runners.MethodSorters;
+import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 
 /*
  * To change this license header, choose License Headers in Project Properties.
@@ -59,7 +60,7 @@ public class testCashAdvance {
         JSONObject loJSON;
         try {
 
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             loJSON = poCashAdvance.NewTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -69,16 +70,16 @@ public class testCashAdvance {
                 poCashAdvance.setIndustryId("08");
                 poCashAdvance.setCompanyId("M001");
                 poCashAdvance.initFields();
-                poCashAdvance.getModel().setCashFundId("GCO126000000004");
-                poCashAdvance.getModel().setClientId("A00120000016");
-                poCashAdvance.getModel().setDepartmentRequest("026");
-                poCashAdvance.getModel().setRemarks("Test Cash Advance");
-                poCashAdvance.getModel().setAdvanceAmount(1000.00);
+                poCashAdvance.Master().setCashFundId("GCO126000000004");
+                poCashAdvance.Master().setClientId("A00120000016");
+                poCashAdvance.Master().setDepartmentRequest("026");
+                poCashAdvance.Master().setRemarks("Test Cash Advance");
+                poCashAdvance.Master().setAdvanceAmount(1000.00);
                 
-                print("Company : " + poCashAdvance.getModel().Company().getCompanyName());
-                print("Industry : " + poCashAdvance.getModel().Industry().getDescription());
-                print("Branch : " + poCashAdvance.getModel().Branch().getDescription());
-                print("TransNox : " + poCashAdvance.getModel().getTransactionNo());
+                print("Company : " + poCashAdvance.Master().Company().getCompanyName());
+                print("Industry : " + poCashAdvance.Master().Industry().getDescription());
+                print("Branch : " + poCashAdvance.Master().Branch().getDescription());
+                print("TransNox : " + poCashAdvance.Master().getTransactionNo());
 
                 loJSON = poCashAdvance.SaveTransaction();
                 if (!"success".equals((String) loJSON.get("result"))) {
@@ -106,9 +107,9 @@ public class testCashAdvance {
     public void testCashAdvanceList() {
         try {
             JSONObject loJSON = new JSONObject();
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setCompanyId("M001"); //direct assignment of value
-            poCashAdvance.setRecordStatus("0");
+            poCashAdvance.setTransactionStatus(CashAdvanceStatus.OPEN);
             loJSON = poCashAdvance.loadTransactionList("Main Office", "", "", "");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -144,9 +145,9 @@ public class testCashAdvance {
     public void testCashAdvanceList2() {
         try {
             JSONObject loJSON = new JSONObject();
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setCompanyId("M001"); //direct assignment of value
-            poCashAdvance.setRecordStatus("0");
+            poCashAdvance.setTransactionStatus("0");
             loJSON = poCashAdvance.loadTransactionList("", "");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -184,7 +185,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -192,14 +193,14 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Industry().getDescription());
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Industry().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
         } catch (CloneNotSupportedException e) {
             System.err.println(MiscUtil.getException(e));
@@ -220,7 +221,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
@@ -228,14 +229,14 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Industry().getDescription());
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Industry().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
             
             loJSON = poCashAdvance.UpdateTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -243,12 +244,12 @@ public class testCashAdvance {
                 Assert.fail();
             }
             
-            poCashAdvance.getModel().setRemarks("Test Cash Advance Update");
+            poCashAdvance.Master().setRemarks("Test Cash Advance Update");
 
-            print("Company : " + poCashAdvance.getModel().Company().getCompanyName());
-            print("Industry : " + poCashAdvance.getModel().Industry().getDescription());
-            print("Branch : " + poCashAdvance.getModel().Branch().getDescription());
-            print("TransNox : " + poCashAdvance.getModel().getTransactionNo());
+            print("Company : " + poCashAdvance.Master().Company().getCompanyName());
+            print("Industry : " + poCashAdvance.Master().Industry().getDescription());
+            print("Branch : " + poCashAdvance.Master().Branch().getDescription());
+            print("TransNox : " + poCashAdvance.Master().getTransactionNo());
 
             loJSON = poCashAdvance.SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -275,7 +276,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setWithUI(false);
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -284,13 +285,13 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
             loJSON = poCashAdvance.ConfirmTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -315,7 +316,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setWithUI(false);
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -324,13 +325,13 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
             loJSON = poCashAdvance.CancelTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -355,7 +356,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setWithUI(false);
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -364,13 +365,13 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
             loJSON = poCashAdvance.VoidTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -395,7 +396,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setWithUI(false);
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -404,13 +405,13 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
             loJSON = poCashAdvance.ApproveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -435,7 +436,7 @@ public class testCashAdvance {
         JSONObject loJSON;
 
         try {
-            poCashAdvance.initialize();
+            poCashAdvance.InitTransaction();
             poCashAdvance.setWithUI(false);
             loJSON = poCashAdvance.OpenTransaction("GCO126000045");
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -444,13 +445,13 @@ public class testCashAdvance {
             }
 
             //retreiving using column index
-            for (int lnCol = 1; lnCol <= poCashAdvance.getModel().getColumnCount(); lnCol++) {
-                print(poCashAdvance.getModel().getColumn(lnCol) + " ->> " + poCashAdvance.getModel().getValue(lnCol));
+            for (int lnCol = 1; lnCol <= poCashAdvance.Master().getColumnCount(); lnCol++) {
+                print(poCashAdvance.Master().getColumn(lnCol) + " ->> " + poCashAdvance.Master().getValue(lnCol));
             }
             //retreiving using field descriptions
-            print(poCashAdvance.getModel().Branch().getBranchName());
-            print(poCashAdvance.getModel().Company().getCompanyName());
-            print(poCashAdvance.getModel().CashFund().getDescription());
+            print(poCashAdvance.Master().Branch().getBranchName());
+            print(poCashAdvance.Master().Company().getCompanyName());
+            print(poCashAdvance.Master().CashFund().getDescription());
 
             loJSON = poCashAdvance.ReleaseTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {

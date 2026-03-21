@@ -5,11 +5,17 @@
  */
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,6 +23,7 @@ import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Parameter;
+import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
@@ -32,6 +39,7 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -44,7 +52,7 @@ import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
  * @author Aldrich & Arsiela 02/03/2026
  * Revised : Arsiela 03/18/2026
  */
-public class CashAdvance extends Parameter {
+public class CashAdvance extends Transaction {
     public String psIndustryId = "";
     public String psCompanyId = "";
     public String psIndustry = "";
@@ -52,46 +60,43 @@ public class CashAdvance extends Parameter {
     public String psPayee = "";
     public List<Model> paMaster;
     
-    Model_Cash_Advance poModel;
-    
     /**
     * Initializes the Cash Fund controller and its model.
     *
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if a system error occurs
     */
-    @Override
-    public void initialize() throws SQLException, GuanzonException {
-        psRecdStat = Logical.YES;
+    public JSONObject InitTransaction() throws SQLException, GuanzonException {
+        SOURCE_CODE = "CADV";
 
-        CashflowModels model = new CashflowModels(poGRider);
-        poModel = model.CashAdvanceMaster();
-        
-        paMaster = new ArrayList<>();
-        
-        super.initialize();
+        poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
+        poDetail = new CashflowModels(poGRider).CashAdvanceDetail();
+
+        paMaster = new ArrayList<Model>();
+
+        return initialize();
     }
     
     /**
     * Initializes default values for Cash Fund fields.
     *
     * @return JSONObject result container
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
     */
     @Override
-    public JSONObject initFields()
-            throws SQLException,
-            GuanzonException {
-        
-        poModel.setIndustryId(psIndustryId);
-        poModel.setCompanyId(psCompanyId);
-        poModel.setBranchCode(poGRider.getBranchCode());
-        poModel.setDepartmentRequest(poGRider.getDepartment());
-        poModel.setTransactionDate(poGRider.getServerDate());
-        poModel.setClientId(poGRider.getEmployeeNo());
-        setCashFund(); //Set Cash Fund ID
-        
+    public JSONObject initFields() {
+        try {
+            Master().setIndustryId(psIndustryId);
+            Master().setCompanyId(psCompanyId);
+            Master().setBranchCode(poGRider.getBranchCode());
+            Master().setDepartmentRequest(poGRider.getDepartment());
+            Master().setTransactionDate(poGRider.getServerDate());
+            Master().setClientId(poGRider.getEmployeeNo());
+            setCashFund(); //Set Cash Fund ID
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
         return poJSON;
     }
     /**
@@ -104,7 +109,7 @@ public class CashAdvance extends Parameter {
     */
     public JSONObject NewTransaction()
             throws CloneNotSupportedException, SQLException, GuanzonException {
-        return super.newRecord();
+        return super.newTransaction();
     }
     /**
     * Saves the current transaction after validation.
@@ -120,17 +125,7 @@ public class CashAdvance extends Parameter {
             throws SQLException,
             GuanzonException,
             CloneNotSupportedException {
-        
-        //validator
-        poJSON = isEntryOkay(poModel.getTransactionStatus());
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
-        
-        poModel.setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
-        poModel.setModifiedDate(poGRider.getServerDate());
-        
-        return super.saveRecord();
+        return super.saveTransaction();
     }
     /**
      * Opens an existing transaction by transaction number.
@@ -145,7 +140,7 @@ public class CashAdvance extends Parameter {
             throws CloneNotSupportedException,
             SQLException,
             GuanzonException {
-        return super.openRecord(transactionNo);
+        return super.openTransaction(transactionNo);
     }
     /**
      * Updates the current transaction record.
@@ -153,7 +148,7 @@ public class CashAdvance extends Parameter {
      * @return JSONObject result of the operation
      */
     public JSONObject UpdateTransaction() {
-        return super.updateRecord();
+        return super.updateTransaction();
     }
     
     //Setting of default values and for filtering data
@@ -198,8 +193,8 @@ public class CashAdvance extends Parameter {
      * @return Model_Cash_Advance object
      */
     @Override
-    public Model_Cash_Advance getModel() {
-        return poModel;
+    public Model_Cash_Advance Master() { 
+        return (Model_Cash_Advance) poMaster; 
     }
     /**
     * Creates a new Cash Advance model instance.
@@ -219,6 +214,12 @@ public class CashAdvance extends Parameter {
     public Model_Cash_Advance CashAdvanceList(int row) {
         return (Model_Cash_Advance) paMaster.get(row);
     }
+    
+    @Override
+    public Model_Cash_Advance_Detail Detail(int row) {
+        return (Model_Cash_Advance_Detail) paDetail.get(row); 
+    }
+    
 
     /**
      * Gets the total number of Cash Advance records.
@@ -229,9 +230,11 @@ public class CashAdvance extends Parameter {
         return this.paMaster.size();
     }
     
-    //Reset Model
-    public void resetModel() {
-        poModel = new CashflowModels(poGRider).CashAdvanceMaster();
+     /**
+     * Resets the master record to its default initial state.
+     */
+    public void resetMaster() {
+        poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
     }
     
     /**
@@ -248,7 +251,7 @@ public class CashAdvance extends Parameter {
                                                                     " sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                                                                    + " AND sDeptIDxx = " + SQLUtil.toSQL(poModel.getDepartmentRequest())
+                                                                    + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
                                                                     + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
@@ -257,7 +260,7 @@ public class CashAdvance extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
-                        poModel.setCashFundId(loRS.getString("sCashFIDx"));
+                        Master().setCashFundId(loRS.getString("sCashFIDx"));
                     }
                 }
             }
@@ -313,7 +316,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
 
-        if (lsStatus.equals(poModel.getTransactionStatus())) {
+        if (lsStatus.equals(Master().getTransactionStatus())) {
             poJSON = setJSON("error", "Transaction was already confirmed.");
             return poJSON;
         }
@@ -331,7 +334,7 @@ public class CashAdvance extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -364,7 +367,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
 
-        if (lsStatus.equals(poModel.getTransactionStatus())) {
+        if (lsStatus.equals(Master().getTransactionStatus())) {
             poJSON = setJSON("error", "Transaction was already approved.");
             return poJSON;
         }
@@ -382,7 +385,7 @@ public class CashAdvance extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -415,7 +418,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
 
-        if (lsStatus.equals(poModel.getTransactionStatus())) {
+        if (lsStatus.equals(Master().getTransactionStatus())) {
             poJSON = setJSON("error", "Transaction was already voided.");
             return poJSON;
         }
@@ -426,7 +429,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
         
-        if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
+        if(CashAdvanceStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
@@ -435,7 +438,7 @@ public class CashAdvance extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -468,7 +471,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
 
-        if (lsStatus.equals(poModel.getTransactionStatus())) {
+        if (lsStatus.equals(Master().getTransactionStatus())) {
             poJSON = setJSON("error", "Transaction was already cancelled.");
             return poJSON;
         }
@@ -479,7 +482,7 @@ public class CashAdvance extends Parameter {
             return poJSON;
         }
         
-        if(CashAdvanceStatus.CONFIRMED.equals(poModel.getTransactionStatus())){
+        if(CashAdvanceStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
@@ -488,7 +491,7 @@ public class CashAdvance extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -520,7 +523,7 @@ public class CashAdvance extends Parameter {
         }
 
         //validator
-        poJSON = isEntryOkay(poModel.getTransactionStatus());
+        poJSON = isEntryOkay(Master().getTransactionStatus());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -532,29 +535,29 @@ public class CashAdvance extends Parameter {
             }
         }
         
-        poJSON = updateRecord();
+        poJSON = Master().updateRecord();
         if (!isJSONSuccess(poJSON)){
             return poJSON;
         }
         
-        poJSON = poModel.setIssuedBy(poGRider.getUserID());
+        poJSON = Master().setIssuedBy(poGRider.getUserID());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
-        poJSON = poModel.setIssuedDate(poGRider.getServerDate());
+        poJSON = Master().setIssuedDate(poGRider.getServerDate());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
         if (!pbWthParent) {
-            poGRider.beginTrans((String) poEvent.get("event"), 
-                        getModel().getTable(), 
+            poGRider.beginTrans("UPDATE", 
+                        Master().getTable(), 
                         SOURCE_CODE, 
-                        String.valueOf(getModel().getValue(1)));
+                        String.valueOf(Master().getValue(1)));
         }
 
-        poJSON =  getModel().saveRecord();
+        poJSON =  Master().saveRecord();
         if (isJSONSuccess(poJSON)){
             if (!pbWthParent) poGRider.commitTrans();
         } else {
@@ -610,7 +613,7 @@ public class CashAdvance extends Parameter {
             if(isSearch){
                 setSearchBranch(object.getModel().getBranchName());
             } else {
-                poModel.setBranchCode(object.getModel().getBranchCode());
+                Master().setBranchCode(object.getModel().getBranchCode());
             }
         }
 
@@ -630,14 +633,14 @@ public class CashAdvance extends Parameter {
     public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
         object.setRecordStatus(RecordStatus.ACTIVE);
-        object.setIndustryId(poModel.getIndustryId());
-        object.setCompanyId(poModel.getCompanyId());
-        object.setBranchCode(poModel.getBranchCode());
-        object.setDepartmentId(poModel.getDepartmentRequest());
+        object.setIndustryId(Master().getIndustryId());
+        object.setCompanyId(Master().getCompanyId());
+        object.setBranchCode(Master().getBranchCode());
+        object.setDepartmentId(Master().getDepartmentRequest());
 
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
-            poModel.setCashFundId(object.getModel().getCashFundId());
+            Master().setCashFundId(object.getModel().getCashFundId());
         }
 
         return poJSON;
@@ -660,7 +663,7 @@ public class CashAdvance extends Parameter {
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
-            poModel.setDepartmentRequest(object.getModel().getDepartmentId());
+            Master().setDepartmentRequest(object.getModel().getDepartmentId());
         }
         return poJSON;
     }
@@ -704,7 +707,7 @@ public class CashAdvance extends Parameter {
             if(isSearch){
                 setSearchPayee((String) loJSON.get("EmployNme"));
             } else {
-                poModel.setClientId((String) loJSON.get("sEmployID"));
+                Master().setClientId((String) loJSON.get("sEmployID"));
             }
         } else {
             loJSON = new JSONObject();
@@ -731,7 +734,8 @@ public class CashAdvance extends Parameter {
             SQLException,
             GuanzonException {
         poJSON = new JSONObject();
-        String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND a.sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
@@ -771,7 +775,8 @@ public class CashAdvance extends Parameter {
             if (fsTransactionNo == null) {
                 fsTransactionNo = "";
             }
-            String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
+            initSQL();
+            String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
@@ -847,7 +852,8 @@ public class CashAdvance extends Parameter {
             if (fsTransactionNo == null) {
                 fsTransactionNo = "";
             }
-            String lsSQL = MiscUtil.addCondition(getSQ_Browse(),
+            initSQL();
+            String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
@@ -896,6 +902,60 @@ public class CashAdvance extends Parameter {
     }
     
     /**
+     * Prepares and validates the transaction data before committing to the database.
+     * <p>
+     * This method performs final integrity checks, generates transaction numbers for new records, 
+     * prunes empty detail rows, and synchronizes metadata across master, details, and 
+     * attachments. It also handles attachment filename collisions by renaming duplicates 
+     * and triggers the file upload process for unsent attachments.
+     * 
+     * @return A {@link JSONObject} indicating success or detailing validation/upload errors.
+     * @throws SQLException, GuanzonException, CloneNotSupportedException 
+     *          If an error occurs during data processing, file operations, or validation.
+     */
+    @Override
+    public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        
+        /*Put system validations and other assignments here*/
+        System.out.println("Class Edit Mode : " + getEditMode());
+        System.out.println("Master Edit Mode : " + Master().getEditMode());
+        //Re-set the transaction no and voucher no
+        if(getEditMode() == EditMode.ADDNEW){
+            Master().setTransactionNo(Master().getNextCode());
+        }
+        
+        poJSON = isEntryOkay(Master().getTransactionStatus());
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+         //Remove detail if particular is empty or the transaction amount is 0.0000
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next(); // Store the item before checking conditions
+            String lsParticular = (String) item.getValue("sPartculr");
+            double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nTranAmtx")));
+            if ((lsAmount == 0.0000 || "".equals(lsParticular) || lsParticular == null)
+                && item.getEditMode() == EditMode.ADDNEW ){
+                detail.remove(); // Correctly remove the item
+            }
+        }
+        
+        Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
+        Master().setModifiedDate(poGRider.getServerDate());
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    @Override
+    public JSONObject save() throws CloneNotSupportedException, SQLException, GuanzonException {
+        /*Put saving business rules here*/
+        return isEntryOkay(CashAdvanceStatus.OPEN);
+    }
+    
+    /**
     * Validates if the Cash Advance entry is ready to be saved.
     *
      * @param status
@@ -908,7 +968,7 @@ public class CashAdvance extends Parameter {
         GValidator loValidator = new CashAdvanceValidator();
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
-        loValidator.setMaster(poModel);
+        loValidator.setMaster(poMaster);
         poJSON = loValidator.validate();
         return poJSON;
     }
@@ -919,20 +979,22 @@ public class CashAdvance extends Parameter {
      * @return SQL query string with record status condition applied
      */
     @Override
-    public String getSQ_Browse() {
+    public void initSQL() {
         String lsCondition = "";
+        
+        if(psTranStat != null){
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsCondition += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
 
-        if (psRecdStat.length() > 1) {
-            for (int lnCtr = 0; lnCtr <= psRecdStat.length() - 1; lnCtr++) {
-                lsCondition += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
+                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+            } else {
+                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psTranStat);
             }
-
-            lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
-        } else {
-            lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psRecdStat);
         }
 
-        String lsSQL =  " SELECT        "
+        SQL_BROWSE =  " SELECT        "
                         + " a.sTransNox   "
                         + " , a.dTransact "
                         + " , a.sCashFIDx "
@@ -951,7 +1013,9 @@ public class CashAdvance extends Parameter {
                         + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
                         + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
 
-        return MiscUtil.addCondition(lsSQL, lsCondition);
+        if(lsCondition != null && !"".equals(lsCondition)){
+            SQL_BROWSE = MiscUtil.addCondition(SQL_BROWSE, lsCondition);
+        }
     }
     /**
     * Displays the status history of a Cash Advance transaction.
@@ -1028,7 +1092,7 @@ public class CashAdvance extends Parameter {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("Cash Advance", (String) poModel.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Cash Advance", (String) Master().getValue("sTransNox"), entryBy, entryDate, crs);
     }
     /**
      * Retrieves the user and timestamp of who created the current transaction.
@@ -1042,9 +1106,9 @@ public class CashAdvance extends Parameter {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL = " SELECT b.sModified, b.dModified "
-                + " FROM "+poModel.getTable()+" a "
-                + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(poModel.getTransactionNo()));
+                + " FROM "+Master().getTable()+" a "
+                + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo()));
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
@@ -1117,7 +1181,7 @@ public class CashAdvance extends Parameter {
                 return "Confirmed";
             case CashAdvanceStatus.APPROVED:
 //                if(getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE){
-                if(poModel.getIssuedBy() != null && !"".equals(poModel.getIssuedBy())){
+                if(Master().getIssuedBy() != null && !"".equals(Master().getIssuedBy())){
                     return "Released";
                 }
                 return "Approved";
