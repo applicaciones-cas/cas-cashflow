@@ -660,11 +660,12 @@ public class CashLiquidation extends Transaction {
      * @param fsIndustry Industry description filter (required).
      * @param fsPayee Payee name filter.
      * @param fsTransactionNo Transaction number filter.
+     * @param fbisEntry if Form is Entry set true else if approval set false.
      * @return A {@link JSONObject} indicating the success of the retrieval or an error message if no records are found.
      * @throws SQLException If a database access error occurs.
      * @throws GuanzonException If business logic or validation (e.g., empty industry) fails.
      */
-    public JSONObject loadTransactionList(String fsIndustry, String fsPayee, String fsTransactionNo) throws SQLException, GuanzonException {
+    public JSONObject loadTransactionList(String fsIndustry, String fsPayee, String fsTransactionNo, boolean fbisEntry) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paMaster = new ArrayList<>();
         if (fsIndustry == null || "".equals(fsIndustry)) { 
@@ -684,6 +685,12 @@ public class CashLiquidation extends Transaction {
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
                 + " AND (a.sIssuedxx IS NOT NULL AND TRIM(a.sIssuedxx) <> '') " //Retrieve all released cash advance
             );
+        
+        if(fbisEntry){
+            lsSQL = lsSQL +  " AND (a.sLiquidtd IS NULL OR TRIM(a.sLiquidtd) = '') " ;
+        } else {
+            lsSQL = lsSQL +  " AND (a.sLiquidtd IS NOT NULL AND TRIM(a.sLiquidtd) <> '') " ;
+        }
             
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);

@@ -172,7 +172,7 @@ public class testCashLiquidation {
                 Assert.fail();
             } 
             
-            loJSON = poController.loadTransactionList("Main Office", "", "");
+            loJSON = poController.loadTransactionList("Main Office", "", "",true);
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
