@@ -184,7 +184,7 @@ public class CashLiquidation extends Transaction {
         }
         
         if(Master().getLiquidatedBy() == null || "".equals(Master().getLiquidatedBy())){
-            Master().setLiquidatedBy(poGRider.Encrypt(poGRider.getUserID()));
+            Master().setLiquidatedBy(poGRider.getUserID());
             Master().setLiquidatedDate(poGRider.getServerDate());
         }
         
@@ -415,6 +415,10 @@ public class CashLiquidation extends Transaction {
         }
         if(fsTransactionNo != null && !"".equals(fsTransactionNo)){
             lnSort = 0;
+        }
+        if (fsIndustry == null || "".equals(fsIndustry)) { 
+            poJSON = setJSON("error", "Industry cannot be empty.");
+            return poJSON;
         }
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
