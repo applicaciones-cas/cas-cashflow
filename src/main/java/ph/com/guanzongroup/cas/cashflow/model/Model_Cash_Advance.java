@@ -189,6 +189,17 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Date getIssuedDate() {
+        try {
+            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
+                                " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
+                                );
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            if (loRS.next()) {
+                return loRS.getDate("dIssuedxx");
+            }
+        } catch (SQLException e) {
+            return (Date) getValue("dIssuedxx");
+        } 
         return (Date) getValue("dIssuedxx");
     }
     

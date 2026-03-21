@@ -1563,7 +1563,7 @@ public class CashLiquidation extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
         
-        showStatusHistoryUI("Cash Liquidation", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Cash Advance", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
     
     /**

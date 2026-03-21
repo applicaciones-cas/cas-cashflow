@@ -988,6 +988,9 @@ public class CashAdvance extends Parameter {
                 case CashAdvanceStatus.APPROVED:
                     crs.updateString("cRefrStat", "APPROVED");
                     break;
+                case CashAdvanceStatus.LIQUIDATED:
+                    crs.updateString("cRefrStat", "LIQUIDATED");
+                    break;
                 default:
                     char ch = crs.getString("cRefrStat").charAt(0);
                     String stat = String.valueOf((int) ch - 64);
@@ -1007,6 +1010,9 @@ public class CashAdvance extends Parameter {
                             break;
                         case CashAdvanceStatus.APPROVED:
                             crs.updateString("cRefrStat", "APPROVED");
+                            break;
+                        case CashAdvanceStatus.LIQUIDATED:
+                            crs.updateString("cRefrStat", "LIQUIDATED");
                             break;
                     }
             }
