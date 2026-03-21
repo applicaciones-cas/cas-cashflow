@@ -172,17 +172,7 @@ public class CheckReleases extends Transaction {
             return poJSON;
         }
         
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            if (!Detail(lnCtr).isReverse()) continue;
-            if (Detail(lnCtr).CheckPayment().getLocation() != null
-                    && !"0".equals(Detail(lnCtr).CheckPayment().getLocation())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Unable to proceed with confirmation. Check No. "
-                        + Detail(lnCtr).CheckPayment().getCheckNo()
-                        + " has already been transferred.");
-                return poJSON;
-            }
-        }
+
 
         //validator
         poJSON = isEntryOkay(CheckTransferStatus.CONFIRMED);
@@ -310,7 +300,7 @@ public class CheckReleases extends Transaction {
             }
         }
         
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -350,13 +340,51 @@ public class CheckReleases extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+        
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if (!Detail(lnCtr).isReverse()) continue;
+            String released = Detail(lnCtr).CheckPayment().getReleased();
+            if (released != null && (released.equals("1"))) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Unable to proceed with releasing. Check No. "
+                        + Detail(lnCtr).CheckPayment().getCheckNo()
+                        + " has a location that is already transferred.");
+                return poJSON;
+            }
+        }
 
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poJSON = setValueToOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        poGRider.beginTrans("UPDATE STATUS", "PostTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        
+        poJSON = saveUpdates();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
 
+        poGRider.commitTrans();
         poJSON = new JSONObject();
         poJSON.put("result", "success");
 
@@ -521,6 +549,7 @@ public class CheckReleases extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         boolean lbUpdated = false;
+        boolean hasReverse = false;
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -544,6 +573,14 @@ public class CheckReleases extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+        if (Detail(lnCtr).isReverse()) {
+                hasReverse = true; // at least one is reversed
+            }
+        }
+        if (!hasReverse) {
+            poJSON.put("result", "error");
+            poJSON.put("message", " Cannot save the transaction. \nAt least one detail must be marked as reversed (active).");
+            return poJSON;
         }
 
         if (CheckReleaseStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
@@ -809,11 +846,17 @@ public class CheckReleases extends Transaction {
                 AddDetail();
             }
         } else {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
-            poJSON.put("tableRow", lnRow);
-            poJSON.put("warning", "false");
-            return poJSON;
+            if (!Detail(lnRow).isReverse()) {
+                Detail(lnRow).isReverse(true);
+                poJSON.put("result", "success");
+                return poJSON;
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
+                poJSON.put("tableRow", lnRow);
+                poJSON.put("warning", "false");
+                return poJSON;
+            }
         }
 
         // Return success
@@ -856,7 +899,7 @@ public class CheckReleases extends Transaction {
 //
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             String fsCheckTransNo = Detail(lnCtr).getSourceNo();
-            updateCheckPayments(fsCheckTransNo);
+            updateCheckPayments(fsCheckTransNo,status, lnCtr);
         }
         poJSON.put("result", "success");
         return poJSON;
@@ -871,7 +914,7 @@ public class CheckReleases extends Transaction {
         for (lnCtr = 0; lnCtr <= poChecks.size() - 1; lnCtr++) {
 
             poChecks.get(lnCtr).setWithParentClass(true);
-
+            poChecks.get(lnCtr).poModel.getReleased();
             poJSON = poChecks.get(lnCtr).poModel.saveRecord();
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -882,7 +925,7 @@ public class CheckReleases extends Transaction {
         return poJSON;
     }
     
-    private void updateCheckPayments(String fsCheckTransNo)
+    private void updateCheckPayments(String fsCheckTransNo,String fsstatus, int fnrowNo)
             throws GuanzonException, SQLException, CloneNotSupportedException {
 
         CheckPayments issuance = CheckPayments();
@@ -890,17 +933,23 @@ public class CheckReleases extends Transaction {
 
         System.out.printf(fsCheckTransNo);
 
-        JSONObject record = issuance.poModel.openRecord(fsCheckTransNo);
+        poChecks.get(poChecks.size()-1).poModel.openRecord(fsCheckTransNo);
 
-        issuance.poModel.updateRecord();
+        poChecks.get(poChecks.size()-1).poModel.updateRecord();
 
-        // Set updated values
-        issuance.poModel.setReleased("1");
-//        issuance.poModel.setBranchCode(Master().getDestination());
-        issuance.poModel.setLocation("4");
-        issuance.poModel.setModifyingId(poGRider.getUserID());
-        issuance.poModel.setModifiedDate(poGRider.getServerDate());
-
+         if(CheckTransferStatus.POSTED.equals(fsstatus)){
+             
+            poChecks.get(poChecks.size()-1).poModel.setReleased("1");
+            poChecks.get(poChecks.size()-1).poModel.setLocation("1");
+            poChecks.get(poChecks.size()-1).poModel.setModifyingId(poGRider.getUserID());
+            poChecks.get(poChecks.size()-1).poModel.setModifiedDate(poGRider.getServerDate());
+            poChecks.get(poChecks.size()-1).getEditMode();
+         }else if(CheckTransferStatus.VOID.equals(fsstatus)){
+            poChecks.get(poChecks.size()-1).poModel.setReleased("0");
+            poChecks.get(poChecks.size()-1).poModel.setLocation("1");
+            poChecks.get(poChecks.size()-1).poModel.setModifyingId(poGRider.getUserID());
+            poChecks.get(poChecks.size()-1).poModel.setModifiedDate(poGRider.getServerDate());
+        }
     }
     
     public JSONObject printTransaction() {
