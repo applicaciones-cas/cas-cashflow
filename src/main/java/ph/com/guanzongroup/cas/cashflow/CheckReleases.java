@@ -300,11 +300,25 @@ public class CheckReleases extends Transaction {
             }
         }
         
+        poJSON = setValueToOthers(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        poJSON = saveUpdates();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
