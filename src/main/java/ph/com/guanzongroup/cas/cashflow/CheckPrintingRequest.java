@@ -784,7 +784,8 @@ public class CheckPrintingRequest extends Transaction {
 
         lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
         lsSQL = lsSQL + " ORDER BY a.dTransact DESC";
-//        System.out.println("Executing SQL: " + lsSQL);
+        System.out.println("Executing SQL: " + lsSQL);
+
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
         int lnCtr = 0;
@@ -1441,34 +1442,18 @@ public class CheckPrintingRequest extends Transaction {
         CachedRowSet crs = getStatusHistory();
         
         crs.beforeFirst(); 
-
         while(crs.next()){
             switch (crs.getString("cRefrStat")){
                 case "":
                     crs.updateString("cRefrStat", "-");
                     break;
-                case CheckStatus.FLOAT:
-                    crs.updateString("cRefrStat", "FLOAT");
-                    break;
-                case CheckStatus.OPEN:
+                case CheckPrintRequestStatus.OPEN:
                     crs.updateString("cRefrStat", "OPEN");
                     break;
-                case CheckStatus.POSTED:
-                    crs.updateString("cRefrStat", "POSTED");
+                case CheckPrintRequestStatus.CONFIRMED:
+                    crs.updateString("cRefrStat", "CONFIRMED");
                     break;
-                case CheckStatus.CANCELLED:
-                    crs.updateString("cRefrStat", "CANCELLED");
-                    break;
-                case CheckStatus.STALED:
-                    crs.updateString("cRefrStat", "STALED");
-                    break;
-                case CheckStatus.STOP_PAYMENT:
-                    crs.updateString("cRefrStat", "STOP_PAYMENT");
-                    break;
-                case CheckStatus.BOUNCED:
-                    crs.updateString("cRefrStat", "BOUNCED");
-                    break;
-                 case CheckStatus.VOID:
+                case CheckPrintRequestStatus.VOID:
                     crs.updateString("cRefrStat", "VOID");
                     break;
                 default:
@@ -1476,28 +1461,13 @@ public class CheckPrintingRequest extends Transaction {
                     String stat = String.valueOf((int) ch - 64);
                     
                     switch (stat){
-                    case CheckStatus.FLOAT:
-                        crs.updateString("cRefrStat", "FLOAT");
-                        break;
-                    case CheckStatus.OPEN:
+                    case CheckPrintRequestStatus.OPEN:
                         crs.updateString("cRefrStat", "OPEN");
                         break;
-                    case CheckStatus.POSTED:
-                        crs.updateString("cRefrStat", "POSTED");
+                    case CheckPrintRequestStatus.CONFIRMED:
+                        crs.updateString("cRefrStat", "CONFIRMED");
                         break;
-                    case CheckStatus.CANCELLED:
-                        crs.updateString("cRefrStat", "CANCELLED");
-                        break;
-                    case CheckStatus.STALED:
-                        crs.updateString("cRefrStat", "STALED");
-                        break;
-                    case CheckStatus.STOP_PAYMENT:
-                        crs.updateString("cRefrStat", "STOP_PAYMENT");
-                        break;
-                    case CheckStatus.BOUNCED:
-                        crs.updateString("cRefrStat", "BOUNCED");
-                        break;
-                    case CheckStatus.VOID:
+                    case CheckPrintRequestStatus.VOID:
                         crs.updateString("cRefrStat", "VOID");
                         break;
                     }

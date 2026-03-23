@@ -21,6 +21,7 @@ import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
@@ -40,8 +41,9 @@ public class Model_Check_Payments extends Model {
     Model_Branch poBranch;
     Model_Banks poBanks;
     Model_Industry poIndustry;
+    Model_Company poCompany;
     Model_Transaction_Status_History poTransactionStatusHistory;
-
+    private String compnyID;
     @Override
     public void initialize() {
         try {
@@ -74,6 +76,7 @@ public class Model_Check_Payments extends Model {
             poBranch = model.Branch();
             poBanks = model.Banks();
             poIndustry = model.Industry();
+            poCompany = model.Company();
             CashflowModels cashFlow = new CashflowModels(poGRider);
             poPayee = cashFlow.Payee();
             poBankAccountMaster = cashFlow.Bank_Account_Master();
@@ -336,6 +339,14 @@ public class Model_Check_Payments extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
+    public String setCompany(String bankidx) {
+        return compnyID = bankidx;
+    }
+
+    public String getCompany() {
+        return compnyID;
+    }
 
     @Override
     public String getNextCode() {
@@ -440,6 +451,23 @@ public class Model_Check_Payments extends Model {
             poBankAccountMaster.initialize();
             return poBankAccountMaster;
         }
+    }
+    
+   public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(compnyID)) {
+            if (this.poCompany.getEditMode() == 1 && this.poCompany
+                    .getCompanyId().equals(compnyID)) {
+                return this.poCompany;
+            }
+            this.poJSON = this.poCompany.openRecord(this.getCompany());
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poCompany;
+            }
+            this.poCompany.initialize();
+            return this.poCompany;
+        }
+        this.poCompany.initialize();
+        return this.poCompany;
     }
 
     public Model_Industry Industry() throws SQLException, GuanzonException {
