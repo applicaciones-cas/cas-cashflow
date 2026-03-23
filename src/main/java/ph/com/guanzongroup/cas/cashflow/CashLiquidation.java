@@ -736,7 +736,9 @@ public class CashLiquidation extends Transaction {
         Double ldblTransactionTotal = 0.0000;
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
-            ldblTransactionTotal += Detail(lnCntr).getTransactionAmount();
+            if(Detail(lnCntr).isReverse()){
+                ldblTransactionTotal += Detail(lnCntr).getTransactionAmount();
+            }
         }
         
         if(ldblTransactionTotal < 0.0000) {
