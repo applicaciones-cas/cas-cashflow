@@ -15,10 +15,12 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -1175,7 +1177,10 @@ public class CashLiquidation extends Transaction {
 
         if ((getDetailCount() - 1) >= 0) {
             if (Detail(getDetailCount() - 1).getParticular() != null && !"".equals(Detail(getDetailCount() - 1).getParticular())
-                && Detail(getDetailCount() - 1).getTransactionAmount() > 0.00) {
+                && Detail(getDetailCount() - 1).getTransactionAmount() > 0.00
+                && Detail(getDetailCount() - 1).getTransactionDate() != null 
+                && !"1900-01-01".equals(xsDateShort(Detail(getDetailCount() - 1).getTransactionDate()))
+                ) {
                 AddDetail();
             }
         }
@@ -1183,6 +1188,16 @@ public class CashLiquidation extends Transaction {
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
         }
+    }
+    
+    /** Formats a date to "yyyy-MM-dd"; returns "1900-01-01" if the input is null. */
+    private static String xsDateShort(Date fdValue) {
+        if(fdValue == null){
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
     }
     
     /**
@@ -1264,9 +1279,21 @@ public class CashLiquidation extends Transaction {
         }
         
         if (Master().getLiquidationTotal() > Master().CashFund().getBalance()) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Advance amount cannot be greater than the cash fund balance.");
+            poJSON = setJSON("error", "Advance amount cannot be greater than the cash fund balance.");
             return poJSON;
+        }
+        
+        int lnRow = 0;
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            if(Detail(lnCtr).isReverse()){
+                lnRow++;
+                if(Detail(lnCtr).getTransactionAmount() > 0.00){
+                    if(Detail(lnCtr).getTransactionDate() == null || "1900-01-01".equals(xsDateShort(Detail(lnCtr).getTransactionDate()))){
+                        poJSON = setJSON("error", "Transaction date cannot be empty at row "+lnRow+".");
+                        return poJSON;
+                    }
+                }
+            }
         }
         
         Iterator<Model> detail = Detail().iterator();
