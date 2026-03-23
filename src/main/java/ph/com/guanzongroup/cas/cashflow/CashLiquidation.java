@@ -1088,6 +1088,13 @@ public class CashLiquidation extends Transaction {
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
     }
+    
+    /**
+     * Resets the other record to its default initial state.
+     */
+    public void resetOthers() {
+        paAttachments = new ArrayList<>();
+    }
 
     /**
      * Completely clears the current transaction state.
