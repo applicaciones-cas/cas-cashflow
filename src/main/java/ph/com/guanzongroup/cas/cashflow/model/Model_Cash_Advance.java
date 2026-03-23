@@ -8,7 +8,6 @@ package ph.com.guanzongroup.cas.cashflow.model;
 import java.sql.ResultSet;
 import java.util.Date;
 import java.sql.SQLException;
-import java.sql.SQLWarning;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -189,17 +188,21 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Date getIssuedDate() {
-        try {
-            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
-                                " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
-                                );
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            if (loRS.next()) {
-                return loRS.getDate("dIssuedxx");
-            }
-        } catch (SQLException e) {
-            return (Date) getValue("dIssuedxx");
-        } 
+//        System.out.println("get Value ISSUED DATE : " + (Date) getValue("dIssuedxx"));
+        if((Date) getValue("dIssuedxx") == null){
+            try {
+                String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
+                                    " sTransNox = " + SQLUtil.toSQL((String) getValue("sTransNox"))
+                                    );
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                if (loRS.next()) {
+//                    System.out.println("DB Select ISSUED DATE : " + loRS.getTimestamp("dIssuedxx"));
+                    setIssuedDate(loRS.getTimestamp("dIssuedxx"));
+                }
+            } catch (SQLException e) {
+                return (Date) getValue("dIssuedxx");
+            } 
+        }
         return (Date) getValue("dIssuedxx");
     }
     
@@ -227,6 +230,7 @@ public class Model_Cash_Advance extends Model {
     }
 
     public Date getLiquidatedDate() {
+//        System.out.println("get Value LIQUIDATED DATE : " + (Date) getValue("dIssuedxx"));
         if((Date) getValue("dLiquidtd") == null){
             try {
                 String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(this), 
@@ -234,6 +238,7 @@ public class Model_Cash_Advance extends Model {
                                     );
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
                 if (loRS.next()) {
+//                    System.out.println("DB select LIQUIDATED DATE : " + loRS.getTimestamp("dLiquidtd"));
                     setLiquidatedDate(loRS.getTimestamp("dLiquidtd"));
                 }
             } catch (SQLException e) {
