@@ -555,14 +555,14 @@ public class CashLiquidation extends Transaction {
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
-            JSONObject loJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
-            if (!isJSONSuccess(loJSON)) {
-                if((boolean) loJSON.get("continue")){
-                    poJSON = setJSON("success", "success");
-                    poJSON.put("row", (int) loJSON.get("row"));
-                } 
-                return poJSON;
-            }
+//            JSONObject loJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
+//            if (!isJSONSuccess(loJSON)) {
+//                if((boolean) loJSON.get("continue")){
+//                    poJSON = setJSON("success", "success");
+//                    poJSON.put("row", (int) loJSON.get("row"));
+//                } 
+//                return poJSON;
+//            }
             Detail(row).setAccountCode(object.getModel().getAccountCode());
             System.out.println("Account : " +  Detail(row).Account().getDescription());
         }
@@ -589,34 +589,37 @@ public class CashLiquidation extends Transaction {
      *         and a "continue" flag for handling non-blocking duplicates.
      * @throws SQLException, GuanzonException If an error occurs during data retrieval.
      */
-    public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode) throws SQLException, GuanzonException{
-        poJSON = new JSONObject();
-        int lnRow = 0;
-        for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
-            if(Detail(lnRow).isReverse()){
-                lnRow++;
-            }
-            if(fnRow != lnCtr){
-                if(fsAcctCode.equals(Detail(lnCtr).getAccountCode())){
-                    if(!Detail(lnCtr).isReverse()){
-//                        poJSON = setJSON("error", "Account " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
+    //TODO
+    //TODDDDDDDDDDDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO TEST
+//    public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode) throws SQLException, GuanzonException{
+//        poJSON = new JSONObject();
+//        int lnRow = 0;
+//        for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
+//            if(Detail(lnRow).isReverse()){
+//                lnRow++;
+//            }
+//            if(fnRow != lnCtr){
+//                if(fsAcctCode.equals(Detail(lnCtr).getAccountCode())
+//                    && Detail(fnRow).getParticular().equals(Detail(lnCtr).getParticular())){
+//                    if(!Detail(lnCtr).isReverse()){
+////                        poJSON = setJSON("error", "Account " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
+////                        poJSON.put("row", lnCtr);
+////                        poJSON.put("continue", false);
+////                    } else {
+//                        Detail(lnCtr).isReverse(true);
+//                        poJSON.put("result", "error");
+//                        poJSON.put("continue", true);
 //                        poJSON.put("row", lnCtr);
-//                        poJSON.put("continue", false);
-//                    } else {
-                        Detail(lnCtr).isReverse(true);
-                        poJSON.put("result", "error");
-                        poJSON.put("continue", true);
-                        poJSON.put("row", lnCtr);
-                    }
-                    return poJSON;
-                }
-            }
-        }
-
-        poJSON.put("result", "success");
-        poJSON.put("row", fnRow);
-        return poJSON;
-    }
+//                    }
+//                    return poJSON;
+//                }
+//            }
+//        }
+//
+//        poJSON.put("result", "success");
+//        poJSON.put("row", fnRow);
+//        return poJSON;
+//    }
     /**
      * Validates if an particular already exists within the transaction details.
      * <p>
@@ -634,26 +637,35 @@ public class CashLiquidation extends Transaction {
     public JSONObject setParticular(int fnRow, String fsParticular) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
         int lnRow = 0;
-        for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
-            if(Detail(lnRow).isReverse()){
-                lnRow++;
-            }
-            if(fnRow != lnCtr){
-                if(fsParticular.equals(Detail(lnCtr).getParticular()) 
-                    && !fsParticular.equals(Detail(fnRow).getParticular())){
-                    if(!Detail(lnCtr).isReverse()){
-//                        poJSON = setJSON("error", "Particular " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
-//                        poJSON.put("row", lnCtr);
-//                    } else {
-                        Detail(lnCtr).isReverse(true);
-                        poJSON.put("result", "success");
-                        poJSON.put("row", lnCtr);
-                        return poJSON;
+        
+        if(Detail(fnRow).getEditMode() == EditMode.ADDNEW){
+            for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
+                if(Detail(lnRow).isReverse()){
+                    lnRow++;
+                }
+                if(fnRow != lnCtr){
+                    if(fsParticular.equals(Detail(lnCtr).getParticular()) 
+                        && Detail(fnRow).getAccountCode().equals(Detail(lnCtr).getAccountCode())
+                        && Detail(fnRow).getORNo().equals(Detail(lnCtr).getORNo())){
+                        if(!Detail(lnCtr).isReverse()){
+    //                        poJSON = setJSON("error", "Particular " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
+    //                        poJSON.put("row", lnCtr);
+    //                    } else {
+                            Detail(lnCtr).isReverse(true);
+
+                            //Reset value of the current selected row
+                            Detail(fnRow).setAccountCode("");
+                            Detail(fnRow).setORNo("");
+                            Detail(fnRow).setTransactionDate(null);
+                            Detail(fnRow).setParticular("");
+                            poJSON.put("result", "success");
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        }
                     }
                 }
             }
         }
-        
         poJSON = Detail(fnRow).setParticular(fsParticular);
         if(!isJSONSuccess(poJSON)){
             poJSON.put("row", fnRow);
