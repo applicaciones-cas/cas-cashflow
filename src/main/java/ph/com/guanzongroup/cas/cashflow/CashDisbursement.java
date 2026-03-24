@@ -75,7 +75,7 @@ public class CashDisbursement extends Transaction {
     
     /**
     * Initializes a new Cash Disbursement transaction.
-    * <p>
+    * 
     * This method sets the source code, instantiates the master, detail, and journal 
     * controllers, and resets all associated data lists (Cash Advances, W-Tax, and Attachments).
     * 
@@ -163,7 +163,7 @@ public class CashDisbursement extends Transaction {
     
     /**
     * Opens an existing transaction and loads its associated data.
-    * <p>
+    * 
     * This method resets the current transaction state, retrieves the specified transaction 
     * record, and automatically loads any related attachments.
     * 
@@ -208,7 +208,7 @@ public class CashDisbursement extends Transaction {
 
     /**
     * Prepares the current transaction for modification.
-    * <p>
+    * 
     * This method initiates the update state for the transaction and refreshes 
     * its associated attachments to ensure data consistency during editing.
     * 
@@ -276,7 +276,7 @@ public class CashDisbursement extends Transaction {
     
     /**
     * Validates if the current transaction can be updated based on its latest database status.
-    * <p>
+    * 
     * This method checks if the transaction is in a restricted state (Voided, Cancelled, 
     * or Approved). It also synchronizes the local transaction data by calling 
     * {@link #OpenTransaction(String)} if the database status differs from the local state.
@@ -352,7 +352,7 @@ public class CashDisbursement extends Transaction {
     
     /**
     * Validates whether a transaction status transition is permitted.
-    * <p>
+    * 
     * This method enforces the workflow rules for cash disbursements (e.g., a transaction 
     * must be "Open" before it can be "Confirmed" or "Voided").
     * 
@@ -381,7 +381,7 @@ public class CashDisbursement extends Transaction {
     
     /**
     * Confirms the current cash disbursement transaction.
-    * <p>
+    * 
     * This method validates the transaction's current state, ensures it hasn't been 
     * confirmed already, performs necessary approval workflows, and updates the 
     * status to {@code CONFIRMED} in the database.
@@ -651,6 +651,23 @@ public class CashDisbursement extends Transaction {
     }
     
     /*Search Master References*/
+    /**
+    * Searches for transactions based on multiple criteria and opens the selected record.
+    * 
+    * This method filters records by industry, branch, payee, and transaction number, 
+    * then displays a browse dialog for user selection. If a record is selected, 
+    * it is automatically loaded using {@link #OpenTransaction(String)}.
+    * 
+    * @param fsIndustry the industry category to filter (required).
+    * @param fsBranch the branch name to filter.
+    * @param fsPayee the payee name to filter.
+    * @param fsTransactionNo the specific transaction number to search for.
+    * @return a {@link JSONObject} containing the status of the search or the loaded transaction data.
+    * @throws CloneNotSupportedException if an error occurs during object cloning.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if business logic or validation fails.
+    * @throws ScriptException if an error occurs during script execution.
+    */
     public JSONObject SearchTransaction(String fsIndustry, String fsBranch, String fsPayee, String fsTransactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         int lnSort = 0;
@@ -739,7 +756,20 @@ public class CashDisbursement extends Transaction {
 
         return poJSON;
     }
-    
+    /**
+    * Searches for an active cash fund and assigns it to the current transaction.
+    * 
+    * This method validates that the necessary transaction headers (Industry, Company, 
+    * Branch, and Department) are set before performing the search. If a record is 
+    * successfully selected, the {@code CashFundId} is automatically updated in the master model.
+    * 
+    * @param value the search keyword or code.
+    * @param byCode {@code true} if the search is by code; {@code false} if by description.
+    * @return a {@link JSONObject} containing the search result or validation error messages.
+    * @throws ExceptionInInitializerError if an error occurs during controller initialization.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if business logic validation fails.
+    */
     public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         if(Master().getIndustryId() == null || "".equals(Master().getIndustryId())){
             poJSON = setJSON("error", "Industry cannot be empty.");
@@ -771,7 +801,22 @@ public class CashDisbursement extends Transaction {
 
         return poJSON;
     }
-   
+   /**
+    * Searches for an active employee to assign as the transaction payee.
+    * 
+    * This method queries the employee database (excluding terminated staff) and displays 
+    * a browse dialog. Depending on the {@code isSearch} flag, the selection will either 
+    * update a temporary search field or the actual master transaction record.
+    * 
+    * @param value the search keyword (ID or name).
+    * @param byCode {@code true} to search by Employee ID; {@code false} to search by Name.
+    * @param isSearch {@code true} to update the search field; {@code false} to update 
+    *                 the master record's Client ID and Payee Name.
+    * @return a {@link JSONObject} indicating "success" or an error if no record was selected.
+    * @throws ExceptionInInitializerError if an error occurs during initialization.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if business logic validation fails.
+    */
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         poJSON = new JSONObject();
 
@@ -811,7 +856,16 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+    /**
+    * Searches for an active employee to credit using a lookup dialog.
+    * 
+    * @param value  The search keyword (ID or Name).
+    * @param byCode Set to true to search by Employee ID, false to search by Name.
+    * @return A {@link JSONObject} containing "success" if a record is selected, 
+    *         otherwise returns an "error" status with a message.
+    * @throws SQLException If a database error occurs.
+    * @throws GuanzonException If a general application error occurs.
+    */
     public JSONObject SearchCreditTo(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         poJSON = new JSONObject();
 
@@ -849,17 +903,15 @@ public class CashDisbursement extends Transaction {
 
 
     /**
-     * Searches for an active Account and assigns it to a specific detail row.
-     * <p>
-     * Includes a validation check to prevent duplicate account codes within the 
-     * transaction details before finalizing the selection.
-     * 
-     * @param value Search criteria.
-     * @param byCode {@code true} to search by account code.
-     * @param row The index of the detail row being updated.
-     * @return A {@link JSONObject} containing the status and the affected row index.
-     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
-     */
+    * Searches for a "Particular" record and assigns it to a specific row in the details.
+    * 
+    * @param value  The search keyword (Code or Description).
+    * @param byCode Set to true to search by Code, false by Description.
+    * @param row    The index of the detail row to update.
+    * @return A {@link JSONObject} containing the result of the search and update operation.
+    * @throws SQLException If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs.
+    */
     public JSONObject SearchParticular(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -869,22 +921,24 @@ public class CashDisbursement extends Transaction {
             if (!isJSONSuccess(loJSON)) {
                 return poJSON;
             }
-//            JSONObject loJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
-//            if (!isJSONSuccess(loJSON)) {
-//                if((boolean) loJSON.get("continue")){
-//                    poJSON = setJSON("success", "success");
-//                    poJSON.put("row", (int) loJSON.get("row"));
-//                } 
-//                return poJSON;
-//            }
-//            Detail(row).setAccountCode(object.getModel().getAccountCode());
             System.out.println("Account : " +  Detail(row).Particular().getDescription());
         }
         
         poJSON.put("success", "success");
         return poJSON;
     }
-    
+    /**
+    * Sets the "Particular" ID for a specific detail row and checks for duplicates.
+    * 
+    * If the item already exists in another row, this method flags that existing 
+    * row as a reversal and resets the current row's selection to prevent duplication.
+    * 
+    * @param fnRow        The index of the detail row being updated.
+    * @param fsParticular The unique ID of the Particular item to assign.
+    * @return A {@link JSONObject} indicating success and the index of the affected duplicate row, if any.
+    * @throws SQLException     If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs.
+    */
     public JSONObject setDetail(int fnRow, String fsParticular) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
         int lnRow = 0;
@@ -922,6 +976,17 @@ public class CashDisbursement extends Transaction {
     }
     
     /*Validate detail exisitence*/
+    /**
+    * Validates if an account code already exists in other detail rows to prevent duplicates.
+    * 
+    * If a duplicate is found, the account code for the current row is cleared 
+    * and an error message identifying the conflicting row is returned.
+    * 
+    * @param fnRow      The index of the current row being edited.
+    * @param fsAcctCode The account code to check.
+    * @return A {@link JSONObject} with a "success" status if unique, or "error" 
+    *         if the code already exists in another row.
+    */
     public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode){
         poJSON = new JSONObject();
 
@@ -940,11 +1005,16 @@ public class CashDisbursement extends Transaction {
     }
     
     /**
-     * Check Existing tax rate per selected period date
-     * @param fnRow
-     * @param fsTaxRated
-     * @return 
-     */
+    * Validates withholding tax deductions for consistency and duplicates within a specific period.
+    * This method ensures:
+    * The tax type remains consistent across all withholding tax deductions.
+    * The same tax rate is not duplicated within the same fiscal year and quarter.
+    * @param fnRow      The index of the current row being validated.
+    * @param fsTaxRated The Tax Rate ID to check for duplicates.
+    * @param fsTaxType  The Tax Type to verify against existing entries.
+    * @return A {@link JSONObject} containing "success" if valid, or an "error" status with 
+    *         details regarding the conflicting row and reversal status.
+    */
     private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
         JSONObject loJSON = new JSONObject();
         try {
@@ -1029,13 +1099,28 @@ public class CashDisbursement extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
-    
+    /**
+    * Determines the calendar quarter (1 to 4) for a given date.
+    * 
+    * @param fdDate The date to evaluate.
+    * @return The quarter index: 1 (Jan-Mar), 2 (Apr-Jun), 3 (Jul-Sep), or 4 (Oct-Dec).
+    */
     private int getQuarter(LocalDate fdDate){
         int month = fdDate.getMonthValue();
         int quarter = ((month - 1) / 3) + 1;
         return quarter;
     }
     
+    /**
+    * Calculates and validates transaction totals, including VAT components and net amounts.
+    *
+    * This method aggregates values from detail rows, performs non-negative 
+    * validation for all calculated totals, and updates the master record summary fields.
+    *
+    * @param isValidate Set to true to return an error immediately if any calculated total is negative.
+    * @return A {@link JSONObject} indicating "success" or "error", including the specific column 
+    *         name where a validation failure occurred.
+    */
     public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
         poJSON.put("column", "");
@@ -1106,7 +1191,16 @@ public class CashDisbursement extends Transaction {
         poJSON.put("column", "");
         return poJSON;
     }
-    
+    /**
+    * Calculates withholding tax amounts for all applicable deductions and updates the master total.
+    * 
+    * This method computes individual tax amounts based on the assigned tax rates and base amounts. 
+    * It validates that neither the total base amount nor the total tax amount exceeds the 
+    * transaction's vatable sales before updating the master record.
+    * 
+    * @return A {@link JSONObject} containing a "success" status if the calculation is valid, 
+    *         or an "error" status with a descriptive message if validation fails or an exception occurs.
+    */
     public JSONObject computeTaxAmount(){
         poJSON = new JSONObject();
         
@@ -1147,7 +1241,14 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success", "Tax computed successfully");
         return poJSON;
     }
-   
+    /**
+    * Iterates through all detail rows to compute their respective VAT and tax values.
+    * 
+    * @param isValidate Set to true to stop execution and return an error immediately 
+    *                   if any row calculation fails validation.
+    * @return A {@link JSONObject} indicating "success" if all rows are processed, 
+    *         or an "error" status if a specific row fails validation.
+    */
     public JSONObject computeDetailFields(boolean isValidate){
                 
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
@@ -1163,7 +1264,16 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+    /**
+    * Calculates the VAT Sales, VAT Amount, and VAT Exempt values for a specific detail row.
+    * 
+    * <p>This method applies a 12% VAT calculation on the non-exempt portion of the row's total 
+    * amount and updates the row model with the results.</p>
+    * 
+    * @param fnRow The index of the detail row to calculate.
+    * @return A {@link JSONObject} with "success" status, or "error" if the input 
+    *         values (such as negative exempt amounts) are invalid.
+    */
     private JSONObject computeDetail(int fnRow){
         poJSON = new JSONObject();
         Double ldblAmount = Detail(fnRow).getAmount();
@@ -1199,7 +1309,21 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+    /**
+    * Loads a list of cash disbursement transactions based on the provided filters.
+    * 
+    * <p>This method queries the database using industry, payee, and voucher number criteria. 
+    * If matches are found, it populates the internal collection ({@code paMaster}) 
+    * with the corresponding transaction models.</p>
+    * 
+    * @param fsIndustry  The industry description to filter by (required).
+    * @param fsPayee     The payee name keyword to filter by.
+    * @param fsVoucherNo The voucher number keyword to filter by.
+    * @return A {@link JSONObject} indicating "success" if records were loaded, 
+    *         otherwise returns an "error" status with a descriptive message.
+    * @throws SQLException     If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs during record opening.
+    */
     public JSONObject loadTransactionList(String fsIndustry, String fsPayee, String fsVoucherNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paMaster = new ArrayList<>();
@@ -1238,7 +1362,21 @@ public class CashDisbursement extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
-    
+    /**
+    * Loads a list of liquidated cash advances that have not yet been linked to a cash disbursement.
+    * 
+    * <p>This method filters records based on industry, payee, and transaction number. 
+    * It specifically excludes cash advances that are already present in the current 
+    * master table to prevent duplicate processing.</p>
+    * 
+    * @param fsIndustry The industry description to filter by.
+    * @param fsPayee    The payee name keyword to filter by.
+    * @param fsTransNo  The transaction number keyword to filter by.
+    * @return A {@link JSONObject} indicating "success" if records were found and loaded 
+    *         into {@code paCashAdvances}, otherwise returns an "error" status.
+    * @throws SQLException     If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs while opening records.
+    */
     public JSONObject loadCashAdvanceList(String fsIndustry, String fsPayee, String fsTransNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paCashAdvances = new ArrayList<>();
@@ -1279,7 +1417,18 @@ public class CashDisbursement extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
-    
+    /**
+    * Populates the current transaction's master and detail records using data from a specific Cash Advance.
+    * 
+    * <p>This method retrieves the Cash Advance master and its non-reversed details, maps them to the 
+    * current object, sets the source reference, and recomputes all transaction totals.</p>
+    * 
+    * @param fsTransNo The transaction number of the source Cash Advance record.
+    * @return A {@link JSONObject} indicating "success" or an "error" if the records cannot be loaded.
+    * @throws SQLException If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs during data mapping.
+    * @throws CloneNotSupportedException If an error occurs while duplicating record models.
+    */
     public JSONObject populateDetail(String fsTransNo) throws SQLException, GuanzonException, CloneNotSupportedException{
         poJSON = new JSONObject();
         Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
@@ -1291,7 +1440,7 @@ public class CashDisbursement extends Transaction {
         Model_Cash_Advance_Detail loDetail = new CashflowModels(poGRider).CashAdvanceDetail();
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loDetail),
                 " sTransNox = " + SQLUtil.toSQL(fsTransNo)
-                + " cReversex = " + SQLUtil.toSQL(CashAdvanceStatus.Reverse.INCLUDE)
+                + " AND cReversex = " + SQLUtil.toSQL(CashAdvanceStatus.Reverse.INCLUDE)
             );
         
         lsSQL = lsSQL + " ORDER BY nEntryNox ASC ";
@@ -1543,7 +1692,7 @@ public class CashDisbursement extends Transaction {
     }
     /**
      * Retrieves and downloads all attachments associated with the current transaction.
-     * <p>
+     * 
      * This method fetches attachment metadata from the system tables, populates the
      * {@code paAttachments} collection, and performs a web download for each file. 
      * Downloaded files are decoded from Base64 and saved to the system's temporary 
@@ -1808,7 +1957,7 @@ public class CashDisbursement extends Transaction {
 
     /**
      * Completely clears the current transaction state.
-     * <p>
+     * 
      * Resets the master model, clears all detail and attachment collections, 
      * and wipes the industry and payee search filters.
      */
@@ -1820,7 +1969,7 @@ public class CashDisbursement extends Transaction {
    
     /**
      * Refines and validates the transaction detail list.
-     * <p>
+     * 
      * This method prunes invalid rows (those with empty particulars or zero amounts for new records) 
      * and automatically appends a new detail row if the list is empty or the last entry is valid.
      * 
@@ -1978,7 +2127,7 @@ public class CashDisbursement extends Transaction {
     }
     /**
      * Sets default master record values for a new transaction.
-     * <p>
+     * 
      * Configures the branch, industry, and company identifiers, sets the current 
      * server date, and initializes the status to {@link CashDisbursementStatus#OPEN}.
      * 
@@ -2084,7 +2233,7 @@ public class CashDisbursement extends Transaction {
     
     /**
      * Prepares and validates the transaction data before committing to the database.
-     * <p>
+     * 
      * This method performs final integrity checks, generates transaction numbers for new records, 
      * prunes empty detail rows, and synchronizes metadata across master, details, and 
      * attachments. It also handles attachment filename collisions by renaming duplicates 
@@ -2206,7 +2355,7 @@ public class CashDisbursement extends Transaction {
 
     /**
      * Handles the saving of supplementary data, specifically transaction attachments.
-     * <p>
+     * 
      * Iterates through the attachment list and commits any new or modified records 
      * to the database after updating audit metadata (User ID and Server Date).
      * 
@@ -2296,7 +2445,7 @@ public class CashDisbursement extends Transaction {
     
     /**
      * Initializes the base SQL query used for browsing Cash Advance records.
-     * <p>
+     * 
      * This method constructs a complex SELECT statement joining tables for Company, 
      * Industry, Department, Client Master, Cash Fund, and Branch. It dynamically 
      * appends filtering conditions based on the current transaction status {@code psTranStat}, 
