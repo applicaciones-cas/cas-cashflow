@@ -48,10 +48,13 @@ import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
@@ -70,6 +73,7 @@ public class CashDisbursement extends Transaction {
     public String psPayee = "";
     
     public List<Model> paMaster;
+    public List<Model> paCashAdvances;
     public List<TransactionAttachment> paAttachments;
     
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
@@ -79,6 +83,7 @@ public class CashDisbursement extends Transaction {
         poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
 
         paMaster = new ArrayList<Model>();
+        paCashAdvances = new ArrayList<Model>();
         paAttachments = new ArrayList<>();
 
         return initialize();
@@ -855,6 +860,90 @@ public class CashDisbursement extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
+    
+    public JSONObject loadLiquidatedList(String fsIndustry, String fsPayee, String fsTransNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        paCashAdvances = new ArrayList<>();
+        if (fsIndustry == null) { fsIndustry = ""; }
+        if (fsPayee == null) { fsPayee = ""; }
+        if (fsTransNo == null) { fsTransNo = ""; }
+        
+        initSQL();
+        //set default retrieval for supplier / reference no
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%")
+            );
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON = setJSON("error", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+            if (isJSONSuccess(poJSON)) {
+                paCashAdvances.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    
+    public JSONObject populateDetail(String fsTransNo) throws SQLException, GuanzonException, CloneNotSupportedException{
+        poJSON = new JSONObject();
+        Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loMaster.openRecord(fsTransNo);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        Model_Cash_Advance_Detail loDetail = new CashflowModels(poGRider).CashAdvanceDetail();
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loDetail),
+                " sTransNox = " + SQLUtil.toSQL(fsTransNo)
+                + " cReversex = " + SQLUtil.toSQL(CashAdvanceStatus.Reverse.INCLUDE)
+            );
+        
+        lsSQL = lsSQL + " ORDER BY nEntryNox ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON = setJSON("error", "No cash advance detail found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            poJSON = loDetail.openRecord(loRS.getString("sTransNox"),loRS.getInt("nEntryNox"));
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            Detail(getDetailCount()-1).setDetailNo(loDetail.getEntryNo());
+            Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
+            ReloadDetail();
+        }
+        MiscUtil.close(loRS);
+        
+        //Populate Master
+        Master().setIndustryId(loMaster.getIndustryId());
+        Master().setCompanyId(loMaster.getCompanyId());
+        Master().setBranchCode(loMaster.getBranchCode());
+        Master().setCashFundId(loMaster.getCashFundId());
+        Master().setClientId(loMaster.getClientId());
+        Master().setPayeeName(loMaster.Payee().getCompanyName());
+        Master().setSourceNo(loMaster.getTransactionNo());
+        Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
+        Master().setDepartmentRequest(loMaster.getDepartmentRequest());
+        
+        return poJSON;
+    }
     /**
      * Retrieves and downloads all attachments associated with the current transaction.
      * <p>
@@ -1087,6 +1176,33 @@ public class CashDisbursement extends Transaction {
         return poJSON;
     }
     
+    public String getVoucherNo() throws SQLException {
+        String lsSQL = "SELECT sVouchrNo FROM "+ Master().getTable();
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
+                + " ORDER BY sVouchrNo DESC LIMIT 1");
+
+        String branchVoucherNo = DisbursementStatic.DEFAULT_VOUCHER_NO;  // default value
+
+        ResultSet loRS = null;
+        try {
+            System.out.println("EXECUTING SQL :  " + lsSQL);
+            loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS != null && loRS.next()) {
+                String sSeries = loRS.getString("sVouchrNo");
+                if (sSeries != null && !sSeries.trim().isEmpty()) {
+                    long voucherNumber = Long.parseLong(sSeries);
+                    voucherNumber += 1;
+                    branchVoucherNo = String.format("%08d", voucherNumber); // format to 6 digits
+                }
+            }
+        } finally {
+            MiscUtil.close(loRS);  // Always close the ResultSet
+        }
+        return branchVoucherNo;
+    }
+    
     @Override
     public Model_Cash_Disbursement Master() { 
         return (Model_Cash_Disbursement) poMaster; 
@@ -1137,6 +1253,13 @@ public class CashDisbursement extends Transaction {
 
     public int getTransactionListCount() {
         return this.paMaster.size();
+    }
+    public Model_Cash_Advance CashAdvancesList(int row) {
+        return (Model_Cash_Advance) paCashAdvances.get(row);
+    }
+
+    public int getCashAdvancesCount() {
+        return this.paCashAdvances.size();
     }
 
     /*RESET CACHE ROW SET*/
@@ -1213,6 +1336,7 @@ public class CashDisbursement extends Transaction {
             Master().setCompanyId(psCompanyId);
             Master().setTransactionDate(poGRider.getServerDate());
             Master().setTransactionStatus(CashDisbursementStatus.OPEN);
+            Master().setVoucherNo(getVoucherNo());
 
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);

@@ -21,4 +21,8 @@ public class CashDisbursementStatus {
         public static final  String EXCLUDE = "-"; 
     }
     
+    public static class SourceCode  {
+        public static final  String CASHADVANCE = "CADV"; 
+    }
+    
 }
