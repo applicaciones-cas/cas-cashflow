@@ -45,6 +45,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
@@ -147,7 +148,16 @@ public class CashDisbursement extends Transaction {
     */
     public JSONObject NewTransaction()
             throws CloneNotSupportedException, SQLException, GuanzonException {
-        return super.newTransaction();
+        resetMaster();
+        Detail().clear();
+        resetJournal();
+        WTaxDeduction().clear();
+        
+        poJSON = newTransaction();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        return poJSON;
     }
     
     /**
@@ -171,6 +181,18 @@ public class CashDisbursement extends Transaction {
         poJSON = openTransaction(transactionNo);
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = populateJournal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = populateWithholdingTaxDeduction();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -202,11 +224,17 @@ public class CashDisbursement extends Transaction {
            return poJSON;
        }
 
-       poJSON = loadAttachments();
-       if (!isJSONSuccess(poJSON)) {
-           poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction attachments.\n" + (String) poJSON.get("message"));
-           return poJSON;
-       }
+        poJSON = populateJournal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = populateWithholdingTaxDeduction();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
 
        poJSON = setJSON("success","success");
        return poJSON;
@@ -1392,6 +1420,73 @@ public class CashDisbursement extends Transaction {
         MiscUtil.close(loRS);
 
         return "";
+    }
+    
+    public JSONObject populateWithholdingTaxDeduction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record to load");
+            return poJSON;
+        }
+        
+        switch(getEditMode()){
+            case EditMode.READY:
+                paWTaxDeductions = new ArrayList<>();
+                Model_Withholding_Tax_Deductions loMaster = new CashflowModels(poGRider).Withholding_Tax_Deductions();
+                String lsSQL = MiscUtil.makeSelect(loMaster);
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                        + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+//                        + " AND cReversex = " + SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)
+                );
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    while (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------WITHHOLDING TAX DEDUCTIONS--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            paWTaxDeductions.add( new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
+                            poJSON = paWTaxDeductions.get(paWTaxDeductions.size() - 1).openRecord(loRS.getString("sTransNox"));
+                            if ("error".equals((String) poJSON.get("result"))){
+                                if(Master().getWithTaxTotal() > 0.0000){
+                                    return poJSON;
+                                } 
+                            } else {
+                                //add tax code
+                                paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().setTaxCode(paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().WithholdingTax().getTaxCode());
+                            }
+                        }  
+                    }
+                }
+                MiscUtil.close(loRS);
+            break;
+            case EditMode.ADDNEW:   
+                if(paWTaxDeductions.isEmpty()){
+                    paWTaxDeductions.add(new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
+                    //set default period date
+                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
+                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
+                }
+            break;
+            case EditMode.UPDATE:
+                for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.READY){
+                        poJSON = WTaxDeduction(lnCtr).updateRecord();
+                        if ("error".equals((String) poJSON.get("result"))){
+                            return poJSON;
+                        }
+                    }
+                }
+            break;
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
     }
     /**
      * Retrieves and downloads all attachments associated with the current transaction.

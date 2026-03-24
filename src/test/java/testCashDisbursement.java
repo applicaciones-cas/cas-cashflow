@@ -57,7 +57,7 @@ public class testCashDisbursement {
      *
      * Fails the test if any operation returns an error.
      */
-    @Test
+//    @Test
     public void testNewTransaction() {
         JSONObject loJSON;
         try {
@@ -181,10 +181,11 @@ public class testCashDisbursement {
             print(poController.Master().CashFund().getDescription());
             
             print("---------------------------DETAIL-----------------------------");
-            for (int lnCtr = 1; lnCtr <= poController.getDetailCount(); lnCtr++) {
-                for (int lnCol = 1; lnCol <= poController.Detail(lnCtr).getColumnCount(); lnCol++) {
-                    print(poController.Detail(lnCtr).getColumn(lnCol) + " ->> " + poController.Detail(lnCtr).getValue(lnCol));
-                }
+            for (int lnCtr = 1; lnCtr < poController.getDetailCount(); lnCtr++) {
+                print("getEntryNo : " + poController.Detail(lnCtr).getEntryNo());
+                print("getParticularId : " + poController.Detail(lnCtr).getParticularId());
+                print("getAmount : " + poController.Detail(lnCtr).getAmount());
+                print("getDetailNo : " + poController.Detail(lnCtr).getDetailNo());
             }
             print("--------------------------------------------------------");
 
@@ -237,6 +238,15 @@ public class testCashDisbursement {
             poController.ReloadDetail();
             poController.Detail(2).setParticularId("test3");
             poController.Detail(2).setAmount(1003.00);
+            
+            print("---------------------------DETAIL-----------------------------");
+            for (int lnCtr = 1; lnCtr < poController.getDetailCount(); lnCtr++) {
+                print("getEntryNo : " + poController.Detail(lnCtr).getEntryNo());
+                print("getParticularId : " + poController.Detail(lnCtr).getParticularId());
+                print("getAmount : " + poController.Detail(lnCtr).getAmount());
+                print("getDetailNo : " + poController.Detail(lnCtr).getDetailNo());
+            }
+            print("--------------------------------------------------------");
 
             loJSON = poController.SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
@@ -376,7 +386,7 @@ public class testCashDisbursement {
      * Opens the transaction, prints its fields, and approves it.
      * Fails the test if any step returns an error.
      */
-//    @Test
+    @Test
     public void testApproveTransaction() {
         JSONObject loJSON;
 
