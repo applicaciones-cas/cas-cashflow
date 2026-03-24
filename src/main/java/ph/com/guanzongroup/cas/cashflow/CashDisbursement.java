@@ -413,13 +413,6 @@ public class CashDisbursement extends Transaction {
             poJSON = setJSON("error", "Transaction was already confirmed.");
             return poJSON;
         }
-        
-        if(!pbWthParent){
-            poJSON = callApproval();
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
-        }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
@@ -427,10 +420,29 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        if(!pbWthParent){
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+        }
+        
+        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
+
+        poGRider.commitTrans();
         
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction approved successfully.");
@@ -445,12 +457,14 @@ public class CashDisbursement extends Transaction {
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if a system error occurs
     * @throws CloneNotSupportedException if cloning is not supported
+     * @throws javax.script.ScriptException
     */
     public JSONObject ApproveTransaction()
             throws ParseException,
             SQLException,
             GuanzonException,
-            CloneNotSupportedException {
+            CloneNotSupportedException,
+            ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = CashDisbursementStatus.APPROVED;
@@ -478,10 +492,22 @@ public class CashDisbursement extends Transaction {
             }
         }
         
+        poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
+
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction approved successfully.");
@@ -496,12 +522,14 @@ public class CashDisbursement extends Transaction {
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if a system error occurs
     * @throws CloneNotSupportedException if cloning is not supported
+     * @throws javax.script.ScriptException
     */
     public JSONObject VoidTransaction()
             throws ParseException,
             SQLException,
             GuanzonException,
-            CloneNotSupportedException {
+            CloneNotSupportedException,
+            ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = CashDisbursementStatus.VOID;
@@ -531,10 +559,22 @@ public class CashDisbursement extends Transaction {
             }
         }
         
+         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
+
+        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction voided successfully.");
@@ -549,12 +589,14 @@ public class CashDisbursement extends Transaction {
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if a system error occurs
     * @throws CloneNotSupportedException if cloning is not supported
+     * @throws javax.script.ScriptException
     */
     public JSONObject CancelTransaction()
             throws ParseException,
             SQLException,
             GuanzonException,
-            CloneNotSupportedException {
+            CloneNotSupportedException,
+            ScriptException {
         poJSON = new JSONObject();
 
         String lsStatus = CashDisbursementStatus.CANCELLED;
@@ -584,10 +626,23 @@ public class CashDisbursement extends Transaction {
             }
         }
         
+        poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
+
+        poGRider.commitTrans();
+        
 
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction cancelled successfully.");
@@ -1203,7 +1258,7 @@ public class CashDisbursement extends Transaction {
             );
         
         lsSQL = lsSQL 
-                + " AND a.sTransNox NOT IN ( SELECT sSourceNo FROM " + SQLUtil.toSQL(Master().getTable()) 
+                + " AND a.sTransNox NOT IN ( SELECT sSourceNo FROM " + Master().getTable()
                 + " WHERE sSourceNo =  a.sTransNox "
                 + " AND sSourceCd = " + SQLUtil.toSQL(CashDisbursementStatus.SourceCode.CASHADVANCE)+ " )";
         
