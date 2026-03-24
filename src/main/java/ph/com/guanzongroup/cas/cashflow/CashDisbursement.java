@@ -33,6 +33,7 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.tbjhandler.TBJEntry;
@@ -925,6 +926,27 @@ public class CashDisbursement extends Transaction {
         }
         
         poJSON.put("success", "success");
+        return poJSON;
+    }
+    /**
+    * Searches a department by code or name and sets the selected department ID if found.
+    *
+    * @param value   search keyword or code
+    * @param byCode  true to search by code, false to search by name
+    * @return JSONObject containing the search result
+    * @throws SQLException if database error occurs
+    * @throws GuanzonException if application error occurs
+    */
+    public JSONObject SearchDepartment(String value, boolean byCode)
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+        Department object = new ParamControllers(poGRider, logwrapr).Department();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if (isJSONSuccess(poJSON)) {
+            Master().setDepartmentRequest(object.getModel().getDepartmentId());
+        }
         return poJSON;
     }
     /**
