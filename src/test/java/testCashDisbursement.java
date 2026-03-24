@@ -12,7 +12,6 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
-import ph.com.guanzongroup.cas.cashflow.CashAdvance;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.runners.MethodSorters;
 import ph.com.guanzongroup.cas.cashflow.CashDisbursement;

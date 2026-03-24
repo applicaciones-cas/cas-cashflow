@@ -1485,10 +1485,10 @@ public class CashDisbursement extends Transaction {
     }
     
     public String getVoucherNo() throws SQLException {
-        String lsSQL = "SELECT sVouchrNo FROM "+ Master().getTable();
+        String lsSQL = "SELECT sVoucherx FROM "+ Master().getTable();
         lsSQL = MiscUtil.addCondition(lsSQL,
                 "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
-                + " ORDER BY sVouchrNo DESC LIMIT 1");
+                + " ORDER BY sVoucherx DESC LIMIT 1");
 
         String branchVoucherNo = DisbursementStatic.DEFAULT_VOUCHER_NO;  // default value
 
@@ -1498,7 +1498,7 @@ public class CashDisbursement extends Transaction {
             loRS = poGRider.executeQuery(lsSQL);
 
             if (loRS != null && loRS.next()) {
-                String sSeries = loRS.getString("sVouchrNo");
+                String sSeries = loRS.getString("sVoucherx");
                 if (sSeries != null && !sSeries.trim().isEmpty()) {
                     long voucherNumber = Long.parseLong(sSeries);
                     voucherNumber += 1;
