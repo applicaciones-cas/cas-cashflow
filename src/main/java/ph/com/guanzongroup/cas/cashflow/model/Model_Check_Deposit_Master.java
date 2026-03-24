@@ -13,6 +13,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
@@ -29,10 +30,12 @@ public class Model_Check_Deposit_Master extends Model {
 
     //reference objects
     Model_Industry poIndustry;
+    Model_Company poCompany;
     Model_Bank_Account_Master poBankAccount;
     Model_Branch poBranch;
     Model_Banks poBanks;
     private String bankid = "";
+    private String compnyID;
 
     @Override
     public void initialize() {
@@ -58,7 +61,7 @@ public class Model_Check_Deposit_Master extends Model {
             this.poBankAccount = (new CashflowModels(this.poGRider)).Bank_Account_Master();
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
             this.poBanks = (new ParamModels(this.poGRider)).Banks();
-
+            this.poCompany =(new ParamModels(this.poGRider)).Company();
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
@@ -226,6 +229,14 @@ public class Model_Check_Deposit_Master extends Model {
     public String getBanks() {
         return bankid;
     }
+    
+    public String setCompany(String bankidx) {
+        return compnyID = bankidx;
+    }
+
+    public String getCompany() {
+        return compnyID;
+    }
 
     @Override
     public String getNextCode() {
@@ -303,6 +314,22 @@ public class Model_Check_Deposit_Master extends Model {
         }
         this.poIndustry.initialize();
         return this.poIndustry;
+    }
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(compnyID)) {
+            if (this.poCompany.getEditMode() == 1 && this.poCompany
+                    .getCompanyId().equals(compnyID)) {
+                return this.poCompany;
+            }
+            this.poJSON = this.poCompany.openRecord(this.getCompany());
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poCompany;
+            }
+            this.poCompany.initialize();
+            return this.poCompany;
+        }
+        this.poCompany.initialize();
+        return this.poCompany;
     }
 
 }
