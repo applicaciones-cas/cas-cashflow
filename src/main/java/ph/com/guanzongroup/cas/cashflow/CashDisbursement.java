@@ -1623,7 +1623,19 @@ public class CashDisbursement extends Transaction {
 
         return "";
     }
-    
+    /**
+    * Manages the withholding tax deduction list based on the current edit mode.
+    * 
+    * In READY mode, it fetches and loads existing linked deductions from the database. 
+    * In ADDNEW mode, it initializes the list with a default entry using the transaction date. 
+    * In UPDATE mode, it transitions all existing deduction records into an editable state.
+    * 
+    * @return A JSONObject indicating "success" or an "error" message if the operation fails.
+    * @throws SQLException If a database access error occurs.
+    * @throws GuanzonException If an application-level error occurs.
+    * @throws CloneNotSupportedException If a model cloning error occurs.
+    * @throws ScriptException If a scripting error occurs during processing.
+    */
     public JSONObject populateWithholdingTaxDeduction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
@@ -1780,7 +1792,16 @@ public class CashDisbursement extends Transaction {
 
         return paAttachments.size();
     }
-    
+    /**
+    * Generates the next sequential voucher number for the current branch.
+    * 
+    * This method retrieves the latest voucher number from the database, increments 
+    * it by one, and returns it as a zero-padded 8-digit string. If no records are 
+    * found, it returns a default starting voucher number.
+    * 
+    * @return The next formatted 8-digit voucher number.
+    * @throws SQLException If a database access error occurs.
+    */
     public String getVoucherNo() throws SQLException {
         String lsSQL = "SELECT sVoucherx FROM "+ Master().getTable();
         lsSQL = MiscUtil.addCondition(lsSQL,
@@ -1807,20 +1828,38 @@ public class CashDisbursement extends Transaction {
         }
         return branchVoucherNo;
     }
-    
+    /**
+    * Returns the master record model for the current cash disbursement transaction.
+    * 
+    * @return The {@link Model_Cash_Disbursement} instance representing the transaction header.
+    */
     @Override
     public Model_Cash_Disbursement Master() { 
         return (Model_Cash_Disbursement) poMaster; 
     }
-    
+    /**
+    * Returns the detail record model at the specified row index.
+    * 
+    * @param row The index of the detail row to retrieve.
+    * @return The {@link Model_Cash_Disbursement_Detail} instance for the given row.
+    */
     @Override
     public Model_Cash_Disbursement_Detail Detail(int row) {
         return (Model_Cash_Disbursement_Detail) paDetail.get(row); 
     }
-    
+    /**
+    * Adds a new detail row to the transaction list after validating the current entries.
+    * 
+    * This method ensures that a new row can only be added if the preceding row has a 
+    * valid "Particular" item selected. If the last row is incomplete, an error is returned.
+    * 
+    * @return A JSONObject indicating the result of the operation.
+    * @throws CloneNotSupportedException If an error occurs while creating the new detail model.
+    */
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
-            if (Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId())) {
+            if ((Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId()))
+                || (Detail(getDetailCount() - 1).getDetailNo() == 0)){
                 poJSON = new JSONObject();
                 poJSON = setJSON("error", "Last row has empty item.");
                 return poJSON;
@@ -1831,9 +1870,13 @@ public class CashDisbursement extends Transaction {
     }
     
     /**
-     * Clears all transaction details and resets associated fields, attachments, and search criteria.
-     * @return A {@link JSONObject} indicating the result of the operation.
-     */
+    * Clears all detail rows, withholding tax deductions, and resets transaction-related fields.
+    * 
+    * This method removes all items from the details and tax deduction lists, clears attachments, 
+    * resets journal entries, and clears master industry and search metadata to return to an initial state.
+    * 
+    * @return A JSONObject indicating "success" after all components have been cleared.
+    */
     public JSONObject removeDetails() {
         poJSON = new JSONObject();
         Iterator<Model> detail = Detail().iterator();
@@ -1859,28 +1902,60 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+    /**
+    * Retrieves a specific cash disbursement record from the transaction list.
+    * 
+    * @param row The index of the record to retrieve.
+    * @return The Model_Cash_Disbursement instance at the specified row.
+    */
     public Model_Cash_Disbursement TransactionList(int row) {
         return (Model_Cash_Disbursement) paMaster.get(row);
     }
-
+    /**
+     * Returns the total number of records in the cash disbursement transaction list.
+     * 
+     * @return The size of the transaction list.
+     */
     public int getTransactionListCount() {
         return this.paMaster.size();
     }
+    /**
+    * Retrieves a specific cash advance record from the cash advance list.
+    * 
+    * @param row The index of the record to retrieve.
+    * @return The Model_Cash_Advance instance at the specified row.
+    */
     public Model_Cash_Advance CashAdvancesList(int row) {
         return (Model_Cash_Advance) paCashAdvances.get(row);
     }
-
+    /**r
+     * Returns the total number of records in the cash advance list.
+     * 
+     * @return The size of the cash advance list.
+     */
     public int getCashAdvancesCount() {
         return this.paCashAdvances.size();
     }
-    
+    /**
+    * Returns the complete list of withholding tax deductions.
+    * 
+    * @return A List of WithholdingTaxDeductions.
+    */
     public List<WithholdingTaxDeductions> WTaxDeduction() {
         return paWTaxDeductions; 
     }
-    
+    /**
+    * Retrieves a specific withholding tax deduction record by row index.
+    * 
+    * @param row The index of the deduction to retrieve.
+    * @return The WithholdingTaxDeductions instance at the specified row.
+    */
     public WithholdingTaxDeductions WTaxDeduction(int row) {
         return (WithholdingTaxDeductions) paWTaxDeductions.get(row); 
+    }
+    
+    public int getWTaxDeductionsCount() {
+        return paWTaxDeductions.size();
     }
     
     public Journal Journal(){
@@ -1893,10 +1968,6 @@ public class CashDisbursement extends Transaction {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         return poJournal;
-    }
-    
-    public int getWTaxDeductionsCount() {
-        return paWTaxDeductions.size();
     }
     
     public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -1978,14 +2049,16 @@ public class CashDisbursement extends Transaction {
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
-            if (Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId())) {
+            if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
+                || (Detail(lnCtr).getDetailNo() == 0)) {
                 deleteDetail(lnCtr);
             } 
             lnCtr--;
         }
 
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId())) {
+            if ((Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
+                || Detail(getDetailCount() - 1).getDetailNo() >= 0) {
                 AddDetail();
             }
         }
