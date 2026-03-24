@@ -2050,7 +2050,7 @@ public class CashDisbursement extends Transaction {
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
             if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
-                || (Detail(lnCtr).getDetailNo() == 0)) {
+               && (Detail(lnCtr).getDetailNo() == 0)) {
                 deleteDetail(lnCtr);
             } 
             lnCtr--;
