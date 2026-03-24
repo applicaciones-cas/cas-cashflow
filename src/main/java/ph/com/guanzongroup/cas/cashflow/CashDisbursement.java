@@ -5,14 +5,6 @@
  */
 package ph.com.guanzongroup.cas.cashflow;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -20,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
@@ -28,24 +19,19 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
-import org.apache.commons.codec.binary.Base64;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.agent.systables.SysTableContollers;
 import org.guanzon.appdriver.agent.systables.TransactionAttachment;
-import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
-import org.guanzon.appdriver.base.MiscReplUtil;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -53,7 +39,6 @@ import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
@@ -86,8 +71,18 @@ public class CashDisbursement extends Transaction {
     public List<Model> paCashAdvances;
     public List<TransactionAttachment> paAttachments;
     
+    /**
+    * Initializes a new Cash Disbursement transaction.
+    * <p>
+    * This method sets the source code, instantiates the master, detail, and journal 
+    * controllers, and resets all associated data lists (Cash Advances, W-Tax, and Attachments).
+    * 
+    * @return a {@link JSONObject} containing the status of the initialization.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if a business logic or validation error occurs.
+    */
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "CDSB";
+        SOURCE_CODE = "CDsb";
 
         poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
         poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
@@ -154,14 +149,21 @@ public class CashDisbursement extends Transaction {
             throws CloneNotSupportedException, SQLException, GuanzonException {
         return super.newTransaction();
     }
+    
     /**
-     * Loads an existing Cash Advance record and its attachments.
-     * 
-     * @param transactionNo The unique identifier of the transaction to be loaded.
-     * @return A {@link JSONObject} containing the operation status and any relevant error messages.
-     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
-     *          If an error occurs during data retrieval or object state management.
-     */
+    * Opens an existing transaction and loads its associated data.
+    * <p>
+    * This method resets the current transaction state, retrieves the specified transaction 
+    * record, and automatically loads any related attachments.
+    * 
+    * @param transactionNo the unique identifier of the transaction to be opened.
+    * @return a {@link JSONObject} containing the success status or an error message if the 
+    *         transaction or its attachments fail to load.
+    * @throws CloneNotSupportedException if an error occurs during object cloning.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if a business logic or validation error occurs.
+    * @throws ScriptException if an error occurs during script execution.
+    */
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
         //Reset Transaction
         resetTransaction();
@@ -182,28 +184,33 @@ public class CashDisbursement extends Transaction {
     }
 
     /**
-     * Prepares the current transaction for modification and refreshes its attachments.
-     * 
-     * @return A {@link JSONObject} indicating success or failure of the update initialization.
-     * @throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException 
-     *          If the record is locked, unavailable, or an error occurs during the update process.
-     */
-    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
-        poJSON = updateTransaction();
-        if (!isJSONSuccess(poJSON)) {
-            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
-            return poJSON;
-        }
-        
-        poJSON = loadAttachments();
-        if (!isJSONSuccess(poJSON)) {
-            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction attachments.\n" + (String) poJSON.get("message"));
-            return poJSON;
-        }
-        
-        poJSON = setJSON("success","success");
-        return poJSON;
-    }
+    * Prepares the current transaction for modification.
+    * <p>
+    * This method initiates the update state for the transaction and refreshes 
+    * its associated attachments to ensure data consistency during editing.
+    * 
+    * @return a {@link JSONObject} indicating the success or failure of the update request.
+    * @throws SQLException if a database error occurs.
+    * @throws GuanzonException if business logic validation fails.
+    * @throws CloneNotSupportedException if an error occurs during data cloning.
+    * @throws ScriptException if an error occurs during script-based processing.
+    */
+   public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+       poJSON = updateTransaction();
+       if (!isJSONSuccess(poJSON)) {
+           poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
+           return poJSON;
+       }
+
+       poJSON = loadAttachments();
+       if (!isJSONSuccess(poJSON)) {
+           poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction attachments.\n" + (String) poJSON.get("message"));
+           return poJSON;
+       }
+
+       poJSON = setJSON("success","success");
+       return poJSON;
+   }
     
     /**
      * Commits the current transaction changes to the database.
@@ -237,18 +244,21 @@ public class CashDisbursement extends Transaction {
         poJSON = setJSON("success","success");
         return poJSON;
     }
+    
     /**
-     * Validates if the current transaction is eligible for updates based on its database status.
-     * <p>
-     * This method checks the latest record state to prevent modifications on transactions 
-     * that are already Void, Cancelled, Liquidated, or (depending on {@code isEntry}) Confirmed. 
-     * If the local state is outdated, it automatically re-opens the transaction to sync data.
-     * 
-     * @param isEntry Set to {@code true} to block updates if the status is already "Confirmed".
-     * @return A {@link JSONObject} with "success" if the update can proceed, or an error message if blocked.
-     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
-     *          If an error occurs during record retrieval or data synchronization.
-     */
+    * Validates if the current transaction can be updated based on its latest database status.
+    * <p>
+    * This method checks if the transaction is in a restricted state (Voided, Cancelled, 
+    * or Approved). It also synchronizes the local transaction data by calling 
+    * {@link #OpenTransaction(String)} if the database status differs from the local state.
+    * 
+    * @param isEntry set to {@code true} to prevent updates if the transaction is already "Confirmed".
+    * @return a {@link JSONObject} with "success" if the update can proceed, or an error message if restricted.
+    * @throws CloneNotSupportedException if an error occurs during data cloning.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if business logic validation fails.
+    * @throws ScriptException if an error occurs during script processing.
+    */
     public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         
@@ -288,11 +298,12 @@ public class CashDisbursement extends Transaction {
     }
     
     /**
-     * Returns a readable string for a given transaction status code.
-     *
-     * @param lsStatus Status code
-     * @return Human-readable status ("Open", "Confirmed", "Approved", "Cancelled", "Voided", or "Unknown")
-     */
+    * Converts a numeric or short-code transaction status into a human-readable string.
+    * 
+    * @param lsStatus the status code to be converted.
+    * @return the descriptive name of the status (e.g., "Voided", "Confirmed"), 
+    *         or "Unknown" if the code is not recognized.
+    */
     public String getStatus(String lsStatus) {
         switch (lsStatus) {
             case CashDisbursementStatus.VOID:
@@ -309,16 +320,17 @@ public class CashDisbursement extends Transaction {
                 return "Unknown";
         }
     }
+    
     /**
-     * Validates the transition logic between transaction statuses.
-     * <p>
-     * Ensures the record follows the prescribed workflow rules (e.g., only "Open" 
-     * transactions can be "Confirmed" or "Voided").
-     * 
-     * @param current The existing status of the record.
-     * @param target The intended status to transition to.
-     * @return {@code true} if the state transition is permitted; otherwise {@code false}.
-     */
+    * Validates whether a transaction status transition is permitted.
+    * <p>
+    * This method enforces the workflow rules for cash disbursements (e.g., a transaction 
+    * must be "Open" before it can be "Confirmed" or "Voided").
+    * 
+    * @param current the current status of the transaction.
+    * @param target the proposed status to transition to.
+    * @return {@code true} if the transition is valid based on business rules; {@code false} otherwise.
+    */
     public boolean isAllowed(String current, String target) {
         switch (target) {
             case CashDisbursementStatus.VOID:
@@ -329,15 +341,30 @@ public class CashDisbursement extends Transaction {
 
             case CashDisbursementStatus.CONFIRMED:
                 return current.equals(CashDisbursementStatus.OPEN);
-                
+
             case CashDisbursementStatus.APPROVED:
                 return current.equals(CashDisbursementStatus.CONFIRMED);
-                
+
             default:
                 return false;
         }
     }
     
+    /**
+    * Confirms the current cash disbursement transaction.
+    * <p>
+    * This method validates the transaction's current state, ensures it hasn't been 
+    * confirmed already, performs necessary approval workflows, and updates the 
+    * status to {@code CONFIRMED} in the database.
+    * 
+    * @param remarks additional notes or comments for the confirmation process.
+    * @return a {@link JSONObject} containing the success status or a specific error message.
+    * @throws ParseException if an error occurs during data parsing.
+    * @throws SQLException if a database access error occurs.
+    * @throws GuanzonException if business logic or validation fails.
+    * @throws CloneNotSupportedException if an error occurs during object cloning.
+    * @throws ScriptException if an error occurs during script execution.
+    */
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = CashDisbursementStatus.CONFIRMED;
@@ -1104,12 +1131,11 @@ public class CashDisbursement extends Transaction {
         if (fsVoucherNo == null) { fsVoucherNo = ""; }
         
         initSQL();
-        //set default retrieval for supplier / reference no
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
+                + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
             );
         
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
@@ -1133,23 +1159,27 @@ public class CashDisbursement extends Transaction {
         return poJSON;
     }
     
-    public JSONObject loadLiquidatedList(String fsIndustry, String fsPayee, String fsTransNo) throws SQLException, GuanzonException {
+    public JSONObject loadCashAdvanceList(String fsIndustry, String fsPayee, String fsTransNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paCashAdvances = new ArrayList<>();
         if (fsIndustry == null) { fsIndustry = ""; }
         if (fsPayee == null) { fsPayee = ""; }
         if (fsTransNo == null) { fsTransNo = ""; }
         
-        initSQL();
-        //set default retrieval for supplier / reference no
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+        String lsSQL = MiscUtil.addCondition(cashAdvanceSQL(),
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%")
+                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%")
+                + " AND a.cTranStat = " + SQLUtil.toSQL(CashAdvanceStatus.LIQUIDATED)
             );
         
-        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+        lsSQL = lsSQL 
+                + " AND a.sTransNox NOT IN ( SELECT sSourceNo FROM " + SQLUtil.toSQL(Master().getTable()) 
+                + " WHERE sSourceNo =  a.sTransNox "
+                + " AND sSourceCd = " + SQLUtil.toSQL(CashDisbursementStatus.SourceCode.CASHADVANCE)+ " )";
+        
+        lsSQL = lsSQL + " ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -2140,169 +2170,75 @@ public class CashDisbursement extends Transaction {
             }
         }
 
-        SQL_BROWSE =   " SELECT "
+        SQL_BROWSE =  "  SELECT "
                     + "   a.sTransNox "
                     + " , a.sCompnyID "
                     + " , a.sBranchCd "
                     + " , a.sIndstCdx "
+                    + " , a.nEntryNox "
                     + " , a.dTransact "
-                    + " , a.sClientID "
-                    + " , a.sDeptReqs "
+                    + " , a.sVoucherx "
                     + " , a.sCashFIDx "
+                    + " , a.sClientID "
+                    + " , a.sPayeeNme "
+                    + " , a.sCrdtedTo "
+                    + " , a.sDeptReqs "
+                    + " , a.sAddressx "
                     + " , a.sRemarksx "
-                    + " , a.nAdvAmtxx "
-                    + " , a.sIssuedxx "
-                    + " , a.dIssuedxx "
-                    + " , a.nLiqTotal "
-                    + " , a.sLiquidtd "
-                    + " , a.dLiquidtd "  
+                    + " , a.sReferNox "
+                    + " , a.sSourceCd "
+                    + " , a.sSourceNo "
+                    + " , a.nTranTotl "
+                    + " , a.nVATSales "
+                    + " , a.nVATAmtxx "
+                    + " , a.nZroVATSl "
+                    + " , a.nVatExmpt "
+                    + " , a.nWTaxTotl "
+                    + " , a.nNetTotal "
+                    + " , a.cVchrPrnt "
+                    + " , a.cCollectd "
                     + " , a.cTranStat "
-                    + " , a.sModified "
-                    + " , a.dModified "
+                    + " , a.sApproved "
                     + " , b.sCompnyNm AS sCompanyx "
                     + " , c.sDescript AS sIndustry "
                     + " , d.sDeptName AS sDeptName "
                     + " , e.sCompnyNm AS sPayeexxx "
                     + " , f.sCashFDsc AS sCashFund "
                     + " , g.sBranchNm AS sBranchNm "
-                    + " FROM CashAdvance a "
-                    + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID "
-                    + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx "
-                    + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs "
+                    + " , h.sCompnyNm AS sCreditTo "
+                    + " FROM Cash_Disbursement a   "
+                    + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
+                    + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
+                    + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
                     + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx "
-                    + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
+                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
+                    + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd        "
+                    + " LEFT JOIN Client_Master h ON h.sClientID = a.sCrdtedTo ";
         if(lsCondition != null && !"".equals(lsCondition)){
             SQL_BROWSE = MiscUtil.addCondition(SQL_BROWSE, lsCondition);
         }
     }
     
-    /**
-     * Upload Attachment
-     * @param instance
-     * @param access 
-     * @param fnRow 
-     * @return  
-     * @throws java.lang.Exception 
-     */
-    /**
-     * Uploads a specific transaction attachment to the web server.
-     * <p>
-     * This method verifies the file's existence (handling renames), generates an MD5 hash 
-     * for data integrity, and transmits the file via the {@link WebFile} API. Upon successful 
-     * upload, it updates the record's hash and sets the send status to "1" (Sent).
-     * 
-     * @param instance The application driver instance.
-     * @param access The access token for web service authentication.
-     * @param fnRow The index of the attachment in the local collection.
-     * @param fsOriginalFileName The original filename to use as a fallback if the new file is missing.
-     * @return A {@link JSONObject} containing the upload result status.
-     * @throws Exception If an error occurs during file reading, encoding, or web transmission.
-     */
-    public JSONObject uploadCASAttachments(GRiderCAS instance, String access, int fnRow, String fsOriginalFileName) throws Exception{       
-        poJSON = new JSONObject();
-        System.out.println("Uploading... : fsOriginalFileName : " + fsOriginalFileName);
-        System.out.println("New File Name... : " + paAttachments.get(fnRow).getModel().getFileName());
-        String hash;
-        String lsFile = paAttachments.get(fnRow).getModel().getFileName();
-        
-        //check if new file is existing
-        File file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
-        if(!file.exists()){
-            //check if original file is existing
-            lsFile = fsOriginalFileName;
-            file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
-            if(!file.exists()){
-                poJSON = setJSON("error", "Cannot locate file in " + paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile
-                                        + ".\nContact system administrator for assistance.");
-                return poJSON;  
-            }
-        }
-
-        //check if file hash is not empty
-        hash = paAttachments.get(fnRow).getModel().getMD5Hash();
-        if(paAttachments.get(fnRow).getModel().getMD5Hash() == null || "".equals(paAttachments.get(fnRow).getModel().getMD5Hash())){
-            hash = MiscReplUtil.md5Hash(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
-        }
-
-        JSONObject result = WebFile.UploadFile(getAccessToken(access)
-                                , "0032"
-                                , ""
-                                , paAttachments.get(fnRow).getModel().getFileName()
-                                , instance.getBranchCode()
-                                , hash
-                                , encodeFileToBase64Binary(file)
-                                , paAttachments.get(fnRow).getModel().getSourceCode()
-                                , paAttachments.get(fnRow).getModel().getSourceNo()
-                                , "");
-
-        if("error".equalsIgnoreCase((String) result.get("result"))){
-            System.out.println("Upload Error : " + result.toJSONString());
-            System.out.println("Upload Error : " + paAttachments.get(fnRow).getModel().getFileName());
-                poJSON = setJSON("error", "System error while uploading file "+ paAttachments.get(fnRow).getModel().getFileName()
-                                    + ".\nContact system administrator for assistance.");
-            return poJSON;
-        }
-        paAttachments.get(fnRow).getModel().setMD5Hash(hash);
-        paAttachments.get(fnRow).getModel().setSendStatus("1");
-        System.out.println("Upload Success : " + paAttachments.get(fnRow).getModel().getFileName());
-        poJSON.put("result", "success");
-        return poJSON;
+    public String cashAdvanceSQL() {
+        return  " SELECT        "
+                + " a.sTransNox   "
+                + " , a.dTransact "
+                + " , a.sCashFIDx "
+                + " , a.cTranStat "
+                + " , b.sCompnyNm AS sCompanyx "
+                + " , c.sDescript AS sIndustry "
+                + " , d.sDeptName AS sDeptName "
+                + " , e.sCompnyNm AS sPayeexxx "
+                + " , f.sCashFDsc AS sCashFund "
+                + ", g.sBranchNm AS sBranchNm "
+                + " FROM CashAdvance a         "
+                + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
+                + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
+                + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
+                + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
+                + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
+                + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
     }
-    
-    /**
-     * Converts a file's content into a Base64 encoded string.
-     * 
-     * @param file The file object to be encoded.
-     * @return A Base64 string representation of the file.
-     * @throws Exception If an I/O error occurs during file reading.
-     */
-    private static String encodeFileToBase64Binary(File file) throws Exception{
-         FileInputStream fileInputStreamReader = new FileInputStream(file);
-         byte[] bytes = new byte[(int)file.length()];
-         fileInputStreamReader.read(bytes);
-         return new String(Base64.encodeBase64(bytes), "UTF-8");
-     }
-         
-    private static JSONObject token = null;
-    /**
-     * Retrieves a valid access token, refreshing it if it has expired.
-     * <p>
-     * The token is considered stale if it was created more than 25 minutes ago. 
-     * If expired, it triggers an external request to update the token file before 
-     * returning the new access key.
-     * 
-     * @param access The file path to the JSON formatted token storage.
-     * @return The access key string, or {@code null} if the file cannot be read or parsed.
-     */
-    private static String getAccessToken(String access){
-        try {
-            JSONParser oParser = new JSONParser();
-            if(token == null){
-                token = (JSONObject)oParser.parse(new FileReader(access));
-            }
-            
-            Calendar current_date = Calendar.getInstance();
-            current_date.add(Calendar.MINUTE, -25);
-            Calendar date_created = Calendar.getInstance();
-            date_created.setTime(SQLUtil.toDate((String) token.get("created") , SQLUtil.FORMAT_TIMESTAMP));
-            
-            //Check if token is still valid within the time frame
-            //Request new access token if not in the current period range
-            if(current_date.after(date_created)){
-                String[] xargs = new String[] {(String) token.get("parent"), access};
-                RequestAccess.main(xargs);
-                token = (JSONObject)oParser.parse(new FileReader(access));
-            }
-            
-            return (String)token.get("access_key");
-        } catch (IOException ex) {
-            return null;
-        } catch (ParseException ex) {
-            return null;
-        }
-    }
-    
     /**
     * Displays the status history of a Cash Advance transaction.
     *
@@ -2372,7 +2308,7 @@ public class CashDisbursement extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("Cash Advance", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Cash Disbursement", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
     /**
      * Retrieves the user and timestamp of who created the current transaction.
