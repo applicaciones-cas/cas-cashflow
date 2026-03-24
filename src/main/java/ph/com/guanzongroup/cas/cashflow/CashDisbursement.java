@@ -1459,7 +1459,7 @@ public class CashDisbursement extends Transaction {
             Detail(getDetailCount()-1).setDetailNo(loDetail.getEntryNo());
             Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
             Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
-            ReloadDetail();
+            AddDetail();
         }
         MiscUtil.close(loRS);
         
