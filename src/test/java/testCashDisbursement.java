@@ -36,7 +36,7 @@ public class testCashDisbursement {
     * Sets up the test class before any tests are run.
     *
     * Initializes system properties, connects to the database, and
-    * creates a Cash Advance controller instance for testing.
+    * creates a controller instance for testing.
     *
     * @throws SQLException if a database access error occurs
     * @throws GuanzonException if application-specific initialization fails
@@ -103,17 +103,17 @@ public class testCashDisbursement {
                 }
 
             } catch (SQLException | GuanzonException ex) {
-                Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
             }
         } catch (ExceptionInInitializerError e) {
             System.err.println(MiscUtil.getException(e));
             Assert.fail();
         } catch (CloneNotSupportedException | SQLException | GuanzonException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
     /**
-    * Tests loading and iterating through the Cash Advance transaction list.
+    * Tests loading and iterating through the transaction list.
     *
     * Retrieves records based on filters and prints key details per entry.
     * Fails the test if the transaction list cannot be loaded.
@@ -144,15 +144,15 @@ public class testCashDisbursement {
                     print("Credited ->> " + poController.TransactionList(lnCtr).Credited().getCompanyName());
                     print("----------------------------------------------------------------------------------");
                 } catch (GuanzonException | SQLException ex) {
-                    Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
                 }
             }
         } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
     /**
-    * Tests loading and iterating through the Cash Advance transaction list.
+    * Tests loading and iterating through the transaction list.
     *
     * Retrieves records based on filters and prints key details per entry.
     * Fails the test if the transaction list cannot be loaded.
@@ -181,15 +181,15 @@ public class testCashDisbursement {
                     print("Cash Fund ->> " + poController.CashAdvancesList(lnCtr).CashFund().getDescription());
                     print("----------------------------------------------------------------------------------");
                 } catch (GuanzonException | SQLException ex) {
-                    Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
                 }
             }
         } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(testCashAdvance.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
         }
     }
     /**
-     * Tests opening an existing Cash Advance transaction.
+     * Tests opening an existing transaction.
      *
      * Loads a transaction by its number and prints all field values,
      * including related descriptions (industry, branch, company, cash fund).
@@ -233,7 +233,7 @@ public class testCashDisbursement {
 
     }
     /**
-    * Tests updating an existing Cash Advance transaction.
+    * Tests updating an existing transaction.
     *
     * Opens a transaction, switches it to update mode, modifies fields,
     * and saves the changes. Fails the test if any step returns an error.
@@ -298,7 +298,7 @@ public class testCashDisbursement {
 
     }
     /**
-     * Tests confirming a Cash Advance transaction.
+     * Tests confirming a transaction.
      * 
      * Opens the transaction, prints its fields, and confirms it.
      * Fails the test if any step returns an error.
@@ -338,7 +338,7 @@ public class testCashDisbursement {
         } 
     }
     /**
-     * Tests cancelling a Cash Advance transaction.
+     * Tests cancelling a transaction.
      * 
      * Opens the transaction, prints its fields, and cancels it.
      * Fails the test if any step returns an error.
@@ -378,7 +378,7 @@ public class testCashDisbursement {
         } 
     }
     /**
-     * Tests voiding a Cash Advance transaction.
+     * Tests voiding a transaction.
      * 
      * Opens the transaction, prints its fields, and voids it.
      * Fails the test if any step returns an error.
@@ -418,7 +418,7 @@ public class testCashDisbursement {
         } 
     }
     /**
-     * Tests approving a Cash Advance transaction.
+     * Tests approving a transaction.
      * 
      * Opens the transaction, prints its fields, and approves it.
      * Fails the test if any step returns an error.
