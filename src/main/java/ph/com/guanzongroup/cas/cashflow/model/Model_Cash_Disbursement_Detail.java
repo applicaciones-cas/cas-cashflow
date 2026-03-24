@@ -23,6 +23,7 @@ public class Model_Cash_Disbursement_Detail extends Model {
 
     Model_Account_Chart poAccount;
     Model_Particular poParticular;
+    Model_Cash_Advance_Detail poCashAdvanceDetail;
     
     @Override
     public void initialize() {
@@ -58,6 +59,7 @@ public class Model_Cash_Disbursement_Detail extends Model {
             CashflowModels gl = new CashflowModels(poGRider);
             poAccount = gl.Account_Chart();
             poParticular = gl.Particular();
+            poCashAdvanceDetail = gl.CashAdvanceDetail();
 //            end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -214,6 +216,28 @@ public class Model_Cash_Disbursement_Detail extends Model {
         } else {
             poParticular.initialize();
             return poParticular;
+        }
+    }
+    
+    public Model_Cash_Advance_Detail CashAdvanceDetail(String fsSourceNo) throws SQLException, GuanzonException{
+        if(fsSourceNo != null && !"".equals(fsSourceNo) && (int) getValue("nDetailNo") > 0){
+            if (poCashAdvanceDetail.getEditMode() == EditMode.READY
+                    && poCashAdvanceDetail.getTransactionNo().equals(fsSourceNo)
+                    && poCashAdvanceDetail.getEntryNo() == (int) getValue("nDetailNo")) {
+                return poCashAdvanceDetail;
+            } else {
+                poJSON = poCashAdvanceDetail.openRecord(fsSourceNo,(int) getValue("nDetailNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poCashAdvanceDetail;
+                } else {
+                    poCashAdvanceDetail.initialize();
+                    return poCashAdvanceDetail;
+                }
+            }
+        } else {
+            poCashAdvanceDetail.initialize();
+            return poCashAdvanceDetail;
         }
     }
 }
