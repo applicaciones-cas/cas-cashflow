@@ -276,6 +276,7 @@ public class testCashDisbursement {
             poController.Detail(2).setParticularId("test3");
             poController.Detail(2).setAmount(1003.00);
             
+            poController.computeFields(false);
             print("---------------------------DETAIL-----------------------------");
             for (int lnCtr = 1; lnCtr < poController.getDetailCount(); lnCtr++) {
                 print("getEntryNo : " + poController.Detail(lnCtr).getEntryNo());

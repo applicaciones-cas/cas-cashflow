@@ -51,6 +51,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
 
@@ -1109,43 +1110,39 @@ public class CashDisbursement extends Transaction {
     public JSONObject computeTaxAmount(){
         poJSON = new JSONObject();
         
-        //set/compute value to tax amount
-//        Double ldblTaxAmount = 0.0000;
-//        Double ldblDetTaxAmt = 0.0000;
-//        Double ldblTotalBaseAmount = 0.0000;
-//        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-//            if(WTaxDeduction(lnCtr).getModel().isReverse()){
-//                if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
-//                    WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-//                    try {
-//                        ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
-//                    } catch (SQLException | GuanzonException ex) {
-//                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-//                        poJSON.put("result", "error");
-//                        poJSON.put("message", MiscUtil.getException(ex));
-//                        return poJSON;
-//                    }
-//                    WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
-//                }
-//                ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
-//                ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
-//            }
-//        }
-//        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
-//        if(ldblTotalBaseAmount > ldblVatSales){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Base amount cannot be greater than the net vatable sales.");
-//            return poJSON;
-//        }
-//        
-//        if(ldblTaxAmount > ldblVatSales){
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
-//            return poJSON;
-//        }
-//        
-//        Master().setWithTaxTotal(ldblTaxAmount);
-////        System.out.println("Withholding tax total : " + Master().getWithTaxTotal());
+//        set/compute value to tax amount
+        Double ldblTaxAmount = 0.0000;
+        Double ldblDetTaxAmt = 0.0000;
+        Double ldblTotalBaseAmount = 0.0000;
+        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+            if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
+                    WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                    try {
+                        ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
+                    } catch (SQLException | GuanzonException ex) {
+                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                        poJSON = setJSON("error", MiscUtil.getException(ex));
+                        return poJSON;
+                    }
+                    WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
+                }
+                ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
+                ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
+            }
+        }
+        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
+        if(ldblTotalBaseAmount > ldblVatSales){
+            poJSON = setJSON("error", "Base amount cannot be greater than the net vatable sales.");
+            return poJSON;
+        }
+        
+        if(ldblTaxAmount > ldblVatSales){
+            poJSON = setJSON("error", "Tax amount cannot be greater than the net vatable sales.");
+            return poJSON;
+        }
+        
+        Master().setWithTaxTotal(ldblTaxAmount);
         
         poJSON = setJSON("success", "Tax computed successfully");
         return poJSON;
@@ -1312,6 +1309,7 @@ public class CashDisbursement extends Transaction {
             }
             Detail(getDetailCount()-1).setDetailNo(loDetail.getEntryNo());
             Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
+            Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
             ReloadDetail();
         }
         MiscUtil.close(loRS);
@@ -1326,7 +1324,7 @@ public class CashDisbursement extends Transaction {
         Master().setSourceNo(loMaster.getTransactionNo());
         Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
         Master().setDepartmentRequest(loMaster.getDepartmentRequest());
-        
+        computeFields(false);
         return poJSON;
     }
     
