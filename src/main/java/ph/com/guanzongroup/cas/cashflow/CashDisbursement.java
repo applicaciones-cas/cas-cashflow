@@ -15,10 +15,13 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -38,6 +41,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
@@ -45,6 +49,9 @@ import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.tbjhandler.TBJEntry;
+import org.guanzon.cas.tbjhandler.TBJTransaction;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -52,6 +59,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
@@ -72,6 +80,8 @@ public class CashDisbursement extends Transaction {
     public String psBranch = "";
     public String psPayee = "";
     
+    public Journal poJournal;
+    public List<WithholdingTaxDeductions> paWTaxDeductions;
     public List<Model> paMaster;
     public List<Model> paCashAdvances;
     public List<TransactionAttachment> paAttachments;
@@ -81,9 +91,11 @@ public class CashDisbursement extends Transaction {
 
         poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
         poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
+        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
 
         paMaster = new ArrayList<Model>();
         paCashAdvances = new ArrayList<Model>();
+        paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
         paAttachments = new ArrayList<>();
 
         return initialize();
@@ -798,13 +810,139 @@ public class CashDisbursement extends Transaction {
         return poJSON;
     }
     
+    /*Validate detail exisitence*/
+    public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode){
+        poJSON = new JSONObject();
+
+        for(int lnCtr = 0;lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
+            if(fsAcctCode.equals(poJournal.Detail(lnCtr).getAccountCode()) && fnRow != lnCtr){
+                poJSON.put("row", lnCtr);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Account code " + fsAcctCode + " already exists at row " + (lnCtr+1) + ".");
+                poJournal.Detail(fnRow).setAccountCode("");
+                return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Check Existing tax rate per selected period date
+     * @param fnRow
+     * @param fsTaxRated
+     * @return 
+     */
+    private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
+        JSONObject loJSON = new JSONObject();
+        try {
+            int lnRow = 0;
+            for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
+                if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                    lnRow++;
+                }
+                if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                    if(WTaxDeduction(lnCtr).getModel().isReverse() && !fsTaxType.equals(WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxType()) ){
+                        loJSON.put("result", "error");
+                        loJSON.put("reverse", true);
+                        loJSON.put("row", lnCtr);
+                        loJSON.put("message", "Tax type must be equal to other withholding tax deductions.");
+                        return loJSON;
+                    }
+                    
+                    //Check the tax rate
+                    if(fsTaxRated.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
+                        && fnRow != lnCtr){
+                        //Check Period Date do not allow when taxratedid was already covered of the specific period date
+                        if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
+                            == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
+                            //Check Period date per quarter
+                            if( getQuarter(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom()))) 
+                                == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) 
+                                    ){
+                                if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                                    loJSON.put("result", "error");
+                                    loJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnRow) + ".");
+                                    loJSON.put("row", lnCtr);
+                                    loJSON.put("reverse", true);
+                                    return loJSON;
+                                } else {
+                                    loJSON.put("result", "error");
+                                    loJSON.put("reverse", false);
+                                    loJSON.put("row", lnCtr);
+                                    return loJSON;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            loJSON.put("result", "error");
+            loJSON.put("message", MiscUtil.getException(ex));
+            return loJSON;
+        }
+    
+        loJSON.put("result", "success");
+        return loJSON;
+    }
+    
+    /**
+     * Validate period date
+     * @param fnRow pass withholding tax deduction selected row
+     * @return 
+     */
+    public JSONObject checkPeriodDate(int fnRow){
+        //Validate period from must be per quarter per year.
+        if(WTaxDeduction(fnRow).getModel().getPeriodFrom() != null){
+            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())).getYear() 
+                != strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear() ){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Period Date must be with the same year at row "+(fnRow + 1)+".");
+                return poJSON;
+            }
+            
+            if( (getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo()))) 
+                != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())))) ){
+                poJSON.put("row", fnRow);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Period date must be in the same quarter at row "+(fnRow + 1)+".");
+                return poJSON;
+            }
+        }
+        
+        poJSON.put("row", fnRow);
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    private int getQuarter(LocalDate fdDate){
+        int month = fdDate.getMonthValue();
+        int quarter = ((month - 1) / 3) + 1;
+        return quarter;
+    }
+    
     public JSONObject computeFields(boolean isValidate) {
         poJSON = new JSONObject();
+        poJSON.put("column", "");
         Double ldblTransactionTotal = 0.0000;
+        Double ldblVATSalesTotal = 0.0000;
+        Double ldblVATAmountTotal = 0.0000;
+        Double ldblVATExemptTotal = 0.0000;
+        Double ldblZeroVATSales = 0.0000;
+        computeTaxAmount();
+        computeDetailFields(isValidate);
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             if(Detail(lnCntr).isReverse()){
                 ldblTransactionTotal += Detail(lnCntr).getAmount();
+                ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
+                ldblVATAmountTotal += Detail(lnCntr).getDetailVatAmount();
+                ldblVATExemptTotal += Detail(lnCntr).getDetailVatExempt();
+
             }
         }
         
@@ -815,9 +953,143 @@ public class CashDisbursement extends Transaction {
                 return poJSON;
             }
         }
+        if(ldblVATSalesTotal < 0.0000) {
+            poJSON = setJSON("error", "Invalid Vat Sales Total.");
+            poJSON.put("column", "nVATSales");
+            if(isValidate){
+                return poJSON;
+            }
+        }
+        if(ldblVATAmountTotal < 0.0000) {
+            poJSON = setJSON("error", "Invalid Vat Amount Total.");
+            poJSON.put("column", "nVATAmtxx");
+            if(isValidate){
+                return poJSON;
+            }
+        }
+        if(ldblVATExemptTotal < 0.0000) {
+            poJSON = setJSON("error", "Invalid Vat Exempt Total.");
+            poJSON.put("column", "nVatExmpt");
+            if(isValidate){
+                return poJSON;
+            }
+        }
         
+        double lnNetAmountDue = ldblTransactionTotal - Master().getWithTaxTotal();
+        if (lnNetAmountDue < 0.0000) {
+            poJSON = setJSON("error", "Invalid Net Total Amount.");
+            poJSON.put("column", "nNetTotal");
+            if(isValidate){
+                return poJSON;
+            }
+        }
+
         Master().setTransactionTotal(ldblTransactionTotal);
+        Master().setVatableSales(ldblVATSalesTotal);
+        Master().setVatAmount(ldblVATAmountTotal);
+        Master().setVatExempt(ldblVATExemptTotal);
+        Master().setZeroVatSales(ldblZeroVATSales);
+        Master().setNetTotal(lnNetAmountDue);
+        
         poJSON = setJSON("success", "computed successfully");
+        poJSON.put("column", "");
+        return poJSON;
+    }
+    
+    public JSONObject computeTaxAmount(){
+        poJSON = new JSONObject();
+        
+        //set/compute value to tax amount
+//        Double ldblTaxAmount = 0.0000;
+//        Double ldblDetTaxAmt = 0.0000;
+//        Double ldblTotalBaseAmount = 0.0000;
+//        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+//            if(WTaxDeduction(lnCtr).getModel().isReverse()){
+//                if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
+//                    WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+//                    try {
+//                        ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
+//                    } catch (SQLException | GuanzonException ex) {
+//                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", MiscUtil.getException(ex));
+//                        return poJSON;
+//                    }
+//                    WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
+//                }
+//                ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
+//                ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
+//            }
+//        }
+//        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
+//        if(ldblTotalBaseAmount > ldblVatSales){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Base amount cannot be greater than the net vatable sales.");
+//            return poJSON;
+//        }
+//        
+//        if(ldblTaxAmount > ldblVatSales){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
+//            return poJSON;
+//        }
+//        
+//        Master().setWithTaxTotal(ldblTaxAmount);
+////        System.out.println("Withholding tax total : " + Master().getWithTaxTotal());
+        
+        poJSON = setJSON("success", "Tax computed successfully");
+        return poJSON;
+    }
+   
+    public JSONObject computeDetailFields(boolean isValidate){
+                
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            //Compute VAT
+            poJSON = computeDetail(lnCtr);
+            if ("error".equals((String) poJSON.get("result"))) {
+                if(isValidate){
+                    return poJSON;
+                }
+            }
+        }
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    private JSONObject computeDetail(int fnRow){
+        poJSON = new JSONObject();
+        Double ldblAmount = Detail(fnRow).getAmount();
+        Double ldblVATExempt = Detail(fnRow).getDetailVatExempt();
+        Double ldblVATSales = 0.0000;
+        Double ldblVATAmount = 0.0000;
+        
+        if(ldblVATExempt < 0.0000){
+            poJSON = setJSON("error", "Vat Exempt amount cannot be negative.");
+            return poJSON;
+        }
+
+        if(ldblVATExempt > 0.0000 && ldblVATExempt < ldblAmount){
+            ldblAmount = ldblAmount - ldblVATExempt;
+            ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
+            ldblVATSales = ldblAmount - ldblVATAmount;
+
+            Detail(fnRow).setDetailVatAmount(ldblVATAmount);
+            Detail(fnRow).setDetailVatSales(ldblVATSales);
+        } if(ldblVATExempt == 0.0000){
+            ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
+            ldblVATSales = ldblAmount - ldblVATAmount;
+
+            Detail(fnRow).setDetailVatAmount(ldblVATAmount);
+            Detail(fnRow).setDetailVatSales(ldblVATSales);
+            Detail(fnRow).setDetailVatExempt(0.0000);
+        } else {
+            Detail(fnRow).setDetailVatAmount(0.0000);
+            Detail(fnRow).setDetailVatSales(0.0000);
+            Detail(fnRow).setDetailVatExempt(ldblAmount);
+        }
+        
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     
@@ -944,6 +1216,153 @@ public class CashDisbursement extends Transaction {
         
         return poJSON;
     }
+    
+    private static String psNoCategory = "EMPTY";
+    /**
+     * Populate Journal information
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ScriptException 
+     */
+    public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
+            poJSON = setJSON("error", "No record to load");
+            return poJSON;
+        }
+        
+        if(poJournal == null || getEditMode() == EditMode.READY){
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        }
+        
+        String lsJournal = existJournal();
+        if(lsJournal != null && !"".equals(lsJournal)){
+            switch(getEditMode()){
+                case EditMode.READY:
+                    poJSON = poJournal.OpenTransaction(lsJournal);
+                    if (!isJSONSuccess(poJSON)){
+                        return poJSON;
+                    }
+                break;
+                case EditMode.UPDATE:
+                    if(poJournal.getEditMode() == EditMode.READY || poJournal.getEditMode() == EditMode.UNKNOWN){
+                        poJSON = poJournal.OpenTransaction(lsJournal);
+                        if (!isJSONSuccess(poJSON)){
+                            return poJSON;
+                        }
+                        poJournal.UpdateTransaction();
+                    } 
+                break;
+            }
+        } else {
+            if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() != EditMode.ADDNEW){
+                poJSON = poJournal.NewTransaction();
+                if (!isJSONSuccess(poJSON)){
+                    return poJSON;
+                }
+                
+                //retreiving using column index
+                JSONObject jsonmaster = new JSONObject();
+                for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
+                    System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
+                    jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
+                }
+                    
+                JSONArray jsondetails = new JSONArray();
+                JSONObject jsondetail = new JSONObject();
+                for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+                    jsondetail = new JSONObject();
+                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
+                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
+                        jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
+                    }
+                    jsondetails.add(jsondetail);
+                }
+
+                jsondetail = new JSONObject();
+                jsondetail.put("Cash_Disbursement", jsonmaster);
+                jsondetail.put("Cash_Disbursement_Detail", jsondetails);
+                    
+                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryId(), ""); 
+                tbj.setGRiderCAS(poGRider);
+                tbj.setData(jsondetail);
+                jsonmaster = tbj.processRequest();
+
+                if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
+                    List<TBJEntry> xlist = tbj.getJournalEntries();
+                    for (TBJEntry xlist1 : xlist) {
+                        System.out.println("Account:" + xlist1.getAccount() );
+                        System.out.println("Debit:" + xlist1.getDebit());
+                        System.out.println("Credit:" + xlist1.getCredit());
+                        poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
+                        poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
+                        poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
+                        poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
+                        poJournal.AddDetail();
+                    }
+                } else {
+                    System.out.println(jsonmaster.toJSONString());
+                }
+
+                //Journa Entry Master
+                poJournal.Master().setAccountPerId("");
+                poJournal.Master().setIndustryCode(Master().getIndustryId());
+                poJournal.Master().setBranchCode(Master().getBranchCode());
+                poJournal.Master().setDepartmentId(poGRider.getDepartment());
+                poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
+                poJournal.Master().setCompanyId(Master().getCompanyId());
+                poJournal.Master().setSourceCode(getSourceCode());
+                poJournal.Master().setSourceNo(Master().getTransactionNo());
+                
+            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
+                poJSON.put("result", "success");
+                return poJSON;
+            } 
+//            else {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "No record to load");
+//                return poJSON;
+//            }
+        
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Check existing Journal
+     * @return
+     * @throws SQLException 
+     */
+    public String existJournal() throws SQLException{
+        Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
+        String lsSQL = MiscUtil.makeSelect(loMaster);
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+        );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        poJSON = new JSONObject();
+        if (MiscUtil.RecordCount(loRS) > 0) {
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("--------------------------JOURNAL ENTRY--------------------------");
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("------------------------------------------------------------------------------");
+                if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                    return loRS.getString("sTransNox");
+                }  
+            }
+        }
+        MiscUtil.close(loRS);
+
+        return "";
+    }
     /**
      * Retrieves and downloads all attachments associated with the current transaction.
      * <p>
@@ -1034,147 +1453,6 @@ public class CashDisbursement extends Transaction {
 
         return paAttachments.size();
     }
-    /**
-     * Appends a new, empty attachment record to the collection.
-     * @return A {@link JSONObject} indicating the success of the addition.
-     * @throws SQLException, GuanzonException if initialization fails.
-     */    
-    public JSONObject addAttachment()
-            throws SQLException,
-            GuanzonException {
-        poJSON = new JSONObject();
-
-        if (paAttachments.isEmpty()) {
-            paAttachments.add(TransactionAttachment());
-            poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).newRecord();
-        } else {
-            if (!paAttachments.get(paAttachments.size() - 1).getModel().getTransactionNo().isEmpty()) {
-                paAttachments.add(TransactionAttachment());
-            } else {
-                poJSON = setJSON("error", "Unable to add transaction attachment.");
-                return poJSON;
-            }
-        }
-        poJSON = setJSON("success", "success");
-        return poJSON;
-    }
-    /**
-     * Removes a new attachment or marks an existing one as Inactive.
-     * @param fnRow Index of the attachment to remove/deactivate.
-     * @return Result status as a {@link JSONObject}.
-     */    
-    public JSONObject removeAttachment(int fnRow) throws GuanzonException, SQLException{
-        poJSON = new JSONObject();
-        if(getTransactionAttachmentCount() <= 0){
-            poJSON = setJSON("error", "No transaction attachment to be removed.");
-            return poJSON;
-        }
-        
-        if(paAttachments.get(fnRow).getEditMode() == EditMode.ADDNEW){
-            paAttachments.remove(fnRow);
-            System.out.println("Attachment :"+ fnRow+" Removed");
-        } else {
-            paAttachments.get(fnRow).getModel().setRecordStatus(RecordStatus.INACTIVE);
-            System.out.println("Attachment :"+ fnRow+" Deactivate");
-        }
-        
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    /**
-     * Adds an attachment by filename or reactivates it if it already exists as Inactive.
-     * @param fFileName The name of the file to add.
-     * @return The index of the added or reactivated attachment.
-     */    
-    public int addAttachment(String fFileName) throws SQLException, GuanzonException{
-        for(int lnCtr = 0;lnCtr <= getTransactionAttachmentCount() - 1;lnCtr++){
-            if(fFileName.equals(paAttachments.get(lnCtr).getModel().getFileName())
-                && RecordStatus.INACTIVE.equals(paAttachments.get(lnCtr).getModel().getRecordStatus())){
-                paAttachments.get(lnCtr).getModel().setRecordStatus(RecordStatus.ACTIVE);
-                System.out.println("Attachment :"+ lnCtr+" Activate");
-                return lnCtr;
-            }
-        }
-        
-        addAttachment();
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setFileName(fFileName);
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setSourceNo(Master().getTransactionNo());
-        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setRecordStatus(RecordStatus.ACTIVE);
-        return getTransactionAttachmentCount() - 1;
-    }
-    
-    /**
-     * Copies a file from the source path to the system's temporary attachment directory.
-     * <p>
-     * Includes a retry mechanism that attempts to re-copy the file up to 5 times 
-     * if the target file is not immediately detected after the initial operation.
-     * 
-     * @param fsPath The absolute path of the source file to be copied.
-     */
-    public void copyFile(String fsPath){
-        Path source = Paths.get(fsPath);
-        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments");
-
-        try {
-            // Ensure target directory exists
-            if (!Files.exists(targetDir)) {
-                Files.createDirectories(targetDir);
-            }
-
-            // Copy file into the target directory
-            Files.copy(source, targetDir.resolve(source.getFileName()),
-                       StandardCopyOption.REPLACE_EXISTING);
-
-            //check if file is existing
-            int lnChecker = 0;
-            File file = new File(targetDir+ "/" + source.getFileName());
-            while(!file.exists() && lnChecker < 5){
-                Files.copy(source, targetDir.resolve(source.getFileName()), StandardCopyOption.REPLACE_EXISTING);  
-                System.out.println("Re-Copying... " + lnChecker);
-                lnChecker++;
-            }
-            
-            if(!file.exists()){
-                System.out.println("File did not copy!");
-                return;
-            } 
-            
-            System.out.println("File copied successfully!");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-    
-    /**
-     * Checks if a filename already exists in the attachment database records.
-     * 
-     * @param fsFileName The name of the file to validate.
-     * @return A {@link JSONObject} containing an error message if the filename exists, 
-     *         otherwise an empty success object.
-     * @throws SQLException, GuanzonException If a database access error occurs.
-     */
-    public JSONObject checkExistingFileName(String fsFileName) throws SQLException, GuanzonException{
-        poJSON = new JSONObject();
-        
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(TransactionAttachment().getModel()), 
-                                                                    " sFileName = " + SQLUtil.toSQL(fsFileName)
-                                                                    );
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        try {
-            if (MiscUtil.RecordCount(loRS) > 0) {
-                if(loRS.next()){
-                    if(loRS.getString("sFileName") != null && !"".equals(loRS.getString("sFileName"))){
-                        poJSON = setJSON("error", "File name already exist in database.\nTry changing the file name to upload.");
-                    }
-                }
-            }
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            System.out.println("No record loaded.");
-        }
-        return poJSON;
-    }
     
     public String getVoucherNo() throws SQLException {
         String lsSQL = "SELECT sVouchrNo FROM "+ Master().getTable();
@@ -1237,6 +1515,14 @@ public class CashDisbursement extends Transaction {
             detail.remove();
         }
         
+        Iterator<WithholdingTaxDeductions> wtDeduction = WTaxDeduction().iterator();
+        while (wtDeduction.hasNext()) {
+            WithholdingTaxDeductions item = wtDeduction.next();
+            wtDeduction.remove();
+        }
+        
+        //Reset Journal when all details was removed
+        resetJournal();
         paAttachments = new ArrayList<>();
         setSearchIndustry("");
         setSearchPayee("");
@@ -1261,6 +1547,62 @@ public class CashDisbursement extends Transaction {
     public int getCashAdvancesCount() {
         return this.paCashAdvances.size();
     }
+    
+    public List<WithholdingTaxDeductions> WTaxDeduction() {
+        return paWTaxDeductions; 
+    }
+    
+    public WithholdingTaxDeductions WTaxDeduction(int row) {
+        return (WithholdingTaxDeductions) paWTaxDeductions.get(row); 
+    }
+    
+    public Journal Journal(){
+        try{
+            if (poJournal == null) {
+                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+                poJournal.InitTransaction();
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        return poJournal;
+    }
+    
+    public int getWTaxDeductionsCount() {
+        return paWTaxDeductions.size();
+    }
+    
+    public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if (getWTaxDeductionsCount() > 0) {
+            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has empty item.");
+                return poJSON;
+            }
+        }
+        paWTaxDeductions.add(new CashflowControllers(poGRider, logwrapr).WithholdingTaxDeductions());
+        //set default period date
+        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
+        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    public JSONObject removeWTDeduction(int fnRow) {
+        if (WTaxDeduction(fnRow).getEditMode() == EditMode.ADDNEW) {
+            WTaxDeduction().remove(fnRow);
+        } else {
+            WTaxDeduction(fnRow).getModel().isReverse(false);
+        }
+        //Compute Tax Amount
+        computeTaxAmount();
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
 
     /*RESET CACHE ROW SET*/
     /**
@@ -1275,6 +1617,15 @@ public class CashDisbursement extends Transaction {
      */
     public void resetOthers() {
         paAttachments = new ArrayList<>();
+    }
+    
+    public void resetJournal() {
+        try {
+            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+            poJournal.InitTransaction();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
+        }
     }
 
     /**
@@ -1317,6 +1668,136 @@ public class CashDisbursement extends Transaction {
         }
     }
     
+    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
+        int lnCtr = Journal().getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+                Journal().Detail().remove(lnCtr);
+            } else {
+                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
+                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
+                        Journal().Detail().remove(lnCtr);
+                    }
+                }
+            }
+            lnCtr--;
+        }
+        if ((Journal().getDetailCount() - 1) >= 0) {
+            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
+                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+                Journal().AddDetail();
+                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
+        }
+        if ((Journal().getDetailCount() - 1) < 0) {
+            Journal().AddDetail();
+            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    
+    }
+    
+    public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
+        int lnCtr = getWTaxDeductionsCount() - 1;
+        Date fromdate = null, todate = null;
+        boolean lbProceed = false;
+        while (lnCtr >= 0) {
+            if (!lbProceed) {
+                fromdate = null;
+                todate = null;
+            }
+            if (WTaxDeduction(lnCtr).getModel().getTaxCode() == null
+                    || "".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())) {
+                System.out.println("REMOVE WTAX : " + WTaxDeduction(lnCtr).getModel().getTransactionNo());
+                fromdate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodFrom();
+                todate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodTo();
+                WTaxDeduction().remove(lnCtr);
+                lbProceed = true;
+            }
+            lnCtr--;
+        }
+        if ((getWTaxDeductionsCount() - 1) >= 0) {
+            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode() != null
+                    && !"".equals(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode())) {
+                AddWTaxDeduction();
+            }
+        }
+
+        if ((getWTaxDeductionsCount() - 1) < 0) {
+            AddWTaxDeduction();
+        }
+        if (lbProceed) {
+            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(fromdate);
+            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(todate);
+        }
+    }
+    
+    
+    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+        poJSON = new JSONObject();
+        
+        //Update Journal
+        switch(fsStatus){
+            case DisbursementStatic.CERTIFIED:
+                //Void Journal
+                poJournal.setWithParent(true);
+                poJournal.setWithUI(false);
+                poJSON = poJournal.ConfirmTransaction("");
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.VOID:
+                //Void Journal
+                poJournal.setWithParent(true);
+                poJournal.setWithUI(false);
+                poJSON = poJournal.VoidTransaction("");
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                break;
+            case DisbursementStatic.CANCELLED:
+            case DisbursementStatic.DISAPPROVED:
+                //Cancel Journal
+                poJournal.setWithParent(true);
+                poJournal.setWithUI(false);
+                poJSON = poJournal.CancelTransaction("");
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.RETURNED:
+                //Return Journal
+                poJournal.setWithParent(true);
+                poJournal.setWithUI(false);
+                poJSON = poJournal.ReturnTransaction("");
+                if (!"success".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+        }
+    
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    /*Convert Date to String*/
+    private static String xsDateShort(Date fdValue) {
+        if(fdValue == null){
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
+
+    private LocalDate strToDate(String val) {
+        DateTimeFormatter date_formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDate localDate = LocalDate.parse(val, date_formatter);
+        return localDate;
+    }
     /**
      * Sets default master record values for a new transaction.
      * <p>
@@ -1362,6 +1843,67 @@ public class CashDisbursement extends Transaction {
         poJSON = loValidator.validate();
         return poJSON;
     }
+    
+    
+    private JSONObject validateJournal(){
+        poJSON = new JSONObject();
+        poJSON.put("continue", false);
+        
+        double ldblCreditAmt = 0.0000;
+        double ldblDebitAmt = 0.0000;
+        boolean lbHasJournal = false;
+        for(int lnCtr = 0; lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
+            ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
+            ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
+            
+            if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
+                if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
+                    if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
+                        return poJSON;
+                    }
+                }
+            }
+            
+            if(!lbHasJournal){
+                lbHasJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+            }   
+        }
+        
+        if(lbHasJournal || poGRider.getUserLevel() > UserRight.ENCODER){
+            if(ldblDebitAmt == 0.0000 ){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry debit amount.");
+                return poJSON;
+            }
+
+            if(ldblCreditAmt == 0.0000){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry credit amount.");
+                return poJSON;
+            }
+
+            if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Debit should be equal to credit amount.");
+                return poJSON;
+            }
+
+    //        if(ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()){
+    //            poJSON.put("result", "error");
+    //            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
+    //            return poJSON;
+    //        }
+        }
+        
+        
+        poJSON.put("result", "sucess");
+        poJSON.put("message", "sucess");
+        poJSON.put("continue", lbHasJournal);
+        return poJSON;
+    }
+    
     /**
      * Prepares and validates the transaction data before committing to the database.
      * <p>
@@ -1381,6 +1923,8 @@ public class CashDisbursement extends Transaction {
         /*Put system validations and other assignments here*/
         System.out.println("Class Edit Mode : " + getEditMode());
         System.out.println("Master Edit Mode : " + Master().getEditMode());
+        System.out.println("Journal Class Edit Mode : " + poJournal.getEditMode());
+        System.out.println("Journal Master Edit Mode : " + poJournal.Master().getEditMode());
         //Re-set the transaction no and voucher no
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
@@ -1425,6 +1969,29 @@ public class CashDisbursement extends Transaction {
             }
         }
         
+        Iterator<WithholdingTaxDeductions> loObject = WTaxDeduction().iterator();
+        while (loObject.hasNext()) {
+            WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
+            String lsTaxRateId = (String) item.getModel().getTaxRateId();
+            double lsAmount = item.getModel().getBaseAmount();
+            if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
+                loObject.remove(); // Correctly remove the item
+            }
+        }
+        
+        //Validate Withholding Tax Deductions
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                    //validate period
+                    poJSON = checkPeriodDate(lnCtr);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
@@ -1433,68 +2000,6 @@ public class CashDisbursement extends Transaction {
         
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
-        
-        //assign other info on attachment
-        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
-            TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
-            TransactionAttachmentList(lnCtr).getModel().setSourceCode(getSourceCode());
-            TransactionAttachmentList(lnCtr).getModel().setBranchCode(Master().getBranchCode());
-            TransactionAttachmentList(lnCtr).getModel().setImagePath(System.getProperty("sys.default.path.temp.attachments"));
-            
-            String lsOriginalFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
-            //Check existing file name in database
-            if(EditMode.ADDNEW == TransactionAttachmentList(lnCtr).getModel().getEditMode()){
-                int lnCopies = 0;
-                String fsFilePath = TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + TransactionAttachmentList(lnCtr).getModel().getFileName();
-                String lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
-                while ("error".equals((String)checkExistingFileName(lsNewFileName).get("result"))) {
-                    lnCopies++;
-                    //Rename the file
-                    int dotIndex = TransactionAttachmentList(lnCtr).getModel().getFileName().lastIndexOf(".");
-                    if (dotIndex == -1) {
-                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName() +"_"+lnCopies;
-                    } else {
-                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName().substring(0, dotIndex) +"_"+ lnCopies +TransactionAttachmentList(lnCtr).getModel().getFileName().substring(dotIndex);
-                    }
-                }
-
-                if(lnCopies > 0){
-                    Path source = Paths.get(fsFilePath);
-                    try {
-                        // Copy file into the target directory with a new name
-                        Path target = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments").resolve(lsNewFileName);
-                        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                        //check if file is existing
-                        int lnChecker = 0;
-                        File file = new File(TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + lsNewFileName);
-                        while(!file.exists() && lnChecker < 5){
-                            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);  
-                            System.out.println("Re-Copying... " + lnChecker);
-                            lnChecker++;
-                        }
-                        TransactionAttachmentList(lnCtr).getModel().setFileName(lsNewFileName);
-                        System.out.println("File copied successfully as " + lsNewFileName);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-            
-            //Upload Attachment when send status is 0
-            try {
-                if("0".equals(TransactionAttachmentList(lnCtr).getModel().getSendStatus())){
-                    poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr,lsOriginalFileName);
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                }
-            } catch (Exception ex) {
-                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                poJSON = setJSON("error", MiscUtil.getException(ex));
-                return poJSON;
-            }
-            
-        }
         
         System.out.println("--------------------------WILL SAVE---------------------------------------------");
         for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
@@ -1543,22 +2048,64 @@ public class CashDisbursement extends Transaction {
             System.out.println("Amount : " + Detail(lnCtr).getAmount());
                 System.out.println("-----------------------------------------------------------------------");
             }
-        
-            //Save Attachments
-            System.out.println("-----------------------------SAVE TRANSACTION ATTACHMENT------------------------------------------");
-            for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
-                if (paAttachments.get(lnCtr).getEditMode() == EditMode.ADDNEW || paAttachments.get(lnCtr).getEditMode() == EditMode.UPDATE) {
-                    paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-                    paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
-                    paAttachments.get(lnCtr).setWithParentClass(true);
-                    poJSON = paAttachments.get(lnCtr).saveRecord();
-                    if (!isJSONSuccess(poJSON)) {
+            
+            System.out.println("--------------------------SAVE WITHHOLDING TAX DEDUCTION---------------------------------------------");
+            //Save Withholding Tax Deductions
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                    WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
+                    WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+                    WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
+                    WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
+                    WTaxDeduction(lnCtr).setWithParentClass(true);
+                    WTaxDeduction(lnCtr).setWithUI(false);
+                    poJSON = WTaxDeduction(lnCtr).saveRecord();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("Save Withholding Tax Deduction : " + poJSON.get("message"));
                         return poJSON;
                     }
                 }
             }
+            
+            //Save Journal
+            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
+            if(poJournal != null){
+                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
+                    poJSON = validateJournal();
+                    boolean lbContinue = (boolean) poJSON.get("continue");
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", poJSON.get("message").toString());
+                        return poJSON;
+                    } 
+                    if(lbContinue){
+                        poJournal.Master().setSourceNo(Master().getTransactionNo());
+                        poJournal.Master().setModifyingId(poGRider.getUserID());
+                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+                        poJournal.setWithParent(true);
+                        poJSON = poJournal.SaveTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                    }
+                } else {
+                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Invalid Update mode for Journal.");
+                        return poJSON;
+                    }
+                }
+            } else {
+                if (poGRider.getUserLevel() > UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Journal is not set.");
+                    return poJSON;
+                }
+            }
             System.out.println("-----------------------------------------------------------------------");
             
+        
         } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON = setJSON("error", MiscUtil.getException(ex));

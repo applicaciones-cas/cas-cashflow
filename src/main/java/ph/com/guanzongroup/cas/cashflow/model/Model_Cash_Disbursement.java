@@ -296,11 +296,11 @@ public class Model_Cash_Disbursement extends Model {
         return Double.valueOf(getValue("nVatExmpt").toString());
     }
 
-    public JSONObject setWithholdingTaxTotal(Double withholdingTaxTotal) {
+    public JSONObject setWithTaxTotal(Double withholdingTaxTotal) {
         return setValue("nWTaxTotl", withholdingTaxTotal);
     }
 
-    public Double getWithholdingTaxTotal() {
+    public Double getWithTaxTotal() {
         if (getValue("nWTaxTotl") == null || "".equals(getValue("nWTaxTotl"))) {
             return 0.0000;
         }
