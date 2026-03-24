@@ -1,0 +1,1777 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+package ph.com.guanzongroup.cas.cashflow;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Iterator;
+import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.script.ScriptException;
+import javax.sql.rowset.CachedRowSet;
+import org.apache.commons.codec.binary.Base64;
+import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.services.Model;
+import org.guanzon.appdriver.agent.services.Transaction;
+import org.guanzon.appdriver.agent.systables.SysTableContollers;
+import org.guanzon.appdriver.agent.systables.TransactionAttachment;
+import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
+import org.guanzon.appdriver.base.MiscReplUtil;
+import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
+import org.guanzon.appdriver.base.WebFile;
+import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.appdriver.constant.UserRight;
+import org.guanzon.appdriver.iface.GValidator;
+import org.guanzon.appdriver.token.RequestAccess;
+import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Industry;
+import org.guanzon.cas.parameter.services.ParamControllers;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
+import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
+
+/**
+ *
+ * @author Arsiela 03/24/2026
+ */
+public class CashDisbursement extends Transaction {
+    public String psIndustryId = "";
+    public String psCompanyId = "";
+    public String psDepartmentId = "";
+    public String psIndustry = "";
+    public String psBranch = "";
+    public String psPayee = "";
+    
+    public List<Model> paMaster;
+    public List<TransactionAttachment> paAttachments;
+    
+    public JSONObject InitTransaction() throws SQLException, GuanzonException {
+        SOURCE_CODE = "CDSB";
+
+        poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
+        poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
+
+        paMaster = new ArrayList<Model>();
+        paAttachments = new ArrayList<>();
+
+        return initialize();
+    }
+
+    //Transaction Source Code 
+    @Override
+    public String getSourceCode() { return SOURCE_CODE; }
+    
+    //Set value for private strings used in searching / filtering data
+    public void setIndustryId(String industryId) { psIndustryId = industryId; }
+    public void setCompanyId(String companyId) { psCompanyId = companyId; }
+    public void setDepartmentId(String departmentId) { psDepartmentId = departmentId; }
+    public void setSearchIndustry(String industry) { psIndustry = industry; }
+    public void setSearchBranch(String branch) { psBranch = branch; }
+    public void setSearchPayee(String payeeName) { psPayee = payeeName; }
+    public String getSearchIndustry() { return psIndustry; }
+    public String getSearchPayee() { return psPayee; }
+    public String getSearchBranch() { return psBranch; }
+    
+    /**
+    * Creates a JSONObject with "result" and "message" fields.
+    *
+    * @param fsResult  The result value (e.g., "success", "error")
+    * @param fsMessage The message describing the result
+    * @return JSONObject containing the result and message
+    */
+    private JSONObject setJSON(String fsResult, String fsMessage) {
+        JSONObject loJSON = new JSONObject();
+        loJSON.put("result", fsResult);
+        loJSON.put("message", fsMessage);
+        return loJSON;
+    }
+
+    /**
+     * Checks whether a JSONObject indicates a successful result.
+     *
+     * Returns true if the "result" field equals "success" or is not "error".
+     *
+     * @param foJSON The JSONObject to check
+     * @return true if successful, false otherwise
+     */
+    public boolean isJSONSuccess(JSONObject foJSON) {
+        return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
+    }
+    
+    /**
+    * Creates a new transaction record.
+    *
+    * @return JSONObject result of the operation
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    */
+    public JSONObject NewTransaction()
+            throws CloneNotSupportedException, SQLException, GuanzonException {
+        return super.newTransaction();
+    }
+    /**
+     * Loads an existing Cash Advance record and its attachments.
+     * 
+     * @param transactionNo The unique identifier of the transaction to be loaded.
+     * @return A {@link JSONObject} containing the operation status and any relevant error messages.
+     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
+     *          If an error occurs during data retrieval or object state management.
+     */
+    public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
+        //Reset Transaction
+        resetTransaction();
+        
+        poJSON = openTransaction(transactionNo);
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = loadAttachments();
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction attachments.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        poJSON = setJSON("success","success");
+        return poJSON;
+    }
+
+    /**
+     * Prepares the current transaction for modification and refreshes its attachments.
+     * 
+     * @return A {@link JSONObject} indicating success or failure of the update initialization.
+     * @throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException 
+     *          If the record is locked, unavailable, or an error occurs during the update process.
+     */
+    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = updateTransaction();
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = loadAttachments();
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction attachments.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = setJSON("success","success");
+        return poJSON;
+    }
+    
+    /**
+     * Commits the current transaction changes to the database.
+     * 
+     * @return A {@link JSONObject} containing the result of the save operation.
+     * @throws SQLException, GuanzonException, CloneNotSupportedException 
+     *          If a database constraint is violated or business logic validation fails.
+     */
+    public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        return saveTransaction();
+    }
+    
+    /**
+    * Requests user approval for the current transaction.
+    *
+    * @return JSONObject containing approval result and message
+    */
+    public JSONObject callApproval(){
+        poJSON = new JSONObject();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON = setJSON("error", "User is not an authorized approving officer.");
+                return poJSON;
+            }
+        }   
+        
+        poJSON = setJSON("success","success");
+        return poJSON;
+    }
+    /**
+     * Validates if the current transaction is eligible for updates based on its database status.
+     * <p>
+     * This method checks the latest record state to prevent modifications on transactions 
+     * that are already Void, Cancelled, Liquidated, or (depending on {@code isEntry}) Confirmed. 
+     * If the local state is outdated, it automatically re-opens the transaction to sync data.
+     * 
+     * @param isEntry Set to {@code true} to block updates if the status is already "Confirmed".
+     * @return A {@link JSONObject} with "success" if the update can proceed, or an error message if blocked.
+     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
+     *          If an error occurs during record retrieval or data synchronization.
+     */
+    public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+        
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        switch(loObject.getTransactionStatus()){
+            case CashDisbursementStatus.VOID:
+            case CashDisbursementStatus.CANCELLED:
+                poJSON = setJSON("error","Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
+                return poJSON;
+            case CashDisbursementStatus.CONFIRMED:
+                if(isEntry){
+                    poJSON = setJSON("error", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                    return poJSON;
+                }
+                break;
+            case CashDisbursementStatus.APPROVED:
+                poJSON = setJSON("error","Transaction status was already approved!\nCheck transaction history.");
+                return poJSON;
+        }
+        
+        if(!loObject.getTransactionStatus().equals(Master().getTransactionStatus())){
+            poJSON = OpenTransaction(Master().getTransactionNo());
+            if (!isJSONSuccess(poJSON)) {
+                poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+                return poJSON;
+            }
+        }
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Returns a readable string for a given transaction status code.
+     *
+     * @param lsStatus Status code
+     * @return Human-readable status ("Open", "Confirmed", "Approved", "Cancelled", "Voided", or "Unknown")
+     */
+    public String getStatus(String lsStatus) {
+        switch (lsStatus) {
+            case CashDisbursementStatus.VOID:
+                return "Voided";
+            case CashDisbursementStatus.CANCELLED:
+                return "Cancelled";
+            case CashDisbursementStatus.APPROVED:
+                return "Approved";
+            case CashDisbursementStatus.CONFIRMED:
+                return "Confirmed";
+            case CashDisbursementStatus.OPEN:
+                return "Open";
+            default:
+                return "Unknown";
+        }
+    }
+    /**
+     * Validates the transition logic between transaction statuses.
+     * <p>
+     * Ensures the record follows the prescribed workflow rules (e.g., only "Open" 
+     * transactions can be "Confirmed" or "Voided").
+     * 
+     * @param current The existing status of the record.
+     * @param target The intended status to transition to.
+     * @return {@code true} if the state transition is permitted; otherwise {@code false}.
+     */
+    public boolean isAllowed(String current, String target) {
+        switch (target) {
+            case CashDisbursementStatus.VOID:
+                return current.equals(CashDisbursementStatus.OPEN);
+
+            case CashDisbursementStatus.CANCELLED:
+                return current.equals(CashDisbursementStatus.CONFIRMED);
+
+            case CashDisbursementStatus.CONFIRMED:
+                return current.equals(CashDisbursementStatus.OPEN);
+                
+            case CashDisbursementStatus.APPROVED:
+                return current.equals(CashDisbursementStatus.CONFIRMED);
+                
+            default:
+                return false;
+        }
+    }
+    
+    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = CashDisbursementStatus.CONFIRMED;
+        
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No transacton was loaded.");
+            return poJSON;
+        }
+        
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
+            poJSON = setJSON("error", "Transaction was already confirmed.");
+            return poJSON;
+        }
+        
+        if(!pbWthParent){
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction approved successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Approve transaction
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject ApproveTransaction()
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CashDisbursementStatus.APPROVED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(Master().getTransactionStatus())) {
+            poJSON = setJSON("error", "Transaction was already approved.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        if(!pbWthParent){
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+        }
+        
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction approved successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Void transaction
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject VoidTransaction()
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CashDisbursementStatus.VOID;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(Master().getTransactionStatus())) {
+            poJSON = setJSON("error", "Transaction was already voided.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+            if(!pbWthParent){
+                poJSON = callApproval();
+                if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+            }
+        }
+        
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction voided successfully.");
+        return poJSON;
+    }
+    
+    /**
+    * Cancel transaction
+    *
+    * @return JSONObject containing the result of the confirmation process
+    * @throws ParseException if date parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a system error occurs
+    * @throws CloneNotSupportedException if cloning is not supported
+    */
+    public JSONObject CancelTransaction()
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CashDisbursementStatus.CANCELLED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No record was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals(Master().getTransactionStatus())) {
+            poJSON = setJSON("error", "Transaction was already cancelled.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+            if(!pbWthParent){
+                poJSON = callApproval();
+                if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+            }
+        }
+        
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction cancelled successfully.");
+        return poJSON;
+    }
+    
+    /*Search Master References*/
+    public JSONObject SearchTransaction(String fsIndustry, String fsBranch, String fsPayee, String fsTransactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+        int lnSort = 0;
+        if(fsPayee != null && !"".equals(fsPayee)){
+            lnSort = 2;
+        }
+        if(fsTransactionNo != null && !"".equals(fsTransactionNo)){
+            lnSort = 0;
+        }
+        if (fsIndustry == null || "".equals(fsIndustry)) { 
+            poJSON = setJSON("error", "Industry cannot be empty.");
+            return poJSON;
+        }
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
+                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%"));
+        
+        if(psDepartmentId != null && !"".equals(psDepartmentId)){
+            lsSQL = lsSQL +  " AND a.sDeptReqs = " + SQLUtil.toSQL(psDepartmentId);
+        }
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
+        System.out.println("Executing SQL: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction No»Transaction Date»Payee»Requesting Department",
+                "sTransNox»dTransact»sPayeexxx»sDeptName",
+                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
+                lnSort);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON = setJSON("error", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
+    /**
+     * Searches for an active Industry record.
+     * 
+     * @param value The search criteria (code or description).
+     * @param byCode {@code true} to search by code, {@code false} by description.
+     * @return A {@link JSONObject} containing the search result.
+     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
+     */
+    public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Industry object = new ParamControllers(poGRider, logwrapr).Industry();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if (isJSONSuccess(poJSON)) {
+            setSearchIndustry(object.getModel().getDescription());
+        }
+
+        return poJSON;
+    }
+    
+    /**
+     * Searches for an active Branch record and updates the local branch state.
+     * 
+     * @param value The search criteria.
+     * @param byCode {@code true} to search by branch code.
+     * @param isSearch {@code true} to search by filter.
+     * @return A {@link JSONObject} containing the search result.
+     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
+     */
+    public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if (isJSONSuccess(poJSON)) {
+            if(isSearch){
+                setSearchBranch(object.getModel().getBranchName()); 
+            } else {
+                Master().setBranchCode(object.getModel().getBranchCode());
+            }
+        }
+
+        return poJSON;
+    }
+    
+    public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        if(Master().getIndustryId() == null || "".equals(Master().getIndustryId())){
+            poJSON = setJSON("error", "Industry cannot be empty.");
+            return poJSON;
+        }
+        if(Master().getCompanyId() == null || "".equals(Master().getCompanyId())){
+            poJSON = setJSON("error", "Company cannot be empty.");
+            return poJSON;
+        }
+        if(Master().getBranchCode() == null || "".equals(Master().getBranchCode())){
+            poJSON = setJSON("error", "Branch cannot be empty.");
+            return poJSON;
+        }
+        if(Master().getDepartmentRequest() == null || "".equals(Master().getDepartmentRequest())){
+            poJSON = setJSON("error", "Department cannot be empty.");
+            return poJSON;
+        }
+        
+        CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        object.setIndustryId(Master().getIndustryId());
+        object.setCompanyId(Master().getCompanyId());
+        object.setBranchCode(Master().getBranchCode());
+        object.setDepartmentId(Master().getDepartmentRequest());
+        poJSON = object.searchRecord(value, byCode);
+        if (isJSONSuccess(poJSON)) {
+            Master().setCashFundId(object.getModel().getCashFundId());
+        }
+
+        return poJSON;
+    }
+   
+    public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM Employee_Master001 a" 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
+                                            );
+        lsSQL = lsSQL + " GROUP BY sEmployID";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
+                byCode ? 0 : 1);
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            if(isSearch){
+                setSearchPayee((String) loJSON.get("EmployNme"));
+            } else {
+                Master().setClientId((String) loJSON.get("sEmployID"));
+                Master().setPayeeName((String) loJSON.get("sEmployID"));
+            }
+        } else {
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
+        }
+    
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    public JSONObject SearchCreditTo(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+
+        poJSON = new JSONObject();
+        String lsSQL = "SELECT " 
+                + "   a.sEmployID "
+                + " , b.sCompnyNm AS EmployNme" 
+                + " FROM Employee_Master001 a" 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
+                                            );
+        lsSQL = lsSQL + " GROUP BY sEmployID";
+        System.out.println("Executing SQL: " + lsSQL);
+        JSONObject loJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Employee ID»Employee Name",
+                "sEmployID»EmployNme",
+                "a.sEmployID»b.sCompnyNm",
+                byCode ? 0 : 1);
+        if (loJSON != null) {
+            System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
+            System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
+            setSearchPayee((String) loJSON.get("EmployNme"));
+        } else {
+            loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "No record loaded.");
+            return loJSON;
+        }
+    
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+
+
+    /**
+     * Searches for an active Account and assigns it to a specific detail row.
+     * <p>
+     * Includes a validation check to prevent duplicate account codes within the 
+     * transaction details before finalizing the selection.
+     * 
+     * @param value Search criteria.
+     * @param byCode {@code true} to search by account code.
+     * @param row The index of the detail row being updated.
+     * @return A {@link JSONObject} containing the status and the affected row index.
+     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
+     */
+    public JSONObject SearchParticular(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if (isJSONSuccess(poJSON)) {
+            JSONObject loJSON = setDetail(row, Detail(row).getParticularId());
+            if (!isJSONSuccess(loJSON)) {
+                return poJSON;
+            }
+//            JSONObject loJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
+//            if (!isJSONSuccess(loJSON)) {
+//                if((boolean) loJSON.get("continue")){
+//                    poJSON = setJSON("success", "success");
+//                    poJSON.put("row", (int) loJSON.get("row"));
+//                } 
+//                return poJSON;
+//            }
+//            Detail(row).setAccountCode(object.getModel().getAccountCode());
+            System.out.println("Account : " +  Detail(row).Particular().getDescription());
+        }
+        
+        poJSON.put("success", "success");
+        return poJSON;
+    }
+    
+    public JSONObject setDetail(int fnRow, String fsParticular) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        int lnRow = 0;
+        
+        if(Detail(fnRow).getEditMode() == EditMode.ADDNEW){
+            for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
+                if(Detail(lnRow).isReverse()){
+                    lnRow++;
+                }
+                if(fnRow != lnCtr){
+                    if(fsParticular.equals(Detail(lnCtr).getParticularId())){
+                        if(!Detail(lnCtr).isReverse()){
+                            Detail(lnCtr).isReverse(true);
+
+                            //Reset value of the current selected row
+                            Detail(fnRow).setParticularId("");
+                            poJSON.put("result", "success");
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        }
+                    }
+                }
+            }
+        }
+        
+        poJSON = Detail(fnRow).setParticularId(fsParticular);
+        if(!isJSONSuccess(poJSON)){
+            poJSON.put("row", fnRow);
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("row", fnRow);
+        return poJSON;
+    }
+    
+    public JSONObject computeFields(boolean isValidate) {
+        poJSON = new JSONObject();
+        Double ldblTransactionTotal = 0.0000;
+        
+        for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
+            if(Detail(lnCntr).isReverse()){
+                ldblTransactionTotal += Detail(lnCntr).getAmount();
+            }
+        }
+        
+        if(ldblTransactionTotal < 0.0000) {
+            poJSON = setJSON("error", "Invalid Transaction Total.");
+            poJSON.put("column", "nTranTotl");
+            if(isValidate){
+                return poJSON;
+            }
+        }
+        
+        Master().setTransactionTotal(ldblTransactionTotal);
+        poJSON = setJSON("success", "computed successfully");
+        return poJSON;
+    }
+    
+    public JSONObject loadTransactionList(String fsIndustry, String fsPayee, String fsVoucherNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        paMaster = new ArrayList<>();
+        if (fsIndustry == null || "".equals(fsIndustry)) { 
+            poJSON = setJSON("error", "Industry cannot be empty.");
+            return poJSON;
+        }
+        if (fsPayee == null) { fsPayee = ""; }
+        if (fsVoucherNo == null) { fsVoucherNo = ""; }
+        
+        initSQL();
+        //set default retrieval for supplier / reference no
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
+            );
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON = setJSON("error", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+            if (isJSONSuccess(poJSON)) {
+                paMaster.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    /**
+     * Retrieves and downloads all attachments associated with the current transaction.
+     * <p>
+     * This method fetches attachment metadata from the system tables, populates the
+     * {@code paAttachments} collection, and performs a web download for each file. 
+     * Downloaded files are decoded from Base64 and saved to the system's temporary 
+     * attachment directory defined in the system properties.
+     * 
+     * @return A {@link JSONObject} indicating the overall success of the attachment loading process.
+     * @throws SQLException If a database error occurs while fetching attachment records.
+     * @throws GuanzonException If an error occurs during file synchronization or processing.
+     */
+    public JSONObject loadAttachments()
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+        paAttachments = new ArrayList<>();
+
+        TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
+        List loList = loAttachment.getAttachments(SOURCE_CODE, Master().getTransactionNo());
+        for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
+            paAttachments.add(TransactionAttachment());
+            poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
+            if (isJSONSuccess(poJSON)) {
+                if(Master().getEditMode() == EditMode.UPDATE){
+                   poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).updateRecord();
+                }
+                System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getTransactionNo());
+                System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo());
+                System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceCode());
+                System.out.println(paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName());
+            }
+            
+            //Download Attachments
+            poJSON = WebFile.DownloadFile(WebFile.getAccessToken(System.getProperty("sys.default.access.token"))
+                    , "0032" //Constant
+                    , "" //Empty
+                    , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
+                    , SOURCE_CODE
+                    , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
+                    , "");
+            if (isJSONSuccess(poJSON)) {
+                
+                poJSON = (JSONObject) poJSON.get("payload");
+                if(WebFile.Base64ToFile((String) poJSON.get("data")
+                        , (String) poJSON.get("hash")
+                        , System.getProperty("sys.default.path.temp.attachments") + "/"
+                        , (String) poJSON.get("filename"))){
+                    System.out.println("poJSON success: " +  poJSON.toJSONString());
+                    System.out.println("File downloaded succesfully.");
+                } else {
+                    poJSON = (JSONObject) poJSON.get("error");
+                    poJSON.put("result", "error");
+                    System.out.println("ERROR WebFile.DownloadFile: " + poJSON.get("message"));
+                    System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+                }
+                
+            } else {
+                System.out.println("poJSON error WebFile.DownloadFile: " + poJSON.toJSONString());
+            }
+        }
+        
+        poJSON = setJSON("success","success");
+        return poJSON;
+    }
+    /**
+     * Instantiates a new TransactionAttachment controller.
+     */
+    private TransactionAttachment TransactionAttachment()
+            throws SQLException,
+            GuanzonException {
+        return new SysTableContollers(poGRider, null).TransactionAttachment();
+    }
+    /**
+     * Retrieves the attachment record at the specified index.
+     * @param row The zero-based index of the attachment.
+     */
+    public TransactionAttachment TransactionAttachmentList(int row) {
+        return (TransactionAttachment) paAttachments.get(row);
+    }
+    /**
+     * Returns the total count of attachments in the current list.
+     */
+    public int getTransactionAttachmentCount() {
+        if (paAttachments == null) {
+            paAttachments = new ArrayList<>();
+        }
+
+        return paAttachments.size();
+    }
+    /**
+     * Appends a new, empty attachment record to the collection.
+     * @return A {@link JSONObject} indicating the success of the addition.
+     * @throws SQLException, GuanzonException if initialization fails.
+     */    
+    public JSONObject addAttachment()
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+
+        if (paAttachments.isEmpty()) {
+            paAttachments.add(TransactionAttachment());
+            poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).newRecord();
+        } else {
+            if (!paAttachments.get(paAttachments.size() - 1).getModel().getTransactionNo().isEmpty()) {
+                paAttachments.add(TransactionAttachment());
+            } else {
+                poJSON = setJSON("error", "Unable to add transaction attachment.");
+                return poJSON;
+            }
+        }
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    /**
+     * Removes a new attachment or marks an existing one as Inactive.
+     * @param fnRow Index of the attachment to remove/deactivate.
+     * @return Result status as a {@link JSONObject}.
+     */    
+    public JSONObject removeAttachment(int fnRow) throws GuanzonException, SQLException{
+        poJSON = new JSONObject();
+        if(getTransactionAttachmentCount() <= 0){
+            poJSON = setJSON("error", "No transaction attachment to be removed.");
+            return poJSON;
+        }
+        
+        if(paAttachments.get(fnRow).getEditMode() == EditMode.ADDNEW){
+            paAttachments.remove(fnRow);
+            System.out.println("Attachment :"+ fnRow+" Removed");
+        } else {
+            paAttachments.get(fnRow).getModel().setRecordStatus(RecordStatus.INACTIVE);
+            System.out.println("Attachment :"+ fnRow+" Deactivate");
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    /**
+     * Adds an attachment by filename or reactivates it if it already exists as Inactive.
+     * @param fFileName The name of the file to add.
+     * @return The index of the added or reactivated attachment.
+     */    
+    public int addAttachment(String fFileName) throws SQLException, GuanzonException{
+        for(int lnCtr = 0;lnCtr <= getTransactionAttachmentCount() - 1;lnCtr++){
+            if(fFileName.equals(paAttachments.get(lnCtr).getModel().getFileName())
+                && RecordStatus.INACTIVE.equals(paAttachments.get(lnCtr).getModel().getRecordStatus())){
+                paAttachments.get(lnCtr).getModel().setRecordStatus(RecordStatus.ACTIVE);
+                System.out.println("Attachment :"+ lnCtr+" Activate");
+                return lnCtr;
+            }
+        }
+        
+        addAttachment();
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setFileName(fFileName);
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setSourceNo(Master().getTransactionNo());
+        paAttachments.get(getTransactionAttachmentCount() - 1).getModel().setRecordStatus(RecordStatus.ACTIVE);
+        return getTransactionAttachmentCount() - 1;
+    }
+    
+    /**
+     * Copies a file from the source path to the system's temporary attachment directory.
+     * <p>
+     * Includes a retry mechanism that attempts to re-copy the file up to 5 times 
+     * if the target file is not immediately detected after the initial operation.
+     * 
+     * @param fsPath The absolute path of the source file to be copied.
+     */
+    public void copyFile(String fsPath){
+        Path source = Paths.get(fsPath);
+        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments");
+
+        try {
+            // Ensure target directory exists
+            if (!Files.exists(targetDir)) {
+                Files.createDirectories(targetDir);
+            }
+
+            // Copy file into the target directory
+            Files.copy(source, targetDir.resolve(source.getFileName()),
+                       StandardCopyOption.REPLACE_EXISTING);
+
+            //check if file is existing
+            int lnChecker = 0;
+            File file = new File(targetDir+ "/" + source.getFileName());
+            while(!file.exists() && lnChecker < 5){
+                Files.copy(source, targetDir.resolve(source.getFileName()), StandardCopyOption.REPLACE_EXISTING);  
+                System.out.println("Re-Copying... " + lnChecker);
+                lnChecker++;
+            }
+            
+            if(!file.exists()){
+                System.out.println("File did not copy!");
+                return;
+            } 
+            
+            System.out.println("File copied successfully!");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+    
+    /**
+     * Checks if a filename already exists in the attachment database records.
+     * 
+     * @param fsFileName The name of the file to validate.
+     * @return A {@link JSONObject} containing an error message if the filename exists, 
+     *         otherwise an empty success object.
+     * @throws SQLException, GuanzonException If a database access error occurs.
+     */
+    public JSONObject checkExistingFileName(String fsFileName) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(TransactionAttachment().getModel()), 
+                                                                    " sFileName = " + SQLUtil.toSQL(fsFileName)
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sFileName") != null && !"".equals(loRS.getString("sFileName"))){
+                        poJSON = setJSON("error", "File name already exist in database.\nTry changing the file name to upload.");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return poJSON;
+    }
+    
+    @Override
+    public Model_Cash_Disbursement Master() { 
+        return (Model_Cash_Disbursement) poMaster; 
+    }
+    
+    @Override
+    public Model_Cash_Disbursement_Detail Detail(int row) {
+        return (Model_Cash_Disbursement_Detail) paDetail.get(row); 
+    }
+    
+    public JSONObject AddDetail() throws CloneNotSupportedException {
+        if (getDetailCount() > 0) {
+            if (Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId())) {
+                poJSON = new JSONObject();
+                poJSON = setJSON("error", "Last row has empty item.");
+                return poJSON;
+            }
+        }
+
+        return addDetail();
+    }
+    
+    /**
+     * Clears all transaction details and resets associated fields, attachments, and search criteria.
+     * @return A {@link JSONObject} indicating the result of the operation.
+     */
+    public JSONObject removeDetails() {
+        poJSON = new JSONObject();
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next();
+            detail.remove();
+        }
+        
+        paAttachments = new ArrayList<>();
+        setSearchIndustry("");
+        setSearchPayee("");
+        Master().setIndustryId("");
+        initFields();
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    public Model_Cash_Disbursement TransactionList(int row) {
+        return (Model_Cash_Disbursement) paMaster.get(row);
+    }
+
+    public int getTransactionListCount() {
+        return this.paMaster.size();
+    }
+
+    /*RESET CACHE ROW SET*/
+    /**
+     * Resets the master record to its default initial state.
+     */
+    public void resetMaster() {
+        poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
+    }
+    
+    /**
+     * Resets the other record to its default initial state.
+     */
+    public void resetOthers() {
+        paAttachments = new ArrayList<>();
+    }
+
+    /**
+     * Completely clears the current transaction state.
+     * <p>
+     * Resets the master model, clears all detail and attachment collections, 
+     * and wipes the industry and payee search filters.
+     */
+    public void resetTransaction(){
+        resetMaster();
+        Detail().clear();
+        paAttachments = new ArrayList<>();
+    }
+   
+    /**
+     * Refines and validates the transaction detail list.
+     * <p>
+     * This method prunes invalid rows (those with empty particulars or zero amounts for new records) 
+     * and automatically appends a new detail row if the list is empty or the last entry is valid.
+     * 
+     * @throws CloneNotSupportedException If an error occurs while adding a new detail row.
+     */
+    public void ReloadDetail() throws CloneNotSupportedException{
+        int lnCtr = getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId())) {
+                deleteDetail(lnCtr);
+            } 
+            lnCtr--;
+        }
+
+        if ((getDetailCount() - 1) >= 0) {
+            if (Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId())) {
+                AddDetail();
+            }
+        }
+
+        if ((getDetailCount() - 1) < 0) {
+            AddDetail();
+        }
+    }
+    
+    /**
+     * Sets default master record values for a new transaction.
+     * <p>
+     * Configures the branch, industry, and company identifiers, sets the current 
+     * server date, and initializes the status to {@link CashDisbursementStatus#OPEN}.
+     * 
+     * @return A {@link JSONObject} indicating the initialization result.
+     */
+    @Override
+    public JSONObject initFields() {
+        //Put initial model values here/
+        poJSON = new JSONObject();
+        try {
+            poJSON = new JSONObject();
+            Master().setBranchCode(poGRider.getBranchCode());
+            Master().setIndustryId(psIndustryId);
+            Master().setCompanyId(psCompanyId);
+            Master().setTransactionDate(poGRider.getServerDate());
+            Master().setTransactionStatus(CashDisbursementStatus.OPEN);
+
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    /**
+     * Validates the transaction record using the {@link CashAdvanceValidator}.
+     * 
+     * @param status The target transaction status to be validated against.
+     * @return A {@link JSONObject} containing success or specific validation error messages.
+     */
+    @Override
+    protected JSONObject isEntryOkay(String status) {
+        GValidator loValidator = new CashDisbursementValidator();
+        loValidator.setApplicationDriver(poGRider);
+        loValidator.setTransactionStatus(status);
+        loValidator.setMaster(Master());
+        poJSON = loValidator.validate();
+        return poJSON;
+    }
+    /**
+     * Prepares and validates the transaction data before committing to the database.
+     * <p>
+     * This method performs final integrity checks, generates transaction numbers for new records, 
+     * prunes empty detail rows, and synchronizes metadata across master, details, and 
+     * attachments. It also handles attachment filename collisions by renaming duplicates 
+     * and triggers the file upload process for unsent attachments.
+     * 
+     * @return A {@link JSONObject} indicating success or detailing validation/upload errors.
+     * @throws SQLException, GuanzonException, CloneNotSupportedException 
+     *          If an error occurs during data processing, file operations, or validation.
+     */
+    @Override
+    public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        
+        /*Put system validations and other assignments here*/
+        System.out.println("Class Edit Mode : " + getEditMode());
+        System.out.println("Master Edit Mode : " + Master().getEditMode());
+        //Re-set the transaction no and voucher no
+        if(getEditMode() == EditMode.ADDNEW){
+            Master().setTransactionNo(Master().getNextCode());
+        }
+        
+        poJSON = isEntryOkay(Master().getTransactionStatus());
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+        
+        if (Master().getTransactionTotal() == 0.0000) {
+            poJSON = setJSON("error", "Transaction total cannot be zero.");
+            return poJSON;
+        }
+        
+        if (Master().getTransactionTotal() > Master().CashFund().getBalance()) {
+            poJSON = setJSON("error", "Transaction total cannot be greater than the cash fund balance.");
+            return poJSON;
+        }
+        
+        Iterator<Model> detail = Detail().iterator();
+        while (detail.hasNext()) {
+            Model item = detail.next(); // Store the item before checking conditions
+            String lsSourceNo = (String) item.getValue("sPrtclrID");
+            double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
+            if ((lsAmount == 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
+                && item.getEditMode() == EditMode.ADDNEW ){
+                detail.remove(); // Correctly remove the item
+            }
+        }
+        
+        if (getDetailCount() <= 0) {
+            poJSON = setJSON("error", "Transaction amount cannot be zero.");
+            return poJSON;
+        }
+
+        if (getDetailCount() == 1) {
+            //do not allow a single item detail with transaction amount detail
+            if (Detail(0).getAmount() == 0.0000) {
+                poJSON = setJSON("error", "Transaction amount cannot be zero.");
+                return poJSON;
+            }
+        }
+        
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
+            Detail(lnCtr).setEntryNo(lnCtr + 1);
+            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+        }
+        
+        Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
+        Master().setModifiedDate(poGRider.getServerDate());
+        
+        //assign other info on attachment
+        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
+            TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+            TransactionAttachmentList(lnCtr).getModel().setSourceCode(getSourceCode());
+            TransactionAttachmentList(lnCtr).getModel().setBranchCode(Master().getBranchCode());
+            TransactionAttachmentList(lnCtr).getModel().setImagePath(System.getProperty("sys.default.path.temp.attachments"));
+            
+            String lsOriginalFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+            //Check existing file name in database
+            if(EditMode.ADDNEW == TransactionAttachmentList(lnCtr).getModel().getEditMode()){
+                int lnCopies = 0;
+                String fsFilePath = TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + TransactionAttachmentList(lnCtr).getModel().getFileName();
+                String lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+                while ("error".equals((String)checkExistingFileName(lsNewFileName).get("result"))) {
+                    lnCopies++;
+                    //Rename the file
+                    int dotIndex = TransactionAttachmentList(lnCtr).getModel().getFileName().lastIndexOf(".");
+                    if (dotIndex == -1) {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName() +"_"+lnCopies;
+                    } else {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName().substring(0, dotIndex) +"_"+ lnCopies +TransactionAttachmentList(lnCtr).getModel().getFileName().substring(dotIndex);
+                    }
+                }
+
+                if(lnCopies > 0){
+                    Path source = Paths.get(fsFilePath);
+                    try {
+                        // Copy file into the target directory with a new name
+                        Path target = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments").resolve(lsNewFileName);
+                        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                        //check if file is existing
+                        int lnChecker = 0;
+                        File file = new File(TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + lsNewFileName);
+                        while(!file.exists() && lnChecker < 5){
+                            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);  
+                            System.out.println("Re-Copying... " + lnChecker);
+                            lnChecker++;
+                        }
+                        TransactionAttachmentList(lnCtr).getModel().setFileName(lsNewFileName);
+                        System.out.println("File copied successfully as " + lsNewFileName);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+            
+            //Upload Attachment when send status is 0
+            try {
+                if("0".equals(TransactionAttachmentList(lnCtr).getModel().getSendStatus())){
+                    poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr,lsOriginalFileName);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            } catch (Exception ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON = setJSON("error", MiscUtil.getException(ex));
+                return poJSON;
+            }
+            
+        }
+        
+        System.out.println("--------------------------WILL SAVE---------------------------------------------");
+        for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+            System.out.println("COUNTER : " + lnCtr);
+            System.out.println("Transaction No : " + Detail(lnCtr).getTransactionNo());
+            System.out.println("Particular ID : " + Detail(lnCtr).getParticularId());
+            System.out.println("Amount : " + Detail(lnCtr).getAmount());
+            System.out.println("-----------------------------------------------------------------------");
+        }
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Executes business rule validations prior to the final save.
+     * 
+     * @return A {@link JSONObject} containing the validation result.
+     * @throws CloneNotSupportedException, SQLException, GuanzonException If validation fails.
+     */
+    @Override
+    public JSONObject save() throws CloneNotSupportedException, SQLException, GuanzonException {
+        /*Put saving business rules here*/
+        return isEntryOkay(DisbursementStatic.OPEN);
+    }
+
+    /**
+     * Handles the saving of supplementary data, specifically transaction attachments.
+     * <p>
+     * Iterates through the attachment list and commits any new or modified records 
+     * to the database after updating audit metadata (User ID and Server Date).
+     * 
+     * @return A {@link JSONObject} indicating the success or failure of the auxiliary save.
+     */
+    @Override
+    public JSONObject saveOthers() {
+        try {
+            System.out.println("--------------------------SAVE OTHERS---------------------------------------------");
+            System.out.println("Class Edit Mode : " + getEditMode());
+            System.out.println("Master Edit Mode : " + Master().getEditMode());
+            System.out.println("-----------------------------------------------------------------------");
+            for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
+            System.out.println("COUNTER : " + lnCtr);
+            System.out.println("Transaction No : " + Detail(lnCtr).getTransactionNo());
+            System.out.println("Particular ID : " + Detail(lnCtr).getParticularId());
+            System.out.println("Amount : " + Detail(lnCtr).getAmount());
+                System.out.println("-----------------------------------------------------------------------");
+            }
+        
+            //Save Attachments
+            System.out.println("-----------------------------SAVE TRANSACTION ATTACHMENT------------------------------------------");
+            for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
+                if (paAttachments.get(lnCtr).getEditMode() == EditMode.ADDNEW || paAttachments.get(lnCtr).getEditMode() == EditMode.UPDATE) {
+                    paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                    paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
+                    paAttachments.get(lnCtr).setWithParentClass(true);
+                    poJSON = paAttachments.get(lnCtr).saveRecord();
+                    if (!isJSONSuccess(poJSON)) {
+                        return poJSON;
+                    }
+                }
+            }
+            System.out.println("-----------------------------------------------------------------------");
+            
+        } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
+            
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Initializes the base SQL query used for browsing Cash Advance records.
+     * <p>
+     * This method constructs a complex SELECT statement joining tables for Company, 
+     * Industry, Department, Client Master, Cash Fund, and Branch. It dynamically 
+     * appends filtering conditions based on the current transaction status {@code psTranStat}, 
+     * supporting both single-status equality and multi-status {@code IN} clauses.
+     */
+    @Override
+    public void initSQL() {
+        String lsCondition = "";
+        
+        if(psTranStat != null && !"".equals(psTranStat)){
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsCondition += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
+
+                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+            } else {
+                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psTranStat);
+            }
+        }
+
+        SQL_BROWSE =   " SELECT "
+                    + "   a.sTransNox "
+                    + " , a.sCompnyID "
+                    + " , a.sBranchCd "
+                    + " , a.sIndstCdx "
+                    + " , a.dTransact "
+                    + " , a.sClientID "
+                    + " , a.sDeptReqs "
+                    + " , a.sCashFIDx "
+                    + " , a.sRemarksx "
+                    + " , a.nAdvAmtxx "
+                    + " , a.sIssuedxx "
+                    + " , a.dIssuedxx "
+                    + " , a.nLiqTotal "
+                    + " , a.sLiquidtd "
+                    + " , a.dLiquidtd "  
+                    + " , a.cTranStat "
+                    + " , a.sModified "
+                    + " , a.dModified "
+                    + " , b.sCompnyNm AS sCompanyx "
+                    + " , c.sDescript AS sIndustry "
+                    + " , d.sDeptName AS sDeptName "
+                    + " , e.sCompnyNm AS sPayeexxx "
+                    + " , f.sCashFDsc AS sCashFund "
+                    + " , g.sBranchNm AS sBranchNm "
+                    + " FROM CashAdvance a "
+                    + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID "
+                    + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx "
+                    + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs "
+                    + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
+                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx "
+                    + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd ";
+        if(lsCondition != null && !"".equals(lsCondition)){
+            SQL_BROWSE = MiscUtil.addCondition(SQL_BROWSE, lsCondition);
+        }
+    }
+    
+    /**
+     * Upload Attachment
+     * @param instance
+     * @param access 
+     * @param fnRow 
+     * @return  
+     * @throws java.lang.Exception 
+     */
+    /**
+     * Uploads a specific transaction attachment to the web server.
+     * <p>
+     * This method verifies the file's existence (handling renames), generates an MD5 hash 
+     * for data integrity, and transmits the file via the {@link WebFile} API. Upon successful 
+     * upload, it updates the record's hash and sets the send status to "1" (Sent).
+     * 
+     * @param instance The application driver instance.
+     * @param access The access token for web service authentication.
+     * @param fnRow The index of the attachment in the local collection.
+     * @param fsOriginalFileName The original filename to use as a fallback if the new file is missing.
+     * @return A {@link JSONObject} containing the upload result status.
+     * @throws Exception If an error occurs during file reading, encoding, or web transmission.
+     */
+    public JSONObject uploadCASAttachments(GRiderCAS instance, String access, int fnRow, String fsOriginalFileName) throws Exception{       
+        poJSON = new JSONObject();
+        System.out.println("Uploading... : fsOriginalFileName : " + fsOriginalFileName);
+        System.out.println("New File Name... : " + paAttachments.get(fnRow).getModel().getFileName());
+        String hash;
+        String lsFile = paAttachments.get(fnRow).getModel().getFileName();
+        
+        //check if new file is existing
+        File file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
+        if(!file.exists()){
+            //check if original file is existing
+            lsFile = fsOriginalFileName;
+            file = new File(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
+            if(!file.exists()){
+                poJSON = setJSON("error", "Cannot locate file in " + paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile
+                                        + ".\nContact system administrator for assistance.");
+                return poJSON;  
+            }
+        }
+
+        //check if file hash is not empty
+        hash = paAttachments.get(fnRow).getModel().getMD5Hash();
+        if(paAttachments.get(fnRow).getModel().getMD5Hash() == null || "".equals(paAttachments.get(fnRow).getModel().getMD5Hash())){
+            hash = MiscReplUtil.md5Hash(paAttachments.get(fnRow).getModel().getImagePath() + "/" + lsFile);
+        }
+
+        JSONObject result = WebFile.UploadFile(getAccessToken(access)
+                                , "0032"
+                                , ""
+                                , paAttachments.get(fnRow).getModel().getFileName()
+                                , instance.getBranchCode()
+                                , hash
+                                , encodeFileToBase64Binary(file)
+                                , paAttachments.get(fnRow).getModel().getSourceCode()
+                                , paAttachments.get(fnRow).getModel().getSourceNo()
+                                , "");
+
+        if("error".equalsIgnoreCase((String) result.get("result"))){
+            System.out.println("Upload Error : " + result.toJSONString());
+            System.out.println("Upload Error : " + paAttachments.get(fnRow).getModel().getFileName());
+                poJSON = setJSON("error", "System error while uploading file "+ paAttachments.get(fnRow).getModel().getFileName()
+                                    + ".\nContact system administrator for assistance.");
+            return poJSON;
+        }
+        paAttachments.get(fnRow).getModel().setMD5Hash(hash);
+        paAttachments.get(fnRow).getModel().setSendStatus("1");
+        System.out.println("Upload Success : " + paAttachments.get(fnRow).getModel().getFileName());
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+     * Converts a file's content into a Base64 encoded string.
+     * 
+     * @param file The file object to be encoded.
+     * @return A Base64 string representation of the file.
+     * @throws Exception If an I/O error occurs during file reading.
+     */
+    private static String encodeFileToBase64Binary(File file) throws Exception{
+         FileInputStream fileInputStreamReader = new FileInputStream(file);
+         byte[] bytes = new byte[(int)file.length()];
+         fileInputStreamReader.read(bytes);
+         return new String(Base64.encodeBase64(bytes), "UTF-8");
+     }
+         
+    private static JSONObject token = null;
+    /**
+     * Retrieves a valid access token, refreshing it if it has expired.
+     * <p>
+     * The token is considered stale if it was created more than 25 minutes ago. 
+     * If expired, it triggers an external request to update the token file before 
+     * returning the new access key.
+     * 
+     * @param access The file path to the JSON formatted token storage.
+     * @return The access key string, or {@code null} if the file cannot be read or parsed.
+     */
+    private static String getAccessToken(String access){
+        try {
+            JSONParser oParser = new JSONParser();
+            if(token == null){
+                token = (JSONObject)oParser.parse(new FileReader(access));
+            }
+            
+            Calendar current_date = Calendar.getInstance();
+            current_date.add(Calendar.MINUTE, -25);
+            Calendar date_created = Calendar.getInstance();
+            date_created.setTime(SQLUtil.toDate((String) token.get("created") , SQLUtil.FORMAT_TIMESTAMP));
+            
+            //Check if token is still valid within the time frame
+            //Request new access token if not in the current period range
+            if(current_date.after(date_created)){
+                String[] xargs = new String[] {(String) token.get("parent"), access};
+                RequestAccess.main(xargs);
+                token = (JSONObject)oParser.parse(new FileReader(access));
+            }
+            
+            return (String)token.get("access_key");
+        } catch (IOException ex) {
+            return null;
+        } catch (ParseException ex) {
+            return null;
+        }
+    }
+    
+    /**
+    * Displays the status history of a Cash Advance transaction.
+    *
+    * Retrieves status records, maps status codes to readable text, and
+    * shows them in the UI along with entry details.
+    *
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if application-specific error occurs
+    * @throws Exception for other unexpected errors
+    */
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception {
+        CachedRowSet crs = getStatusHistory();
+
+        crs.beforeFirst();
+
+        while (crs.next()) {
+            switch (crs.getString("cRefrStat")) {
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case CashDisbursementStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case CashDisbursementStatus.CONFIRMED:
+                    crs.updateString("cRefrStat", "CONFIRMED");
+                    break;
+                case CashDisbursementStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
+                    break;
+                case CashDisbursementStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                case CashDisbursementStatus.APPROVED:
+                    crs.updateString("cRefrStat", "APPROVED");
+                    break;
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+
+                    switch (stat) {
+                        case CashDisbursementStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case CashDisbursementStatus.CONFIRMED:
+                            crs.updateString("cRefrStat", "CONFIRMED");
+                            break;
+                        case CashDisbursementStatus.CANCELLED:
+                            crs.updateString("cRefrStat", "CANCELLED");
+                            break;
+                        case CashDisbursementStatus.VOID:
+                            crs.updateString("cRefrStat", "VOID");
+                            break;
+                        case CashDisbursementStatus.APPROVED:
+                            crs.updateString("cRefrStat", "APPROVED");
+                            break;
+                    }
+            }
+            crs.updateRow();
+        }
+
+        JSONObject loJSON = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+
+        if (isJSONSuccess(loJSON)) {
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+
+        showStatusHistoryUI("Cash Advance", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+    }
+    /**
+     * Retrieves the user and timestamp of who created the current transaction.
+     *
+     * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (timestamp)
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
+     */
+    public JSONObject getEntryBy() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL = " SELECT b.sModified, b.dModified "
+                + " FROM "+Master().getTable()+" a "
+                + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo()));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                        if (loRS.getString("sModified").length() > 10) {
+                            lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                        } else {
+                            lsEntry = getSysUser(loRS.getString("sModified"));
+                        }
+                        // Get the LocalDateTime from your result set
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                        lsEntryDate = dModified.format(formatter);
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON = setJSON("error", e.getMessage());
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+    /**
+     * Retrieves the company name of a system user based on user ID.
+     *
+     * @param fsId User ID to lookup
+     * @return Company name of the user
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if application-specific error occurs
+     */
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL = " SELECT b.sCompnyNm from xxxSysUser a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId));
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    lsEntry = loRS.getString("sCompnyNm");
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            poJSON = setJSON("error", e.getMessage());
+        }
+        return lsEntry;
+    }
+}
