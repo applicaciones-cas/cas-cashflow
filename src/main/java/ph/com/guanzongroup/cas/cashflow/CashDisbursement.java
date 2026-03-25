@@ -845,7 +845,7 @@ public class CashDisbursement extends Transaction {
                 setSearchPayee((String) loJSON.get("EmployNme"));
             } else {
                 Master().setClientId((String) loJSON.get("sEmployID"));
-                Master().setPayeeName((String) loJSON.get("sEmployID"));
+                Master().setPayeeName((String) loJSON.get("EmployNme"));
             }
         } else {
             loJSON = new JSONObject();
@@ -890,7 +890,7 @@ public class CashDisbursement extends Transaction {
         if (loJSON != null) {
             System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
             System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
-            setSearchPayee((String) loJSON.get("EmployNme"));
+            Master().setCreditedTo((String) loJSON.get("sEmployID"));
         } else {
             loJSON = new JSONObject();
             loJSON.put("result", "error");
