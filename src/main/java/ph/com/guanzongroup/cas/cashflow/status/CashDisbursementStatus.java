@@ -16,6 +16,8 @@ public class CashDisbursementStatus {
     public static final  String CANCELLED = "3";
     public static final  String VOID = "4";
     
+    public static final String DEFAULT_VOUCHER_NO = "00000001";
+    
     public static class Reverse  {
         public static final  String INCLUDE = "+"; 
         public static final  String EXCLUDE = "-"; 

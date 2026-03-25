@@ -51,7 +51,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
@@ -439,7 +439,7 @@ public class CashDisbursement extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -504,7 +504,7 @@ public class CashDisbursement extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -561,7 +561,7 @@ public class CashDisbursement extends Transaction {
             }
         }
         
-         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
+        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         //Update Related transaction to DV
         poJSON = updateRelatedTransactions(lsStatus);
@@ -571,7 +571,7 @@ public class CashDisbursement extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -638,7 +638,7 @@ public class CashDisbursement extends Transaction {
         }
 
         //change status
-        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -1345,7 +1345,7 @@ public class CashDisbursement extends Transaction {
 
             Detail(fnRow).setDetailVatAmount(ldblVATAmount);
             Detail(fnRow).setDetailVatSales(ldblVATSales);
-        } if(ldblVATExempt == 0.0000){
+        } else if(ldblVATExempt == 0.0000){
             ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
             ldblVATSales = ldblAmount - ldblVATAmount;
 
@@ -1447,7 +1447,10 @@ public class CashDisbursement extends Transaction {
         lsSQL = lsSQL 
                 + " AND a.sTransNox NOT IN ( SELECT sSourceNo FROM " + Master().getTable()
                 + " WHERE sSourceNo =  a.sTransNox "
-                + " AND sSourceCd = " + SQLUtil.toSQL(CashDisbursementStatus.SourceCode.CASHADVANCE)+ " )";
+                + " AND sSourceCd = " + SQLUtil.toSQL(CashDisbursementStatus.SourceCode.CASHADVANCE)
+                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.VOID)
+                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.CANCELLED)
+                + " )";
         
         lsSQL = lsSQL + " ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
@@ -1483,6 +1486,12 @@ public class CashDisbursement extends Transaction {
     */
     public JSONObject populateDetail(String fsTransNo) throws SQLException, GuanzonException, CloneNotSupportedException{
         poJSON = new JSONObject();
+        
+        if(getEditMode() != EditMode.ADDNEW){
+            poJSON = setJSON("error", "Invalid update mode.\nUnable to populate detail.");
+            return poJSON;
+        }
+        
         Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
         poJSON = loMaster.openRecord(fsTransNo);
         if (!isJSONSuccess(poJSON)) {
@@ -1526,6 +1535,11 @@ public class CashDisbursement extends Transaction {
         Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
         Master().setDepartmentRequest(loMaster.getDepartmentRequest());
         computeFields(false);
+        
+        setSearchPayee(loMaster.Payee().getCompanyName());
+        setSearchBranch(loMaster.Branch().getBranchName());
+        setSearchIndustry(loMaster.Industry().getDescription());
+        
         return poJSON;
     }
     
@@ -1704,7 +1718,7 @@ public class CashDisbursement extends Transaction {
                 lsSQL = MiscUtil.addCondition(lsSQL,
                         " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                         + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-//                        + " AND cReversex = " + SQLUtil.toSQL(DisbursementStatic.Reverse.INCLUDE)
+//                        + " AND cReversex = " + SQLUtil.toSQL(CashDisbursementStatus.Reverse.INCLUDE)
                 );
                 System.out.println("Executing SQL: " + lsSQL);
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -1860,7 +1874,7 @@ public class CashDisbursement extends Transaction {
                 "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                 + " ORDER BY sVoucherx DESC LIMIT 1");
 
-        String branchVoucherNo = DisbursementStatic.DEFAULT_VOUCHER_NO;  // default value
+        String branchVoucherNo = CashDisbursementStatus.DEFAULT_VOUCHER_NO;  // default value
 
         ResultSet loRS = null;
         try {
@@ -2187,47 +2201,39 @@ public class CashDisbursement extends Transaction {
     
     public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
-        
-        //Update Journal
-        switch(fsStatus){
-            case DisbursementStatic.CERTIFIED:
-                //Void Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.ConfirmTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.VOID:
-                //Void Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.VoidTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                
-                break;
-            case DisbursementStatic.CANCELLED:
-            case DisbursementStatic.DISAPPROVED:
-                //Cancel Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.CancelTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.RETURNED:
-                //Return Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.ReturnTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
+        String lsJournal = existJournal();
+        if(lsJournal != null && !"".equals(lsJournal)){
+            //Update Journal
+            switch(fsStatus){
+                case CashDisbursementStatus.CONFIRMED:
+                    //Confirm Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.ConfirmTransaction("");
+                    if (!isJSONSuccess(poJSON)) {
+                        return poJSON;
+                    }
+                    break;
+                case CashDisbursementStatus.VOID:
+                    //Void Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.VoidTransaction("");
+                    if (!isJSONSuccess(poJSON)) {
+                        return poJSON;
+                    }
+
+                    break;
+                case CashDisbursementStatus.CANCELLED:
+                    //Cancel Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.CancelTransaction("");
+                    if (!isJSONSuccess(poJSON)) {
+                        return poJSON;
+                    }
+                    break;
+            }
         }
     
         poJSON.put("result", "success");
@@ -2476,7 +2482,7 @@ public class CashDisbursement extends Transaction {
     @Override
     public JSONObject save() throws CloneNotSupportedException, SQLException, GuanzonException {
         /*Put saving business rules here*/
-        return isEntryOkay(DisbursementStatic.OPEN);
+        return isEntryOkay(CashDisbursementStatus.OPEN);
     }
 
     /**
