@@ -652,6 +652,36 @@ public class CashDisbursement extends Transaction {
     }
     
     /*Search Master References*/
+    public JSONObject SearchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
+//                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+//                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
+//                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
+                );
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
+        System.out.println("Executing SQL: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction No»Transaction Date»Payee»Requesting Department",
+                "sTransNox»dTransact»sPayeexxx»sDeptName",
+                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
+                0);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
     /**
     * Searches for transactions based on multiple criteria and opens the selected record.
     * 
