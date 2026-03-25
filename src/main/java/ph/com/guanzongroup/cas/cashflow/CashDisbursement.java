@@ -2400,9 +2400,10 @@ public class CashDisbursement extends Transaction {
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
-            String lsSourceNo = (String) item.getValue("sPrtclrID");
+//            String lsSourceNo = (String) item.getValue("sPrtclrID");
+            int lnDetailNo = (int) item.getValue("nDetailNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if ((lsAmount == 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
+            if ((lsAmount == 0.0000 || lnDetailNo == 0)
                 && item.getEditMode() == EditMode.ADDNEW ){
                 detail.remove(); // Correctly remove the item
             }
@@ -2488,7 +2489,7 @@ public class CashDisbursement extends Transaction {
      */
     @Override
     public JSONObject saveOthers() {
-        try {
+//        try {
             System.out.println("--------------------------SAVE OTHERS---------------------------------------------");
             System.out.println("Class Edit Mode : " + getEditMode());
             System.out.println("Master Edit Mode : " + Master().getEditMode());
@@ -2503,66 +2504,66 @@ public class CashDisbursement extends Transaction {
             
             System.out.println("--------------------------SAVE WITHHOLDING TAX DEDUCTION---------------------------------------------");
             //Save Withholding Tax Deductions
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
-                    WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
-                    WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
-                    WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
-                    WTaxDeduction(lnCtr).setWithParentClass(true);
-                    WTaxDeduction(lnCtr).setWithUI(false);
-                    poJSON = WTaxDeduction(lnCtr).saveRecord();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        System.out.println("Save Withholding Tax Deduction : " + poJSON.get("message"));
-                        return poJSON;
-                    }
-                }
-            }
+//            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+//                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+//                    WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
+//                    WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+//                    WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
+//                    WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
+//                    WTaxDeduction(lnCtr).setWithParentClass(true);
+//                    WTaxDeduction(lnCtr).setWithUI(false);
+//                    poJSON = WTaxDeduction(lnCtr).saveRecord();
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        System.out.println("Save Withholding Tax Deduction : " + poJSON.get("message"));
+//                        return poJSON;
+//                    }
+//                }
+//            }
             
             //Save Journal
-            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
-            if(poJournal != null){
-                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
-                    poJSON = validateJournal();
-                    boolean lbContinue = (boolean) poJSON.get("continue");
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", poJSON.get("message").toString());
-                        return poJSON;
-                    } 
-                    if(lbContinue){
-                        poJournal.Master().setSourceNo(Master().getTransactionNo());
-                        poJournal.Master().setModifyingId(poGRider.getUserID());
-                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                        poJournal.setWithParent(true);
-                        poJSON = poJournal.SaveTransaction();
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            System.out.println("Save Journal : " + poJSON.get("message"));
-                            return poJSON;
-                        }
-                    }
-                } else {
-                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid Update mode for Journal.");
-                        return poJSON;
-                    }
-                }
-            } else {
-                if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Journal is not set.");
-                    return poJSON;
-                }
-            }
+//            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
+//            if(poJournal != null){
+//                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
+//                    poJSON = validateJournal();
+//                    boolean lbContinue = (boolean) poJSON.get("continue");
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", poJSON.get("message").toString());
+//                        return poJSON;
+//                    } 
+//                    if(lbContinue){
+//                        poJournal.Master().setSourceNo(Master().getTransactionNo());
+//                        poJournal.Master().setModifyingId(poGRider.getUserID());
+//                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
+//                        poJournal.setWithParent(true);
+//                        poJSON = poJournal.SaveTransaction();
+//                        if ("error".equals((String) poJSON.get("result"))) {
+//                            System.out.println("Save Journal : " + poJSON.get("message"));
+//                            return poJSON;
+//                        }
+//                    }
+//                } else {
+//                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "Invalid Update mode for Journal.");
+//                        return poJSON;
+//                    }
+//                }
+//            } else {
+//                if (poGRider.getUserLevel() > UserRight.ENCODER) {
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "Journal is not set.");
+//                    return poJSON;
+//                }
+//            }
             System.out.println("-----------------------------------------------------------------------");
             
         
-        } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            poJSON = setJSON("error", MiscUtil.getException(ex));
-            return poJSON;
-        }
+//        } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//            poJSON = setJSON("error", MiscUtil.getException(ex));
+//            return poJSON;
+//        }
             
         poJSON = setJSON("success", "success");
         return poJSON;

@@ -119,15 +119,33 @@ public class CashDisbursementValidator implements GValidator {
                 return poJSON;
             }
             
+            if (poMaster.getSourceNo() == null || "".equals(poMaster.getSourceNo())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Source no cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getSourceCode() == null || "".equals(poMaster.getSourceCode())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Source code cannot be empty");
+                return poJSON;
+            }
+            
             if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Payee cannot be empty");
                 return poJSON;
             }
             
-            if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
-                poJSON.put("result","error");
-                poJSON.put("message", "Remarks cannot be empty.");
+            if (poMaster.getPayeeName() == null || "".equals(poMaster.getPayeeName())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Payee cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Credit to cannot be empty");
                 return poJSON;
             }
             
@@ -160,6 +178,14 @@ public class CashDisbursementValidator implements GValidator {
         poJSON = validateNew();
         if("error".equals((String) poJSON.get("result"))){
             return poJSON;
+        }
+        
+        if (poMaster.getVatableSales() > 0.0000) {
+            if (poMaster.getWithTaxTotal() <= 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Tax amount total cannot be zeros.");
+                return poJSON;
+            }
         }
         
         poJSON.put("result", "success");
