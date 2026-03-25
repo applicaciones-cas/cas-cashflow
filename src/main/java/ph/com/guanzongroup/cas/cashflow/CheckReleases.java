@@ -967,6 +967,18 @@ public class CheckReleases extends Transaction {
     }
     
     public JSONObject printTransaction() {
+        
+        if(Master().isPrintedStatus()){
+            try {
+                JSONObject loJSON = new JSONObject();
+                loJSON = seekApproval();
+                if("error".equals(loJSON.get("result"))){
+                    return loJSON;
+                }
+            } catch (SQLException | GuanzonException ex) {
+                Logger.getLogger(CheckReleases.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         poJSON = new JSONObject();
         String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\draft.png"; //set draft as default
         try {
@@ -1047,7 +1059,7 @@ public class CheckReleases extends Transaction {
             switch (Master().getTransactionStatus()) {
                 case CheckReleaseStatus.RELEASED:
                 case CheckReleaseStatus.CONFIRMED:
-                    if ("1".equals(Master().isPrintedStatus())) {
+                    if(Master().isPrintedStatus()) {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approvedreprint.png";
                     } else {
                         watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\approved.png";
