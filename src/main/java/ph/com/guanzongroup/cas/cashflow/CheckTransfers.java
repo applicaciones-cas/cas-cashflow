@@ -1191,6 +1191,8 @@ public class CheckTransfers extends Transaction {
     }
     
     public JSONObject printTransaction() {
+        
+        
         poJSON = new JSONObject();
         String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\draft.png"; //set draft as default
         try {
