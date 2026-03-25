@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -144,6 +145,59 @@ public class CashAdvance extends Transaction {
         return super.updateTransaction();
     }
     
+    /**
+     * Validates if the current transaction is eligible for updates based on its database status.
+     * <p>
+     * This method checks the latest record state to prevent modifications on transactions 
+     * that are already Void, Cancelled, Liquidated, or (depending on {@code isEntry}) Confirmed. 
+     * If the local state is outdated, it automatically re-opens the transaction to sync data.
+     * 
+     * @param isEntry Set to {@code true} to block updates if the status is already "Confirmed".
+     * @return A {@link JSONObject} with "success" if the update can proceed, or an error message if blocked.
+     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
+     *          If an error occurs during record retrieval or data synchronization.
+     */
+    public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+        
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        switch(loObject.getTransactionStatus()){
+            case CashAdvanceStatus.VOID:
+            case CashAdvanceStatus.CANCELLED:
+                poJSON = setJSON("error","Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
+                return poJSON;
+            case CashAdvanceStatus.CONFIRMED:
+//                if(isEntry){
+                    poJSON = setJSON("error", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                    return poJSON;
+//                }
+//                break;
+            case CashAdvanceStatus.APPROVED:
+                poJSON = setJSON("error","Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                return poJSON;
+            case CashAdvanceStatus.LIQUIDATED:
+                poJSON = setJSON("error","Transaction status was already liquidated!\nCheck transaction history.");
+                return poJSON;
+        }
+        
+        if(!loObject.getTransactionStatus().equals(Master().getTransactionStatus())){
+            poJSON = OpenTransaction(Master().getTransactionNo());
+            if (!isJSONSuccess(poJSON)) {
+                poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+                return poJSON;
+            }
+        }
+        
+        poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
     //Setting of default values and for filtering data
     public void setIndustryId(String industryId) { psIndustryId = industryId; }
     public void setCompanyId(String companyId) { psCompanyId = companyId; }
@@ -265,6 +319,64 @@ public class CashAdvance extends Transaction {
     }
     
     /**
+     * Validates the transition logic between transaction statuses.
+     * <p>
+     * Ensures the record follows the prescribed workflow rules (e.g., only "Open" 
+     * transactions can be "Confirmed" or "Voided").
+     * 
+     * @param current The existing status of the record.
+     * @param target The intended status to transition to.
+     * @return {@code true} if the state transition is permitted; otherwise {@code false}.
+     */
+    public boolean isAllowed(String current, String target) {
+        switch (target) {
+            case CashAdvanceStatus.VOID:
+                return current.equals(CashAdvanceStatus.OPEN);  //Allow void when current status is open
+
+            case CashAdvanceStatus.CANCELLED:
+                return current.equals(CashAdvanceStatus.CONFIRMED) || current.equals(CashAdvanceStatus.APPROVED)  ;  //Allow cancel when current status is confirmed / apporoved and released and not have a cash advance detail
+
+            case CashAdvanceStatus.CONFIRMED:
+                return current.equals(CashAdvanceStatus.OPEN);  //Allow confirm when current status is open
+                
+            case CashAdvanceStatus.APPROVED:
+                return current.equals(CashAdvanceStatus.CONFIRMED);  //Allow approve when current status is confirmed
+                
+            case CashAdvanceStatus.LIQUIDATED:
+                return current.equals(CashAdvanceStatus.APPROVED); //Allow liquidate when current status is approved
+
+            default:
+                return false;
+        }
+    }
+    
+    /**
+     * Check existing cash advance detail
+     * @param fsTransNo
+     * @return true / false based on retrieved data
+     * @throws SQLException 
+     */
+    private boolean checkExistingDetail(String fsTransNo) throws SQLException{
+        boolean lbExist = false;
+        Model_Cash_Advance_Detail loObj = new CashflowModels(poGRider).CashAdvanceDetail();
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
+                                                                    " sTransNox = " + SQLUtil.toSQL(fsTransNo)
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                lbExist = loRS.next();
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return lbExist;
+    
+    }
+    
+    /**
     * Requests user approval for the current transaction.
     *
     * @return JSONObject containing approval result and message
@@ -308,9 +420,21 @@ public class CashAdvance extends Transaction {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals(Master().getTransactionStatus())) {
+        
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already confirmed.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -360,8 +484,20 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
 
-        if (lsStatus.equals(Master().getTransactionStatus())) {
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already approved.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -410,9 +546,21 @@ public class CashAdvance extends Transaction {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals(Master().getTransactionStatus())) {
-            poJSON = setJSON("error", "Transaction was already voided.");
+        
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
+            poJSON = setJSON("error", "Transaction was already void.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -464,8 +612,25 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
 
-        if (lsStatus.equals(Master().getTransactionStatus())) {
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already cancelled.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
+        
+        if(checkExistingDetail(Master().getTransactionNo())){
+            poJSON = setJSON("error",  "Transaction was already on process in liquidation entry.");
             return poJSON;
         }
 
@@ -512,6 +677,23 @@ public class CashAdvance extends Transaction {
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
+            return poJSON;
+        }
+        
+        Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load cash advance.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!loObject.getTransactionStatus().equals(Master().getTransactionStatus())) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
+        
+        if (loObject.getIssuedBy() != null && !"".equals(loObject.getIssuedBy())) {
+            poJSON = setJSON("error", "Cash advance was already released.");
             return poJSON;
         }
 

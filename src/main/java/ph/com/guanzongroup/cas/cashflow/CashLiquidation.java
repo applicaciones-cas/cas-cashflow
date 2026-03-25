@@ -317,20 +317,20 @@ public class CashLiquidation extends Transaction {
      */
     public boolean isAllowed(String current, String target) {
         switch (target) {
-            case CashAdvanceStatus.VOID:
-                return current.equals(CashAdvanceStatus.OPEN);
-
-            case CashAdvanceStatus.CANCELLED:
-                return current.equals(CashAdvanceStatus.CONFIRMED) || current.equals(CashAdvanceStatus.APPROVED);
-
-            case CashAdvanceStatus.CONFIRMED:
-                return current.equals(CashAdvanceStatus.OPEN);
-                
-            case CashAdvanceStatus.APPROVED:
-                return current.equals(CashAdvanceStatus.CONFIRMED);
+//            case CashAdvanceStatus.VOID:
+//                return current.equals(CashAdvanceStatus.OPEN);
+//
+//            case CashAdvanceStatus.CANCELLED:
+//                return current.equals(CashAdvanceStatus.CONFIRMED) || current.equals(CashAdvanceStatus.APPROVED);
+//
+//            case CashAdvanceStatus.CONFIRMED:
+//                return current.equals(CashAdvanceStatus.OPEN);
+//                
+//            case CashAdvanceStatus.APPROVED:
+//                return current.equals(CashAdvanceStatus.CONFIRMED);
                 
             case CashAdvanceStatus.LIQUIDATED:
-                return current.equals(CashAdvanceStatus.APPROVED);
+                return current.equals(CashAdvanceStatus.APPROVED); //Allow liquidate when current status is approved
 
             default:
                 return false;
@@ -366,6 +366,11 @@ public class CashLiquidation extends Transaction {
         
         if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already approved.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
         

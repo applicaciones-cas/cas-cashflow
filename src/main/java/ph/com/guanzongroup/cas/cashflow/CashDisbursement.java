@@ -364,16 +364,16 @@ public class CashDisbursement extends Transaction {
     public boolean isAllowed(String current, String target) {
         switch (target) {
             case CashDisbursementStatus.VOID:
-                return current.equals(CashDisbursementStatus.OPEN);
+                return current.equals(CashDisbursementStatus.OPEN); //Allow void when current status is open
 
             case CashDisbursementStatus.CANCELLED:
-                return current.equals(CashDisbursementStatus.CONFIRMED);
+                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow void when current status is confirmed
 
             case CashDisbursementStatus.CONFIRMED:
-                return current.equals(CashDisbursementStatus.OPEN);
+                return current.equals(CashDisbursementStatus.OPEN); //Allow confirm when current status is open
 
             case CashDisbursementStatus.APPROVED:
-                return current.equals(CashDisbursementStatus.CONFIRMED);
+                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow approve when current status is confirmed
 
             default:
                 return false;
@@ -413,6 +413,11 @@ public class CashDisbursement extends Transaction {
         
         if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already confirmed.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -475,9 +480,22 @@ public class CashDisbursement extends Transaction {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals(Master().getTransactionStatus())) {
+        
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already approved.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -538,6 +556,24 @@ public class CashDisbursement extends Transaction {
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
+            return poJSON;
+        }
+        
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
+            poJSON = setJSON("error", "Transaction was already approved.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
@@ -607,9 +643,22 @@ public class CashDisbursement extends Transaction {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
-
-        if (lsStatus.equals(Master().getTransactionStatus())) {
+        
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
             poJSON = setJSON("error", "Transaction was already cancelled.");
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
 
