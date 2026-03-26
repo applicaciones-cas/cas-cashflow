@@ -46,7 +46,9 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Industry;
+import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -397,6 +399,33 @@ public class CashLiquidation extends Transaction {
         return poJSON;
     }
     
+    public String getFinanceDepartment() throws SQLException, GuanzonException{
+        Model_Department loObj = new ParamModels(poGRider).Department();
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
+                                                                    " ( sDeptName LIKE '%Finance%' "
+                                                                    + " OR sDeptName LIKE '%Accounting%' )"
+                                                                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
+                                                                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+                        return loRS.getString("sDeptIDxx");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return "";
+    }
+    
+    public double getCashAdvanceBalance(){
+        return Master().getAdvanceAmount() - Master().getLiquidationTotal();
+    }
     
     /*Search Master References*/
     /**
