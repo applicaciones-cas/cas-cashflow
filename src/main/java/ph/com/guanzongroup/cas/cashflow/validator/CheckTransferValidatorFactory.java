@@ -84,7 +84,7 @@ public class CheckTransferValidatorFactory implements GValidator {
             }
             
             if (poMaster.getDestination()== null || poMaster.getDestination().isEmpty()) {
-                poJSON.put("message", "Distination is not set");
+                poJSON.put("message", "Destination is not set");
                 return poJSON;
             }
 //
