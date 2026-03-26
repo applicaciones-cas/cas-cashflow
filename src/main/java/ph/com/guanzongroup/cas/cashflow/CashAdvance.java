@@ -630,7 +630,7 @@ public class CashAdvance extends Transaction {
         }
         
         if(checkExistingDetail(Master().getTransactionNo())){
-            poJSON = setJSON("error",  "Transaction was already on process in liquidation entry.");
+            poJSON = setJSON("error",  "The transaction is already being processed in a liquidation entry.");
             return poJSON;
         }
 

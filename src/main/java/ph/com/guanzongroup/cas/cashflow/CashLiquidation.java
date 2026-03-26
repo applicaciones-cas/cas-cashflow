@@ -560,8 +560,7 @@ public class CashLiquidation extends Transaction {
     public JSONObject SearchAccount(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
         AccountChart object = new CashflowControllers(poGRider, logwrapr).AccountChart();
         object.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = object.searchRecord(value, byCode);
-//        poJSON = object.searchRecord(value, byCode,Master().getIndustryId(),null);
+        poJSON = object.searchRecord(value, byCode,Master().getIndustryId(),null);
         poJSON.put("row", row);
         if (isJSONSuccess(poJSON)) {
             JSONObject loJSON = setDetail(row, Detail(row).getParticular(), Detail(row).getORNo(), object.getModel().getAccountCode());

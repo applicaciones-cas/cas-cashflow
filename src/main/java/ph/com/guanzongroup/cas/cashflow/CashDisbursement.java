@@ -1541,6 +1541,14 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        String lsCashDisbursement = existCashDisbursement(fsTransNo, CashDisbursementStatus.SourceCode.CASHADVANCE);
+        if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
+            poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement. Kindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
+            return poJSON;
+        }
+        
+        removeDetails(); // Remove all details
+        
         Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
         poJSON = loMaster.openRecord(fsTransNo);
         if (!isJSONSuccess(poJSON)) {
@@ -1566,10 +1574,11 @@ public class CashDisbursement extends Transaction {
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
+            ReloadDetail();
+            System.out.println("Detail Count : " + getDetailCount());
             Detail(getDetailCount()-1).setDetailNo(loDetail.getEntryNo());
             Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
             Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
-            AddDetail();
         }
         MiscUtil.close(loRS);
         
@@ -1590,6 +1599,39 @@ public class CashDisbursement extends Transaction {
         setSearchIndustry(loMaster.Industry().getDescription());
         
         return poJSON;
+    }
+    
+    /**
+     * Check existing Cash Disbursement
+     * @return
+     * @throws SQLException 
+     */
+    public String existCashDisbursement(String fsSourceNo, String fsSourceCode) throws SQLException{
+        Model_Cash_Disbursement loMaster = new CashflowModels(poGRider).CashDisbursementMaster();
+        String lsSQL = MiscUtil.makeSelect(loMaster);
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " sSourceNo = " + SQLUtil.toSQL(fsSourceNo)
+                + " AND sSourceCD = " + SQLUtil.toSQL(fsSourceCode)
+                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.CANCELLED)
+                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.VOID)
+        );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        poJSON = new JSONObject();
+        if (MiscUtil.RecordCount(loRS) > 0) {
+            while (loRS.next()) {
+                // Print the result set
+                System.out.println("--------------------------CASH DISBURSEMENT--------------------------");
+                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                System.out.println("------------------------------------------------------------------------------");
+                if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                    return loRS.getString("sTransNox");
+                }  
+            }
+        }
+        MiscUtil.close(loRS);
+
+        return "";
     }
     
     private static String psNoCategory = "EMPTY";
@@ -1974,7 +2016,7 @@ public class CashDisbursement extends Transaction {
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
             if ((Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId()))
-                || (Detail(getDetailCount() - 1).getDetailNo() == 0)){
+                && (Detail(getDetailCount() - 1).getDetailNo() == 0)){
                 poJSON = new JSONObject();
                 poJSON = setJSON("error", "Last row has empty item.");
                 return poJSON;
@@ -2009,9 +2051,11 @@ public class CashDisbursement extends Transaction {
         //Reset Journal when all details was removed
         resetJournal();
         paAttachments = new ArrayList<>();
-        setSearchIndustry("");
-        setSearchPayee("");
-        Master().setIndustryId("");
+//        setSearchIndustry("");
+//        setSearchPayee("");
+//        Master().setIndustryId("");
+        Master().setSourceNo("");
+        Master().setSourceCode("");
         initFields();
         
         poJSON = setJSON("success", "success");
@@ -2170,7 +2214,7 @@ public class CashDisbursement extends Transaction {
             } 
             lnCtr--;
         }
-
+            
         if ((getDetailCount() - 1) >= 0) {
             if ((Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
                 || Detail(getDetailCount() - 1).getDetailNo() >= 0) {
