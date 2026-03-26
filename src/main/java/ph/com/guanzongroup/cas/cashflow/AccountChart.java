@@ -137,6 +137,32 @@ public class AccountChart extends Parameter {
             return poJSON;
         }
     }
+    public JSONObject searchRecord(String value, boolean byCode, String industryCode) throws SQLException, GuanzonException {
+        String lsSQL = getSQ_Browse();
+
+        if (industryCode != null) {
+            lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCde = " + SQLUtil.toSQL(industryCode));
+        }
+
+
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Description»Account»Industry",
+                "sAcctCode»sDescript»sGLCodexx»xIndustry",
+                "a.sAcctCode»a.sDescript»a.sGLCodexx»IFNULL(b.sDescript, '')",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sAcctCode"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
 
     public JSONObject searchRecordByIndustry(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
