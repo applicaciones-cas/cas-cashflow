@@ -434,12 +434,15 @@ public class CheckPaymentImporting extends Parameter {
             System.out.println("Records found: " + lnCtr);
             loJSON.put("result", "success");
             loJSON.put("message", "Record loaded successfully.");
+            
         } else {
             paCheckPayment = new ArrayList<>();
             paCheckPayment.add(Check_Payment_List());
             loJSON.put("result", "error");
             loJSON.put("continue", true);
             loJSON.put("message", "No record found .");
+            MiscUtil.close(loRS);
+            return loJSON;
         }
         MiscUtil.close(loRS);
         return loJSON;

@@ -758,7 +758,8 @@ public class CheckReleases extends Transaction {
                 + "  b.sBankName AS bankname, "
                 + "  d.sPayeeNme AS payeename, "
                 + "  a.cReleased, "
-                + "  a.cTranStat "
+                + "  a.cTranStat, "
+                + "  a.dTransact"
                 + " FROM "
                 + "  Check_Payments a "
                 + "  LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
@@ -787,7 +788,7 @@ public class CheckReleases extends Transaction {
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
             lsSQL += " WHERE " + String.join(" AND ", lsFilter);
         }
-
+        lsSQL = lsSQL + "ORDER BY a.dTransact DESC";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
