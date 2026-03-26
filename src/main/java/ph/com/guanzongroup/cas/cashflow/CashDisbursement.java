@@ -1573,8 +1573,6 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        removeDetails(); // Remove all details
-        
         Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
         poJSON = loMaster.openRecord(fsTransNo);
         if (!isJSONSuccess(poJSON)) {
@@ -1595,6 +1593,8 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
 
+        removeDetails(); // Remove all details
+        
         while (loRS.next()) {
             poJSON = loDetail.openRecord(loRS.getString("sTransNox"),loRS.getInt("nEntryNox"));
             if (!isJSONSuccess(poJSON)) {
@@ -2082,6 +2082,8 @@ public class CashDisbursement extends Transaction {
 //        Master().setIndustryId("");
         Master().setSourceNo("");
         Master().setSourceCode("");
+        Master().setCreditedTo("");
+        Master().setRemarks("");
         initFields();
         
         poJSON = setJSON("success", "success");
