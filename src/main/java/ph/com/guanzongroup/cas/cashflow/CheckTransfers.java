@@ -1191,7 +1191,24 @@ public class CheckTransfers extends Transaction {
     }
     
     public JSONObject printTransaction() {
+        if(!Master().getTransactionStatus().equals(CheckTransferStatus.CONFIRMED)){
+            JSONObject loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printing");
+            return loJSON;
+        }
         
+        if(Master().isPrintedStatus()){
+            try {
+                JSONObject loJSON = new JSONObject();
+                loJSON = seekApproval();
+                if("error".equals(loJSON.get("result"))){
+                    return loJSON;
+                }
+            } catch (SQLException | GuanzonException ex) {
+                Logger.getLogger(CheckReleases.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         
         poJSON = new JSONObject();
         String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\draft.png"; //set draft as default
@@ -1925,6 +1942,22 @@ public class CheckTransfers extends Transaction {
         this.poJSON.put("message", "Transaction saved successfully.");
 
         return this.poJSON;
+    }
+    
+    public JSONObject seekApproval() throws SQLException, GuanzonException {
+    if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+    poJSON.put("result", "success");
+    return poJSON;
     }
 
 }
