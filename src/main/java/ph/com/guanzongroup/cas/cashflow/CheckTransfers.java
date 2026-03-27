@@ -1191,7 +1191,8 @@ public class CheckTransfers extends Transaction {
     }
     
     public JSONObject printTransaction() {
-        if(!Master().getTransactionStatus().equals(CheckTransferStatus.CONFIRMED)){
+        if(!Master().getTransactionStatus().equals(CheckTransferStatus.CONFIRMED)
+            && !Master().getTransactionStatus().equals(CheckTransferStatus.POSTED)){
             JSONObject loJSON = new JSONObject();
             loJSON.put("result", "error");
             loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printing");
