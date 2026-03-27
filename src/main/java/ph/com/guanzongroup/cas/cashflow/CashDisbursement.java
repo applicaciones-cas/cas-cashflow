@@ -2301,7 +2301,9 @@ public class CashDisbursement extends Transaction {
      */
     public void resetTransaction(){
         resetMaster();
+        resetJournal();
         Detail().clear();
+        WTaxDeduction().clear();
         paAttachments = new ArrayList<>();
     }
    
