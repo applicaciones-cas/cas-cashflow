@@ -1436,7 +1436,7 @@ public class CashDisbursement extends Transaction {
         }
         double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
         if(ldblTotalBaseAmount > ldblVatSales){
-            poJSON = setJSON("error", "Base amount cannot be greater than the net vatable sales.");
+            poJSON = setJSON("error", "Tax Base amount cannot be greater than the net vatable sales.");
             return poJSON;
         }
         
@@ -2598,13 +2598,15 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        if (Master().getTransactionTotal() == 0.0000) {
-            poJSON = setJSON("error", "Transaction total cannot be zero.");
+        //Recompute tax amount
+        poJSON = computeTaxAmount();
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
-        if (Master().getTransactionTotal() > Master().CashFund().getBalance()) {
-            poJSON = setJSON("error", "Transaction total cannot be greater than the cash fund balance.");
+        //Recompute fields to validate
+        poJSON = computeFields(true);
+        if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
         
@@ -2639,7 +2641,11 @@ public class CashDisbursement extends Transaction {
             String lsTaxRateId = (String) item.getModel().getTaxRateId();
             double lsAmount = item.getModel().getBaseAmount();
             if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
-                loObject.remove(); // Correctly remove the item
+                if(item.getEditMode() == EditMode.ADDNEW){
+                    loObject.remove(); // Correctly remove the item
+                } else {
+                    item.getModel().isReverse(false);
+                }
             }
         }
         
@@ -2661,6 +2667,9 @@ public class CashDisbursement extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
+        //Recompute amounts
+        computeTaxAmount();
+        computeFields(false);
         
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
