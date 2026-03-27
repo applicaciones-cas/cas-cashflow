@@ -1159,16 +1159,18 @@ public class CashDisbursement extends Transaction {
         
         WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
+        object.setIndustryId(Master().getIndustryId());
         poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
             JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId(),object.getModel().getTaxType());
-            if ("error".equals((String) loJSON.get("result"))) {
+            if (!isJSONSuccess(loJSON)) {
                 if((boolean) loJSON.get("reverse")){
                     return loJSON;
                 } else {
                     row = (int) loJSON.get("row");
                     WTaxDeduction(row).getModel().isReverse(true);
+                    WTaxDeduction(row).getModel().setBaseAmount(0.00);
+                    WTaxDeduction(row).getModel().setTaxAmount(0.00);
                 }
             }
             
