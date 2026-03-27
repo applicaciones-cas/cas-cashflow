@@ -59,6 +59,7 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
+import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
@@ -1096,6 +1097,88 @@ public class CashDisbursement extends Transaction {
         
         poJSON.put("result", "success");
         poJSON.put("row", fnRow);
+        return poJSON;
+    }
+    
+    public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        poJSON.put("row", row);
+        
+        if(WTaxDeduction(row).getModel().getPeriodFrom() == null || WTaxDeduction(row).getModel().getPeriodTo() == null){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Period date is not set.");
+            return poJSON;
+        }
+        
+        //validate period
+        poJSON = checkPeriodDate(row);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        int lnRow = 1;
+        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+            if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                lnRow++;
+            }
+            if(lnCtr != row){
+                if(WTaxDeduction(lnCtr).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())){
+                    if(WTaxDeduction(lnCtr).getModel().getTaxRateId() == null || "".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+                        poJSON.put("result", "error");
+                        poJSON.put("message", "Particular at row "+lnRow+" is not set.");
+                        return poJSON;
+                    }
+                }
+            }
+        }
+        
+        TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            WTaxDeduction(row).getModel().setTaxCode(object.getModel().getTaxCode());
+            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxCode());
+        }
+        poJSON.put("row", row);
+        return poJSON;
+    }
+
+    public JSONObject SearchWTParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Tax Code is not set.");
+            poJSON.put("row", row);
+            return poJSON;
+        }
+        
+        //validate period
+        poJSON = checkPeriodDate(row);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
+        if ("success".equals((String) poJSON.get("result"))) {
+            JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId(),object.getModel().getTaxType());
+            if ("error".equals((String) loJSON.get("result"))) {
+                if((boolean) loJSON.get("reverse")){
+                    return loJSON;
+                } else {
+                    row = (int) loJSON.get("row");
+                    WTaxDeduction(row).getModel().isReverse(true);
+                }
+            }
+            
+            WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
+            WTaxDeduction(row).getModel().setBIRForm(object.getModel().getTaxType());
+            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxRateId());
+            System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
+        }
+        
+        poJSON.put("row", row);
         return poJSON;
     }
     
@@ -2835,108 +2918,114 @@ public class CashDisbursement extends Transaction {
         
         try {
             String watermarkPath = "";
-            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CashDisbursement.jrxml";//"D:\\GGC_Maven_Systems\\Reports\\CheckDisbursementVoucher.jrxml";
+            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CashDisbursement.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
-            watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; // "D:\\GGC_Maven_Systems\\Reports\\images\\none.png"; 
-                
-                poJSON = UpdateTransaction();
-                if ("error".equals((String) poJSON.get("result"))){
-                    proceedAfterViewerClosed();
-                    return poJSON;
+            watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
+            poJSON = OpenTransaction(Master().getTransactionNo());
+            if ("error".equals((String) poJSON.get("result"))){
+                proceedAfterViewerClosed();
+                return poJSON;
+            }
+            poJSON = UpdateTransaction();
+            if ("error".equals((String) poJSON.get("result"))){
+                proceedAfterViewerClosed();
+                return poJSON;
+            }
+
+            Map<String, Object> params = new HashMap<>();
+            System.out.println("voucher No : " + Master().getVoucherNo());
+            System.out.println("transaction No : " + Master().getTransactionNo());
+            System.out.println("payee : " + Master().getPayeeName());
+            params.put("sVouchrNo", Master().getVoucherNo());
+            params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
+            params.put("sPayeeNme", Master().getPayeeName());
+            params.put("sCreditTo", Master().Credited().getCompanyName());
+            params.put("nAdvAmntx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", "")));
+
+            //Set Default value to empty to prevent null in display
+            params.put("sEncoder","");
+            params.put("sConfirmer","");
+            params.put("sApprover","");
+
+            //Get Encoder
+            JSONObject loJSONEntry = getEntryBy();
+            if(!isJSONSuccess(loJSONEntry)){
+                return loJSONEntry;
+            }
+            if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
+                params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
+            }
+            //Get Confirmer
+            JSONObject loJSONConfirm = getUpdateStatusBy(CashDisbursementStatus.CONFIRMED);
+            if(!isJSONSuccess(loJSONConfirm)){
+                return loJSONConfirm;
+            } else {
+                if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
+                    params.put("sConfirmer", (String) loJSONConfirm.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirm.get("sUpdateDte"))); 
                 }
-                
-                Map<String, Object> params = new HashMap<>();
-                System.out.println("voucher No : " + Master().getVoucherNo());
-                System.out.println("transaction No : " + Master().getTransactionNo());
-                System.out.println("payee : " + Master().getPayeeName());
-                params.put("sVouchrNo", Master().getVoucherNo());
-                params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
-                params.put("sPayeeNme", Master().getPayeeName());
-                params.put("sCreditTo", Master().Credited().getCompanyName());
-                params.put("nAdvAmntx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", "")));
-                
-                //Set Default value to empty to prevent null in display
-                params.put("sEncoder","");
-                params.put("sConfirmer","");
-                params.put("sApprover","");
-                
-                //Get Encoder
-                JSONObject loJSONEntry = getEntryBy();
-                if(!isJSONSuccess(loJSONEntry)){
-                    return loJSONEntry;
+            }
+            //Get Approver
+            JSONObject loJSONApprover = getUpdateStatusBy(CashDisbursementStatus.APPROVED);
+            if(!isJSONSuccess(loJSONApprover)){
+                return loJSONApprover;
+            } else {
+                if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
+                    params.put("sApprover", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
                 }
-                if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
-                    params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
-                }
-                //Get Confirmer
-                JSONObject loJSONConfirm = getUpdateStatusBy(CashDisbursementStatus.CONFIRMED);
-                if(!isJSONSuccess(loJSONConfirm)){
-                    return loJSONConfirm;
+            }
+
+            if(Master().isPrinted()){
+                watermarkPath = watermarkPath + "reprint.png"; 
+            } else {
+                watermarkPath = watermarkPath + "none.png" ; 
+            }
+            params.put("watermarkImagePath", watermarkPath);
+            List<TransactionDetail> Details = new ArrayList<>();
+            List<String> laParticular = new ArrayList<>();
+            String lsParticular = "";
+            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
+                    lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular().toUpperCase();
+                    if(!laParticular.contains(lsParticular)){
+                        laParticular.add(lsParticular);
+                    }
                 } else {
-                    if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
-                        params.put("sConfirmer", (String) loJSONConfirm.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirm.get("sUpdateDte"))); 
+                    lsParticular = Detail(lnCtr).Particular().getDescription().toUpperCase();
+                    if(!laParticular.contains(lsParticular)){
+                        laParticular.add(lsParticular);
                     }
                 }
-                //Get Approver
-                JSONObject loJSONApprover = getUpdateStatusBy(CashDisbursementStatus.APPROVED);
-                if(isJSONSuccess(loJSONApprover)){
-                    return loJSONApprover;
+            }
+
+            //Particular
+            lsParticular = ""; //Reset value
+            for(int lnCtr = 0;lnCtr <= laParticular.size()-1;lnCtr++){
+                if(lsParticular.isEmpty()){
+                    lsParticular = laParticular.get(lnCtr);
                 } else {
-                    if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
-                        params.put("sApprover", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
-                    }
-                }
-                
-                if(Master().isPrinted()){
-                    watermarkPath = watermarkPath + "reprint.png"; 
-                } else {
-                    watermarkPath = watermarkPath + "none.png" ; 
-                }
-                params.put("watermarkImagePath", watermarkPath);
-                List<TransactionDetail> Details = new ArrayList<>();
-                List<String> laParticular = new ArrayList<>();
-                String lsParticular = "";
-                for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-                    if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
-                        lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular();
-                        if(!laParticular.contains(lsParticular)){
-                            laParticular.add(lsParticular);
-                        }
-                    } else {
-                        lsParticular = Detail(lnCtr).Particular().getDescription();
-                        if(!laParticular.contains(lsParticular)){
-                            laParticular.add(lsParticular);
-                        }
-                    }
-                }
-                
-                //Particular
-                lsParticular = ""; //Reset value
-                for(int lnCtr = 0;lnCtr <= laParticular.size()-1;lnCtr++){
-                    if(lsParticular.isEmpty()){
-                        lsParticular = laParticular.get(lnCtr);
+                    if(lnCtr < laParticular.size()-1){
+                        lsParticular = lsParticular + " , " + laParticular.get(lnCtr);
                     } else {
                         lsParticular = lsParticular + " AND " + laParticular.get(lnCtr);
                     }
                 }
-                
-                Details.add(new TransactionDetail(
-                        1,
-                        lsParticular,
-                        "",
-                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", ""))
-                ));
-                
-                JasperPrint currentPrint = JasperFillManager.fillReport(
-                        jasperReport,
-                        params,
-                        new JRBeanCollectionDataSource(Details)
-                );
-                masterPrint = currentPrint;
+            }
 
-            if (masterPrint != null) {
-                CustomJasperViewer viewer = new CustomJasperViewer(masterPrint);
+            Details.add(new TransactionDetail(
+                    1,
+                    lsParticular,
+                    "",
+                    Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", ""))
+            ));
+
+            JasperPrint currentPrint = JasperFillManager.fillReport(
+                    jasperReport,
+                    params,
+                    new JRBeanCollectionDataSource(Details)
+            );
+            if (currentPrint != null) {
+                CustomJasperViewer viewer = new CustomJasperViewer(currentPrint);
                 viewer.setVisible(true);
                 viewer.addWindowListener(new WindowAdapter() {
                     @Override
@@ -3101,8 +3190,6 @@ public class CashDisbursement extends Transaction {
                                 } else {
                                     // Disable all other buttons
                                     button.setEnabled(false);
-                                    poJSON.put("result", "error");
-                                    poJSON.put("message",  "Transaction print aborted!");
                                 }
                             }
                         }
@@ -3117,22 +3204,6 @@ public class CashDisbursement extends Transaction {
             }
             
             return poJSON;
-        }
-
-        private void PrintTransaction(boolean fbIsPrinted)
-                throws SQLException, CloneNotSupportedException, GuanzonException {
-            final String msg = fbIsPrinted
-                    ? "Transaction printed successfully."
-                    : "Transaction print aborted.";
-
-            Platform.runLater(() -> {
-                if(fbIsPrinted){
-                    ShowMessageFX.Information(null, "Computerized Accounting System", msg);
-                } else {
-                    ShowMessageFX.Warning(null, "Computerized Accounting System", msg);
-                }
-                SwingUtilities.invokeLater(() -> CustomJasperViewer.this.toFront());
-            });
         }
 
         private void warnAndRefocus(final String m) {
