@@ -1587,7 +1587,8 @@ public class CheckDeposits extends Transaction {
     }
     
     public JSONObject printDepositSlip() throws SQLException, GuanzonException, CloneNotSupportedException {
-        if(!Master().getTransactionStatus().equals(CheckDepositStatus.CONFIRMED)){
+        if(!Master().getTransactionStatus().equals(CheckDepositStatus.CONFIRMED)
+            && !Master().getTransactionStatus().equals(CheckDepositStatus.POSTED)){
             JSONObject loJSON = new JSONObject();
             loJSON.put("result", "error");
             loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printing");
