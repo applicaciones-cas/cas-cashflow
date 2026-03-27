@@ -1702,9 +1702,9 @@ public class CashDisbursement extends Transaction {
         Master().setDepartmentRequest(loMaster.getDepartmentRequest());
         computeFields(false);
         
-        setSearchPayee(loMaster.Payee().getCompanyName());
-        setSearchBranch(loMaster.Branch().getBranchName());
-        setSearchIndustry(loMaster.Industry().getDescription());
+//        setSearchPayee(loMaster.Payee().getCompanyName());
+//        setSearchBranch(loMaster.Branch().getBranchName());
+//        setSearchIndustry(loMaster.Industry().getDescription());
         
         return poJSON;
     }
