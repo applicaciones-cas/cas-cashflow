@@ -33,6 +33,7 @@ import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import org.rmj.cas.core.APTransaction;
 import org.rmj.cas.core.GLTransaction;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
@@ -433,12 +434,15 @@ public class CheckPaymentImporting extends Parameter {
             System.out.println("Records found: " + lnCtr);
             loJSON.put("result", "success");
             loJSON.put("message", "Record loaded successfully.");
+            
         } else {
             paCheckPayment = new ArrayList<>();
             paCheckPayment.add(Check_Payment_List());
             loJSON.put("result", "error");
             loJSON.put("continue", true);
             loJSON.put("message", "No record found .");
+            MiscUtil.close(loRS);
+            return loJSON;
         }
         MiscUtil.close(loRS);
         return loJSON;
@@ -482,64 +486,80 @@ public class CheckPaymentImporting extends Parameter {
         return sSeries;
     }
     public JSONObject updateChecks(String transactionNo, String CheckNo,String Checkdate,Double amt) throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
-        poJSON = new JSONObject();
 
-        poJSON = poModel.openRecord(transactionNo);
-
-        if ("error".equals((String) poJSON.get("result"))) {
-            poJSON.put(poJSON.get("message"),"message");
-            return poJSON;
-        }
-//        
-//        poGRider.beginTrans("UPDATE", "CHECK IMPORTING", "chk", transactionNo);
-//
-//        String lsSQL = "UPDATE "
-//                + poModel.getTable()
-//                + " SET   sCheckNox = " + SQLUtil.toSQL(CheckNo)                
-//                + "    ,dCheckDte = " + SQLUtil.toSQL(Checkdate)                
-//                + "    ,nAmountxx = " + SQLUtil.toSQL(amt)                
-//                + "    ,cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
-//                + "    ,dPrintxxx = " + SQLUtil.toSQL(poGRider.getServerDate())
-//                + "    ,cLocation = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
-//                + "    ,cReleased = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
-//                + "    ,cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
-//                + " WHERE sTransNox = " + SQLUtil.toSQL(transactionNo);
-//
-//        Long lnResult = poGRider.executeQuery(lsSQL,
-//                poModel.getTable(),
-//                poGRider.getBranchCode(), "", "");
-//        if (lnResult <= 0L) {
-//            poGRider.rollbackTrans();
-//
-//            poJSON = new JSONObject();
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Error updating the transaction status.");
-//            return poJSON;
-//        }
-        System.out.println("SOURCE NO : " + poModel.getSourceNo());
-        poDVMaster = new CashflowControllers(poGRider, logwrapr).DisbursementVoucher();
-        poDVMaster.InitTransaction();
-        poDVMaster.OpenTransaction(poModel.getSourceNo());
-        poDVMaster.UpdateTransaction();
-        
-        
-        poDVMaster.CheckPayments().getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
-        poDVMaster.CheckPayments().getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
-        poDVMaster.CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
-        poDVMaster.CheckPayments().getModel().setDatePrint(poGRider.getServerDate());
+            poJSON = new JSONObject();
             
-        poDVMaster.SaveTransaction();
-        
-        
-//        JSONObject loJSON = new JSONObject();        
-//        loJSON = updateOthers(CheckNo,Checkdate,amt);
-//        if ("error".equals((String) loJSON.get("result"))) {
-//            loJSON.put(loJSON.get("message"),"message");
-//            return loJSON;
-//        }
-        
-        poGRider.commitTrans();
+            if (CheckNo==null || CheckNo.isEmpty()){
+                poJSON.put("result", "error");
+                poJSON.put("message","Check no is null or empty");
+                return poJSON;
+            }
+            if (Checkdate==null || Checkdate.isEmpty()){
+                poJSON.put("result", "error");
+                poJSON.put("message","Check date is null or invalid");
+                return poJSON;
+            }
+            if (amt == null || amt <= 0) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Check amount is null or invalid");
+                return poJSON;
+            }
+            
+            poJSON = poModel.openRecord(transactionNo);
+            
+            if ("error".equals((String) poJSON.get("result"))) {
+                poJSON.put(poJSON.get("message"),"message");
+                return poJSON;
+            }
+//
+poGRider.beginTrans("UPDATE", "CHECK IMPORTING", "chk", transactionNo);
 
+String lsSQL = "UPDATE "
+        + poModel.getTable()
+        + " SET   sCheckNox = " + SQLUtil.toSQL(CheckNo)
+        + "    ,dCheckDte = " + SQLUtil.toSQL(Checkdate)
+        + "    ,nAmountxx = " + SQLUtil.toSQL(amt)
+        + "    ,cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
+        + "    ,dPrintxxx = " + SQLUtil.toSQL(poGRider.getServerDate())
+        + "    ,cLocation = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED)
+        + "    ,cReleased = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
+        + "    ,cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+        + " WHERE sTransNox = " + SQLUtil.toSQL(transactionNo);
+
+Long lnResult = poGRider.executeQuery(lsSQL,
+        poModel.getTable(),
+        poGRider.getBranchCode(), "", "");
+if (lnResult <= 0L) {
+    poGRider.rollbackTrans();
+    
+    poJSON = new JSONObject();
+    poJSON.put("result", "error");
+    poJSON.put("message", "Error updating the transaction status.");
+    return poJSON;
+}
+//        System.out.println("SOURCE NO : " + poModel.getSourceNo());
+//        poDVMaster = new CashflowControllers(poGRider, logwrapr).DisbursementVoucher();
+//        poDVMaster.InitTransaction();
+//        poDVMaster.OpenTransaction(poModel.getSourceNo());
+//        poDVMaster.UpdateTransaction();
+//
+//        
+//        poDVMaster.CheckPayments().getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+//        poDVMaster.CheckPayments().getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
+//        poDVMaster.CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
+//        poDVMaster.CheckPayments().getModel().setDatePrint(poGRider.getServerDate());
+//            
+//        poDVMaster.SaveTransaction();
+            JSONObject loJSON = new JSONObject();
+            loJSON = updateOthers(CheckNo, Checkdate, amt);
+            if ("error".equals((String) loJSON.get("result"))) {
+                loJSON.put(loJSON.get("message"), "message");
+                return loJSON;
+            }
+
+          poGRider.commitTrans();
+
+       
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Check Imports Save Successfully.");
@@ -549,70 +569,87 @@ public class CheckPaymentImporting extends Parameter {
     
     
     public JSONObject updateOthers(String checkno,String checkdate,Double checkamt) throws SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        
-        System.out.println("----------Bank Account Transaction----------");
-        //Bank Account Transaction
-        BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
-        poJSON = poBankAccountTrans.InitTransaction();
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        poJSON = poBankAccountTrans.CheckDisbursement(
-                poModel.getBankAcountID(),
-                poModel.getSourceNo(),
-                SQLUtil.toDate(checkdate, SQLUtil.FORMAT_SHORT_DATE),
-                checkamt,
-                checkno,
-               poDVMaster.getVoucherNo(),
-                false);
-        if ("error".equals(poJSON.get("result"))) {
-            return poJSON;
-        }
-        System.out.println("--------------------------------------------");
-
-        System.out.println("----------AP CLIENT MASTER----------");
-        //Insert AP Client
-        APTransaction loAPTrans = new APTransaction(poGRider, poDVMaster.Master().getBranchCode());
-        String lsClientId = poDVMaster.Master().Payee().getAPClientID();
-        if (lsClientId == null || "".equals(lsClientId)) {
-            lsClientId = poDVMaster.Master().Payee().getClientID();
-        }
-        poJSON = loAPTrans.PaymentIssue(lsClientId,
-                "",
-                poDVMaster.Master().getTransactionNo(),
-                poDVMaster.Master().getTransactionDate(),
-                poDVMaster.Master().getNetTotal(),
-                false);
-        if ("error".equals(poJSON.get("result"))) {
-            return poJSON;
-        }
-        System.out.println("-----------------------------------");
-
-        System.out.println("----------ACCOUNT MASTER / LEDGER----------");
         try {
-            //GL Transaction Account Ledger
-            GLTransaction loGLTrans = new GLTransaction(poGRider, poDVMaster.Master().getBranchCode());
-            loGLTrans.initTransaction(poModel.getSourceCode(), poDVMaster.Master().getTransactionNo());
-            for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
-                loGLTrans.addDetail(Journal().Master().getBranchCode(),
-                        Journal().Detail(lnCtr).getAccountCode(),
-                        SQLUtil.toDate(Journal().Detail(lnCtr).getForMonthOf().toString(), SQLUtil.FORMAT_SHORT_DATE),
-                        Journal().Detail(lnCtr).getDebitAmount(),
-                        Journal().Detail(lnCtr).getCreditAmount());
+            poJSON = new JSONObject();
+            
+            poDVMaster = new CashflowControllers(poGRider, logwrapr).DisbursementVoucher();
+            poDVMaster.InitTransaction();
+            poDVMaster.OpenTransaction(poModel.getSourceNo());
+            
+            
+            System.out.println("----------Bank Account Transaction----------");
+            //Bank Account Transaction
+            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+            poJSON = poBankAccountTrans.InitTransaction();
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
             }
-            loGLTrans.saveTransaction();
-        } catch (GuanzonException | SQLException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON = poBankAccountTrans.CheckDisbursement(
+                    poModel.getBankAcountID(),
+                    poModel.getSourceNo(),
+                    SQLUtil.toDate(checkdate, SQLUtil.FORMAT_SHORT_DATE),
+                    checkamt,
+                    checkno,
+                    poDVMaster.Master().getVoucherNo(),
+                    false);
+            if ("error".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+            System.out.println("--------------------------------------------");
+            
+            System.out.println("----------AP CLIENT MASTER----------");
+            //Insert AP Client
+            APTransaction loAPTrans = new APTransaction(poGRider, poDVMaster.Master().getBranchCode());
+            String lsClientId = poDVMaster.Master().Payee().getAPClientID();
+            if (lsClientId == null || "".equals(lsClientId)) {
+                lsClientId = poDVMaster.Master().Payee().getClientID();
+            }
+            poJSON = loAPTrans.PaymentIssue(lsClientId,
+                    "",
+                    poDVMaster.Master().getTransactionNo(),
+                    poDVMaster.Master().getTransactionDate(),
+                    poDVMaster.Master().getNetTotal(),
+                    false);
+            if ("error".equals(poJSON.get("result"))) {
+                return poJSON;
+            }
+            System.out.println("-----------------------------------");
+            
+            System.out.println("----------ACCOUNT MASTER / LEDGER----------");
+            try {
+                //GL Transaction Account Ledger
+                GLTransaction loGLTrans = new GLTransaction(poGRider, poDVMaster.Master().getBranchCode());
+                loGLTrans.initTransaction(poModel.getSourceCode(), poDVMaster.Master().getTransactionNo());
+                for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
+                    loGLTrans.addDetail(Journal().Master().getBranchCode(),
+                            Journal().Detail(lnCtr).getAccountCode(),
+                            SQLUtil.toDate(Journal().Detail(lnCtr).getForMonthOf().toString(), SQLUtil.FORMAT_SHORT_DATE),
+                            Journal().Detail(lnCtr).getDebitAmount(),
+                            Journal().Detail(lnCtr).getCreditAmount());
+                }
+                loGLTrans.saveTransaction();
+            } catch (GuanzonException | SQLException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON.put("result", "error");
+                poJSON.put("message", MiscUtil.getException(ex));
+                return poJSON;
+            }
+            System.out.println("-----------------------------------");
+            
+            System.out.println("--------------------------SAVE LINKED TRANSACTION---------------------------------------------");
+//Update other linked transaction in DV Detail
+            poJSON = updateLinkedTransactions(poDVMaster.Master().getTransactionStatus(), poDVMaster.Master().getTransactionNo());
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        } catch (CloneNotSupportedException |ParseException ex) {
+            Logger.getLogger(CheckPaymentImporting.class.getName()).log(Level.SEVERE, null, ex);
             poJSON.put("result", "error");
             poJSON.put("message", MiscUtil.getException(ex));
             return poJSON;
+        } catch (ScriptException ex) { 
+            Logger.getLogger(CheckPaymentImporting.class.getName()).log(Level.SEVERE, null, ex);
         }
-        System.out.println("-----------------------------------");
-        
-        
-        
-        
         poJSON.put("result", "success");
         return poJSON;
     }
@@ -627,6 +664,32 @@ public class CheckPaymentImporting extends Parameter {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         }
         return poJournal;
+    }
+    
+    public JSONObject updateLinkedTransactions(String fsStatus,String fsDvTransNo) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
+        try {
+            poJSON = new JSONObject();
+            //Call Class for updating of linked transactions in DV Details
+            Disbursement_LinkedTransactions loDVExtend = new Disbursement_LinkedTransactions();
+            poDVMaster = new CashflowControllers(poGRider, logwrapr).DisbursementVoucher();
+            poDVMaster.InitTransaction();
+            poJSON = poDVMaster.OpenTransaction(fsDvTransNo);
+            
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            loDVExtend.setDisbursemmentVoucher(poDVMaster, poGRider, logwrapr);
+            loDVExtend.setUpdateAmountPaid(true);
+            poJSON = loDVExtend.updateLinkedTransactions(fsStatus);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        } catch (ScriptException ex) {
+            Logger.getLogger(CheckPaymentImporting.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
     
     

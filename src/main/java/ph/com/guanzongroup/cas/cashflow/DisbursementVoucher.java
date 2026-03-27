@@ -3170,46 +3170,49 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         
-        //Update Journal
-        switch(fsStatus){
-            case DisbursementStatic.CERTIFIED:
-                //Void Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.ConfirmTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.VOID:
-                //Void Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.VoidTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                
-                break;
-            case DisbursementStatic.CANCELLED:
-            case DisbursementStatic.DISAPPROVED:
-                //Cancel Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.CancelTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
-            case DisbursementStatic.RETURNED:
-                //Return Journal
-                poJournal.setWithParent(true);
-                poJournal.setWithUI(false);
-                poJSON = poJournal.ReturnTransaction("");
-                if (!"success".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                break;
+        String lsJournal = existJournal();
+        if(lsJournal != null && !"".equals(lsJournal)){
+            //Update Journal
+            switch(fsStatus){
+                case DisbursementStatic.CERTIFIED:
+                    //Void Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.ConfirmTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.VOID:
+                    //Void Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.VoidTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+
+                    break;
+                case DisbursementStatic.CANCELLED:
+                case DisbursementStatic.DISAPPROVED:
+                    //Cancel Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.CancelTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.RETURNED:
+                    //Return Journal
+                    poJournal.setWithParent(true);
+                    poJournal.setWithUI(false);
+                    poJSON = poJournal.ReturnTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+            }
         }
         
         //Update record status of Check Payment or Other Payment

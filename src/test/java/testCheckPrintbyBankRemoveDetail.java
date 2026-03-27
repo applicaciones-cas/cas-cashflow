@@ -4,6 +4,7 @@ import java.util.Date;
 import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -18,6 +19,7 @@ public class testCheckPrintbyBankRemoveDetail {
 
     static GRiderCAS poApp;
     static CashflowControllers poPrint;
+    int pnEditMode;
 
     @BeforeClass
     public static void setUpClass() {
@@ -39,7 +41,7 @@ public class testCheckPrintbyBankRemoveDetail {
                 Assert.fail();
             }
 
-            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000005");
+            loJSON = (JSONObject) poPrint.CheckPrintingRequest().OpenTransaction("GCO126000011");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -51,18 +53,51 @@ public class testCheckPrintbyBankRemoveDetail {
                 Assert.fail();
             }
             
-            poPrint.CheckPrintingRequest().Detail().remove(0);
+            System.out.println("=================START TEST====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getEntryNumber());
+                System.out.println("Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("Source No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getSourceNo());
+                System.out.println("===============================================");
+            }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST=====================");
             
-            for (int lnCtr = 0; lnCtr <=  poPrint.CheckPrintingRequest().getDetailCount() - 1; lnCtr++) {
-            System.out.println("\n-----------------------------\n" +
-                      "------old details after remove------\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getTransactionNo()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).getEntryNumber()+ "\n" +
-             poPrint.CheckPrintingRequest().Detail(lnCtr).DisbursementMaster().getVoucherNo()+
-                    "\n-----------------------------"
-            );
-        }
+            poPrint.CheckPrintingRequest().deleteDetail(0);
+            System.out.println("=================START TEST REMOVE====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()- 1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("No : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getEntryNumber());
+                System.out.println("Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("Source No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getSourceNo());
+                System.out.println("===============================================");
+            }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST REMOVE=====================");
             
+            poPrint.CheckPrintingRequest().AddDetail();
+             for (int lnCtr = 0; lnCtr < poPrint.CheckPrintingRequest().getDetailCount(); lnCtr++) {
+                System.out.println("Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCtr ).getTransactionNo());
+                System.out.println("Source No. : " + poPrint.CheckPrintingRequest().Detail(lnCtr ).getSourceNo());
+             }
+            
+             loJSON = (JSONObject)poPrint.CheckPrintingRequest().addCheckPaymentToCheckPrintRequest("GCO126000031");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            System.out.println(" ");
+            System.out.println("=================START TEST ADD====================");
+            for (int lnCntr = 0; lnCntr <= poPrint.CheckPrintingRequest().getDetailCount()-1; lnCntr++) {    
+                System.out.println("===============================================");
+                System.out.println("Transaction No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getTransactionNo());
+                System.out.println("Source No. : " + poPrint.CheckPrintingRequest().Detail(lnCntr).getSourceNo());
+                System.out.println("===============================================");
+            }
+            poPrint.CheckPrintingRequest().computeFields();
+            System.out.println("==================END TEST ADD=====================");
+         
 
             loJSON = poPrint.CheckPrintingRequest().SaveTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {

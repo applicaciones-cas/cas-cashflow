@@ -14,6 +14,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.parameter.model.Model_Branch;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
@@ -28,11 +29,13 @@ public class Model_Check_Transfer_Master extends Model {
 
     //reference objects
     Model_Industry poIndustry;
+    Model_Company poCompany;
     Model_Client_Master poPrepareClient;
     Model_Department poDepartment;
     Model_Branch poBranch;
     Model_Branch poBranchDestination;
     private String bankid;
+    private String compnyID;
 
     @Override
     public void initialize() {
@@ -48,8 +51,8 @@ public class Model_Check_Transfer_Master extends Model {
             poEntity.updateDouble("nTranTotl", 0.0000);
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateNull("sDeptIDxx");
-            poEntity.updateNull("sPrepared");
-            poEntity.updateNull("dPrepared");
+            poEntity.updateNull("sPrepared");            
+            poEntity.updateObject("dPrepared", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateNull("dReceived");
             poEntity.updateString("cPrintedx", "0"); 
             poEntity.updateString("cTranStat", CheckTransferStatus.OPEN);           
@@ -60,7 +63,7 @@ public class Model_Check_Transfer_Master extends Model {
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
             this.poDepartment = (new ParamModels(this.poGRider)).Department();
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
-
+            this.poCompany= (new ParamModels(this.poGRider)).Company();
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
@@ -158,8 +161,9 @@ public class Model_Check_Transfer_Master extends Model {
     }
 
     //dPrepared
-    public JSONObject setPreparedDate(LocalDateTime receivedDate) {
-        return setValue("dPrepared", Timestamp.valueOf(receivedDate));
+
+    public JSONObject setPreparedDate(Date modifiedDate) {
+        return setValue("dPrepared", modifiedDate);
     }
 
     public Date getPreparedDate() {
@@ -275,6 +279,15 @@ public class Model_Check_Transfer_Master extends Model {
     public String getBanks() {
         return bankid;
     }
+    
+    
+    public String setCompany(String bankidx) {
+        return compnyID = bankidx;
+    }
+
+    public String getCompany() {
+        return compnyID;
+    }
     @Override
     public String getNextCode() {
         return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
@@ -349,6 +362,22 @@ public class Model_Check_Transfer_Master extends Model {
         }
         this.poIndustry.initialize();
         return this.poIndustry;
+    }
+    public Model_Company Company() throws SQLException, GuanzonException {
+        if (!"".equals(compnyID)) {
+            if (this.poCompany.getEditMode() == 1 && this.poCompany
+                    .getCompanyId().equals(compnyID)) {
+                return this.poCompany;
+            }
+            this.poJSON = this.poCompany.openRecord(this.getCompany());
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poCompany;
+            }
+            this.poCompany.initialize();
+            return this.poCompany;
+        }
+        this.poCompany.initialize();
+        return this.poCompany;
     }
     
     

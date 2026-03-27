@@ -338,7 +338,7 @@ public class CheckDeposits extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm,true);
 
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -630,6 +630,7 @@ public class CheckDeposits extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         boolean lbUpdated = false;
+        boolean hasReverse = false;
         //remove items with no stockid or quantity order
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
@@ -641,13 +642,28 @@ public class CheckDeposits extends Transaction {
                 detail.remove();
             }
         }
-
+        if(getDetailCount() <= 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
+        }
+        
         //assign other info on detail
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+            
+            if (Detail(lnCtr).isReverse()) {
+                hasReverse = true; // at least one is reversed
+            }
         }
+        if (!hasReverse) {
+            poJSON.put("result", "error");
+            poJSON.put("message", " Cannot save the transaction. \nAt least one detail must be marked as reversed (active).");
+            return poJSON;
+        }
+        
 
         if (CheckTransferStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
             poJSON = setValueToOthers(Master().getTransactionStatus());
@@ -674,6 +690,8 @@ public class CheckDeposits extends Transaction {
         poJSON.put("result", "success");
         return poJSON;
     }
+    
+    
 
     @Override
     public JSONObject save() {
@@ -859,6 +877,7 @@ public class CheckDeposits extends Transaction {
                 paChecks.get(paChecks.size() - 1).openRecord(loRS.getString("sTransNox"));
                 lnCtr++;
             }
+            
             System.out.println("Records found: " + lnCtr);
             loJSON.put("result", "success");
             loJSON.put("message", "Record loaded successfully.");
@@ -916,11 +935,17 @@ public class CheckDeposits extends Transaction {
                 AddDetail();
             }
         } else {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
-            poJSON.put("tableRow", lnRow);
-            poJSON.put("warning", "false");
-            return poJSON;
+            if (!Detail(lnRow).isReverse()) {
+                Detail(lnRow).isReverse(true);
+                poJSON.put("result", "success");
+                return poJSON;
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
+                poJSON.put("tableRow", lnRow);
+                poJSON.put("warning", "false");
+                return poJSON;
+            }
         }
 
         // Return success
@@ -932,12 +957,20 @@ public class CheckDeposits extends Transaction {
         poJSON = new JSONObject();
         double totalAmount = 0.0000;
 
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+        for (int lnCtr = 0; lnCtr < getDetailCount()-1; lnCtr++) {
+
+            // include only reversed ("+")
+            if (Detail(lnCtr).isReverse()) {
+                totalAmount += Detail(lnCtr).CheckPayment().getAmount();
+            }
         }
+
         Master().setTransactionTotalDeposit(totalAmount);
         return poJSON;
     }
+    
+    
+    
 
     private Model_Check_Deposit_Master CheckTransferMasterList() {
         return new CashflowModels(poGRider).CheckDepositMaster();
@@ -1002,7 +1035,7 @@ public class CheckDeposits extends Transaction {
         // Set updated values
         switch (fsStatus) {
             case CheckTransferStatus.CONFIRMED:
-                issuance.poModel.setLocation("1");
+                issuance.poModel.setLocation("4");
                 issuance.poModel.setModifyingId(poGRider.getUserID());
                 issuance.poModel.setModifiedDate(poGRider.getServerDate());
                 break;
@@ -1013,7 +1046,7 @@ public class CheckDeposits extends Transaction {
                 issuance.poModel.setModifiedDate(poGRider.getServerDate());
                 break;    
             case CheckTransferStatus.VOID:
-                issuance.poModel.setLocation("0");
+                issuance.poModel.setLocation("1");
                 issuance.poModel.setReleased("0");
                 issuance.poModel.setModifyingId(poGRider.getUserID());
                 issuance.poModel.setModifiedDate(poGRider.getServerDate());
@@ -1826,6 +1859,21 @@ public class CheckDeposits extends Transaction {
         poJSON.put("message", "Transaction Printed successfully.");
 
         return poJSON;
+    }
+    public JSONObject seekApproval() throws SQLException, GuanzonException {
+    if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer..");
+                return poJSON;
+            }
+        }
+    poJSON.put("result", "success");
+    return poJSON;
     }
     
     
