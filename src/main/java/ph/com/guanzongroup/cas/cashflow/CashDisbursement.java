@@ -2853,19 +2853,20 @@ public class CashDisbursement extends Transaction {
                 System.out.println("voucher No : " + Master().getVoucherNo());
                 System.out.println("transaction No : " + Master().getTransactionNo());
                 System.out.println("payee : " + Master().getPayeeName());
-                params.put("voucherNo", Master().getVoucherNo());
+                params.put("sVouchrNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
                 params.put("sPayeeNme", Master().getPayeeName());
-                params.put("nAmount", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", "")));
+                params.put("sCreditTo", Master().Credited().getCompanyName());
+                params.put("nAdvAmntx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", "")));
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
                 params.put("sConfirmer","");
-                params.put("sApproved","");
+                params.put("sApprover","");
                 
                 //Get Encoder
                 JSONObject loJSONEntry = getEntryBy();
-                if("error".equals((String) loJSONEntry.get("result"))){
+                if(!isJSONSuccess(loJSONEntry)){
                     return loJSONEntry;
                 }
                 if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
@@ -2873,7 +2874,7 @@ public class CashDisbursement extends Transaction {
                 }
                 //Get Confirmer
                 JSONObject loJSONConfirm = getUpdateStatusBy(CashDisbursementStatus.CONFIRMED);
-                if("error".equals((String) loJSONConfirm.get("result"))){
+                if(!isJSONSuccess(loJSONConfirm)){
                     return loJSONConfirm;
                 } else {
                     if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
@@ -2882,11 +2883,11 @@ public class CashDisbursement extends Transaction {
                 }
                 //Get Approver
                 JSONObject loJSONApprover = getUpdateStatusBy(CashDisbursementStatus.APPROVED);
-                if("error".equals((String) loJSONApprover.get("result"))){
+                if(isJSONSuccess(loJSONApprover)){
                     return loJSONApprover;
                 } else {
                     if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
-                        params.put("sApproved", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
+                        params.put("sApprover", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
                     }
                 }
                 
@@ -2898,7 +2899,7 @@ public class CashDisbursement extends Transaction {
                 params.put("watermarkImagePath", watermarkPath);
                 List<TransactionDetail> Details = new ArrayList<>();
                 List<String> laParticular = new ArrayList<>();
-                String lsParticular = "Cash Advance";
+                String lsParticular = "";
                 for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
                     if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
                         lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular();

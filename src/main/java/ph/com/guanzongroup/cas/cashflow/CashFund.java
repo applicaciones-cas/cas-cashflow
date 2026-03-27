@@ -168,7 +168,7 @@ public class CashFund extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, "error",pbWthParent);
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -225,7 +225,7 @@ public class CashFund extends Parameter {
             }
         }
         
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"),"", lsStatus, false,pbWthParent);
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
