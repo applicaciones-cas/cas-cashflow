@@ -476,7 +476,7 @@ public class CashDisbursement extends Transaction {
         poGRider.commitTrans();
         
         poJSON = new JSONObject();
-        poJSON = setJSON("success", "Transaction approved successfully.");
+        poJSON = setJSON("success", "Transaction confirmed successfully.");
         return poJSON;
     }
     
