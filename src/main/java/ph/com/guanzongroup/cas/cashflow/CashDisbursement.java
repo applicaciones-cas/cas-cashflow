@@ -69,15 +69,12 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
@@ -765,22 +762,22 @@ public class CashDisbursement extends Transaction {
     * it is automatically loaded using {@link #OpenTransaction(String)}.
     * 
     * @param fsIndustry the industry category to filter (required).
-    * @param fsBranch the branch name to filter.
+//    * @param fsBranch the branch name to filter.
     * @param fsPayee the payee name to filter.
-    * @param fsTransactionNo the specific transaction number to search for.
+    * @param fsVoucherNo the specific voucher number to search for.
     * @return a {@link JSONObject} containing the status of the search or the loaded transaction data.
     * @throws CloneNotSupportedException if an error occurs during object cloning.
     * @throws SQLException if a database access error occurs.
     * @throws GuanzonException if business logic or validation fails.
     * @throws ScriptException if an error occurs during script execution.
     */
-    public JSONObject SearchTransaction(String fsIndustry, String fsBranch, String fsPayee, String fsTransactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+    public JSONObject SearchTransaction(String fsIndustry, String fsPayee, String fsVoucherNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         int lnSort = 0;
         if(fsPayee != null && !"".equals(fsPayee)){
             lnSort = 2;
         }
-        if(fsTransactionNo != null && !"".equals(fsTransactionNo)){
+        if(fsVoucherNo != null && !"".equals(fsVoucherNo)){
             lnSort = 0;
         }
         if (fsIndustry == null || "".equals(fsIndustry)) { 
@@ -792,8 +789,8 @@ public class CashDisbursement extends Transaction {
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
-                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%"));
+//                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
+                + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%"));
         
         if(psDepartmentId != null && !"".equals(psDepartmentId)){
             lsSQL = lsSQL +  " AND a.sDeptReqs = " + SQLUtil.toSQL(psDepartmentId);
@@ -804,9 +801,9 @@ public class CashDisbursement extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Payee»Requesting Department",
-                "sTransNox»dTransact»sPayeexxx»sDeptName",
-                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
+                "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
+                "sTransNox»dTransact»sVoucherx»sPayeexxx»sDeptName",
+                "a.sTransNox»a.dTransact»a.sVoucherx»e.sCompnyNm»d.sDeptName",
                 lnSort);
 
         if (poJSON != null) {
@@ -1904,7 +1901,7 @@ public class CashDisbursement extends Transaction {
         paAttachments = new ArrayList<>();
 
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
-        List loList = loAttachment.getAttachments(SOURCE_CODE, Master().getTransactionNo());
+        List loList = loAttachment.getAttachments(Master().getSourceCode(), Master().getSourceNo());
         for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
             paAttachments.add(TransactionAttachment());
             poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
@@ -1923,7 +1920,7 @@ public class CashDisbursement extends Transaction {
                     , "0032" //Constant
                     , "" //Empty
                     , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
-                    , SOURCE_CODE
+                    , Master().getSourceCode()
                     , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
                     , "");
             if (isJSONSuccess(poJSON)) {
