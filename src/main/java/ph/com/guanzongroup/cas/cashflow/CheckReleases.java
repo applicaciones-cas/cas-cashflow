@@ -969,6 +969,13 @@ public class CheckReleases extends Transaction {
     
     public JSONObject printTransaction() {
         
+        if(!Master().getTransactionStatus().equals(CheckReleaseStatus.CONFIRMED)){
+            JSONObject loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printing");
+            return loJSON;
+        }
+        
         if(Master().isPrintedStatus()){
             try {
                 JSONObject loJSON = new JSONObject();
