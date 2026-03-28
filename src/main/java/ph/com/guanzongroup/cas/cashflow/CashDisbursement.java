@@ -3053,7 +3053,7 @@ public class CashDisbursement extends Transaction {
                     1,
                     lsParticular,
                     "",
-                    Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", ""))
+                    Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotal(), false).replace(",", ""))
             ));
 
             JasperPrint currentPrint = JasperFillManager.fillReport(
