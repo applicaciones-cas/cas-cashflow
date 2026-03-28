@@ -3026,7 +3026,7 @@ public class CashDisbursement extends Transaction {
                     if(lnCtr < laParticular.size()-1){
                         lsParticular = lsParticular + " , " + laParticular.get(lnCtr);
                     } else {
-                        lsParticular = lsParticular + " AND " + laParticular.get(lnCtr);
+                        lsParticular = lsParticular + ", AND " + laParticular.get(lnCtr);
                     }
                 }
             }
