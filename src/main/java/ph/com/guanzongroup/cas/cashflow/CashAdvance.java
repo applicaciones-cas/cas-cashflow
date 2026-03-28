@@ -294,6 +294,8 @@ public class CashAdvance extends Transaction {
     */
     private String setCashFund() throws SQLException, GuanzonException{
         Model_Cash_Fund loObj = new CashflowModels(poGRider).CashFund();
+        int lnCountCashFund = 0;
+        String lsCashFundID = "";
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
                                                                     " sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
@@ -306,15 +308,22 @@ public class CashAdvance extends Transaction {
         try {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
-                    if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
-                        Master().setCashFundId(loRS.getString("sCashFIDx"));
-                    }
+                    lnCountCashFund++;
+                    lsCashFundID = loRS.getString("sCashFIDx") ;
                 }
             }
             MiscUtil.close(loRS);
         } catch (SQLException e) {
             System.out.println("No record loaded.");
         }
+        
+        //BR: Use the Cash Fund ID based on the log in branch and dept ng requesting employee or if 1 Cash Fund ID is defined, use this as the default
+        if(lnCountCashFund == 1){
+            if(lsCashFundID != null && !"".equals(lsCashFundID)){
+                Master().setCashFundId(lsCashFundID);
+            }
+        }
+        
         return "";
     }
     

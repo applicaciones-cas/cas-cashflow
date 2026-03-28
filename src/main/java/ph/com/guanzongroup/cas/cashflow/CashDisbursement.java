@@ -71,12 +71,14 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
+import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
@@ -723,6 +725,49 @@ public class CashDisbursement extends Transaction {
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction cancelled successfully.");
         return poJSON;
+    }
+    
+    /**
+    * Retrieves Cash Fund based on branch, department, company, and industry,
+    * then sets the Cash Fund ID to the model if found.
+    *
+    * @return empty string
+    * @throws SQLException if database error occurs
+    * @throws GuanzonException if application error occurs
+    */
+    private String setCashFund() throws SQLException, GuanzonException{
+        Model_Cash_Fund loObj = new CashflowModels(poGRider).CashFund();
+        int lnCountCashFund = 0;
+        String lsCashFundID = "";
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
+                    " sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                    + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                    + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                    + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
+                    + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
+                    );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    lnCountCashFund++;
+                    lsCashFundID = loRS.getString("sCashFIDx") ;
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        
+        //BR: Use the Cash Fund ID based on the log in branch and dept ng requesting employee or if 1 Cash Fund ID is defined, use this as the default
+        if(lnCountCashFund == 1){
+            if(lsCashFundID != null && !"".equals(lsCashFundID)){
+                Master().setCashFundId(lsCashFundID);
+            }
+        }
+        
+        return "";
     }
     
     /*Search Master References*/
@@ -2072,9 +2117,11 @@ public class CashDisbursement extends Transaction {
     */
     public String getVoucherNo() throws SQLException {
         String lsSQL = "SELECT sVoucherx FROM "+ Master().getTable();
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
-                + " ORDER BY sVoucherx DESC LIMIT 1");
+        //Branch code is not stated in BR
+        //Do not include branch code according to ma'am grace 03/28/2026
+//        lsSQL = MiscUtil.addCondition(lsSQL,
+//                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+        lsSQL = lsSQL + " ORDER BY sVoucherx DESC LIMIT 1";
 
         String branchVoucherNo = CashDisbursementStatus.DEFAULT_VOUCHER_NO;  // default value
 
@@ -2331,8 +2378,9 @@ public class CashDisbursement extends Transaction {
         }
             
         if ((getDetailCount() - 1) >= 0) {
-            if ((Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
-                || Detail(getDetailCount() - 1).getDetailNo() >= 0) {
+            if (((Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
+                || Detail(getDetailCount() - 1).getDetailNo() >= 0)
+                && Detail(getDetailCount() - 1).getAmount() > 0.0000) {
                 AddDetail();
             }
         }
@@ -2481,9 +2529,10 @@ public class CashDisbursement extends Transaction {
             Master().setBranchCode(poGRider.getBranchCode());
             Master().setIndustryId(psIndustryId);
             Master().setCompanyId(psCompanyId);
+            Master().setDepartmentRequest(Master().getDepartmentRequest());
             Master().setTransactionDate(poGRider.getServerDate());
             Master().setTransactionStatus(CashDisbursementStatus.OPEN);
-//            Master().setVoucherNo(getVoucherNo());
+            Master().setVoucherNo(getVoucherNo());
 
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);

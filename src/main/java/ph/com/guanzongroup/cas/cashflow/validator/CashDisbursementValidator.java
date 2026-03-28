@@ -16,6 +16,7 @@ import org.guanzon.appdriver.iface.GValidator;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 
 /**
  *
@@ -155,10 +156,13 @@ public class CashDisbursementValidator implements GValidator {
                 return poJSON;
             }
             
-            if (poMaster.getTransactionTotal() > poMaster.CashFund().getBalance()) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Cash disbursment total cannot be greater than the cash fund balance.");
-                return poJSON;
+            //BR: If NOT Cash Advance, Validate Amount to Disburse <= Cash Fund Balance
+            if(!CashDisbursementStatus.SourceCode.CASHADVANCE.equals(poMaster.getSourceCode())){
+                if (poMaster.getTransactionTotal() > poMaster.CashFund().getBalance()) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Cash disbursment total cannot be greater than the cash fund balance.");
+                    return poJSON;
+                }
             }
             
         } catch (SQLException | GuanzonException ex) {
