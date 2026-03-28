@@ -7,13 +7,16 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.parameter.model.Model_Industry;
+import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_Account_Chart extends Model {
 
     Model_Transaction_Account_Chart poGL;
-
+    Model_Industry poIndustry;
     Model_Account_ChartX poAccountParent;
 
     @Override
@@ -27,7 +30,8 @@ public class Model_Account_Chart extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateString("cRecdStat", RecordStatus.ACTIVE);
+            poEntity.updateString("cRecdStat", "0");
+            poEntity.updateNull("sContraTo");
             //end - assign default values
 
             poEntity.insertRow();
@@ -35,11 +39,15 @@ public class Model_Account_Chart extends Model {
 
             poEntity.absolute(1);
 
-            ID = poEntity.getMetaData().getColumnLabel(1);
+            ID = "sAcctCode";
+            ID2 = "sParentCd";
+            ID3 = "sIndstCde";
 
             CashflowModels model = new CashflowModels(poGRider);
             poGL = model.Transaction_Account_Chart();
             poAccountParent = model.Account_ChartX();
+            
+            poIndustry = new ParamModels(poGRider).Industry();
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -71,30 +79,6 @@ public class Model_Account_Chart extends Model {
     public String getParentAccountCode() {
         return (String) getValue("sParentCd");
     }
-//
-//    public JSONObject isBasedAccount(boolean value) {
-//        return setValue("cBasedAct", value ? "1" : "0");
-//    }
-//
-//    public boolean isBasedAccount() {
-//        return (boolean) getValue("cBasedAct").equals("1");
-//    }
-//
-//    public JSONObject setAccountGroup(String accountGroup) {
-//        return setValue("sAcctGrpx", accountGroup);
-//    }
-//
-//    public String getAccountGroup() {
-//        return (String) getValue("sAcctGrpx");
-//    }
-//
-//    public JSONObject setReportGroup(String reportGroup) {
-//        return setValue("sReprtGrp", reportGroup);
-//    }
-//
-//    public String getReportGroup() {
-//        return (String) getValue("sReprtGrp");
-//    }
 
     public JSONObject setAccountType(String accountType) {
         return setValue("cAcctType", accountType);
@@ -136,22 +120,14 @@ public class Model_Account_Chart extends Model {
         return (String) getValue("sRemarksx");
     }
     
-        public JSONObject isCash(boolean iscash) {
-        return setValue("cIsCashxx", iscash ? "1" : "0");
+    public JSONObject isCash(boolean iscash) {
+    return setValue("cIsCashxx", iscash ? "1" : "0");
     }
     
     public boolean isCash() {
         Object value = getValue("cIsCashxx");
         return "1".equals(String.valueOf(value));
     }
-
-//    public JSONObject setBaseAccount(String balanceType) {
-//        return setValue("cBasedAct", balanceType);
-//    }
-//
-//    public String getBaseAccount() {
-//        return (String) getValue("cBasedAct");
-//    }
 
     public JSONObject setGLCode(String glCode) {
         return setValue("sGLCodexx", glCode);
@@ -192,6 +168,11 @@ public class Model_Account_Chart extends Model {
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
     }
+    
+    @Override
+    public String getNextCode() {
+        return "";
+    }
 
     public Model_Transaction_Account_Chart General_Ledger() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sGLCodexx"))) {
@@ -228,10 +209,31 @@ public class Model_Account_Chart extends Model {
                     poAccountParent.initialize();
                     return poAccountParent;
                 }
-            }
+            }   
         } else {
             poAccountParent.initialize();
             return poAccountParent;
+        }
+    }
+    
+    public Model_Industry Industry() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sIndstCde"))) {
+            if (poIndustry.getEditMode() == EditMode.READY
+                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCde"))) {
+                return poIndustry;
+            } else {
+                poJSON = poIndustry.openRecord((String) getValue("sIndstCde"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poIndustry;
+                } else {
+                    poIndustry.initialize();
+                    return poIndustry;
+                }
+            }
+        } else {
+            poIndustry.initialize();
+            return poIndustry;
         }
     }
 }
