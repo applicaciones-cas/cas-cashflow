@@ -1700,6 +1700,7 @@ public class CashDisbursement extends Transaction {
         Master().setSourceNo(loMaster.getTransactionNo());
         Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
         Master().setDepartmentRequest(loMaster.getDepartmentRequest());
+        Master().setVoucherNo(getVoucherNo());
         computeFields(false);
         
 //        setSearchPayee(loMaster.Payee().getCompanyName());
@@ -1722,6 +1723,7 @@ public class CashDisbursement extends Transaction {
                 + " AND sSourceCD = " + SQLUtil.toSQL(fsSourceCode)
                 + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.CANCELLED)
                 + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.VOID)
+                + " AND sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
         );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -2480,7 +2482,7 @@ public class CashDisbursement extends Transaction {
             Master().setCompanyId(psCompanyId);
             Master().setTransactionDate(poGRider.getServerDate());
             Master().setTransactionStatus(CashDisbursementStatus.OPEN);
-            Master().setVoucherNo(getVoucherNo());
+//            Master().setVoucherNo(getVoucherNo());
 
         } catch (SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
