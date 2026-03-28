@@ -23,6 +23,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -2619,10 +2620,37 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        //Validate Withholding Tax Deductions
+        Double ldblTotalBaseAmount = 0.0000;
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if (WTaxDeduction(lnCtr).getModel().isReverse()
+                    && WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 
+                    && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId()) 
+                    && WTaxDeduction(lnCtr).getModel().getTaxRateId() != null
+                    ) {
+                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                        //validate period
+                        poJSON = checkPeriodDate(lnCtr);
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    }
+                    
+                    ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
+                }
+            }
+        }
+        
+        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
+        if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
+            poJSON = setJSON("error", "Total tax base amount must be equal to net vatable sales.");
+            return poJSON;
+        }
+        
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
-//            String lsSourceNo = (String) item.getValue("sPrtclrID");
             int lnDetailNo = (int) item.getValue("nDetailNo");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
             if ((lsAmount == 0.0000 || lnDetailNo == 0)
@@ -2654,19 +2682,6 @@ public class CashDisbursement extends Transaction {
                     loObject.remove(); // Correctly remove the item
                 } else {
                     item.getModel().isReverse(false);
-                }
-            }
-        }
-        
-        //Validate Withholding Tax Deductions
-        if(Master().getWithTaxTotal() > 0.0000){
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    //validate period
-                    poJSON = checkPeriodDate(lnCtr);
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
                 }
             }
         }
@@ -2963,7 +2978,7 @@ public class CashDisbursement extends Transaction {
             params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
             params.put("sPayeeNme", Master().getPayeeName());
             params.put("sCreditTo", Master().Credited().getCompanyName());
-            params.put("nAdvAmntx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", "")));
+            params.put("nAdvAmntx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotal(), false).replace(",", "")));
 
             //Set Default value to empty to prevent null in display
             params.put("sEncoder","");
