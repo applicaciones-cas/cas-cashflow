@@ -741,9 +741,9 @@ public class CashDisbursement extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Payee»Requesting Department",
-                "sTransNox»dTransact»sPayeexxx»sDeptName",
-                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
+                "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
+                "sTransNox»dTransact»sVoucherx»sPayeexxx»sDeptName",
+                "a.sTransNox»a.dTransact»a.sVoucherx»e.sCompnyNm»d.sDeptName",
                 0);
 
         if (poJSON != null) {
@@ -2591,6 +2591,7 @@ public class CashDisbursement extends Transaction {
         //Re-set the transaction no and voucher no
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
+            Master().setVoucherNo(getVoucherNo());
         }
         
         String lsCashDisbursement = existCashDisbursement(Master().getSourceNo(), Master().getSourceCode());
