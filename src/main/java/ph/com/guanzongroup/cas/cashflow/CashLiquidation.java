@@ -1327,6 +1327,10 @@ public class CashLiquidation extends Transaction {
                         poJSON = setJSON("error", "Transaction date cannot be empty at row "+lnRow+".");
                         return poJSON;
                     }
+                    if(Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular())){
+                        poJSON = setJSON("error", "Particular cannot be empty at row "+lnRow+".");
+                        return poJSON;
+                    }
                 }
             }
         }

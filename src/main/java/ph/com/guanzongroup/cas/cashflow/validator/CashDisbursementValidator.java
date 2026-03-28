@@ -183,7 +183,7 @@ public class CashDisbursementValidator implements GValidator {
         if (poMaster.getVatableSales() > 0.0000) {
             if (poMaster.getWithTaxTotal() <= 0.0000) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Tax amount total cannot be zeros.");
+                poJSON.put("message", "Tax amount total cannot be zero.");
                 return poJSON;
             }
         }
