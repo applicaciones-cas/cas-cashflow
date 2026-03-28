@@ -1023,7 +1023,7 @@ public class CashLiquidation extends Transaction {
      */
     public void copyFile(String fsPath){
         Path source = Paths.get(fsPath);
-        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments");
+        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp.attachments"));
 
         try {
             // Ensure target directory exists
@@ -1038,6 +1038,7 @@ public class CashLiquidation extends Transaction {
             //check if file is existing
             int lnChecker = 0;
             File file = new File(targetDir+ "/" + source.getFileName());
+            System.out.println("File Path : " + file.getPath());
             while(!file.exists() && lnChecker < 5){
                 Files.copy(source, targetDir.resolve(source.getFileName()), StandardCopyOption.REPLACE_EXISTING);  
                 System.out.println("Re-Copying... " + lnChecker);
@@ -1047,9 +1048,10 @@ public class CashLiquidation extends Transaction {
             if(!file.exists()){
                 System.out.println("File did not copy!");
                 return;
+            } else {
+                System.out.println("File copied successfully!");
             } 
             
-            System.out.println("File copied successfully!");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -1206,7 +1208,22 @@ public class CashLiquidation extends Transaction {
                 && (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
                 && (Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular()))) {
                 deleteDetail(lnCtr);
-            } 
+            } else if ((Detail(lnCtr).getORNo() == null || "".equals(Detail(lnCtr).getORNo()))
+                && (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
+                && (Detail(lnCtr).getParticular() == null || "".equals(Detail(lnCtr).getParticular()))){
+                if(Detail(lnCtr).getEditMode() == EditMode.UPDATE){
+                    try {
+                        Model_Cash_Advance_Detail loObj = new CashflowModels(poGRider).CashAdvanceDetail();
+                        loObj.openRecord(Detail(lnCtr).getTransactionNo(),Detail(lnCtr).getEntryNo());
+                        loObj.updateRecord();
+                        loObj.isReverse(false);
+                        Detail().set(lnCtr, loObj); //Set original value
+                    } catch (SQLException | GuanzonException ex) {
+                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                        Detail(lnCtr).isReverse(false);
+                    }
+                } 
+            }
             lnCtr--;
         }
 
@@ -1215,6 +1232,14 @@ public class CashLiquidation extends Transaction {
                 && Detail(getDetailCount() - 1).getTransactionAmount() > 0.00
                 && Detail(getDetailCount() - 1).getTransactionDate() != null 
                 && !"1900-01-01".equals(xsDateShort(Detail(getDetailCount() - 1).getTransactionDate()))
+                && Detail(getDetailCount() - 1).isReverse()
+                ) {
+                AddDetail();
+            } else if (Detail(getDetailCount() - 1).getParticular() != null && !"".equals(Detail(getDetailCount() - 1).getParticular())
+                && Detail(getDetailCount() - 1).getTransactionAmount() > 0.00
+                && Detail(getDetailCount() - 1).getTransactionDate() != null 
+                && !"1900-01-01".equals(xsDateShort(Detail(getDetailCount() - 1).getTransactionDate()))
+                && !Detail(getDetailCount() - 1).isReverse()
                 ) {
                 AddDetail();
             }
@@ -1341,8 +1366,16 @@ public class CashLiquidation extends Transaction {
             String lsSourceNo = (String) item.getValue("sPartculr");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nTranAmtx")));
             if ((lsAmount == 0.0000 || "".equals(lsSourceNo) || lsSourceNo == null)
-                && item.getEditMode() == EditMode.ADDNEW ){
-                detail.remove(); // Correctly remove the item
+                ){
+                if(item.getEditMode() == EditMode.ADDNEW ){
+                    detail.remove(); // Correctly remove the item
+                } else {
+                    Model_Cash_Advance_Detail loObj = new CashflowModels(poGRider).CashAdvanceDetail();
+                    loObj.openRecord((String) item.getValue("sTransNox"),(int) item.getValue("nEntryNox"));
+                    loObj.updateRecord();
+                    loObj.isReverse(false);
+                    Detail().set((int) item.getValue("nEntryNox"), loObj); //Set original value 
+                }
             }
         }
         
@@ -1396,7 +1429,7 @@ public class CashLiquidation extends Transaction {
                     Path source = Paths.get(fsFilePath);
                     try {
                         // Copy file into the target directory with a new name
-                        Path target = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments").resolve(lsNewFileName);
+                        Path target = Paths.get(System.getProperty("sys.default.path.temp.attachments")).resolve(lsNewFileName);
                         Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
                         //check if file is existing
                         int lnChecker = 0;

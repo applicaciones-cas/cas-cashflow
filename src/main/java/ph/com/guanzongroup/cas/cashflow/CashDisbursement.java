@@ -2593,6 +2593,12 @@ public class CashDisbursement extends Transaction {
             Master().setTransactionNo(Master().getNextCode());
         }
         
+        String lsCashDisbursement = existCashDisbursement(Master().getSourceNo(), Master().getSourceCode());
+        if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
+            poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement.\nKindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
+            return poJSON;
+        }
+        
         poJSON = isEntryOkay(Master().getTransactionStatus());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
