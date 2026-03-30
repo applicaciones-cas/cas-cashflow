@@ -1122,9 +1122,16 @@ public class CashDisbursement extends Transaction {
                     if(fsParticular.equals(Detail(lnCtr).getParticularId())){
                         if(!Detail(lnCtr).isReverse()){
                             Detail(lnCtr).isReverse(true);
+                            Detail(lnCtr).setReferNo(Detail(fnRow).getReferNo());
+                            Detail(lnCtr).setAmount(Detail(fnRow).getAmount());
+                            Detail(lnCtr).setDetailVatAmount(Detail(fnRow).getDetailVatAmount());
+                            Detail(lnCtr).setDetailVatExempt(Detail(fnRow).getDetailVatExempt());
+                            Detail(lnCtr).setDetailVatRate(Detail(fnRow).getDetailVatRate());
+                            Detail(lnCtr).setDetailVatSales(Detail(fnRow).getDetailVatSales());
+                            Detail(lnCtr).setDetailZeroVat(Detail(fnRow).getDetailZeroVat());
 
                             //Reset value of the current selected row
-                            Detail(fnRow).setParticularId("");
+                            Detail().remove(fnRow);
                             poJSON.put("result", "success");
                             poJSON.put("row", lnCtr);
                             return poJSON;
