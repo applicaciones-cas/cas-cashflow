@@ -38,7 +38,7 @@ public class Model_Cash_Disbursement_Detail extends Model {
             //assign default values
             poEntity.updateNull("dModified");
             poEntity.updateObject("nEntryNox", 0);
-            poEntity.updateObject("nDetailNo", 0);
+//            poEntity.updateObject("nDetailNo", 0);
             poEntity.updateObject("nAmountxx", 0.0000);
             poEntity.updateObject("nDetVatSl", 0.0000);
             poEntity.updateObject("nDetVatRa", 0.0000);
@@ -90,12 +90,20 @@ public class Model_Cash_Disbursement_Detail extends Model {
         return (int) getValue("nEntryNox");
     }
     
-    public JSONObject setDetailNo(int detailNo){
-        return setValue("nDetailNo", detailNo);
+//    public JSONObject setDetailNo(int detailNo){
+//        return setValue("nDetailNo", detailNo);
+//    }
+//
+//    public int getDetailNo() {
+//        return (int) getValue("nDetailNo");
+//    }
+    
+    public JSONObject setReferNo(String referNo) {
+        return setValue("sReferNox", referNo);
     }
 
-    public int getDetailNo() {
-        return (int) getValue("nDetailNo");
+    public String getReferNo() {
+        return (String) getValue("sReferNox");
     }
 
     public JSONObject setParticularId(String accountCode) {
@@ -220,13 +228,13 @@ public class Model_Cash_Disbursement_Detail extends Model {
     }
     
     public Model_Cash_Advance_Detail CashAdvanceDetail(String fsSourceNo) throws SQLException, GuanzonException{
-        if(fsSourceNo != null && !"".equals(fsSourceNo) && (int) getValue("nDetailNo") > 0){
+        if(fsSourceNo != null && !"".equals(fsSourceNo) && (int) getValue("nEntryNox") > 0){
             if (poCashAdvanceDetail.getEditMode() == EditMode.READY
                     && poCashAdvanceDetail.getTransactionNo().equals(fsSourceNo)
-                    && poCashAdvanceDetail.getEntryNo() == (int) getValue("nDetailNo")) {
+                    && poCashAdvanceDetail.getEntryNo() == (int) getValue("nEntryNox")) {
                 return poCashAdvanceDetail;
             } else {
-                poJSON = poCashAdvanceDetail.openRecord(fsSourceNo,(int) getValue("nDetailNo"));
+                poJSON = poCashAdvanceDetail.openRecord(fsSourceNo,(int) getValue("nEntryNox"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poCashAdvanceDetail;
