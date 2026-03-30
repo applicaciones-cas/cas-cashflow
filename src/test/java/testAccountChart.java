@@ -106,7 +106,7 @@ public class testAccountChart {
         try {
             JSONObject loJSON;
             
-            loJSON = record.openRecord("1010999");
+            loJSON = record.openRecord("1010995");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             }
