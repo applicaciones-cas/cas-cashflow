@@ -1539,14 +1539,14 @@ public class CashDisbursement extends Transaction {
         poJSON = new JSONObject();
         Double ldblAmount = Detail(fnRow).getAmount();
         Double ldblVATExempt = Detail(fnRow).getDetailVatExempt();
-        Double ldblVATSales = 0.0000;
+        Double ldblVATSales = Detail(fnRow).getDetailVatSales();
         Double ldblVATAmount = 0.0000;
         
         if(ldblVATExempt < 0.0000){
             poJSON = setJSON("error", "Vat Exempt amount cannot be negative.");
             return poJSON;
         }
-
+        
         if(ldblVATExempt > 0.0000 && ldblVATExempt < ldblAmount){
             ldblAmount = ldblAmount - ldblVATExempt;
             ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
@@ -1554,7 +1554,7 @@ public class CashDisbursement extends Transaction {
 
             Detail(fnRow).setDetailVatAmount(ldblVATAmount);
             Detail(fnRow).setDetailVatSales(ldblVATSales);
-        } else if(ldblVATExempt == 0.0000){
+        } else if(ldblVATExempt == 0.0000 && ldblVATSales > 0.0000){
             ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
             ldblVATSales = ldblAmount - ldblVATAmount;
 
