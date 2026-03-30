@@ -1744,6 +1744,7 @@ public class CashDisbursement extends Transaction {
             Detail(getDetailCount()-1).setReferNo(loDetail.getORNo());
             Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
             Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
+            Detail(getDetailCount()-1).setEntryNo(getDetailCount());
         }
         MiscUtil.close(loRS);
         
@@ -2371,6 +2372,7 @@ public class CashDisbursement extends Transaction {
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
             if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
+                && (Detail(lnCtr).getReferNo() == null || "".equals(Detail(lnCtr).getReferNo()))
                && (Master().getSourceCode() == null || "".equals(Master().getSourceCode()))) {
                 deleteDetail(lnCtr);
             } 
