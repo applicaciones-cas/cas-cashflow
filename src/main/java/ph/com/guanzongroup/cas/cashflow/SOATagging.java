@@ -564,8 +564,10 @@ public class SOATagging extends Transaction {
         }
 
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                                                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+//                                                    " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+//                                                    + " AND "
+                                                            " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
         if (lsTransStat != null && !"".equals(lsTransStat)) {
             lsSQL = lsSQL + lsTransStat;
         }
@@ -622,8 +624,10 @@ public class SOATagging extends Transaction {
         }
 
         initSQL();
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
-                                                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+//                                                    " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
+//                                                    + " AND "
+                                                            "a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
 //                + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + sReferenceNo));
@@ -862,8 +866,10 @@ public class SOATagging extends Transaction {
             }
 
             initSQL();
-            String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
-                    + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+            String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+//                    " a.sIndstCdx = " + SQLUtil.toSQL(industryId)
+//                    + " AND"
+                     " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
 //                    + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                     + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                     + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + referenceNo)
@@ -1213,6 +1219,7 @@ public class SOATagging extends Transaction {
         poJSON.put("row", 0);
         int lnCtr = 0;
         int lnRow = getDetailCount() - 1;
+        String lsIndustryId = "";
         String lsCompanyId = "";
         String lsClientId = "";
         String lsIssuedTo = "";
@@ -1249,7 +1256,7 @@ public class SOATagging extends Transaction {
                     poJSON.put("row", 0);
                     return poJSON;
                 }
-
+                lsIndustryId = loPaymentRequest.Master().getIndustryID();
                 lsCompanyId = loPaymentRequest.Master().getCompanyID();
                 lsIssuedTo = loPaymentRequest.Master().getPayeeID();
                 lsTransNo = loPaymentRequest.Master().getTransactionNo();
@@ -1315,6 +1322,7 @@ public class SOATagging extends Transaction {
                     }
                 }
                 
+                lsIndustryId = loCachePayable.Master().getIndustryCode();
                 lsCompanyId = loCachePayable.Master().getCompanyId();
                 lsClientId = loCachePayable.Master().getClientId();
                 lsTransNo = loCachePayable.Master().getSourceNo();
@@ -1355,6 +1363,26 @@ public class SOATagging extends Transaction {
                 break;
         }
         
+        //O3302026 - Rsie
+        if(Master().getIndustryId() == null || "".equals(Master().getIndustryId())){
+                Master().setIndustryId(lsIndustryId);
+        } else {
+            if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
+                && Detail(getDetailCount() - 1).getAppliedAmount().doubleValue() <= 0.0000
+                && getDetailCount() <= 1
+                && getEditMode() == EditMode.ADDNEW){
+                Master().setIndustryId(lsIndustryId);
+            } else {
+                if (!Master().getIndustryId().equals(lsIndustryId)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Selected transaction industry must be equal to current industry in soa.");
+                    poJSON.put("row", lnCtr);
+                    return poJSON;
+                }
+            }
+        }
+        System.out.println("Industry ID : " + Master().getIndustryId());
+        
         if(ldblBalance <= 0.0000){
             poJSON.put("result", "error");
             poJSON.put("message", "No remaining balance for the selected transaction.\n\nContact System Administrator to address the issue.");
@@ -1372,7 +1400,7 @@ public class SOATagging extends Transaction {
                 return poJSON;
             }
         }
-
+        
         if (Master().getClientId() == null || "".equals(Master().getClientId())) {
             Master().setClientId(lsClientId);
         }
@@ -2562,8 +2590,9 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
+//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+//                + " AND "
+                + " a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -2588,8 +2617,9 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+//                + " AND "
+                + " a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
@@ -2617,8 +2647,9 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
+//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+//                + " AND "
+                + " a.cTranStat = " + SQLUtil.toSQL(CachePayableStatus.CONFIRMED) 
                 + " AND a.nAmtPaidx < a.nNetTotal "
                 + " AND b.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
@@ -2646,8 +2677,9 @@ public class SOATagging extends Transaction {
                 + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
-                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
-                + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+//                + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+//                + " AND "
+                + " a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
                 + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
                 + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
