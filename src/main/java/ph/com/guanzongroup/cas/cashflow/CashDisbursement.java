@@ -1067,11 +1067,10 @@ public class CashDisbursement extends Transaction {
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
-            JSONObject loJSON = setDetail(row, Detail(row).getParticularId());
+            JSONObject loJSON = setDetail(row, object.getModel().getParticularID());
             if (!isJSONSuccess(loJSON)) {
                 return poJSON;
             }
-            System.out.println("Account : " +  Detail(row).Particular().getDescription());
         }
         
         poJSON.put("success", "success");
@@ -1140,7 +1139,7 @@ public class CashDisbursement extends Transaction {
             poJSON.put("row", fnRow);
             return poJSON;
         }
-        
+        System.out.println("Particular : " + Detail(fnRow).Particular().getDescription());
         poJSON.put("result", "success");
         poJSON.put("row", fnRow);
         return poJSON;
@@ -1723,19 +1722,6 @@ public class CashDisbursement extends Transaction {
 
         removeDetails(); // Remove all details
         
-        while (loRS.next()) {
-            poJSON = loDetail.openRecord(loRS.getString("sTransNox"),loRS.getInt("nEntryNox"));
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
-            ReloadDetail();
-            System.out.println("Detail Count : " + getDetailCount());
-            Detail(getDetailCount()-1).setDetailNo(loDetail.getEntryNo());
-            Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
-            Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
-        }
-        MiscUtil.close(loRS);
-        
         //Populate Master
         Master().setIndustryId(loMaster.getIndustryId());
         Master().setCompanyId(loMaster.getCompanyId());
@@ -1747,6 +1733,20 @@ public class CashDisbursement extends Transaction {
         Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
         Master().setDepartmentRequest(loMaster.getDepartmentRequest());
         Master().setVoucherNo(getVoucherNo());
+        
+        while (loRS.next()) {
+            poJSON = loDetail.openRecord(loRS.getString("sTransNox"),loRS.getInt("nEntryNox"));
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            AddDetail();
+            System.out.println("Detail Count : " + getDetailCount());
+            Detail(getDetailCount()-1).setReferNo(loDetail.getORNo());
+            Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
+            Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
+        }
+        MiscUtil.close(loRS);
+        
         computeFields(false);
         
 //        setSearchPayee(loMaster.Payee().getCompanyName());
@@ -2174,7 +2174,7 @@ public class CashDisbursement extends Transaction {
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
             if ((Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId()))
-                && (Detail(getDetailCount() - 1).getDetailNo() == 0)){
+                && (Master().getSourceNo() == null || "".equals(Master().getSourceNo()))){
                 poJSON = new JSONObject();
                 poJSON = setJSON("error", "Last row has empty item.");
                 return poJSON;
@@ -2371,16 +2371,18 @@ public class CashDisbursement extends Transaction {
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
             if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
-               && (Detail(lnCtr).getDetailNo() == 0)) {
+               && (Master().getSourceCode() == null || "".equals(Master().getSourceCode()))) {
                 deleteDetail(lnCtr);
             } 
             lnCtr--;
         }
             
         if ((getDetailCount() - 1) >= 0) {
-            if (((Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
-                || Detail(getDetailCount() - 1).getDetailNo() >= 0)
-                && Detail(getDetailCount() - 1).getAmount() > 0.0000) {
+            if (
+                (Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
+                && Detail(getDetailCount() - 1).getAmount() > 0.0000
+                && (Master().getSourceCode() == null || "".equals(Master().getSourceCode()))
+                ) {
                 AddDetail();
             }
         }
@@ -2700,9 +2702,9 @@ public class CashDisbursement extends Transaction {
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
-            int lnDetailNo = (int) item.getValue("nDetailNo");
+            String lsDetailNo = (String) item.getValue("sPrtclrID");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if ((lsAmount == 0.0000 || lnDetailNo == 0)
+            if ((lsAmount == 0.0000 || (lsDetailNo == null || "".equals(lsDetailNo)))
                 && item.getEditMode() == EditMode.ADDNEW ){
                 detail.remove(); // Correctly remove the item
             }
