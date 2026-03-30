@@ -1770,6 +1770,9 @@ public class CashDisbursement extends Transaction {
      * @throws SQLException 
      */
     public String existCashDisbursement(String fsSourceNo, String fsSourceCode) throws SQLException{
+        if(fsSourceNo == null || "".equals(fsSourceNo)){
+            return "";
+        }
         Model_Cash_Disbursement loMaster = new CashflowModels(poGRider).CashDisbursementMaster();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         lsSQL = MiscUtil.addCondition(lsSQL,
