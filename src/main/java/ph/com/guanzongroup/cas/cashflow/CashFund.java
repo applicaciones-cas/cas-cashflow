@@ -480,12 +480,12 @@ public class CashFund extends Parameter {
     */
     public JSONObject searchCustodian(String value, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        String lsFinance = getFinanceDepartment();
-        
-        if(lsFinance == null || "".equals(lsFinance)){
-            poJSON = setJSON("error", "No Finance Department.\nPlease contact System Administration.");
-            return poJSON;
-        }
+//        String lsFinance = getFinanceDepartment();
+//        
+//        if(lsFinance == null || "".equals(lsFinance)){
+//            poJSON = setJSON("error", "No Finance Department.\nPlease contact System Administration.");
+//            return poJSON;
+//        }
         
         String lsSQL = "SELECT " 
                 + "   a.sEmployID "
@@ -495,7 +495,7 @@ public class CashFund extends Parameter {
                 + " FROM Employee_Master001 a" //GGC_ISysDBF.
                 + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
-                                               + " AND a.sDeptIDxx = " + SQLUtil.toSQL(lsFinance)
+                                               + " AND a.sDeptIDxx = " + SQLUtil.toSQL( System.getProperty("sys.dept.finance"))
 //                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
                                             );
         lsSQL = lsSQL + " GROUP BY sEmployID ";

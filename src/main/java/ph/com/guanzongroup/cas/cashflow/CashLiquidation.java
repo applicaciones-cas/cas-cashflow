@@ -399,29 +399,29 @@ public class CashLiquidation extends Transaction {
         return poJSON;
     }
     
-    public String getFinanceDepartment() throws SQLException, GuanzonException{
-        Model_Department loObj = new ParamModels(poGRider).Department();
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
-                                                                    " ( sDeptName LIKE '%Finance%' "
-                                                                    + " OR sDeptName LIKE '%Accounting%' )"
-                                                                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
-                                                                    );
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        try {
-            if (MiscUtil.RecordCount(loRS) > 0) {
-                if(loRS.next()){
-                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
-                        return loRS.getString("sDeptIDxx");
-                    }
-                }
-            }
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            System.out.println("No record loaded.");
-        }
-        return "";
-    }
+//    public String getFinanceDepartment() throws SQLException, GuanzonException{
+//        Model_Department loObj = new ParamModels(poGRider).Department();
+//        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
+//                                                                    " ( sDeptName LIKE '%Finance%' "
+//                                                                    + " OR sDeptName LIKE '%Accounting%' )"
+//                                                                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
+//                                                                    );
+//        System.out.println("Executing SQL: " + lsSQL);
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//        try {
+//            if (MiscUtil.RecordCount(loRS) > 0) {
+//                if(loRS.next()){
+//                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+//                        return loRS.getString("sDeptIDxx");
+//                    }
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            System.out.println("No record loaded.");
+//        }
+//        return "";
+//    }
     
     public double getCashAdvanceBalance(){
         return Master().getAdvanceAmount() - Master().getLiquidationTotal();
@@ -473,9 +473,62 @@ public class CashLiquidation extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Payee»Requesting Department",
-                "sTransNox»dTransact»sPayeexxx»sDeptName",
-                "a.sTransNox»a.dTransact»e.sCompnyNm»d.sDeptName",
+                "Transaction No»Transaction Date»Payee»Branch»Requesting Department",
+                "sTransNox»dTransact»sPayeexxx»sBranchNm»sDeptName",
+                "a.sTransNox»a.dTransact»e.sCompnyNm»g.sBranchNm»d.sDeptName",
+                lnSort);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON = setJSON("error", "No record loaded.");
+            return poJSON;
+        }
+    }
+    /**
+     * Searches for transactions based on various filters and displays a selection dialog.
+     * <p>
+     * Filters include industry, branch, payee, and transaction number. If a record is selected 
+     * from the browse dialog, the method automatically calls {@link #OpenTransaction(String)} 
+     * to load the data.
+     * 
+     * @param fsPayee Payee name filter.
+     * @param fsTransactionNo Transaction number filter.
+     * @return A {@link JSONObject} containing the loaded transaction or an error message if no record is selected.
+     * @throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException 
+     *          If an error occurs during SQL construction, record browsing, or data retrieval.
+     */
+    public JSONObject SearchTransaction( String fsPayee, String fsTransactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+        poJSON = new JSONObject();
+        int lnSort = 0;
+        if(fsPayee != null && !"".equals(fsPayee)){
+            lnSort = 2;
+        }
+        if(fsTransactionNo != null && !"".equals(fsTransactionNo)){
+            lnSort = 0;
+        }
+        initSQL();
+        
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
+                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
+                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%"));
+        
+        //Kung accounting yung dept ni user makikita lahat else kung hindi mag base sa department ng user - ma'am grace 03/26/2026 3:51pm
+        if(!poGRider.getDepartment().equals( System.getProperty("sys.dept.finance"))){
+            lsSQL = lsSQL + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                    +  " AND a.sDeptReqs = " + SQLUtil.toSQL(poGRider.getDepartment());
+        }
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
+        System.out.println("Executing SQL: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction No»Transaction Date»Payee»Branch»Requesting Department",
+                "sTransNox»dTransact»sPayeexxx»sBranchNm»sDeptName",
+                "a.sTransNox»a.dTransact»e.sCompnyNm»g.sBranchNm»d.sDeptName",
                 lnSort);
 
         if (poJSON != null) {

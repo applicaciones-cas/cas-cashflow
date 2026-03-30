@@ -848,9 +848,9 @@ public class CashDisbursement extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 "",
-                "Transaction No»Transaction Date»Voucher No»Payee»Requesting Department",
-                "sTransNox»dTransact»sVoucherx»sPayeexxx»sDeptName",
-                "a.sTransNox»a.dTransact»a.sVoucherx»e.sCompnyNm»d.sDeptName",
+                "Transaction No»Transaction Date»Voucher No»Payee»Branch»Requesting Department",
+                "sTransNox»dTransact»sVoucherx»sPayeexxx»sBranchNm»sDeptName",
+                "a.sTransNox»a.dTransact»a.sVoucherx»e.sCompnyNm»g.sBranchNm»d.sDeptName",
                 lnSort);
 
         if (poJSON != null) {
