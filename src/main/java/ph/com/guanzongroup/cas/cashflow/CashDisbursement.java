@@ -1547,20 +1547,26 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        if(ldblVATExempt > 0.0000 && ldblVATExempt < ldblAmount){
-            ldblAmount = ldblAmount - ldblVATExempt;
-            ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
-            ldblVATSales = ldblAmount - ldblVATAmount;
+        if(Detail(fnRow).getReferNo() != null && !"".equals(Detail(fnRow).getReferNo())){
+            if(ldblVATExempt > 0.0000 && ldblVATExempt < ldblAmount){
+                ldblAmount = ldblAmount - ldblVATExempt;
+                ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
+                ldblVATSales = ldblAmount - ldblVATAmount;
 
-            Detail(fnRow).setDetailVatAmount(ldblVATAmount);
-            Detail(fnRow).setDetailVatSales(ldblVATSales);
-        } else if(ldblVATExempt == 0.0000 && ldblVATSales > 0.0000){
-            ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
-            ldblVATSales = ldblAmount - ldblVATAmount;
+                Detail(fnRow).setDetailVatAmount(ldblVATAmount);
+                Detail(fnRow).setDetailVatSales(ldblVATSales);
+            } else if(ldblVATExempt == 0.0000){
+                ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
+                ldblVATSales = ldblAmount - ldblVATAmount;
 
-            Detail(fnRow).setDetailVatAmount(ldblVATAmount);
-            Detail(fnRow).setDetailVatSales(ldblVATSales);
-            Detail(fnRow).setDetailVatExempt(0.0000);
+                Detail(fnRow).setDetailVatAmount(ldblVATAmount);
+                Detail(fnRow).setDetailVatSales(ldblVATSales);
+                Detail(fnRow).setDetailVatExempt(0.0000);
+            } else {
+                Detail(fnRow).setDetailVatAmount(0.0000);
+                Detail(fnRow).setDetailVatSales(0.0000);
+                Detail(fnRow).setDetailVatExempt(ldblAmount);
+            }
         } else {
             Detail(fnRow).setDetailVatAmount(0.0000);
             Detail(fnRow).setDetailVatSales(0.0000);
@@ -2703,12 +2709,12 @@ public class CashDisbursement extends Transaction {
                     ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
                 }
             }
-        }
-        
-        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
-        if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
-            poJSON = setJSON("error", "Total tax base amount must be equal to net vatable sales.");
-            return poJSON;
+            
+            double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
+            if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
+                poJSON = setJSON("error", "Total tax base amount must be equal to net vatable sales.");
+                return poJSON;
+            }
         }
         
         Iterator<Model> detail = Detail().iterator();
