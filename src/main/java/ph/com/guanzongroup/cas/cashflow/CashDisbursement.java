@@ -791,10 +791,6 @@ public class CashDisbursement extends Transaction {
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-//                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
-//                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-//                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
-//                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo + "%")
                 );
         lsSQL = lsSQL + " GROUP BY a.sTransNox ";
         System.out.println("Executing SQL: " + lsSQL);
@@ -823,7 +819,6 @@ public class CashDisbursement extends Transaction {
     * it is automatically loaded using {@link #OpenTransaction(String)}.
     * 
     * @param fsIndustry the industry category to filter (required).
-//    * @param fsBranch the branch name to filter.
     * @param fsPayee the payee name to filter.
     * @param fsVoucherNo the specific voucher number to search for.
     * @return a {@link JSONObject} containing the status of the search or the loaded transaction data.
@@ -850,7 +845,6 @@ public class CashDisbursement extends Transaction {
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-//                + " AND g.sBranchNm LIKE " + SQLUtil.toSQL("%" + fsBranch + "%")
                 + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%"));
         
         if(psDepartmentId != null && !"".equals(psDepartmentId)){
@@ -1077,6 +1071,10 @@ public class CashDisbursement extends Transaction {
     * @throws GuanzonException If an application-level error occurs.
     */
     public JSONObject SearchParticular(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        poJSON = validateMaster();
+        if(!isJSONSuccess(poJSON)){
+            return poJSON;
+        }
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
@@ -1088,6 +1086,45 @@ public class CashDisbursement extends Transaction {
         }
         
         poJSON.put("success", "success");
+        return poJSON;
+    }
+    /**
+    * Validates required fields in the Master object.
+    *
+    * @return JSONObject with "error" and message if a field is empty,
+    *         or "success" if all fields are valid.
+    */
+    public JSONObject validateMaster(){
+        poJSON = new JSONObject();
+            if(Master().getIndustryId() == null || "".equals(Master().getIndustryId())){
+                poJSON = setJSON("error", "Industry cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getCompanyId() == null || "".equals(Master().getCompanyId())){
+                poJSON = setJSON("error", "Company cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getBranchCode() == null || "".equals(Master().getBranchCode())){
+                poJSON = setJSON("error", "Branch cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getDepartmentRequest() == null || "".equals(Master().getDepartmentRequest())){
+                poJSON = setJSON("error", "Department cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getCashFundId() == null || "".equals(Master().getCashFundId())){
+                poJSON = setJSON("error", "Cash fund cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getPayeeName() == null || "".equals(Master().getPayeeName())){
+                poJSON = setJSON("error", "Payee cannot be empty.");
+                return poJSON;
+            }
+            if(Master().getCreditedTo() == null || "".equals(Master().getCreditedTo())){
+                poJSON = setJSON("error", "Credited to cannot be empty.");
+                return poJSON;
+            }
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
     /**
@@ -1777,10 +1814,6 @@ public class CashDisbursement extends Transaction {
         
         computeFields(false);
         
-//        setSearchPayee(loMaster.Payee().getCompanyName());
-//        setSearchBranch(loMaster.Branch().getBranchName());
-//        setSearchIndustry(loMaster.Industry().getDescription());
-        
         return poJSON;
     }
     
@@ -1996,7 +2029,6 @@ public class CashDisbursement extends Transaction {
                 lsSQL = MiscUtil.addCondition(lsSQL,
                         " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                         + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-//                        + " AND cReversex = " + SQLUtil.toSQL(CashDisbursementStatus.Reverse.INCLUDE)
                 );
                 System.out.println("Executing SQL: " + lsSQL);
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -2782,12 +2814,6 @@ public class CashDisbursement extends Transaction {
                 poJSON.put("message", "Debit should be equal to credit amount.");
                 return poJSON;
             }
-
-    //        if(ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()){
-    //            poJSON.put("result", "error");
-    //            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
-    //            return poJSON;
-    //        }
         }
         
         
@@ -2940,6 +2966,7 @@ public class CashDisbursement extends Transaction {
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
+        //Save attachment only for manual entry
         if(Master().getSourceNo() == null || "".equals(Master().getSourceNo())){
             //assign other info on attachment
             for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
