@@ -278,6 +278,12 @@ public class CashDisbursement extends Transaction {
             poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
+        
+        poJSON = loadAttachments();
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction attachments.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
 
        poJSON = setJSON("success","success");
        return poJSON;
@@ -1071,10 +1077,10 @@ public class CashDisbursement extends Transaction {
     * @throws GuanzonException If an application-level error occurs.
     */
     public JSONObject SearchParticular(String value, boolean byCode, int row) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        poJSON = validateMaster();
-        if(!isJSONSuccess(poJSON)){
-            return poJSON;
-        }
+//        poJSON = validateMaster();
+//        if(!isJSONSuccess(poJSON)){
+//            return poJSON;
+//        }
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
@@ -2095,9 +2101,17 @@ public class CashDisbursement extends Transaction {
             GuanzonException {
         poJSON = new JSONObject();
         paAttachments = new ArrayList<>();
-
+        String lsSourceCode = "";
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
-        List loList = loAttachment.getAttachments(Master().getSourceCode(), Master().getSourceNo());
+        List loList;
+        if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
+            loList = loAttachment.getAttachments(Master().getSourceCode(), Master().getSourceNo());
+            lsSourceCode = Master().getSourceCode();
+        } else {
+            loList = loAttachment.getAttachments(getSourceCode(), Master().getTransactionNo());
+            lsSourceCode = getSourceCode();
+        }
+        
         for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
             paAttachments.add(TransactionAttachment());
             poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
@@ -2116,7 +2130,7 @@ public class CashDisbursement extends Transaction {
                     , "0032" //Constant
                     , "" //Empty
                     , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getFileName()
-                    , Master().getSourceCode()
+                    , lsSourceCode
                     , paAttachments.get(getTransactionAttachmentCount() - 1).getModel().getSourceNo()
                     , "");
             if (isJSONSuccess(poJSON)) {
