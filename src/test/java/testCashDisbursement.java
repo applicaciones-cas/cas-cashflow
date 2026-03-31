@@ -222,7 +222,7 @@ public class testCashDisbursement {
                 print("getEntryNo : " + poController.Detail(lnCtr).getEntryNo());
                 print("getParticularId : " + poController.Detail(lnCtr).getParticularId());
                 print("getAmount : " + poController.Detail(lnCtr).getAmount());
-                print("getDetailNo : " + poController.Detail(lnCtr).getDetailNo());
+                print("getReferNo : " + poController.Detail(lnCtr).getReferNo());
             }
             print("--------------------------------------------------------");
 
@@ -282,7 +282,7 @@ public class testCashDisbursement {
                 print("getEntryNo : " + poController.Detail(lnCtr).getEntryNo());
                 print("getParticularId : " + poController.Detail(lnCtr).getParticularId());
                 print("getAmount : " + poController.Detail(lnCtr).getAmount());
-                print("getDetailNo : " + poController.Detail(lnCtr).getDetailNo());
+                print("getReferNo : " + poController.Detail(lnCtr).getReferNo());
             }
             print("--------------------------------------------------------");
 
