@@ -2689,6 +2689,18 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        //Validate Detail
+        for(int lnCtr = 0;lnCtr <= getDetailCount()-1;lnCtr++){
+            if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
+                ){
+                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo()) 
+                    || Detail(lnCtr).getAmount() > 0.0000){
+                    poJSON = setJSON("error", "Particular cannot be empty at row " + (lnCtr+1) );
+                    return poJSON;
+                }
+            }
+        }
+        
         //Validate Withholding Tax Deductions
         Double ldblTotalBaseAmount = 0.0000;
         if(Master().getWithTaxTotal() > 0.0000){
