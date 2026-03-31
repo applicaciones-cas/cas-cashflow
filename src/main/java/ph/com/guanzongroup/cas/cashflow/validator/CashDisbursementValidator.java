@@ -120,17 +120,17 @@ public class CashDisbursementValidator implements GValidator {
                 return poJSON;
             }
             
-            if (poMaster.getSourceNo() == null || "".equals(poMaster.getSourceNo())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Source no cannot be empty");
-                return poJSON;
-            }
-            
-            if (poMaster.getSourceCode() == null || "".equals(poMaster.getSourceCode())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Source code cannot be empty");
-                return poJSON;
-            }
+//            if (poMaster.getSourceNo() == null || "".equals(poMaster.getSourceNo())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Source no cannot be empty");
+//                return poJSON;
+//            }
+//            
+//            if (poMaster.getSourceCode() == null || "".equals(poMaster.getSourceCode())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Source code cannot be empty");
+//                return poJSON;
+//            }
             
             if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
                 poJSON.put("result", "error");
