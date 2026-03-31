@@ -2734,9 +2734,12 @@ public class CashDisbursement extends Transaction {
             Model item = detail.next(); // Store the item before checking conditions
             String lsDetailNo = (String) item.getValue("sPrtclrID");
             double lsAmount = Double.parseDouble(String.valueOf(item.getValue("nAmountxx")));
-            if ((lsAmount == 0.0000 || (lsDetailNo == null || "".equals(lsDetailNo)))
-                && item.getEditMode() == EditMode.ADDNEW ){
-                detail.remove(); // Correctly remove the item
+            if ((lsAmount == 0.0000 || (lsDetailNo == null || "".equals(lsDetailNo)))){
+                if(item.getEditMode() == EditMode.ADDNEW){
+                    detail.remove(); // Correctly remove the item
+                } else {
+                    item.setValue("cReversex", CashDisbursementStatus.Reverse.EXCLUDE);
+                }
             }
         }
         
@@ -3125,7 +3128,11 @@ public class CashDisbursement extends Transaction {
                     if(lnCtr < laParticular.size()-1){
                         lsParticular = lsParticular + " , " + laParticular.get(lnCtr);
                     } else {
-                        lsParticular = lsParticular + ", AND " + laParticular.get(lnCtr);
+                        if(lnCtr > 2){
+                            lsParticular = lsParticular + ", AND " + laParticular.get(lnCtr);
+                        } else {
+                            lsParticular = lsParticular + " AND " + laParticular.get(lnCtr);
+                        }
                     }
                 }
             }
