@@ -13,22 +13,23 @@ import org.guanzon.appdriver.base.GRiderCAS;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.iface.GValidator;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 
 /**
  *
- * @author Aldrich & Arsiela 02/03/2026
+ * @author Arsiela 03-24-2026
  */
-public class CashAdvanceValidator implements GValidator {
+public class CashDisbursementValidator implements GValidator {
 
     GRiderCAS poGrider;
     String psTranStat;
     JSONObject poJSON;
 
-    Model_Cash_Advance poMaster;
-    ArrayList<Model_Cash_Advance> poDetail;
+    Model_Cash_Disbursement poMaster;
+    ArrayList<Model_Cash_Disbursement> poDetail;
 
     @Override
     public void setApplicationDriver(Object applicationDriver) {
@@ -42,14 +43,14 @@ public class CashAdvanceValidator implements GValidator {
 
     @Override
     public void setMaster(Object value) {
-        poMaster = (Model_Cash_Advance) value;
+        poMaster = (Model_Cash_Disbursement) value;
     }
 
     @Override
     public void setDetail(ArrayList<Object> value) {
         poDetail.clear();
         for (int lnCtr = 0; lnCtr <= value.size() - 1; lnCtr++) {
-            poDetail.add((Model_Cash_Advance) value.get(lnCtr));
+            poDetail.add((Model_Cash_Disbursement) value.get(lnCtr));
         }
     }
 
@@ -119,28 +120,49 @@ public class CashAdvanceValidator implements GValidator {
                 return poJSON;
             }
             
+//            if (poMaster.getSourceNo() == null || "".equals(poMaster.getSourceNo())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Source no cannot be empty");
+//                return poJSON;
+//            }
+//            
+//            if (poMaster.getSourceCode() == null || "".equals(poMaster.getSourceCode())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Source code cannot be empty");
+//                return poJSON;
+//            }
+            
             if (poMaster.getClientId() == null || "".equals(poMaster.getClientId())) {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Payee cannot be empty");
                 return poJSON;
             }
             
-            if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
-                poJSON.put("result","error");
-                poJSON.put("message", "Remarks cannot be empty.");
+            if (poMaster.getPayeeName() == null || "".equals(poMaster.getPayeeName())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Payee cannot be empty");
                 return poJSON;
             }
             
-            if (poMaster.getAdvanceAmount() <= 0.0000) {
+            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Advance amount cannot be empty.");
+                poJSON.put("message", "Credit to cannot be empty");
                 return poJSON;
             }
             
-            if (poMaster.getAdvanceAmount() > poMaster.CashFund().getBalance()) {
+            if (poMaster.getTransactionTotal() <= 0.0000) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Advance amount cannot be greater than the cash fund balance.");
+                poJSON.put("message", "Cash disbursment total cannot be empty.");
                 return poJSON;
+            }
+            
+            //BR: If NOT Cash Advance, Validate Amount to Disburse <= Cash Fund Balance
+            if(!CashDisbursementStatus.SourceCode.CASHADVANCE.equals(poMaster.getSourceCode())){
+                if (poMaster.getTransactionTotal() > poMaster.CashFund().getBalance()) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "Cash disbursment total cannot be greater than the cash fund balance.");
+                    return poJSON;
+                }
             }
             
         } catch (SQLException | GuanzonException ex) {
@@ -160,6 +182,14 @@ public class CashAdvanceValidator implements GValidator {
         poJSON = validateNew();
         if("error".equals((String) poJSON.get("result"))){
             return poJSON;
+        }
+        
+        if (poMaster.getVatableSales() > 0.0000) {
+            if (poMaster.getWithTaxTotal() <= 0.0000) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Tax amount total cannot be zero.");
+                return poJSON;
+            }
         }
         
         poJSON.put("result", "success");
@@ -192,27 +222,4 @@ public class CashAdvanceValidator implements GValidator {
         return poJSON;
     }
 
-    private JSONObject validateReleased() {
-        poJSON = new JSONObject();
-        
-        if (!CashAdvanceStatus.APPROVED.equals(poMaster.getTransactionStatus())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Cash advance is not yet approved.");
-            return poJSON;
-        }
-        
-        if (poMaster.getIssuedBy() != null && !"".equals(poMaster.getIssuedBy())) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Cash advance is already released.");
-            return poJSON;
-        }
-
-        poJSON = validateNew();
-        if("error".equals((String) poJSON.get("result"))){
-            return poJSON;
-        }
-        
-        poJSON.put("result", "success");
-        return poJSON;
-    }
 }
