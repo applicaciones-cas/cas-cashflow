@@ -1059,6 +1059,25 @@ public class CheckDeposits extends Transaction {
     }
     
     public JSONObject printTransaction() {
+        
+        if(!Master().getTransactionStatus().equals(CheckDepositStatus.CONFIRMED)){
+            JSONObject loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printitng");
+            return loJSON;
+        }
+        
+        if(Master().isPrintedStatus()){
+            try {
+                JSONObject loJSON = new JSONObject();
+                loJSON = seekApproval();
+                if("error".equals(loJSON.get("result"))){
+                    return loJSON;
+                }
+            } catch (SQLException | GuanzonException ex) {
+                Logger.getLogger(CheckReleases.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
         poJSON = new JSONObject();
         String watermarkPath = "D:\\GGC_Maven_Systems\\Reports\\images\\draft.png"; //set draft as default
         try {
@@ -1568,6 +1587,25 @@ public class CheckDeposits extends Transaction {
     }
     
     public JSONObject printDepositSlip() throws SQLException, GuanzonException, CloneNotSupportedException {
+        if(!Master().getTransactionStatus().equals(CheckDepositStatus.CONFIRMED)
+            && !Master().getTransactionStatus().equals(CheckDepositStatus.POSTED)){
+            JSONObject loJSON = new JSONObject();
+            loJSON.put("result", "error");
+            loJSON.put("message", "Transaction is not yet Confirm. \nPlease Confirm the transaction before printing");
+            return loJSON;
+        }
+        if(Master().isPrintedStatus()){
+            try {
+                JSONObject loJSON = new JSONObject();
+                loJSON = seekApproval();
+                if("error".equals(loJSON.get("result"))){
+                    return loJSON;
+                }
+            } catch (SQLException | GuanzonException ex) {
+                Logger.getLogger(CheckReleases.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        
         Printer printer = Printer.getDefaultPrinter();
 
         if (CheckDepositStatus.POSTED.equals((String) poMaster.getValue("cTranStat"))) {

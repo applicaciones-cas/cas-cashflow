@@ -321,7 +321,6 @@ public class CashflowControllers {
         poAccountChart.setWithParentClass(false);
         poAccountChart.setLogWrapper(poLogWrapper);
         poAccountChart.initialize();
-        poAccountChart.newRecord();
         return poAccountChart;
     }
 
