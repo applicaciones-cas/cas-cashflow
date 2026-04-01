@@ -71,7 +71,7 @@ public class Model_PettyCash extends Model {
 
     @Override
     public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+        return MiscUtil.getNextCode(this.getTable(), ID, false, poGRider.getGConnection().getConnection(), "");
     }
 
     public JSONObject setPettyId(String pettyId) {
