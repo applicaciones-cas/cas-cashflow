@@ -263,9 +263,8 @@ public class PettyCash extends Parameter {
 //            return poJSON;
 //        } else {
         poJSON = new JSONObject();
-
         if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
-            poJSON = setJSON("error", "Cash fund ID must not be empty.");
+            poJSON = setJSON("error", "Petty Cash ID must not be empty.");
             return poJSON;
         }
 
