@@ -2342,6 +2342,9 @@ public class CashDisbursement extends Transaction {
         //Do not include branch code according to ma'am grace 03/28/2026
 //        lsSQL = MiscUtil.addCondition(lsSQL,
 //                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                "sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())); //get voucher no account to company ma'am she 03-31-2026
         lsSQL = lsSQL + " ORDER BY sVoucherx DESC LIMIT 1";
 
         String branchVoucherNo = CashDisbursementStatus.DEFAULT_VOUCHER_NO;  // default value
