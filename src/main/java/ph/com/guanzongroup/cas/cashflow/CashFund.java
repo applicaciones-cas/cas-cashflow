@@ -335,7 +335,7 @@ public class CashFund extends Parameter {
                                                                     + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
-                                                                    + " AND sCashFMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
+//                                                                    + " AND sCashFMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
                                                                     + " AND sCashFDsc = " + SQLUtil.toSQL(getModel().getDescription())
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
