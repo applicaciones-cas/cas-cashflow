@@ -3515,17 +3515,18 @@ public class CashDisbursement extends Transaction {
             List<String> laParticular = new ArrayList<>();
             String lsParticular = "";
             for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
-                    lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular().toUpperCase();
-                    if(!laParticular.contains(lsParticular)){
-                        laParticular.add(lsParticular);
-                    }
-                } else {
+//                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
+//                    lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular().toUpperCase();
+//                    if(!laParticular.contains(lsParticular)){
+//                        laParticular.add(lsParticular);
+//                    }
+//                } else { 
+                    //All detail will have a particular description - Arsiela 04/06/2026
                     lsParticular = Detail(lnCtr).Particular().getDescription().toUpperCase();
                     if(!laParticular.contains(lsParticular)){
                         laParticular.add(lsParticular);
                     }
-                }
+//                }
             }
 
             //Particular
