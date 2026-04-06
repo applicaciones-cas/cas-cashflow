@@ -1740,7 +1740,7 @@ public class CheckDeposits extends Transaction {
             double rowSpace = loDocumentMapping.Detail(lnCtr).getRowSpace();
             double maxrow = loDocumentMapping.Detail(lnCtr).getMaxRow();
             int maxlens = (int) loDocumentMapping.Detail(lnCtr).getMaxLength();
-            boolean isMultiple = loDocumentMapping.Detail(lnCtr).getMultiple().equals("1");
+            boolean isMultiple = loDocumentMapping.Detail(lnCtr).isMultiple();
 
             Font fieldFont = Font.font(fontName, fontSize);
             String textValue = "";

@@ -33,8 +33,15 @@ public class Model_Document_Mapping_Detail extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateObject("nEntryNox", 0);
-            
+            poEntity.updateObject("nEntryNox", 0);  
+            poEntity.updateObject("nFontSize", 0);
+            poEntity.updateObject("nTopRowxx", 0.00);
+            poEntity.updateObject("nLeftColx", 0.00);
+            poEntity.updateObject("nMaxLenxx", 0);
+            poEntity.updateObject("nMaxRowxx", 0);
+            poEntity.updateObject("nRowSpace", 0.00);
+            poEntity.updateObject("nColSpace", 0.00);
+            poEntity.updateObject("nPageLocx", 0);
 
             //end - assign default values
             poEntity.insertRow();
@@ -84,21 +91,23 @@ public class Model_Document_Mapping_Detail extends Model {
     public String getFieldCode() {
         return (String) getValue("sFieldCde");
     }
-
-    public JSONObject setMultiple(String prfRemarks) {
-        return setValue("cMultiple", prfRemarks);
-    }
-
-    public String getMultiple() {
-        return (String) getValue("cMultiple");
+   
+    public JSONObject isMultiple(boolean isActive) {
+        return setValue("cMultiple", isActive ? "1" : "0");
     }
     
-    public JSONObject setFixValue(String fixValue) {
-        return setValue("cFixedVal", fixValue);
+    public boolean isMultiple() {
+        Object value = getValue("cMultiple");
+        return "1".equals(String.valueOf(value));
     }
-
-    public String getFixValue() {
-        return (String) getValue("cMultiple");
+    
+    public JSONObject isFixValue(boolean isActive) {
+        return setValue("cFixedVal", isActive ? "1" : "0");
+    }
+    
+    public boolean isFixValue() {
+        Object value = getValue("cFixedVal");
+        return "1".equals(String.valueOf(value));
     }
     
     public JSONObject setFontName(String fontName) {
@@ -109,14 +118,13 @@ public class Model_Document_Mapping_Detail extends Model {
         return (String) getValue("sFontName");
     }
     
-    public JSONObject setFontSize(double fontSize) {
+    public JSONObject setFontSize(int fontSize) {
         return setValue("nFontSize", fontSize);
     }
 
-    public double getFontSize() {
-        return Double.parseDouble(String.valueOf(getValue("nFontSize")));
+    public int getFontSize() {
+        return (int) getValue("nFontSize");
     }
-    
     
     public JSONObject setTopRow(double topRow) {
         return setValue("nTopRowxx", topRow);
@@ -134,23 +142,22 @@ public class Model_Document_Mapping_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nLeftColx")));
     }
     
-    public JSONObject setMaxLength(double maxLength) {
-        return setValue("nMaxLenxx", maxLength);
+    public JSONObject setMaxLength(int maxLenxx) {
+        return setValue("nMaxLenxx", maxLenxx);
     }
 
-    public double getMaxLength() {
-        return Double.parseDouble(String.valueOf(getValue("nMaxLenxx")));
+    public int getMaxLength() {
+        return (int) getValue("nMaxLenxx");
     }
     
-    
-    public JSONObject setMaxRow(double maxRow) {
-        return setValue("nMaxRowxx", maxRow);
+    public JSONObject setMaxRow(int maxRowxx) {
+        return setValue("nMaxRowxx", maxRowxx);
     }
 
-    public double getMaxRow() {
-        return Double.parseDouble(String.valueOf(getValue("nMaxRowxx")));
+    public int getMaxRow() {
+        return (int) getValue("nMaxRowxx");
     }
-    
+
     public JSONObject setRowSpace(double rowSpace) {
         return setValue("nRowSpace", rowSpace);
     }
@@ -165,15 +172,15 @@ public class Model_Document_Mapping_Detail extends Model {
 
     public double getColumnSpace() {
         return Double.parseDouble(String.valueOf(getValue("nColSpace")));
-    }   
+    } 
     
-    public JSONObject setPageLocation(double pageLocation) {
-        return setValue("nPageLocx", pageLocation);
+    public JSONObject setPageLocation(int PageLocx) {
+        return setValue("nPageLocx", PageLocx);
     }
 
-    public double getPageLocation() {
-        return Double.parseDouble(String.valueOf(getValue("nPageLocx")));
-    } 
+    public int getPageLocation() {
+        return (int) getValue("nPageLocx");
+    }
     
     public JSONObject setModifyingId(String modifyingId) {
         return setValue("sModified", modifyingId);

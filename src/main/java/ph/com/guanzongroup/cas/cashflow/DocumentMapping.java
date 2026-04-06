@@ -1,51 +1,58 @@
 package ph.com.guanzongroup.cas.cashflow;
 
-import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
-import org.guanzon.appdriver.agent.systables.SysTableContollers;
-import org.guanzon.appdriver.agent.systables.TransactionAttachment;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
-import org.guanzon.cas.parameter.Department;
-import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Issuance;
-import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStaticData;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
-import ph.com.guanzongroup.cas.cashflow.validator.PaymentRequestValidator;
+import ph.com.guanzongroup.cas.cashflow.validator.DocumentMappingValidator;
 
 public class DocumentMapping extends Transaction {
 
     private boolean pbApproval = false;
 
     public JSONObject InitTransaction() {
-        setVerifyEntryNo(false);
-        SOURCE_CODE = "DcMap";
+        SOURCE_CODE = "DcMp";
 
         poMaster = new CashflowModels(poGRider).DocumentMapingMaster();
         poDetail = new CashflowModels(poGRider).DocumentMapingDetail();
         paDetail = new ArrayList<>();
         return initialize();
+    }
+    
+    public JSONObject AddDetail() throws CloneNotSupportedException {
+        if (Detail(getDetailCount() - 1).getFieldCode().isEmpty() &&
+                Detail(getDetailCount() - 1).getFontName().isEmpty() &&
+                Detail(getDetailCount() - 1).getFontSize()== 0.00) {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "Last row has empty item.");
+            return poJSON;
+        }
+        return addDetail();
+    }
+    
+    @Override
+    public Model_Document_Mapping Master() {
+        return (Model_Document_Mapping) poMaster;
+    }
+
+    @Override
+    public Model_Document_Mapping_Detail Detail(int row) {
+        return (Model_Document_Mapping_Detail) paDetail.get(row);
     }
 
     public JSONObject NewTransaction() throws CloneNotSupportedException {
@@ -65,12 +72,18 @@ public class DocumentMapping extends Transaction {
         return updateTransaction();
     }
 
-    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject ActivateTransaction() throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = new JSONObject();
 
-        String lsStatus = PaymentRequestStatus.CONFIRMED;
+        String lsStatus = "1";
         boolean lbConfirm = true;
+        
+        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
+            poJSON.put("result", "error");
+            poJSON.put("message", "User is not allowed to modify the record.");
+            return poJSON;
+        }
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -80,57 +93,42 @@ public class DocumentMapping extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already confirmed.");
+            poJSON.put("message", "Parameter is already active.");
             return poJSON;
         }
-
-        //validator
-        poJSON = isEntryOkay(PaymentRequestStatus.CONFIRMED);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        poJSON = UpdateTransaction();
+        if("error".equals((String)poJSON.get("result"))){
             return poJSON;
         }
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
-               return poJSON; 
-            }
-            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer..");
-                return poJSON;
-            }
-        }
-
-
-        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getDocumentCode());
-
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
+        Master().setTransactionStatus(lsStatus);
+        poJSON = SaveTransaction();
+        if("error".equals((String)poJSON.get("result"))){
             return poJSON;
         }
-
-
-        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
 
         if (lbConfirm) {
-            poJSON.put("message", "Transaction confirmed successfully.");
+            poJSON.put("message", "Transaction activated successfully.");
         } else {
-            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+            poJSON.put("message", "Transaction activated request submitted successfully.");
         }
-
         return poJSON;
     }
 
-    public JSONObject PaidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject DeactivateTransaction() throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = new JSONObject();
 
-        String lsStatus = PaymentRequestStatus.PAID;
+        String lsStatus = "0";
         boolean lbConfirm = true;
+        
+        if (poGRider.getUserLevel() < UserRight.SYSADMIN){
+            poJSON.put("result", "error");
+            poJSON.put("message", "User is not allowed to modify the record.");
+            return poJSON;
+        }
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -140,20 +138,16 @@ public class DocumentMapping extends Transaction {
 
         if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already Paid.");
+            poJSON.put("message", "Parameter has already been deactivated.");
             return poJSON;
         }
-
-        //validator
-        poJSON = isEntryOkay(PaymentRequestStatus.PAID);
-        if (!"success".equals((String) poJSON.get("result"))) {
+        poJSON = UpdateTransaction();
+        if("error".equals((String)poJSON.get("result"))){
             return poJSON;
         }
-
-        //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
-        if (!"success".equals((String) poJSON.get("result"))) {
+        Master().setTransactionStatus(lsStatus);
+        poJSON = SaveTransaction();
+        if("error".equals((String)poJSON.get("result"))){
             return poJSON;
         }
 
@@ -161,230 +155,24 @@ public class DocumentMapping extends Transaction {
         poJSON.put("result", "success");
 
         if (lbConfirm) {
-            poJSON.put("message", "Transaction Paid successfully.");
+            poJSON.put("message", "Transaction activated successfully.");
         } else {
-            poJSON.put("message", "Transaction Paid request submitted successfully.");
+            poJSON.put("message", "Transaction activated request submitted successfully.");
         }
-
         return poJSON;
     }
 
-    public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
-        poJSON = new JSONObject();
 
-        String lsStatus = PaymentRequestStatus.CANCELLED;
-        boolean lbConfirm = true;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already cancelled.");
-            return poJSON;
-        }
-
-        poJSON = isEntryOkay(PaymentRequestStatus.CANCELLED);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction cancelled successfully.");
-        } else {
-            poJSON.put("message", "Transaction cancellation request submitted successfully.");
-        }
-
-        return poJSON;
-    }
-
-    public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
-        poJSON = new JSONObject();
-
-        String lsStatus = PaymentRequestStatus.VOID;
-        boolean lbConfirm = true;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already voided.");
-            return poJSON;
-        }
-
-        poJSON = isEntryOkay(PaymentRequestStatus.VOID);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        if (PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "User is not an authorized approving officer..");
-                    return poJSON;
-                }
-            }
-        }
-
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction voided successfully.");
-        } else {
-            poJSON.put("message", "Transaction voiding request submitted successfully.");
-        }
-
-        return poJSON;
-    }
-
-    public JSONObject PostTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
-        poJSON = new JSONObject();
-
-        String lsStatus = PaymentRequestStatus.POSTED;
-        boolean lbConfirm = true;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already processed.");
-            return poJSON;
-        }
-
-        poJSON = isEntryOkay(PaymentRequestStatus.POSTED);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction posted successfully.");
-        } else {
-            poJSON.put("message", "Transaction posting request submitted successfully.");
-        }
-
-        return poJSON;
-    }
-
-    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
-        poJSON = new JSONObject();
-
-        String lsStatus = PaymentRequestStatus.RETURNED;
-        boolean lbConfirm = true;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already returned.");
-            return poJSON;
-        }
-
-        poJSON = isEntryOkay(PaymentRequestStatus.RETURNED);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        if (PaymentRequestStatus.CONFIRMED.equals((String) poMaster.getValue("cTranStat"))) {
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                poJSON = ShowDialogFX.getUserApproval(poGRider);
-                if ("error".equals((String) poJSON.get("result"))) {
-                    return poJSON;
-                }
-                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "User is not an authorized approving officer..");
-                    return poJSON;
-                }
-            }
-        }
-
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm);
-
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction returned successfully.");
-        } else {
-            poJSON.put("message", "Transaction return request submitted successfully.");
-        }
-
-        return poJSON;
-    }
-
-    public JSONObject AddDetail() throws CloneNotSupportedException {
-        if (Detail(getDetailCount() - 1).getDocumentCode().isEmpty()) {
-            poJSON = new JSONObject();
-            poJSON.put("result", "error");
-            poJSON.put("message", "Last row has empty item.");
-            return poJSON;
-        }
-        return addDetail();
-    }
+    
     @Override
     public void initSQL() {
-        SQL_BROWSE = "SELECT "
-                + " a.sTransNox,"
-                + " a.dTransact,"
-                + " b.sBranchNm,"
-                + " c.sDeptName,"
-                + " d.sPayeeNme,"
-                + " b.sBranchCd,"
-                + " c.sDeptIDxx,"
-                + " d.sPayeeIDx"
-                + " FROM payment_request_master a "
-                + " LEFT JOIN Branch b ON a.sBranchCd = b.sBranchCd "
-                + " LEFT JOIN Department c ON c.sDeptIDxx = a.sDeptIDxx "
-                + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx";
-    }
+    SQL_BROWSE = "SELECT "
+            + " sDocCodex, "
+            + " sDescript, "
+            + " nEntryNox, "
+            + " cRecdStat "
+            + " FROM Document_Mapping";
+}
     
 //    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
 //        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
@@ -404,15 +192,7 @@ public class DocumentMapping extends Transaction {
         return SOURCE_CODE;
     }
 
-    @Override
-    public Model_Document_Mapping Master() {
-        return (Model_Document_Mapping) poMaster;
-    }
-
-    @Override
-    public Model_Document_Mapping_Detail Detail(int row) {
-        return (Model_Document_Mapping_Detail) paDetail.get(row);
-    }
+    
 
     @Override
     public JSONObject willSave() throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -424,21 +204,32 @@ public class DocumentMapping extends Transaction {
         while (detail.hasNext()) {
             Model item = detail.next(); // Store the item before checking conditions
 
-            double amount = (double) item.getValue("nAmountxx");
+            int fontSize = (int) item.getValue("nFontSize");
 
-            if (amount <= 0) {
+            if (fontSize <= 0) {
                 detail.remove(); // Correctly remove the item
             }
         }
+        if(getDetailCount() <= 0 ){
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transaction detail to be save.");
+            return poJSON;
+        }
 
-
+        //assign other info on detail
+        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
+            Detail(lnCtr).setDocumentCode(Master().getDocumentCode());
+            Detail(lnCtr).setEntryNo(lnCtr + 1);
+            Detail(lnCtr).setModifyingId(poGRider.getUserID());
+            Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+        }
         poJSON.put("result", "success");
         return poJSON;
     }
 
     @Override
     public JSONObject save() {
-        return isEntryOkay(PaymentRequestStatus.OPEN);
+        return isEntryOkay("0");
     }
 
     @Override
@@ -464,11 +255,58 @@ public class DocumentMapping extends Transaction {
 
     @Override
     protected JSONObject isEntryOkay(String status) {
-        GValidator loValidator = new PaymentRequestValidator();
+        GValidator loValidator = new DocumentMappingValidator();
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
         loValidator.setMaster(Master());
         poJSON = loValidator.validate();
         return poJSON;
+    }
+    
+   
+    public JSONObject SearchTransaction(String fsValue, String byFilter) throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        String lsFilter = "";
+        if (psTranStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+            }
+            lsTransStat = " cRecdStat IN (" + lsTransStat.substring(2) + ")";
+        } else {
+            lsTransStat = " cRecdStat = " + SQLUtil.toSQL(psTranStat);
+        }
+        initSQL();
+
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsTransStat);
+        if (byFilter !=null && !byFilter.isEmpty()){
+            switch (byFilter) {
+            case "txtSeeks01":
+                lsFilter = " sDocCodex LIKE  " + SQLUtil.toSQL(fsValue + "%");
+                break;
+            case "txtSeeks02":
+                lsFilter = " sDescript LIKE  " + SQLUtil.toSQL(fsValue + "%");
+                break;
+            }
+             lsSQL = MiscUtil.addCondition(lsSQL, lsFilter);
+        }
+       
+        System.out.println("SQL EXECUTED: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                fsValue,
+                "Document Code»Description»Status",
+                "sDocCodex»sDescript»cRecdStat",
+                "sDocCodex»sDescript»cRecdStat",
+                1);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sDocCodex"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
     }
 }
