@@ -550,7 +550,7 @@ public class CashFund extends Parameter {
         return "";
     }
     
-    public JSONObject loadLedger(String fsCash, String fsPayee, String fsVoucherNo) throws SQLException, GuanzonException {
+    public JSONObject loadLedger() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paLedger = new ArrayList<>();
         
