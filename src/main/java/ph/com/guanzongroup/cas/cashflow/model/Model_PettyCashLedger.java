@@ -37,19 +37,13 @@ public class Model_PettyCashLedger extends Model {
             poEntity.updateNull("dTransact");
             poEntity.updateNull("dModified");
 
-            poEntity.updateObject("nLedgerNo", 0.0000);
+            poEntity.updateObject("nLedgerNo", 0);
             poEntity.updateObject("nDebtAmtx", 0.0000);
             poEntity.updateObject("nCrdtAmtx", 0.0000);
 
-            poEntity.updateObject("sPettyIDx", "");
-            poEntity.updateObject("sBranchCD", "");
-            poEntity.updateObject("sDeptIDxx", "");
-            poEntity.updateObject("sSourceCD", "");
-            poEntity.updateObject("sSourceNo", "");
             poEntity.updateObject("cReversex", "+");
 
             //end - assign default values
-
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
             poEntity.absolute(1);
@@ -59,7 +53,7 @@ public class Model_PettyCashLedger extends Model {
             ID3 = "sDeptIDxx";
             ID4 = "sSourceCD";
             ID5 = "sSourceNo";
-            
+
             //initialize reference objects
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
@@ -80,7 +74,7 @@ public class Model_PettyCashLedger extends Model {
 
     @Override
     public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, false, poGRider.getGConnection().getConnection(), "");
+        return MiscUtil.getNextCode(this.getTable(), "nLedgerNo", false, poGRider.getGConnection().getConnection(), "");
     }
 
     public JSONObject setPettyID(String pettyIDx) {
@@ -111,11 +105,8 @@ public class Model_PettyCashLedger extends Model {
         return setValue("nLedgerNo", ledgerNo);
     }
 
-    public Double getLedgerNo() {
-        if (getValue("nLedgerNo") == null || "".equals(getValue("nLedgerNo"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nLedgerNo").toString());
+    public Number getLedgerNo() {
+        return (Number) getValue("nLedgerNo");
     }
 
     public JSONObject setSourceCode(String sourceCD) {
