@@ -6,9 +6,12 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Parameter;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -25,6 +28,7 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund_Ledger;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 
@@ -35,6 +39,7 @@ public class CashFund extends Parameter {
     public String psDepartmentId = "";
     
     Model_Cash_Fund poModel;
+    public List<Model> paLedger;
     
     /**
     * Initializes the Cash Fund controller and its model.
@@ -48,7 +53,8 @@ public class CashFund extends Parameter {
 
         CashflowModels model = new CashflowModels(poGRider);
         poModel = model.CashFund();
-
+        paLedger = new ArrayList<Model>();
+        
         super.initialize();
     }
     
@@ -544,6 +550,53 @@ public class CashFund extends Parameter {
         return "";
     }
     
+    public JSONObject loadLedger(String fsCash, String fsPayee, String fsVoucherNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        paLedger = new ArrayList<>();
+        
+        String lsSQL = MiscUtil.addCondition(getSQ_Ledger(),
+                " a.sCashFIDx = " + SQLUtil.toSQL(getModel().getCashFundId())
+            );
+        
+//        lsSQL = lsSQL + " GROUP BY a.nLedgerNo ORDER BY a.dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY a.sCashFIDx, a.sSourceCD, a.sSourceNo, a.cReversex ORDER BY a.dTransact ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON = setJSON("error", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_Cash_Fund_Ledger loObject = new CashflowModels(poGRider).CashFundLedger();
+//            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
+            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+            if (isJSONSuccess(poJSON)) {
+                paLedger.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    /**
+    * Retrieves a specific ledger record from the transaction list.
+    * 
+    * @param row The index of the record to retrieve.
+    * @return The Model_Cash_Fund_Ledger instance at the specified row.
+    */
+    public Model_Cash_Fund_Ledger LedgerList(int row) {
+        return (Model_Cash_Fund_Ledger) paLedger.get(row);
+    }
+    /**
+     * Returns the total number of records in the ledger transaction list.
+     * 
+     * @return The size of the transaction list.
+     */
+    public int getLedgerListCount() {
+        return this.paLedger.size();
+    }
     /**
     * Returns a readable status of the current Cash Fund transaction.
     *
@@ -610,6 +663,20 @@ public class CashFund extends Parameter {
                     + " LEFT JOIN Client_Master f ON f.sClientID = a.sCashFMgr ";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
+    }
+    
+    private String getSQ_Ledger(){
+        return " SELECT " +
+                "  a.sCashFIDx " +
+                " , a.nLedgerNo " +
+                " , a.sSourceCD " +
+                " , a.sSourceNo " +
+                " , a.dTransact " +
+                " , a.nDebtAmtx " +
+                " , a.nCrdtAmtx " +
+                " , a.cReversex " +
+                " , a.dModified " +
+                " FROM Cashfund_Ledger a ";
     }
     
     /**

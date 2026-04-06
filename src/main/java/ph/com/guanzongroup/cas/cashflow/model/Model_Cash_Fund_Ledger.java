@@ -50,8 +50,10 @@ public class Model_Cash_Fund_Ledger extends Model {
             poEntity.moveToCurrentRow();
             poEntity.absolute(1);
 
-            ID = "nLedgerNo";
-            ID2 = "sCashFIDx";
+            ID = "sCashFIDx";
+            ID2 = "sSourceCD";
+            ID3 = "sSourceNo";
+            ID4 = "cReversex";
 
             //initialize reference objects
             CashflowModels gl = new CashflowModels(poGRider);
@@ -67,7 +69,7 @@ public class Model_Cash_Fund_Ledger extends Model {
 
     @Override
     public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, false, poGRider.getGConnection().getConnection(), "");
+        return MiscUtil.getNextCode(this.getTable(), "nLedgerNo", false, poGRider.getGConnection().getConnection(), "");
     }
 
     public JSONObject setCashFundId(String cashFundId) {
