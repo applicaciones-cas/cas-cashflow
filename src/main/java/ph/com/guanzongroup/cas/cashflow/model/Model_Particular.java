@@ -43,6 +43,11 @@ public class Model_Particular extends Model {
             System.exit(1);
         }
     }
+    
+     @Override
+    public String getNextCode() {
+        return MiscUtil.getNextCode(this.getTable(), ID, false, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+    }
 
     public JSONObject setParticularID(String particularId) {
         return setValue("sPrtclrID", particularId);
