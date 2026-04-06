@@ -441,13 +441,6 @@ public class PettyCashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -519,13 +512,6 @@ public class PettyCashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -603,14 +589,7 @@ public class PettyCashDisbursement extends Transaction {
         }
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
-        
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
+       
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -684,13 +663,6 @@ public class PettyCashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -910,7 +882,7 @@ public class PettyCashDisbursement extends Transaction {
             return poJSON;
         }
         
-        CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
+        PettyCash object = new CashflowControllers(poGRider, logwrapr).PettyCash();
         object.setRecordStatus(RecordStatus.ACTIVE);
         object.setIndustryId(Master().getIndustryId());
         object.setCompanyId(Master().getCompanyId());

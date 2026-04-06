@@ -388,7 +388,7 @@ public class Model_PettyCash_Disbursement extends Model {
         }
     }
     
-    public Model_PettyCash CashFund() throws SQLException, GuanzonException {
+    public Model_PettyCash PettyCash() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sPettyIDx"))) {
             if (poPettyCash.getEditMode() == EditMode.READY
                     && poPettyCash.getPettyId().equals((String) getValue("sPettyIDx"))) {
