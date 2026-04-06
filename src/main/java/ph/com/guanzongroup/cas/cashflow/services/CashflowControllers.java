@@ -11,6 +11,9 @@ import ph.com.guanzongroup.cas.cashflow.Particular;
 import ph.com.guanzongroup.cas.cashflow.BankAccountMaster;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
 import ph.com.guanzongroup.cas.cashflow.CashAdvance;
+import ph.com.guanzongroup.cas.cashflow.CashDisbursement;
+import ph.com.guanzongroup.cas.cashflow.CashFund;
+import ph.com.guanzongroup.cas.cashflow.CashLiquidation;
 import ph.com.guanzongroup.cas.cashflow.CheckDeposits;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
@@ -505,25 +508,6 @@ public class CashflowControllers {
         return poWithholdingTaxDeductions;
     }
     
-    public CashAdvance CashAdvance() {
-        if (poGRider == null) {
-            poLogWrapper.severe("CashFlowcontrollers.CashAdvance: Application driver is not set.");
-            return null;
-        }
-
-        if (poCashAdvance != null) {
-            return poCashAdvance;
-        }
-
-        poCashAdvance = new CashAdvance();
-        poCashAdvance.setApplicationDriver(poGRider);
-        poCashAdvance.setBranchCode(poGRider.getBranchCode());
-        poCashAdvance.setLogWrapper(poLogWrapper);
-        poCashAdvance.setVerifyEntryNo(false);
-        poCashAdvance.setWithParent(false);
-        return poCashAdvance;
-    }
-    
     public CheckTransfers CheckTransfers() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckTransfers: Application driver is not set.");
@@ -618,6 +602,81 @@ public class CashflowControllers {
         return poRecurringExpenseSchedule;
     }
     
+    public CashFund CashFund() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashFund: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashFund != null) {
+            return poCashFund;
+        }
+
+        poCashFund = new CashFund();
+        poCashFund.setApplicationDriver(poGRider);
+        poCashFund.setWithParentClass(false);
+        poCashFund.setLogWrapper(poLogWrapper);
+        poCashFund.initialize();
+        poCashFund.newRecord();
+        return poCashFund;
+    }
+    
+    public CashAdvance CashAdvance() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashAdvance: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashAdvance != null) {
+            return poCashAdvance;
+        }
+
+        poCashAdvance = new CashAdvance();
+        poCashAdvance.setApplicationDriver(poGRider);
+        poCashAdvance.setBranchCode(poGRider.getBranchCode());
+        poCashAdvance.setLogWrapper(poLogWrapper);
+        poCashAdvance.setVerifyEntryNo(false);
+        poCashAdvance.setWithParent(false);
+        return poCashAdvance;
+    }
+    
+    public CashLiquidation CashLiquidation() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashLiquidation: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashLiquidation != null) {
+            return poCashLiquidation;
+        }
+
+        poCashLiquidation = new CashLiquidation();
+        poCashLiquidation.setApplicationDriver(poGRider);
+        poCashLiquidation.setBranchCode(poGRider.getBranchCode());
+        poCashLiquidation.setLogWrapper(poLogWrapper);
+        poCashLiquidation.setVerifyEntryNo(false);
+        poCashLiquidation.setWithParent(false);
+        return poCashLiquidation;
+    }
+    
+    public CashDisbursement CashDisbursement() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashDisbursement: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashDisbursement != null) {
+            return poCashDisbursement;
+        }
+
+        poCashDisbursement = new CashDisbursement();
+        poCashDisbursement.setApplicationDriver(poGRider);
+        poCashDisbursement.setBranchCode(poGRider.getBranchCode());
+        poCashDisbursement.setLogWrapper(poLogWrapper);
+        poCashDisbursement.setVerifyEntryNo(true);
+        poCashDisbursement.setWithParent(false);
+        return poCashDisbursement;
+    }
     @Override
     protected void finalize() throws Throwable {
         try {
@@ -653,6 +712,9 @@ public class CashflowControllers {
             poCashAdvance = null;
             poRecurringExpense = null;
             poRecurringExpenseSchedule = null;
+            poCashFund = null;
+            poCashLiquidation = null;
+            poCashDisbursement = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -695,4 +757,7 @@ public class CashflowControllers {
     private CheckReleases poCheckRelease;
     private RecurringExpense poRecurringExpense;
     private RecurringExpenseSchedule poRecurringExpenseSchedule;
+    private CashFund poCashFund;
+    private CashLiquidation poCashLiquidation;
+    private CashDisbursement poCashDisbursement;
 }

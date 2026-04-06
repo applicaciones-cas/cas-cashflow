@@ -12,6 +12,9 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
@@ -706,6 +709,58 @@ public class CashflowModels {
 
         return poRecurringExpenseMonitor;
     }
+    
+    public Model_Cash_Fund CashFund() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CashFund: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashFund == null){
+            poCashFund = new Model_Cash_Fund();
+            poCashFund.setApplicationDriver(poGRider);
+            poCashFund.setXML("Model_CashFund");
+            poCashFund.setTableName("CashFund");
+            poCashFund.initialize();
+        }
+
+        return poCashFund;
+    }
+    
+    public Model_Cash_Disbursement CashDisbursementMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CashDisbursement: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashDisbursement == null){
+            poCashDisbursement = new Model_Cash_Disbursement();
+            poCashDisbursement.setApplicationDriver(poGRider);
+            poCashDisbursement.setXML("Model_Cash_Disbursement");
+            poCashDisbursement.setTableName("Cash_Disbursement");
+            poCashDisbursement.initialize();
+        }
+
+        return poCashDisbursement;
+    }
+    
+    public Model_Cash_Disbursement_Detail CashDisbursementDetail() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CashDisbursementDetail: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashDisbursementDetail == null){
+            poCashDisbursementDetail = new Model_Cash_Disbursement_Detail();
+            poCashDisbursementDetail.setApplicationDriver(poGRider);
+            poCashDisbursementDetail.setXML("Model_Cash_Disbursement_Detail");
+            poCashDisbursementDetail.setTableName("Cash_Disbursement_Detail");
+            poCashDisbursementDetail.initialize();
+        }
+
+        return poCashDisbursementDetail;
+    }
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -738,6 +793,9 @@ public class CashflowModels {
             poRecurringExpenseSchedule = null;
             poRecurringExpenseMonitor = null;
             poPettyCash = null;
+            poCashFund = null;
+            poCashDisbursement = null;
+            poCashDisbursementDetail = null;
 
             poGRider = null;
         } finally {
@@ -786,4 +844,7 @@ public class CashflowModels {
     private Model_Recurring_Expense poRecurringExpense;
     private Model_Recurring_Expense_Schedule poRecurringExpenseSchedule;
     private Model_Recurring_Expense_Payment_Monitor poRecurringExpenseMonitor;
+    private Model_Cash_Fund poCashFund;
+    private Model_Cash_Disbursement poCashDisbursement;
+    private Model_Cash_Disbursement_Detail poCashDisbursementDetail;
 }

@@ -13,6 +13,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
 
 /**
  *
@@ -38,6 +39,7 @@ public class Model_Cash_Advance_Detail extends Model {
             poEntity.updateNull("dModified");
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateObject("nTranAmtx", 0.0000);
+            poEntity.updateObject("cReversex", CashAdvanceStatus.Reverse.INCLUDE);
             //end - assign default values
 
             poEntity.insertRow();
@@ -84,11 +86,11 @@ public class Model_Cash_Advance_Detail extends Model {
         return (String) getValue("sAcctCode");
     }
 
-    public JSONObject setParticularId(String particular) {
+    public JSONObject setParticular(String particular) {
         return setValue("sPartculr", particular);
     }
 
-    public String getParticularId() {
+    public String getParticular() {
         return (String) getValue("sPartculr");
     }
 
@@ -108,8 +110,8 @@ public class Model_Cash_Advance_Detail extends Model {
         return (String) getValue("sORNoxxxx");
     }
 
-    public JSONObject setTransactionAmount(Double transactionTotal) {
-        return setValue("nTranAmtx", transactionTotal);
+    public JSONObject setTransactionAmount(Double transactionAmount) {
+        return setValue("nTranAmtx", transactionAmount);
     }
 
     public Double getTransactionAmount() {
@@ -118,14 +120,22 @@ public class Model_Cash_Advance_Detail extends Model {
         }
         return Double.valueOf(getValue("nTranAmtx").toString());
     }
-
-    public JSONObject setModifyingBy(String modified) {
-        return setValue("sModified", modified);
+    
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
     }
 
-    public String getModifyingBy() {
-        return (String) getValue("sModified");
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
     }
+
+//    public JSONObject setModifyingBy(String modified) {
+//        return setValue("sModified", modified);
+//    }
+//
+//    public String getModifyingBy() {
+//        return (String) getValue("sModified");
+//    }
 
     public JSONObject setModifiedDate(Date modified) {
         return setValue("dModified", modified);
@@ -162,24 +172,24 @@ public class Model_Cash_Advance_Detail extends Model {
         }
     }
 
-    public Model_Particular Particular() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sPartculr"))) {
-            if (poParticular.getEditMode() == EditMode.READY
-                    && poParticular.getParticularID().equals((String) getValue("sPartculr"))) {
-                return poParticular;
-            } else {
-                poJSON = poParticular.openRecord((String) getValue("sPartculr"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poParticular;
-                } else {
-                    poParticular.initialize();
-                    return poParticular;
-                }
-            }
-        } else {
-            poParticular.initialize();
-            return poParticular;
-        }
-    }
+//    public Model_Particular Particular() throws SQLException, GuanzonException {
+//        if (!"".equals((String) getValue("sPartculr"))) {
+//            if (poParticular.getEditMode() == EditMode.READY
+//                    && poParticular.getParticularID().equals((String) getValue("sPartculr"))) {
+//                return poParticular;
+//            } else {
+//                poJSON = poParticular.openRecord((String) getValue("sPartculr"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poParticular;
+//                } else {
+//                    poParticular.initialize();
+//                    return poParticular;
+//                }
+//            }
+//        } else {
+//            poParticular.initialize();
+//            return poParticular;
+//        }
+//    }
 }

@@ -107,9 +107,17 @@ public class WithholdingTax extends Parameter{
         }
     }
     
+    private String psIndustryId = "";
+    public void setIndustryId(String industryId) { psIndustryId = industryId; }
+    
     public JSONObject searchRecord(String value, boolean byCode, String taxCode) throws SQLException, GuanzonException{
         String lsSQL = MiscUtil.addCondition(getSQ_Browse(), " a.sATaxCode = " + SQLUtil.toSQL(taxCode));
         
+        if(psIndustryId != null && !"".equals(psIndustryId)){
+            lsSQL = lsSQL + " AND b.sIndstCde = " + SQLUtil.toSQL(psIndustryId);
+        }
+        
+        System.out.println("WT Account : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
