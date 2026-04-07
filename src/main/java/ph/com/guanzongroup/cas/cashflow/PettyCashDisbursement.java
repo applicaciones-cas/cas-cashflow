@@ -116,7 +116,7 @@ public class PettyCashDisbursement extends Transaction {
         SOURCE_CODE = "PDsb";
 
         poMaster = new CashflowModels(poGRider).PettyCashDisbursementMaster();
-        poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
+        poDetail = new CashflowModels(poGRider).PettyCashDisbursementDetail();
 
         paMaster = new ArrayList<Model>();
         paAttachments = new ArrayList<>();
@@ -1944,7 +1944,7 @@ public class PettyCashDisbursement extends Transaction {
             }
         }
 
-        SQL_BROWSE =  "  SELECT "
+        SQL_BROWSE = " SELECT "
                     + "   a.sTransNox "
                     + " , a.sCompnyID "
                     + " , a.sBranchCd "
@@ -1952,7 +1952,7 @@ public class PettyCashDisbursement extends Transaction {
                     + " , a.nEntryNox "
                     + " , a.dTransact "
                     + " , a.sVoucherx "
-                    + " , a.sCashFIDx "
+                    + " , a.sPettyIDx "
                     + " , a.sClientID "
                     + " , a.sPayeeNme "
                     + " , a.sCrdtedTo "
@@ -1960,32 +1960,24 @@ public class PettyCashDisbursement extends Transaction {
                     + " , a.sAddressx "
                     + " , a.sRemarksx "
                     + " , a.sReferNox "
-                    + " , a.sSourceCd "
-                    + " , a.sSourceNo "
                     + " , a.nTranTotl "
-                    + " , a.nVATSales "
-                    + " , a.nVATAmtxx "
-                    + " , a.nZroVATSl "
-                    + " , a.nVatExmpt "
-                    + " , a.nWTaxTotl "
-                    + " , a.nNetTotal "
                     + " , a.cVchrPrnt "
                     + " , a.cCollectd "
                     + " , a.cTranStat "
                     + " , a.sApproved "
-                    + " , b.sCompnyNm AS sCompanyx "
-                    + " , c.sDescript AS sIndustry "
-                    + " , d.sDeptName AS sDeptName "
-                    + " , e.sCompnyNm AS sPayeexxx "
-                    + " , f.sCashFDsc AS sCashFund "
-                    + " , g.sBranchNm AS sBranchNm "
-                    + " , h.sCompnyNm AS sCreditTo "
-                    + " FROM Cash_Disbursement a   "
+                    + " , b.sCompnyNm AS sCompanyx    "
+                    + " , c.sDescript AS sIndustry    "
+                    + " , d.sDeptName AS sDeptName    "
+                    + " , e.sCompnyNm AS sPayeexxx    "
+                    + " , f.sPettyDsc AS sPettyDsc    "
+                    + " , g.sBranchNm AS sBranchNm    "
+                    + " , h.sCompnyNm AS sCreditTo    "
+                    + " FROM PettyCash_Disbursement a "  
                     + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
                     + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
                     + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
                     + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
+                    + " LEFT JOIN PettyCash f ON f.sPettyIDx = a.sPettyIDx     "
                     + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd        "
                     + " LEFT JOIN Client_Master h ON h.sClientID = a.sCrdtedTo ";
         if(lsCondition != null && !"".equals(lsCondition)){

@@ -146,7 +146,7 @@ public class PettyCashDisbursementValidator implements GValidator {
             
             if (poMaster.getTransactionTotal() > poMaster.PettyCash().getBalance()) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Cash disbursment total cannot be greater than the cash fund balance.");
+                poJSON.put("message", "Cash disbursment total cannot be greater than the petty cash balance.");
                 return poJSON;
             }
             
