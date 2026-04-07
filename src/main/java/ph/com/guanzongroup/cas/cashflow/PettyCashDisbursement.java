@@ -1622,8 +1622,7 @@ public class PettyCashDisbursement extends Transaction {
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
-            if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
-                && (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode()))
+            if (Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId())
                ) {
                 deleteDetail(lnCtr);
             } 
