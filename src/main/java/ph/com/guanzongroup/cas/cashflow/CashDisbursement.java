@@ -614,7 +614,7 @@ public class CashDisbursement extends Transaction {
         }
         
         if (loObject.getTransactionStatus().equals(lsStatus)) {
-            poJSON = setJSON("error", "Transaction was already approved.");
+            poJSON = setJSON("error", "Transaction was already voided.");
             return poJSON;
         }
         

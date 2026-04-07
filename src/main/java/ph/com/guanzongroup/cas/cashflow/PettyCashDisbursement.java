@@ -558,7 +558,7 @@ public class PettyCashDisbursement extends Transaction {
         }
         
         if (loObject.getTransactionStatus().equals(lsStatus)) {
-            poJSON = setJSON("error", "Transaction was already approved.");
+            poJSON = setJSON("error", "Transaction was already voided.");
             return poJSON;
         }
         
@@ -2179,7 +2179,7 @@ public class PettyCashDisbursement extends Transaction {
         
         try {
             String watermarkPath = "";
-            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CashDisbursement.jrxml";
+            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/PettyCashDisbursement.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
             watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
