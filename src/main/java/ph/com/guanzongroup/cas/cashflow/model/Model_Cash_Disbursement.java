@@ -22,6 +22,7 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
+import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 
 /**
  *
@@ -57,7 +58,7 @@ public class Model_Cash_Disbursement extends Model {
             poEntity.updateObject("nVatExmpt", 0.0000);
             poEntity.updateObject("nWTaxTotl", 0.0000);
             poEntity.updateObject("nNetTotal", 0.0000);
-            poEntity.updateString("cTranStat", CashAdvanceStatus.OPEN);
+            poEntity.updateString("cTranStat", CashDisbursementStatus.OPEN);
             poEntity.updateString("cCollectd", Logical.NO);
             poEntity.updateString("cVchrPrnt", Logical.NO);
             //end - assign default values
