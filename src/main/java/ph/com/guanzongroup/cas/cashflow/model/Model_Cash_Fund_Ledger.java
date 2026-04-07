@@ -80,12 +80,12 @@ public class Model_Cash_Fund_Ledger extends Model {
         return (String) getValue("sCashFIDx");
     }
 
-    public JSONObject setLedgerNo(String ledgerNo) {
+    public JSONObject setLedgerNo(int ledgerNo) {
         return setValue("nLedgerNo", ledgerNo);
     }
 
-    public String getLedgerNo() {
-        return (String) getValue("nLedgerNo");
+    public int getLedgerNo() {
+        return (int) getValue("nLedgerNo");
     }
 
     public JSONObject setSourceCode(String sourceCode) {

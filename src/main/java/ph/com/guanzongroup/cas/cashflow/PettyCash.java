@@ -564,16 +564,18 @@ public class PettyCash extends Parameter {
     }
 
     
-    public JSONObject loadLedger() throws SQLException, GuanzonException {
+    public JSONObject loadLedger(String fsDateFrom, String fsDateTo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paLedger = new ArrayList<>();
-        
-        String lsSQL = MiscUtil.addCondition(getSQ_Ledger(),
-                " a.sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).PettyCashFundLedger()),
+                " sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
+                + " AND cReversex = '+'"
+                + " AND dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom)
+                + " AND " + SQLUtil.toSQL(fsDateTo)
             );
         
-        lsSQL = lsSQL + " GROUP BY a.nLedgerNo ORDER BY a.dTransact ASC ";
-//        lsSQL = lsSQL + " GROUP BY a.sCashFIDx, a.sSourceCD, a.sSourceNo, a.cReversex ORDER BY a.dTransact ASC ";
+//        lsSQL = lsSQL + " GROUP BY nLedgerNo ORDER BY dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -583,8 +585,8 @@ public class PettyCash extends Parameter {
 
         while (loRS.next()) {
             Model_PettyCashLedger loObject = new CashflowModels(poGRider).PettyCashFundLedger();
-            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
-//            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+//            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
+            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
             if (isJSONSuccess(poJSON)) {
                 paLedger.add((Model) loObject);
             } else {
@@ -680,20 +682,6 @@ public class PettyCash extends Parameter {
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
     
-    private String getSQ_Ledger(){
-        return " SELECT " +
-                "  a.sCashFIDx " +
-                " , a.nLedgerNo " +
-                " , a.sSourceCD " +
-                " , a.sSourceNo " +
-                " , a.dTransact " +
-                " , a.nDebtAmtx " +
-                " , a.nCrdtAmtx " +
-                " , a.cReversex " +
-                " , a.dModified " +
-                " FROM PettyCash_Ledger a ";
-    }
-
     /**
      * Displays the status history of the current Petty Cash Fund record.
      * <p>

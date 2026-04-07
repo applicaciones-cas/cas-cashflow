@@ -132,6 +132,18 @@ public class PettyCashDisbursementValidator implements GValidator {
                 return poJSON;
             }
             
+            if (poMaster.getReferNo() == null || "".equals(poMaster.getReferNo())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Reference no cannot be empty");
+                return poJSON;
+            }
+            
+            if (poMaster.getRemarks() == null || "".equals(poMaster.getRemarks())) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Remarks cannot be empty");
+                return poJSON;
+            }
+            
 //            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
 //                poJSON.put("result", "error");
 //                poJSON.put("message", "Credit to cannot be empty");

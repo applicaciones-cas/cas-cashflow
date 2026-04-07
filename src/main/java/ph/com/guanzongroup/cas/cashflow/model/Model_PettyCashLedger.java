@@ -6,22 +6,17 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.cas.client.model.Model_Client_Master;
-import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.model.Model_Branch;
-import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Department;
-import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_PettyCashLedger extends Model {
 
     Model_Branch poBranch;
-    Model_Industry poIndustry;
-    Model_Company poCompany;
     Model_Department poDepartment;
-    Model_Client_Master poClient;
+    Model_PettyCash poPettyCash;
 
     @Override
     public void initialize() {
@@ -57,12 +52,10 @@ public class Model_PettyCashLedger extends Model {
             //initialize reference objects
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
-            poIndustry = model.Industry();
-            poCompany = model.Company();
             poDepartment = model.Department();
 
-            ClientModels clientModel = new ClientModels(poGRider);
-            poClient = clientModel.ClientMaster();
+            CashflowModels gl = new CashflowModels(poGRider);
+            poPettyCash = gl.PettyCashMaster();
 //            end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -101,12 +94,12 @@ public class Model_PettyCashLedger extends Model {
         return (String) getValue("sDeptIDxx");
     }
 
-    public JSONObject setLedgerNo(Double ledgerNo) {
+    public JSONObject setLedgerNo(String ledgerNo) {
         return setValue("nLedgerNo", ledgerNo);
     }
 
-    public Number getLedgerNo() {
-        return (Number) getValue("nLedgerNo");
+    public String getLedgerNo() {
+        return (String) getValue("nLedgerNo");
     }
 
     public JSONObject setSourceCode(String sourceCD) {
@@ -125,11 +118,11 @@ public class Model_PettyCashLedger extends Model {
         return (String) getValue("sSourceNo");
     }
 
-    public JSONObject setTransaction(Date transact) {
+    public JSONObject setTransactionDate(Date transact) {
         return setValue("dTransact", transact);
     }
 
-    public Date getTransaction() {
+    public Date getTransactionDate() {
         return (Date) getValue("dTransact");
     }
 
@@ -156,11 +149,11 @@ public class Model_PettyCashLedger extends Model {
     }
 
     public boolean isReverse() {
-        return ((String) getValue("cReversex")).equals("1");
+        return ((String) getValue("cReversex")).equals("+");
     }
 
     public JSONObject isReverse(boolean reversex) {
-        return setValue("cReversex", reversex ? "1" : "0");
+        return setValue("cReversex", reversex ? "+" : "-");
     }
 
     public JSONObject setModified(Date modified) {
@@ -172,6 +165,27 @@ public class Model_PettyCashLedger extends Model {
     }
 
     //reference object models
+    public Model_PettyCash PettyCash() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPettyIDx"))) {
+            if (poPettyCash.getEditMode() == EditMode.READY
+                    && poPettyCash.getPettyId().equals((String) getValue("sPettyIDx"))) {
+                return poPettyCash;
+            } else {
+                poJSON = poPettyCash.openRecord((String) getValue("sPettyIDx"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPettyCash;
+                } else {
+                    poPettyCash.initialize();
+                    return poPettyCash;
+                }
+            }
+        } else {
+            poPettyCash.initialize();
+            return poPettyCash;
+        }
+    }
+
     public Model_Branch Branch() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sBranchCD"))) {
             if (poBranch.getEditMode() == EditMode.READY
@@ -190,48 +204,6 @@ public class Model_PettyCashLedger extends Model {
         } else {
             poBranch.initialize();
             return poBranch;
-        }
-    }
-
-    public Model_Industry Industry() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sIndstCdx"))) {
-            if (poIndustry.getEditMode() == EditMode.READY
-                    && poIndustry.getIndustryId().equals((String) getValue("sIndstCdx"))) {
-                return poIndustry;
-            } else {
-                poJSON = poIndustry.openRecord((String) getValue("sIndstCdx"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poIndustry;
-                } else {
-                    poIndustry.initialize();
-                    return poIndustry;
-                }
-            }
-        } else {
-            poIndustry.initialize();
-            return poIndustry;
-        }
-    }
-
-    public Model_Company Company() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sCompnyID"))) {
-            if (poCompany.getEditMode() == EditMode.READY
-                    && poCompany.getCompanyId().equals((String) getValue("sCompnyID"))) {
-                return poCompany;
-            } else {
-                poJSON = poCompany.openRecord((String) getValue("sCompnyID"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poCompany;
-                } else {
-                    poCompany.initialize();
-                    return poCompany;
-                }
-            }
-        } else {
-            poCompany.initialize();
-            return poCompany;
         }
     }
 
@@ -255,26 +227,4 @@ public class Model_PettyCashLedger extends Model {
             return poDepartment;
         }
     }
-
-    public Model_Client_Master Custodian() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sPettyMgr"))) {
-            if (poClient.getEditMode() == EditMode.READY
-                    && poClient.getClientId().equals((String) getValue("sPettyMgr"))) {
-                return poClient;
-            } else {
-                poJSON = poClient.openRecord((String) getValue("sPettyMgr"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poClient;
-                } else {
-                    poClient.initialize();
-                    return poClient;
-                }
-            }
-        } else {
-            poClient.initialize();
-            return poClient;
-        }
-    }
-
 }
