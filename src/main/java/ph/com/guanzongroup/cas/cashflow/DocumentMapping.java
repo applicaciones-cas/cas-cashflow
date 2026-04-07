@@ -17,13 +17,69 @@ import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping_Detail;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.DocumentMappingValidator;
 
+/**
+ * The {@code DocumentMapping} class handles the transaction logic for
+ * Document Mapping configuration within the Cashflow module.
+ *
+ * <p>This class extends {@link Transaction} and manages both the master
+ * and detail records of document mapping, including creation, update,
+ * activation, deactivation, validation, and searching of transactions.</p>
+ *
+ * <h2>Core Responsibilities:</h2>
+ * <ul>
+ *   <li>Initialize document mapping transactions</li>
+ *   <li>Manage master-detail relationship of mapping records</li>
+ *   <li>Validate entries before saving</li>
+ *   <li>Handle activation and deactivation with access control</li>
+ *   <li>Provide search and browse functionality</li>
+ * </ul>
+ *
+ * <h2>Key Features:</h2>
+ * <ul>
+ *   <li>Prevents saving of invalid or empty detail records</li>
+ *   <li>Automatically assigns metadata to detail records</li>
+ *   <li>Restricts activation/deactivation to SYSADMIN users only</li>
+ *   <li>Supports dynamic SQL-based searching with filters</li>
+ * </ul>
+ *
+ * <h2>Transaction Workflow:</h2>
+ * <ol>
+ *   <li>Initialize transaction via {@link #InitTransaction()}</li>
+ *   <li>Create or load transaction using {@link #NewTransaction()} or {@link #OpenTransaction(String)}</li>
+ *   <li>Add details using {@link #AddDetail()}</li>
+ *   <li>Validate and save using {@link #SaveTransaction()}</li>
+ *   <li>Activate or deactivate using {@link #ActivateTransaction()} or {@link #DeactivateTransaction()}</li>
+ * </ol>
+ *
+ * <h2>Validation Rules:</h2>
+ * <ul>
+ *   <li>Detail rows with Font Size ≤ 0 are removed before saving</li>
+ *   <li>At least one valid detail record is required</li>
+ *   <li>Last detail row must not be empty when adding new rows</li>
+ * </ul>
+ *
+ * <h2>Security:</h2>
+ * <ul>
+ *   <li>Only users with {@link UserRight#SYSADMIN} can activate or deactivate transactions</li>
+ * </ul>
+ *
+ * @author 
+ * TEEJEI DE CELIS (mdot223)
+ * 
+ * @version 1.0
+ * @since 2026
+ */
 public class DocumentMapping extends Transaction {
 
     private boolean pbApproval = false;
 
+    /**
+     * Initializes the Document Mapping transaction.
+     *
+     * @return JSONObject containing initialization result
+     */
     public JSONObject InitTransaction() {
         SOURCE_CODE = "DcMp";
 
@@ -32,7 +88,15 @@ public class DocumentMapping extends Transaction {
         paDetail = new ArrayList<>();
         return initialize();
     }
-    
+    /**
+     * Adds a new detail row to the transaction.
+     *
+     * <p>
+     * Prevents adding a new row if the last row is empty.</p>
+     *
+     * @return JSONObject result of the operation
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (Detail(getDetailCount() - 1).getFieldCode().isEmpty() &&
                 Detail(getDetailCount() - 1).getFontName().isEmpty() &&
@@ -45,33 +109,83 @@ public class DocumentMapping extends Transaction {
         return addDetail();
     }
     
+    /**
+     * Retrieves the master record of the transaction.
+     *
+     * @return Model_Document_Mapping master object
+     */
     @Override
     public Model_Document_Mapping Master() {
         return (Model_Document_Mapping) poMaster;
     }
 
+    /**
+     * Retrieves a specific detail record by row index.
+     *
+     * @param row index of the detail record
+     * @return Model_Document_Mapping_Detail object
+     */
     @Override
     public Model_Document_Mapping_Detail Detail(int row) {
         return (Model_Document_Mapping_Detail) paDetail.get(row);
     }
 
+    /**
+     * Creates a new document mapping transaction.
+     *
+     * @return JSONObject result
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public JSONObject NewTransaction() throws CloneNotSupportedException {
         return newTransaction();
     }
 
+    /**
+     * Saves the current transaction after validation.
+     *
+     * @return JSONObject result of save operation
+     * @throws SQLException if database error occurs
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws GuanzonException if validation fails
+     */
     public JSONObject SaveTransaction() throws SQLException, CloneNotSupportedException, GuanzonException {
         return saveTransaction();
     }
 
+    /**
+     * Opens an existing transaction using the document code.
+     *
+     * @param transactionNo document code
+     * @return JSONObject result
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if database error occurs
+     * @throws GuanzonException if validation fails
+     */
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException {
         return openTransaction(transactionNo);
     }
     
-
+    /**
+     * Updates the current transaction.
+     *
+     * @return JSONObject result
+     */
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
 
+    /**
+     * Activates the current transaction.
+     *
+     * <p>
+     * Only SYSADMIN users are allowed to perform this action.</p>
+     *
+     * @return JSONObject result
+     * @throws ParseException if parsing fails
+     * @throws SQLException if database error occurs
+     * @throws GuanzonException if validation fails
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public JSONObject ActivateTransaction() throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = new JSONObject();
@@ -117,6 +231,18 @@ public class DocumentMapping extends Transaction {
         return poJSON;
     }
 
+    /**
+     * Deactivates the current transaction.
+     *
+     * <p>
+     * Only SYSADMIN users are allowed to perform this action.</p>
+     *
+     * @return JSONObject result
+     * @throws ParseException if parsing fails
+     * @throws SQLException if database error occurs
+     * @throws GuanzonException if validation fails
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public JSONObject DeactivateTransaction() throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = new JSONObject();
@@ -163,7 +289,9 @@ public class DocumentMapping extends Transaction {
     }
 
 
-    
+    /**
+     * Initializes SQL query for browsing transactions.
+     */
     @Override
     public void initSQL() {
     SQL_BROWSE = "SELECT "
@@ -172,28 +300,30 @@ public class DocumentMapping extends Transaction {
             + " nEntryNox, "
             + " cRecdStat "
             + " FROM Document_Mapping";
-}
-    
-//    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
-//        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-//        object.setRecordStatus("1");
-//
-//        poJSON = object.searchRecord(value, byCode);
-//
-//        if ("success".equals((String) poJSON.get("result"))) {
-//            Master().setPayeeID(object.getModel().getPayeeID());
-//        }
-//
-//        return poJSON;
-//    }
+    }
 
+    /**
+     * Returns the source code identifier of this transaction.
+     *
+     * @return source code string
+     */
     @Override
     public String getSourceCode() {
         return SOURCE_CODE;
     }
 
     
-
+    /**
+     * Performs pre-save validation and processing.
+     *
+     * <ul>
+     * <li>Removes invalid detail records (Font Size ≤ 0)</li>
+     * <li>Ensures at least one valid detail exists</li>
+     * <li>Assigns metadata to detail records</li>
+     * </ul>
+     *
+     * @return JSONObject validation result
+     */
     @Override
     public JSONObject willSave() throws CloneNotSupportedException, SQLException, GuanzonException {
         /*Put system validations and other assignments here*/
@@ -227,11 +357,27 @@ public class DocumentMapping extends Transaction {
         return poJSON;
     }
 
+    /**
+     * Executes entry validation using {@link DocumentMappingValidator}.
+     *
+     * @param status transaction status
+     * @return JSONObject validation result
+     */
     @Override
     public JSONObject save() {
         return isEntryOkay("0");
     }
 
+    /**
+     * Searches for document mapping records using filters.
+     *
+     * @param fsValue search value
+     * @param byFilter filter field (e.g., document code or description)
+     * @return JSONObject result containing selected record
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if database error occurs
+     * @throws GuanzonException if validation fails
+     */
     @Override
     public JSONObject saveOthers() {
         poJSON = new JSONObject();
@@ -240,11 +386,35 @@ public class DocumentMapping extends Transaction {
         return poJSON;
     }
 
+    /**
+     * Callback method executed after a successful transaction save.
+     *
+     * <p>
+     * This method is triggered once the transaction has been completely saved
+     * to the database. It can be used for logging, notifications, or
+     * post-processing logic.</p>
+     *
+     * <p>
+     * Current implementation logs a success message to the console.</p>
+     */
     @Override
     public void saveComplete() {
         System.out.println("Transaction saved successfully.");
     }
 
+    /**
+     * Initializes default field values for the transaction.
+     *
+     * <p>
+     * This method is invoked during transaction initialization to set up any
+     * required default values for the master or detail records.</p>
+     *
+     * <p>
+     * Current implementation returns a success response without assigning
+     * additional default values.</p>
+     *
+     * @return JSONObject containing initialization result
+     */
     @Override
     public JSONObject initFields() {
         poJSON = new JSONObject();
@@ -253,6 +423,21 @@ public class DocumentMapping extends Transaction {
         return poJSON;
     }
 
+    /**
+     * Validates the transaction entry using the assigned validator.
+     *
+     * <p>
+     * This method delegates validation to {@link DocumentMappingValidator} to
+     * ensure that all required fields and business rules are satisfied before
+     * saving the transaction.</p>
+     *
+     * <p>
+     * The validator checks the master record based on the provided transaction
+     * status.</p>
+     *
+     * @param status the transaction status used for validation context
+     * @return JSONObject containing validation result (success or error)
+     */
     @Override
     protected JSONObject isEntryOkay(String status) {
         GValidator loValidator = new DocumentMappingValidator();
@@ -263,7 +448,32 @@ public class DocumentMapping extends Transaction {
         return poJSON;
     }
     
-   
+    /**
+     * Searches for a Document Mapping transaction based on a given value and
+     * filter.
+     *
+     * <p>
+     * This method builds a dynamic SQL query using the provided search value
+     * and filter criteria. It supports searching by:</p>
+     * <ul>
+     * <li>Document Code (txtSeeks01)</li>
+     * <li>Description (txtSeeks02)</li>
+     * </ul>
+     *
+     * <p>
+     * The method also filters records based on transaction status
+     * ({@code cRecdStat}) and opens the selected record if found.</p>
+     *
+     * <p>
+     * If no record is selected, an error response is returned.</p>
+     *
+     * @param fsValue the search keyword entered by the user
+     * @param byFilter the filter identifier (e.g., txtSeeks01, txtSeeks02)
+     * @return JSONObject containing the opened transaction or error message
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if a database access error occurs
+     * @throws GuanzonException if transaction processing fails
+     */
     public JSONObject SearchTransaction(String fsValue, String byFilter) throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
