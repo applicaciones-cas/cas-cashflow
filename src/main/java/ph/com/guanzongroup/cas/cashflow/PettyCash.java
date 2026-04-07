@@ -6,9 +6,12 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Parameter;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -25,6 +28,7 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCashLedger;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PettyCashStatus;
 
@@ -36,6 +40,7 @@ public class PettyCash extends Parameter {
     public String psDepartmentId = "";
 
     Model_PettyCash poModel;
+    public List<Model> paLedger;
 
     /**
      * Initializes the Petty Cash Fund controller and its model.
@@ -49,6 +54,7 @@ public class PettyCash extends Parameter {
 
         CashflowModels model = new CashflowModels(poGRider);
         poModel = model.PettyCashMaster();
+        paLedger = new ArrayList<Model>();
 
         super.initialize();
     }
@@ -318,7 +324,7 @@ public class PettyCash extends Parameter {
             }
         }
 
-        poJSON = checkExistingCashFund();
+        poJSON = checkExistingPettyCash();
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -337,7 +343,7 @@ public class PettyCash extends Parameter {
      * @throws SQLException if a database error occurs
      * @throws GuanzonException if a system error occurs
      */
-    public JSONObject checkExistingCashFund() throws SQLException, GuanzonException {
+    public JSONObject checkExistingPettyCash() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()),
@@ -346,8 +352,8 @@ public class PettyCash extends Parameter {
                 + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
                 + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
                 + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
-                //                                                                    + " AND sPettyMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
-                + " AND sPettyDsc = " + SQLUtil.toSQL(getModel().getDescription())
+                //+ " AND sPettyMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
+                //+ " AND sPettyDsc = " + SQLUtil.toSQL(getModel().getDescription())
         );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -355,7 +361,7 @@ public class PettyCash extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if (loRS.next()) {
                     if (loRS.getString("sPettyIDx") != null && !"".equals(loRS.getString("sPettyIDx"))) {
-                        poJSON = setJSON("error", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
+                        poJSON = setJSON("error", "Petty Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
                     }
                 }
             }
@@ -557,6 +563,54 @@ public class PettyCash extends Parameter {
         return "";
     }
 
+    
+    public JSONObject loadLedger() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        paLedger = new ArrayList<>();
+        
+        String lsSQL = MiscUtil.addCondition(getSQ_Ledger(),
+                " a.sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
+            );
+        
+        lsSQL = lsSQL + " GROUP BY a.nLedgerNo ORDER BY a.dTransact ASC ";
+//        lsSQL = lsSQL + " GROUP BY a.sCashFIDx, a.sSourceCD, a.sSourceNo, a.cReversex ORDER BY a.dTransact ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON = setJSON("error", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_PettyCashLedger loObject = new CashflowModels(poGRider).PettyCashFundLedger();
+            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
+//            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+            if (isJSONSuccess(poJSON)) {
+                paLedger.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    /**
+    * Retrieves a specific ledger record from the transaction list.
+    * 
+    * @param row The index of the record to retrieve.
+    * @return The Model_PettyCashLedger instance at the specified row.
+    */
+    public Model_PettyCashLedger LedgerList(int row) {
+        return (Model_PettyCashLedger) paLedger.get(row);
+    }
+    /**
+     * Returns the total number of records in the ledger transaction list.
+     * 
+     * @return The size of the transaction list.
+     */
+    public int getLedgerListCount() {
+        return this.paLedger.size();
+    }
     /**
      * Returns a readable status of the current Petty Cash Fund transaction.
      *
@@ -624,6 +678,20 @@ public class PettyCash extends Parameter {
                 + "LEFT JOIN Client_Master f ON f.sClientID = a.sPettyMgr";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
+    }
+    
+    private String getSQ_Ledger(){
+        return " SELECT " +
+                "  a.sCashFIDx " +
+                " , a.nLedgerNo " +
+                " , a.sSourceCD " +
+                " , a.sSourceNo " +
+                " , a.dTransact " +
+                " , a.nDebtAmtx " +
+                " , a.nCrdtAmtx " +
+                " , a.cReversex " +
+                " , a.dModified " +
+                " FROM PettyCash_Ledger a ";
     }
 
     /**

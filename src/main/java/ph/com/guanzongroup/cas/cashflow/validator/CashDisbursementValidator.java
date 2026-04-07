@@ -144,11 +144,11 @@ public class CashDisbursementValidator implements GValidator {
                 return poJSON;
             }
             
-            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "Credit to cannot be empty");
-                return poJSON;
-            }
+//            if (poMaster.getCreditedTo() == null || "".equals(poMaster.getCreditedTo())) {
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Credit to cannot be empty");
+//                return poJSON;
+//            }
             
             if (poMaster.getTransactionTotal() <= 0.0000) {
                 poJSON.put("result", "error");

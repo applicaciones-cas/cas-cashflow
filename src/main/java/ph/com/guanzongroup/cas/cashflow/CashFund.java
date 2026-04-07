@@ -342,7 +342,7 @@ public class CashFund extends Parameter {
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
 //                                                                    + " AND sCashFMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
-                                                                    + " AND sCashFDsc = " + SQLUtil.toSQL(getModel().getDescription())
+//                                                                    + " AND sCashFDsc = " + SQLUtil.toSQL(getModel().getDescription())
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -676,7 +676,7 @@ public class CashFund extends Parameter {
                 " , a.nCrdtAmtx " +
                 " , a.cReversex " +
                 " , a.dModified " +
-                " FROM Cashfund_Ledger a ";
+                " FROM CashFund_Ledger a ";
     }
     
     /**
