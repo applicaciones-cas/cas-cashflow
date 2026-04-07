@@ -13,7 +13,6 @@ import org.junit.FixMethodOrder;
 import org.junit.Test;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import org.junit.runners.MethodSorters;
-import ph.com.guanzongroup.cas.cashflow.CashFund;
 import ph.com.guanzongroup.cas.cashflow.PettyCash;
 
 /*
@@ -23,7 +22,7 @@ import ph.com.guanzongroup.cas.cashflow.PettyCash;
  */
 /**
  *
- * @author Arsiela 03-17-2026
+ * @author Team 1 04-06-2026
  */
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class testPettyCash {
@@ -65,7 +64,7 @@ public class testPettyCash {
                 Assert.fail();
             }
             poController.getModel().setPettyManager(instance.getClientID());
-            poController.getModel().setDescription("Rsie Test");
+            poController.getModel().setDescription("helllo Test");
             poController.getModel().setBeginningBalance(1000.00);
             poController.getModel().setBalance(1000.00);
 
@@ -94,7 +93,7 @@ public class testPettyCash {
         try {
             poController.initialize();
 
-            loJSON = poController.openRecord("GCO1261");
+            loJSON = poController.openRecord("2600003");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -109,7 +108,7 @@ public class testPettyCash {
             System.out.println(poController.getModel().Branch().getBranchName());
             System.out.println(poController.getModel().Company().getCompanyName());
             System.out.println(poController.getModel().Industry().getDescription());
-            poController.getModel().setDescription("Hello");
+            poController.getModel().setDescription("sample change");
             poController.saveRecord();
 
         } catch (SQLException | GuanzonException ex) {
