@@ -563,7 +563,15 @@ public class PettyCash extends Parameter {
         return "";
     }
 
-    
+    /**
+    * Loads petty cash ledger records within the given date range.
+    *
+    * @param fsDateFrom start date (inclusive)
+    * @param fsDateTo   end date (inclusive)
+    * @return JSONObject containing status or error message
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if business logic fails
+    */
     public JSONObject loadLedger(String fsDateFrom, String fsDateTo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paLedger = new ArrayList<>();
