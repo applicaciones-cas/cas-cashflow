@@ -38,7 +38,7 @@ public class PettyCash extends Parameter {
     Model_PettyCash poModel;
 
     /**
-     * Initializes the Cash Fund controller and its model.
+     * Initializes the Petty Cash Fund controller and its model.
      *
      * @throws SQLException if a database error occurs
      * @throws GuanzonException if a system error occurs
@@ -54,7 +54,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Initializes default values for Cash Fund fields.
+     * Initializes default values for Petty Cash Fund fields.
      *
      * @return JSONObject result container
      * @throws SQLException if a database error occurs
@@ -140,7 +140,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Activate the current Cash Fund record.
+     * Activate the current Petty Cash Fund record.
      *
      * @return JSONObject containing the result of the confirmation process
      * @throws ParseException if date parsing fails
@@ -191,7 +191,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Deactivate the current Cash Fund record.
+     * Deactivate the current Petty Cash Fund record.
      *
      * @return JSONObject containing the result of the confirmation process
      * @throws ParseException if date parsing fails
@@ -248,7 +248,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Validates if the Cash Fund entry is ready to be saved.
+     * Validates if the Petty Cash Fund entry is ready to be saved.
      *
      * @return JSONObject containing validation result and message if invalid
      * @throws SQLException if a database error occurs
@@ -331,7 +331,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Checks if a similar Cash Fund record already exists in the database.
+     * Checks if a similar Petty Cash Fund record already exists in the database.
      *
      * @return JSONObject indicating whether a duplicate record was found
      * @throws SQLException if a database error occurs
@@ -367,7 +367,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Returns the Cash Fund model instance.
+     * Returns the Petty Cash Fund model instance.
      *
      * @return Model_PettyCash object
      */
@@ -377,7 +377,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Searches a Cash Fund record using the given value.
+     * Searches a Petty Cash Fund record using the given value.
      *
      * @param value the search key
      * @param byCode true to search by code, false to search by description
@@ -438,7 +438,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Searches for a branch and assigns it to the current Cash Fund model.
+     * Searches for a branch and assigns it to the current Petty Cash Fund model.
      *
      * @param value the search key
      * @param byCode true to search by code, false to search by description
@@ -461,7 +461,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Searches for a department and assigns it to the current Cash Fund model.
+     * Searches for a department and assigns it to the current Petty Cash Fund model.
      *
      * @param value the search key
      * @param byCode true to search by code, false to search by description
@@ -482,7 +482,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Searches a Cash Fund custodian using the given value.
+     * Searches a Petty Cash Fund custodian using the given value.
      *
      * @param value the search key
      * @param byCode true to search by code, false to search by description
@@ -558,7 +558,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Returns a readable status of the current Cash Fund transaction.
+     * Returns a readable status of the current Petty Cash Fund transaction.
      *
      * @return String representing the transaction status (e.g., "OPEN",
      * "ACTIVE", "DEACTIVATED", or "UNKNOWN")
@@ -577,7 +577,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Builds the SQL query used for browsing Cash Fund records.
+     * Builds the SQL query used for browsing Petty Cash Fund records.
      *
      * @return SQL query string with record status condition applied
      */
@@ -627,7 +627,7 @@ public class PettyCash extends Parameter {
     }
 
     /**
-     * Displays the status history of the current Cash Fund record.
+     * Displays the status history of the current Petty Cash Fund record.
      * <p>
      * Retrieves status changes, maps internal codes to readable values, fetches
      * the entry user and date, and displays the history via the UI.
@@ -686,11 +686,11 @@ public class PettyCash extends Parameter {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("Cash Fund", (String) poModel.getValue("sPettyIDx"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Petty Cash Fund", (String) poModel.getValue("sPettyIDx"), entryBy, entryDate, crs);
     }
 
     /**
-     * Retrieves information about who created the current Cash Fund record and
+     * Retrieves information about who created the current Petty Cash Fund record and
      * when.
      *
      * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (date)
