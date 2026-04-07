@@ -132,7 +132,7 @@ public class testPettyCash {
         try {
             poController.initialize();
 
-            loJSON = poController.openRecord("");
+            loJSON = poController.openRecord("2600003");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -169,14 +169,14 @@ public class testPettyCash {
      * entity details, and attempts to deactivate it. Fails the test if any
      * operation is unsuccessful.
      */
-//    @Test
+    @Test
     public void testDeactivateRecord() {
         JSONObject loJSON;
 
         try {
             poController.initialize();
 
-            loJSON = poController.openRecord("");
+            loJSON = poController.openRecord("2600003");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();

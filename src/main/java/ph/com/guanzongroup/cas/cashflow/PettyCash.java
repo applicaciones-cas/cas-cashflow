@@ -258,65 +258,65 @@ public class PettyCash extends Parameter {
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
-//        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
-//            poJSON = setJSON("error", "User is not allowed to save record.");
-//            return poJSON;
-//        } else {
-        poJSON = new JSONObject();
-        if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
-            poJSON = setJSON("error", "Petty Cash ID must not be empty.");
+        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+            poJSON = setJSON("error", "User is not allowed to save record.");
             return poJSON;
-        }
-
-        if (poModel.getIndustryId() == null || "".equals(poModel.getIndustryId())) {
-            poJSON = setJSON("error", "Industry must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getCompanyId() == null || "".equals(poModel.getCompanyId())) {
-            poJSON = setJSON("error", "Company must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getBranchCode() == null || "".equals(poModel.getBranchCode())) {
-            poJSON = setJSON("error", "Branch must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getDepartment() == null || "".equals(poModel.getDepartment())) {
-            poJSON = setJSON("error", "Department must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getDescription() == null || "".equals(poModel.getDescription())) {
-            poJSON = setJSON("error", "Description must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getPettyManager() == null || "".equals(poModel.getPettyManager())) {
-            poJSON = setJSON("error", "Custodian must not be empty.");
-            return poJSON;
-        }
-
-        if (poModel.getBeginningBalance() <= 0.0000) {
-            poJSON = setJSON("error", "Invalid beginning balance.");
-            return poJSON;
-        }
-
-        if (poModel.getEditMode() == EditMode.ADDNEW) {
-            if (poModel.getBalance() <= 0.0000) {
-                poJSON = setJSON("error", "Invalid balance.");
+        } else {
+            poJSON = new JSONObject();
+            if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
+                poJSON = setJSON("error", "Petty Cash ID must not be empty.");
                 return poJSON;
             }
 
-            LocalDate ldateServerDate = strToDate(xsDateShort(poGRider.getServerDate()));
-            LocalDate ldateBeginningDate = strToDate(xsDateShort(poModel.getBeginningDate()));
-            if (ldateBeginningDate.isBefore(ldateServerDate)) {
-                poJSON = setJSON("error", "Back date is not allowed.");
+            if (poModel.getIndustryId() == null || "".equals(poModel.getIndustryId())) {
+                poJSON = setJSON("error", "Industry must not be empty.");
                 return poJSON;
             }
+
+            if (poModel.getCompanyId() == null || "".equals(poModel.getCompanyId())) {
+                poJSON = setJSON("error", "Company must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getBranchCode() == null || "".equals(poModel.getBranchCode())) {
+                poJSON = setJSON("error", "Branch must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getDepartment() == null || "".equals(poModel.getDepartment())) {
+                poJSON = setJSON("error", "Department must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getDescription() == null || "".equals(poModel.getDescription())) {
+                poJSON = setJSON("error", "Description must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getPettyManager() == null || "".equals(poModel.getPettyManager())) {
+                poJSON = setJSON("error", "Custodian must not be empty.");
+                return poJSON;
+            }
+
+            if (poModel.getBeginningBalance() <= 0.0000) {
+                poJSON = setJSON("error", "Invalid beginning balance.");
+                return poJSON;
+            }
+
+            if (poModel.getEditMode() == EditMode.ADDNEW) {
+                if (poModel.getBalance() <= 0.0000) {
+                    poJSON = setJSON("error", "Invalid balance.");
+                    return poJSON;
+                }
+
+                LocalDate ldateServerDate = strToDate(xsDateShort(poGRider.getServerDate()));
+                LocalDate ldateBeginningDate = strToDate(xsDateShort(poModel.getBeginningDate()));
+                if (ldateBeginningDate.isBefore(ldateServerDate)) {
+                    poJSON = setJSON("error", "Back date is not allowed.");
+                    return poJSON;
+                }
+            }
         }
-//        }
 
         poJSON = checkExistingCashFund();
         if (!isJSONSuccess(poJSON)) {
