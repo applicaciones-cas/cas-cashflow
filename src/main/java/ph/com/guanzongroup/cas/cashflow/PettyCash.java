@@ -345,7 +345,7 @@ public class PettyCash extends Parameter {
      */
     public JSONObject checkExistingPettyCash() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-
+        //BR : Validate if Petty Cash Fund with the same Branch and Department exists; AND Industry, Company as per - ma'am grace 04/07/2026 11:50 AM
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()),
                 " sPettyIDx != " + SQLUtil.toSQL(getModel().getPettyId())
                 + " AND sBranchCD = " + SQLUtil.toSQL(getModel().getBranchCode())

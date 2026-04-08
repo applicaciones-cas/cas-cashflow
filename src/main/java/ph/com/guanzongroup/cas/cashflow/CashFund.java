@@ -334,7 +334,7 @@ public class CashFund extends Parameter {
      */
     public JSONObject checkExistingCashFund() throws SQLException, GuanzonException{
         poJSON = new JSONObject();
-        
+        //BR : Validate if Cash Fund with the same Industry, Company, Branch and Department exists
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()), 
                                                                     " sCashFIDx != " + SQLUtil.toSQL(getModel().getCashFundId())
                                                                     + " AND sBranchCD = " + SQLUtil.toSQL(getModel().getBranchCode())
