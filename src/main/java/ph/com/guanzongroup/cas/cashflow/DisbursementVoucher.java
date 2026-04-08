@@ -5077,7 +5077,7 @@ public class DisbursementVoucher extends Transaction {
             String transactionno = fsTransactionNos.get(lnCtr);
             String sPayeeNme = CheckPayments().getModel().Payee().getPayeeName();
             String dCheckDte = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
-            String nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
+            String nAmountxx = removeComma(String.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false))); 
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             
             if(dCheckDte == null || "".equals(dCheckDte)){
@@ -5145,6 +5145,23 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Check printed successfully");
         return poJSON;
+    }
+    
+    /*Removes comma character existing in a string containing number*/
+    public static String removeComma(String numberStr) {
+        if (numberStr == null || numberStr.isEmpty()) {
+            return "0";
+        }
+
+        // Remove commas
+        String clean = numberStr.replace(",", "");
+
+        // Check if it's exactly negative zero
+        if (clean.matches("-0+(\\.0+)?")) {
+            return "0";
+        }
+
+        return clean.isEmpty() ? "0" : clean;
     }
     
     /**
