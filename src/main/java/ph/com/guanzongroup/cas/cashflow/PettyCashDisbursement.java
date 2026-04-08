@@ -728,6 +728,12 @@ public class PettyCashDisbursement extends Transaction {
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE,
                 " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 );
+        
+        if(!psIndustryId.equals(System.getProperty("sys.main.industry"))){
+           lsSQL = lsSQL + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
+                        + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode());
+        }
+        
         lsSQL = lsSQL + " GROUP BY a.sTransNox ";
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
@@ -1201,6 +1207,10 @@ public class PettyCashDisbursement extends Transaction {
                 + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
                 + " AND a.sVoucherx LIKE " + SQLUtil.toSQL("%" + fsVoucherNo + "%")
             );
+        
+        if(!psIndustryId.equals(System.getProperty("sys.main.industry"))){
+           lsSQL = lsSQL + " AND a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode());
+        }
         
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
