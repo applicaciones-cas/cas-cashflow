@@ -39,7 +39,7 @@ public class NumberToWords {
         if (number < 20)
             return units[(int) number];
         if (number < 100)
-            return tens[(int) number / 10] + ((number % 10 != 0) ? "-" + units[(int) number % 10] : "");
+            return tens[(int) number / 10] + ((number % 10 != 0) ? " " + units[(int) number % 10] : "");
         if (number < 1000)
             return units[(int) number / 100] + " Hundred" + ((number % 100 != 0) ? " " + convert(number % 100) : "");
         if (number < 1000000)
