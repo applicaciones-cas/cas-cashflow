@@ -123,10 +123,12 @@ public class CashFund extends Parameter {
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
+            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
                 poJSON = setJSON("error", "User is not an authorized approving officer.");
                 return poJSON;
             }
+//            setApproving(lsUserIDxx);
         }   
         
         poJSON = setJSON("success","success");
