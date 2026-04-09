@@ -86,12 +86,6 @@ import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.parameter.services.ParamModels;
-import org.guanzon.cas.purchasing.model.Model_POR_Detail;
-import org.guanzon.cas.purchasing.model.Model_POR_Master;
-import org.guanzon.cas.purchasing.model.Model_PO_Master;
-import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
-import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
-import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
@@ -106,7 +100,6 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -133,6 +126,7 @@ public class DisbursementVoucher extends Transaction {
     public String psClient = "";
     public String psPayee = "";
     public String psParticular = "";
+    public String psApprover = "";
     public boolean pbIsUpdateAmountPaid = false;
     
     public OtherPayments poOtherPayments;
@@ -317,6 +311,8 @@ public class DisbursementVoucher extends Transaction {
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
+        setApproving((String) poJSON.get("sUserIDxx"));
+        psApprover = (String) poJSON.get("sUserIDxx");
         return poJSON;
     }
     
@@ -518,8 +514,8 @@ public class DisbursementVoucher extends Transaction {
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
-        }
-
+        } 
+        
         //validator
         poJSON = isEntryOkay(DisbursementStatic.VERIFIED);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -2428,6 +2424,7 @@ public class DisbursementVoucher extends Transaction {
         setSearchClient("");
         setSearchParticular("");
         setSearchPayee("");
+        psApprover = "";
     }
     
     public void ReloadDetail() throws CloneNotSupportedException{
@@ -3178,6 +3175,9 @@ public class DisbursementVoucher extends Transaction {
                     //Void Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
+                    if(psApprover != null && !"".equals(psApprover)){
+                        poJournal.setApproving(psApprover);
+                    }
                     poJSON = poJournal.ConfirmTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -3187,6 +3187,9 @@ public class DisbursementVoucher extends Transaction {
                     //Void Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
+                    if(psApprover != null && !"".equals(psApprover)){
+                        poJournal.setApproving(psApprover);
+                    }
                     poJSON = poJournal.VoidTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -3198,6 +3201,9 @@ public class DisbursementVoucher extends Transaction {
                     //Cancel Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
+                    if(psApprover != null && !"".equals(psApprover)){
+                        poJournal.setApproving(psApprover);
+                    }
                     poJSON = poJournal.CancelTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -3207,6 +3213,9 @@ public class DisbursementVoucher extends Transaction {
                     //Return Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
+                    if(psApprover != null && !"".equals(psApprover)){
+                        poJournal.setApproving(psApprover);
+                    }
                     poJSON = poJournal.ReturnTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
@@ -3226,6 +3235,9 @@ public class DisbursementVoucher extends Transaction {
                         if(poCheckPayments != null){
                             poCheckPayments.setWithParentClass(true);
                             poCheckPayments.setWithUI(false);
+                            if(psApprover != null && !"".equals(psApprover)){
+//                                poCheckPayments.setApproving(psApprover);
+                            }
                             poJSON = poCheckPayments.VoidTransaction("");
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
@@ -3238,6 +3250,9 @@ public class DisbursementVoucher extends Transaction {
                         if(poOtherPayments != null){
                             poOtherPayments.setWithParentClass(true);
                             poOtherPayments.setWithUI(false);
+                            if(psApprover != null && !"".equals(psApprover)){
+//                                poOtherPayments.setApproving(psApprover);
+                            }
                             poJSON = poOtherPayments.VoidTransaction("");
                             if ("error".equals((String) poJSON.get("result"))) {
                                 return poJSON;
@@ -5057,7 +5072,7 @@ public class DisbursementVoucher extends Transaction {
                             + "Do you wish to proceed with reprinting?"
                     );
                     if (proceed) {
-                        poJSON = ShowDialogFX.getUserApproval(poGRider);
+                        poJSON = callApproval();
                         if (!"success".equals((String) poJSON.get("result"))) {
                             return poJSON;
                         }
@@ -5077,7 +5092,7 @@ public class DisbursementVoucher extends Transaction {
             String transactionno = fsTransactionNos.get(lnCtr);
             String sPayeeNme = CheckPayments().getModel().Payee().getPayeeName();
             String dCheckDte = CustomCommonUtil.formatDateToMMDDYYYY(Master().CheckPayments().getCheckDate());
-            String nAmountxx = String.valueOf(Master().CheckPayments().getAmount());
+            String nAmountxx = removeComma(String.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false))); 
             String xAmountWords = NumberToWords.convertToWords(new BigDecimal(nAmountxx));
             
             if(dCheckDte == null || "".equals(dCheckDte)){
@@ -5145,6 +5160,23 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("result", "success");
         poJSON.put("message", "Check printed successfully");
         return poJSON;
+    }
+    
+    /*Removes comma character existing in a string containing number*/
+    public static String removeComma(String numberStr) {
+        if (numberStr == null || numberStr.isEmpty()) {
+            return "0";
+        }
+
+        // Remove commas
+        String clean = numberStr.replace(",", "");
+
+        // Check if it's exactly negative zero
+        if (clean.matches("-0+(\\.0+)?")) {
+            return "0";
+        }
+
+        return clean.isEmpty() ? "0" : clean;
     }
     
     /**

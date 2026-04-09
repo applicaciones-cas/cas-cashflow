@@ -10,6 +10,7 @@ import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.RecordStatus;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 
@@ -30,7 +31,10 @@ public class Model_Document_Mapping extends Model {
             MiscUtil.initRowSet(poEntity);
 
             //assign default values
-            poEntity.updateObject("cRecdStat", PaymentRequestStatus.OPEN);
+            poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            poEntity.updateObject("nEntryNox", 0);  
+            poEntity.updateObject("sModified", poGRider.getUserID());
+            poEntity.updateObject("dModified", poGRider.getServerDate());
             //end - assign default values
 
             poEntity.insertRow();
@@ -113,7 +117,6 @@ public class Model_Document_Mapping extends Model {
 
     @Override
     public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+        return "";
     }
-
 }

@@ -271,7 +271,7 @@ public class AccountChart extends Parameter {
             lsSQL = MiscUtil.addCondition(lsSQL, "a.sIndstCde = " + SQLUtil.toSQL(industryCode));
         }
 
-
+        System.out.print("Executing SQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
@@ -1000,27 +1000,27 @@ public class AccountChart extends Parameter {
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
-                    if(loRS.getString("sModified").length() > 10){
-                        lsConfirm = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
-                    } else {
-                        lsConfirm = getSysUser(loRS.getString("sModified")); 
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                        if (loRS.getString("sModified").length() > 10) {
+                            lsConfirm = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                        } else {
+                            lsConfirm = getSysUser(loRS.getString("sModified"));
+                        }
+                        // Get the LocalDateTime from your result set
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                        lsDate = dModified.format(formatter);
                     }
-                    // Get the LocalDateTime from your result set
-                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
-                    lsDate =  dModified.format(formatter);
                 }
-            } 
-          }
-          MiscUtil.close(loRS);
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
-          poJSON.put("result", "error");
-          poJSON.put("message", e.getMessage());
-          return poJSON;
-        } 
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+            return poJSON;
+        }
         
         poJSON.put("result", "success");
         poJSON.put("sConfirmed", lsConfirm);
@@ -1029,38 +1029,38 @@ public class AccountChart extends Parameter {
     }
     
     /**
-     * Checks if an account combination already exists in the Account_Chart
-     * table.
-     *
-     * <p>
-     * This method validates the uniqueness of the combination of
-     * <code>sAcctCode</code> (Account Code) and <code>sIndstCde</code>
-     * (Industry Code) for active records (cRecdStat = '1'). It returns a
-     * {@link JSONObject} indicating whether a duplicate exists or not.
-     * </p>
-     *
-     * <p>
-     * Validation rules:
-     * <ul>
-     * <li>The account combination (sAcctCode + sIndstCde) must be unique.</li>
-     * <li>Only active records (cRecdStat = '1') are considered in the duplicate
-     * check.</li>
-     * </ul>
-     * </p>
-     *
-     * @param fsAcctCode the Account Code to check for duplicates; must not be
-     * null or empty
-     * @param fsIndstCde the Industry Code to check for duplicates; must not be
-     * null or empty
-     * @return a {@link JSONObject} containing:
-     * <ul>
-     * <li><b>result</b>: "success" if no duplicate is found, "error" if a
-     * duplicate exists</li>
-     * <li><b>message</b>: description of the validation outcome</li>
-     * </ul>
-     * @throws SQLException if a database access error occurs
-     * @throws GuanzonException if any business logic or execution error occurs
-     */
+    * Checks if an account combination already exists in the Account_Chart
+    * table.
+    *
+    * <p>
+    * This method validates the uniqueness of the combination of
+    * <code>sAcctCode</code> (Account Code) and <code>sIndstCde</code>
+    * (Industry Code) for active records (cRecdStat = '1'). It returns a
+    * {@link JSONObject} indicating whether a duplicate exists or not.
+    * </p>
+    *
+    * <p>
+    * Validation rules:
+    * <ul>
+    * <li>The account combination (sAcctCode + sIndstCde) must be unique.</li>
+    * <li>Only active records (cRecdStat = '1') are considered in the duplicate
+    * check.</li>
+    * </ul>
+    * </p>
+    *
+    * @param fsAcctCode the Account Code to check for duplicates; must not be
+    * null or empty
+    * @param fsIndstCde the Industry Code to check for duplicates; must not be
+    * null or empty
+    * @return a {@link JSONObject} containing:
+    * <ul>
+    * <li><b>result</b>: "success" if no duplicate is found, "error" if a
+    * duplicate exists</li>
+    * <li><b>message</b>: description of the validation outcome</li>
+    * </ul>
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if any business logic or execution error occurs
+    */
     public JSONObject checkAccountDuplicate(String fsAcctCode, String fsIndstCde) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
 
@@ -1068,7 +1068,7 @@ public class AccountChart extends Parameter {
                 + "FROM Account_Chart "
                 + "WHERE sAcctCode = " + SQLUtil.toSQL(fsAcctCode)
                 + " AND sIndstCde = " + SQLUtil.toSQL(fsIndstCde)
-                + " AND cRecdStat IN ('0','2')" ;
+                + " AND cRecdStat IN ('0','2')";
 
         System.out.println("EXECUTING SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
