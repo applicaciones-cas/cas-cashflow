@@ -130,6 +130,7 @@ public class CheckPrintingRequest extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
 
         //change status
@@ -185,6 +186,7 @@ public class CheckPrintingRequest extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
 
         //change status
@@ -239,6 +241,7 @@ public class CheckPrintingRequest extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
 
         //change status
@@ -289,6 +292,7 @@ public class CheckPrintingRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
 

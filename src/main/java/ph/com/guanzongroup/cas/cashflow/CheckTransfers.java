@@ -181,6 +181,7 @@ public class CheckTransfers extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if (!Detail(lnCtr).isReverse()) continue;
@@ -300,6 +301,7 @@ public class CheckTransfers extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -721,6 +723,7 @@ public class CheckTransfers extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -1956,6 +1959,7 @@ public class CheckTransfers extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
     poJSON.put("result", "success");
     return poJSON;
