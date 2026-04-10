@@ -343,8 +343,6 @@ public class CashFund extends Parameter {
                                                                     + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
                                                                     + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
-//                                                                    + " AND sCashFMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
-//                                                                    + " AND sCashFDsc = " + SQLUtil.toSQL(getModel().getDescription())
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -488,23 +486,21 @@ public class CashFund extends Parameter {
     */
     public JSONObject searchCustodian(String value, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-//        String lsFinance = getFinanceDepartment();
-//        
-//        if(lsFinance == null || "".equals(lsFinance)){
-//            poJSON = setJSON("error", "No Finance Department.\nPlease contact System Administration.");
-//            return poJSON;
-//        }
+        
+        if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
+            poJSON = setJSON("error", "The Finance Department configuration is missing. This field is required to proceed.\nPlease contact your system administrator for assistance.");
+            return poJSON;
+        }
         
         String lsSQL = "SELECT " 
                 + "   a.sEmployID "
                 + " , a.sDeptIDxx "
                 + " , a.sBranchCd "
                 + " , b.sCompnyNm AS EmployNme" 
-                + " FROM Employee_Master001 a" //GGC_ISysDBF.
-                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; //GGC_ISysDBF. NEED TO CLARIFY WHERE TO CONNECT SEARCH OF EMPLOYEE TO DATABASE
+                + " FROM Employee_Master001 a" 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
                                                + " AND a.sDeptIDxx = " + SQLUtil.toSQL( System.getProperty("sys.dept.finance"))
-//                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
                                             );
         lsSQL = lsSQL + " GROUP BY sEmployID ";
         System.out.println("Executing SQL: " + lsSQL);
@@ -526,30 +522,6 @@ public class CashFund extends Parameter {
         
         poJSON = setJSON("success", "success");
         return poJSON;
-    }
-    
-    private String getFinanceDepartment() throws SQLException, GuanzonException{
-        Model_Department loObj = new ParamModels(poGRider).Department();
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
-                                                                    " ( sDeptName LIKE '%Finance%' "
-                                                                    + " OR sDeptName LIKE '%Accounting%' )"
-                                                                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
-                                                                    );
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        try {
-            if (MiscUtil.RecordCount(loRS) > 0) {
-                if(loRS.next()){
-                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
-                        return loRS.getString("sDeptIDxx");
-                    }
-                }
-            }
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            System.out.println("No record loaded.");
-        }
-        return "";
     }
     /**
     * Loads cash fund ledger records within the given date range.

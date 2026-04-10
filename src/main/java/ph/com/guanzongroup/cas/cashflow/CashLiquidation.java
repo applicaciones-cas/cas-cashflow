@@ -46,9 +46,7 @@ import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Industry;
-import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -219,10 +217,12 @@ public class CashLiquidation extends Transaction {
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
+            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
                 poJSON = setJSON("error", "User is not an authorized approving officer.");
                 return poJSON;
             }
+            setApproving(lsUserIDxx);
         }   
         
         poJSON = setJSON("success","success");
@@ -398,30 +398,6 @@ public class CashLiquidation extends Transaction {
         poJSON = setJSON("success", "Transaction approved successfully.");
         return poJSON;
     }
-    
-//    public String getFinanceDepartment() throws SQLException, GuanzonException{
-//        Model_Department loObj = new ParamModels(poGRider).Department();
-//        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
-//                                                                    " ( sDeptName LIKE '%Finance%' "
-//                                                                    + " OR sDeptName LIKE '%Accounting%' )"
-//                                                                    + " AND cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
-//                                                                    );
-//        System.out.println("Executing SQL: " + lsSQL);
-//        ResultSet loRS = poGRider.executeQuery(lsSQL);
-//        try {
-//            if (MiscUtil.RecordCount(loRS) > 0) {
-//                if(loRS.next()){
-//                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
-//                        return loRS.getString("sDeptIDxx");
-//                    }
-//                }
-//            }
-//            MiscUtil.close(loRS);
-//        } catch (SQLException e) {
-//            System.out.println("No record loaded.");
-//        }
-//        return "";
-//    }
     
     public double getCashAdvanceBalance(){
         return Master().getAdvanceAmount() - Master().getLiquidationTotal();
@@ -649,15 +625,6 @@ public class CashLiquidation extends Transaction {
             if (!isJSONSuccess(loJSON)) {
                 return poJSON;
             }
-//            JSONObject loJSON = checkExistAcctCode(row, object.getModel().getAccountCode());
-//            if (!isJSONSuccess(loJSON)) {
-//                if((boolean) loJSON.get("continue")){
-//                    poJSON = setJSON("success", "success");
-//                    poJSON.put("row", (int) loJSON.get("row"));
-//                } 
-//                return poJSON;
-//            }
-//            Detail(row).setAccountCode(object.getModel().getAccountCode());
             System.out.println("Account : " +  Detail(row).Account().getDescription());
         }
         
@@ -718,97 +685,6 @@ public class CashLiquidation extends Transaction {
         return poJSON;
     }
     
-    /*Validate detail exisitence*/
-    //No need to validate existing account code or particular
-    // pwede kasi na dalawang OR yung content ng liquidation nya pero same ng account code or particular - ma'am grace 03-21-2026 4:43pm 
-    /**
-     * Validates if an account code already exists within the transaction details.
-     * <p>
-     * This method prevents duplicate account entries. If a duplicate is found, it 
-     * checks the "reverse" status of the existing record: if already reversed, 
-     * it blocks the entry; otherwise, it flags the existing record for reversal 
-     * and allows the process to continue.
-     * 
-     * @param fnRow The index of the current row being validated.
-     * @param fsAcctCode The account code to check against existing details.
-     * @return A {@link JSONObject} containing the validation result, the affected row index, 
-     *         and a "continue" flag for handling non-blocking duplicates.
-     * @throws SQLException, GuanzonException If an error occurs during data retrieval.
-     */
-    //TODO
-    //TODDDDDDDDDDDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO TEST
-//    public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode) throws SQLException, GuanzonException{
-//        poJSON = new JSONObject();
-//        int lnRow = 0;
-//        for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
-//            if(Detail(lnRow).isReverse()){
-//                lnRow++;
-//            }
-//            if(fnRow != lnCtr){
-//                if(fsAcctCode.equals(Detail(lnCtr).getAccountCode())
-//                    && Detail(fnRow).getParticular().equals(Detail(lnCtr).getParticular())){
-//                    if(!Detail(lnCtr).isReverse()){
-////                        poJSON = setJSON("error", "Account " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
-////                        poJSON.put("row", lnCtr);
-////                        poJSON.put("continue", false);
-////                    } else {
-//                        Detail(lnCtr).isReverse(true);
-//                        poJSON.put("result", "error");
-//                        poJSON.put("continue", true);
-//                        poJSON.put("row", lnCtr);
-//                    }
-//                    return poJSON;
-//                }
-//            }
-//        }
-//
-//        poJSON.put("result", "success");
-//        poJSON.put("row", fnRow);
-//        return poJSON;
-//    }
-    
-//    public JSONObject setParticular(int fnRow, String fsParticular, String fsReceiptNo, String fsAccountCode ) throws SQLException, GuanzonException{
-//        poJSON = new JSONObject();
-//        int lnRow = 0;
-//        
-//        if(Detail(fnRow).getEditMode() == EditMode.ADDNEW){
-//            for(int lnCtr = 0;lnCtr <= getDetailCount()-1; lnCtr++){
-//                if(Detail(lnRow).isReverse()){
-//                    lnRow++;
-//                }
-//                if(fnRow != lnCtr){
-//                    if(fsParticular.equals(Detail(lnCtr).getParticular()) 
-//                        && Detail(fnRow).getAccountCode().equals(Detail(lnCtr).getAccountCode())
-//                        && Detail(fnRow).getORNo().equals(Detail(lnCtr).getORNo())){
-//                        if(!Detail(lnCtr).isReverse()){
-//    //                        poJSON = setJSON("error", "Particular " + Detail(lnCtr).Account().getDescription() + " already exists at row " + (lnRow) + ".");
-//    //                        poJSON.put("row", lnCtr);
-//    //                    } else {
-//                            Detail(lnCtr).isReverse(true);
-//
-//                            //Reset value of the current selected row
-//                            Detail(fnRow).setAccountCode("");
-//                            Detail(fnRow).setORNo("");
-//                            Detail(fnRow).setTransactionDate(null);
-//                            Detail(fnRow).setParticular("");
-//                            poJSON.put("result", "success");
-//                            poJSON.put("row", lnCtr);
-//                            return poJSON;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//        poJSON = Detail(fnRow).setParticular(fsParticular);
-//        if(!isJSONSuccess(poJSON)){
-//            poJSON.put("row", fnRow);
-//            return poJSON;
-//        }
-//        
-//        poJSON.put("result", "success");
-//        poJSON.put("row", fnRow);
-//        return poJSON;
-//    }
     /**
      * Calculates the total transaction amount by summing up all detail records.
      * <p>
@@ -1141,7 +1017,7 @@ public class CashLiquidation extends Transaction {
         return poJSON;
     }
     
-/**
+    /**
      * Gets the master record for the Cash Advance transaction.
      * @return The {@link Model_Cash_Advance} master object.
      */
