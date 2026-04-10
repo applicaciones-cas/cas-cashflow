@@ -477,6 +477,12 @@ public class CashLiquidation extends Transaction {
      */
     public JSONObject SearchTransaction( String fsPayee, String fsTransactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
+        
+        if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
+            poJSON = setJSON("error", "The Finance Department configuration is missing. This field is required to proceed.\nPlease contact your system administrator for assistance.");
+            return poJSON;
+        }
+        
         int lnSort = 0;
         if(fsPayee != null && !"".equals(fsPayee)){
             lnSort = 2;
