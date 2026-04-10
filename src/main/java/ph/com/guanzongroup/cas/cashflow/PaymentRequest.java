@@ -143,6 +143,7 @@ public class PaymentRequest extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
         poJSON = setValueToOthers(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -345,6 +346,7 @@ public class PaymentRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -431,6 +433,7 @@ public class PaymentRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
 
@@ -527,6 +530,7 @@ public class PaymentRequest extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
 

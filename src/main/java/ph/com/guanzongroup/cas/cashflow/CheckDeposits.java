@@ -221,6 +221,7 @@ public class CheckDeposits extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
         poJSON = setValueToOthers(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -329,6 +330,7 @@ public class CheckDeposits extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         poJSON = setValueToOthers(lsStatus);
@@ -396,6 +398,7 @@ public class CheckDeposits extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -683,6 +686,7 @@ public class CheckDeposits extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -1909,6 +1913,7 @@ public class CheckDeposits extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
     poJSON.put("result", "success");
     return poJSON;
