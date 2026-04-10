@@ -22,101 +22,111 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
-import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund_Ledger;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCashLedger;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
+import ph.com.guanzongroup.cas.cashflow.status.PettyCashStatus;
 
-public class CashFund extends Parameter {
+public class PettyCash extends Parameter {
+
     public String psIndustryId = "";
     public String psCompanyId = "";
     public String psBranchCode = "";
     public String psDepartmentId = "";
-    
-    Model_Cash_Fund poModel;
+
+    Model_PettyCash poModel;
     public List<Model> paLedger;
-    
+
     /**
-    * Initializes the Cash Fund controller and its model.
-    *
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Initializes the Petty Cash Fund controller and its model.
+     *
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     @Override
     public void initialize() throws SQLException, GuanzonException {
         psRecdStat = Logical.YES;
 
         CashflowModels model = new CashflowModels(poGRider);
-        poModel = model.CashFund();
+        poModel = model.PettyCashMaster();
         paLedger = new ArrayList<Model>();
-        
+
         super.initialize();
     }
-    
+
     /**
-    * Initializes default values for Cash Fund fields.
-    *
-    * @return JSONObject result container
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Initializes default values for Petty Cash Fund fields.
+     *
+     * @return JSONObject result container
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     @Override
     public JSONObject initFields()
             throws SQLException,
             GuanzonException {
-        
+
         poModel.setIndustryId(poGRider.getIndustry());
         poModel.setCompanyId(poGRider.getCompnyId());
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartment(poGRider.getDepartment());
         poModel.setBeginningDate(poGRider.getServerDate());
-        
+
         return poJSON;
     }
-    
-    //Set default values for filtering data
-    public void setIndustryId(String industryId) { psIndustryId = industryId; }
-    public void setCompanyId(String companyId) { psCompanyId = companyId; }
-    public void setBranchCode(String branchCode) { psBranchCode = branchCode; }
-    public void setDepartmentId(String departmentId) { psDepartmentId = departmentId; }
-    
-    /**
-    * Creates a JSONObject with "result" and "message" fields.
-    *
-    * @param fsResult  The result value (e.g., "success", "error")
-    * @param fsMessage The message describing the result
-    * @return JSONObject containing the result and message
-    */
-   private JSONObject setJSON(String fsResult, String fsMessage) {
-       JSONObject loJSON = new JSONObject();
-       loJSON.put("result", fsResult);
-       loJSON.put("message", fsMessage);
-       return loJSON;
-   }
 
-   /**
-    * Checks whether a JSONObject indicates a successful result.
-    *
-    * Returns true if the "result" field equals "success" or is not "error".
-    *
-    * @param foJSON The JSONObject to check
-    * @return true if successful, false otherwise
-    */
-   public boolean isJSONSuccess(JSONObject foJSON) {
-       return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
-   }
-    
+    //Set default values for filtering data
+    public void setIndustryId(String industryId) {
+        psIndustryId = industryId;
+    }
+
+    public void setCompanyId(String companyId) {
+        psCompanyId = companyId;
+    }
+
+    public void setBranchCode(String branchCode) {
+        psBranchCode = branchCode;
+    }
+
+    public void setDepartmentId(String departmentId) {
+        psDepartmentId = departmentId;
+    }
+
     /**
-    * Requests user approval for the current transaction.
-    *
-    * @return JSONObject containing approval result and message
-    */
-    public JSONObject callApproval(){
+     * Creates a JSONObject with "result" and "message" fields.
+     *
+     * @param fsResult The result value (e.g., "success", "error")
+     * @param fsMessage The message describing the result
+     * @return JSONObject containing the result and message
+     */
+    private JSONObject setJSON(String fsResult, String fsMessage) {
+        JSONObject loJSON = new JSONObject();
+        loJSON.put("result", fsResult);
+        loJSON.put("message", fsMessage);
+        return loJSON;
+    }
+
+    /**
+     * Checks whether a JSONObject indicates a successful result.
+     *
+     * Returns true if the "result" field equals "success" or is not "error".
+     *
+     * @param foJSON The JSONObject to check
+     * @return true if successful, false otherwise
+     */
+    public boolean isJSONSuccess(JSONObject foJSON) {
+        return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
+    }
+
+    /**
+     * Requests user approval for the current transaction.
+     *
+     * @return JSONObject containing approval result and message
+     */
+    public JSONObject callApproval() {
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
             poJSON = ShowDialogFX.getUserApproval(poGRider);
@@ -129,21 +139,21 @@ public class CashFund extends Parameter {
                 return poJSON;
             }
 //            setApproving(lsUserIDxx);
-        }   
-        
-        poJSON = setJSON("success","success");
+        }
+
+        poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+
     /**
-    * Activate the current Cash Fund record.
-    *
-    * @return JSONObject containing the result of the confirmation process
-    * @throws ParseException if date parsing fails
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    * @throws CloneNotSupportedException if cloning is not supported
-    */
+     * Activate the current Petty Cash Fund record.
+     *
+     * @return JSONObject containing the result of the confirmation process
+     * @throws ParseException if date parsing fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     * @throws CloneNotSupportedException if cloning is not supported
+     */
     public JSONObject ActivateRecord()
             throws ParseException,
             SQLException,
@@ -151,7 +161,7 @@ public class CashFund extends Parameter {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashFundStatus.ACTIVE;
+        String lsStatus = PettyCashStatus.ACTIVE;
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
@@ -168,15 +178,15 @@ public class CashFund extends Parameter {
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-        if(!pbWthParent){
+
+        if (!pbWthParent) {
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
         }
-        
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
+
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sPettyIDx"), "", lsStatus, false, pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -185,23 +195,23 @@ public class CashFund extends Parameter {
         poJSON = setJSON("success", "Record activate successfully.");
         return poJSON;
     }
-    
+
     /**
-    * Deactivate the current Cash Fund record.
-    *
-    * @return JSONObject containing the result of the confirmation process
-    * @throws ParseException if date parsing fails
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    * @throws CloneNotSupportedException if cloning is not supported
-    */
+     * Deactivate the current Petty Cash Fund record.
+     *
+     * @return JSONObject containing the result of the confirmation process
+     * @throws ParseException if date parsing fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     * @throws CloneNotSupportedException if cloning is not supported
+     */
     public JSONObject DeactivateRecord() throws ParseException,
             SQLException,
             GuanzonException,
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashFundStatus.DEACTIVATED;
+        String lsStatus = PettyCashStatus.DEACTIVATED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
@@ -212,8 +222,8 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "Record was already deactivate.");
             return poJSON;
         }
-        
-        if (poModel.getBalance() != 0.0000 || !CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
+
+        if (poModel.getBalance() != 0.0000 || !PettyCashStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
             poJSON = setJSON("error", "Deactivation is only allowed if status is active and balance is 0.00");
             return poJSON;
         }
@@ -223,17 +233,17 @@ public class CashFund extends Parameter {
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-        if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
-            if(!pbWthParent){
+
+        if (PettyCashStatus.ACTIVE.equals(poModel.getTransactionStatus())) {
+            if (!pbWthParent) {
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
                     return poJSON;
                 }
             }
         }
-        
-        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
+
+        poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sPettyIDx"), "", lsStatus, false, pbWthParent);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
@@ -242,14 +252,14 @@ public class CashFund extends Parameter {
         poJSON = setJSON("success", "Record deactivate successfully.");
         return poJSON;
     }
-    
+
     /**
-    * Validates if the Cash Fund entry is ready to be saved.
-    *
-    * @return JSONObject containing validation result and message if invalid
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Validates if the Petty Cash Fund entry is ready to be saved.
+     *
+     * @return JSONObject containing validation result and message if invalid
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     @Override
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -259,9 +269,8 @@ public class CashFund extends Parameter {
             return poJSON;
         } else {
             poJSON = new JSONObject();
-
-            if (poModel.getCashFundId() == null || "".equals(poModel.getCashFundId())) {
-                poJSON = setJSON("error", "Cash fund ID must not be empty.");
+            if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
+                poJSON = setJSON("error", "Petty Cash ID must not be empty.");
                 return poJSON;
             }
 
@@ -290,67 +299,69 @@ public class CashFund extends Parameter {
                 return poJSON;
             }
 
-            if (poModel.getCashFundManager() == null || "".equals(poModel.getCashFundManager())) {
+            if (poModel.getPettyManager() == null || "".equals(poModel.getPettyManager())) {
                 poJSON = setJSON("error", "Custodian must not be empty.");
                 return poJSON;
             }
-            
+
             if (poModel.getBeginningBalance() <= 0.0000) {
                 poJSON = setJSON("error", "Invalid beginning balance.");
                 return poJSON;
             }
-            
-            if(poModel.getEditMode() == EditMode.ADDNEW){
+
+            if (poModel.getEditMode() == EditMode.ADDNEW) {
                 if (poModel.getBalance() <= 0.0000) {
                     poJSON = setJSON("error", "Invalid balance.");
                     return poJSON;
                 }
-                
+
                 LocalDate ldateServerDate = strToDate(xsDateShort(poGRider.getServerDate()));
                 LocalDate ldateBeginningDate = strToDate(xsDateShort(poModel.getBeginningDate()));
                 if (ldateBeginningDate.isBefore(ldateServerDate)) {
                     poJSON = setJSON("error", "Back date is not allowed.");
                     return poJSON;
                 }
-            } 
+            }
         }
-        
-        poJSON = checkExistingCashFund();
+
+        poJSON = checkExistingPettyCash();
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
 
         poModel.setModifiedBy(poGRider.getUserID());
         poModel.setModifiedDate(poGRider.getServerDate());
-        
+
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+
     /**
-     * Checks if a similar Cash Fund record already exists in the database.
+     * Checks if a similar Petty Cash Fund record already exists in the database.
      *
      * @return JSONObject indicating whether a duplicate record was found
      * @throws SQLException if a database error occurs
      * @throws GuanzonException if a system error occurs
      */
-    public JSONObject checkExistingCashFund() throws SQLException, GuanzonException{
+    public JSONObject checkExistingPettyCash() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
-        //BR : Validate if Cash Fund with the same Industry, Company, Branch and Department exists
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()), 
-                                                                    " sCashFIDx != " + SQLUtil.toSQL(getModel().getCashFundId())
-                                                                    + " AND sBranchCD = " + SQLUtil.toSQL(getModel().getBranchCode())
-                                                                    + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
-                                                                    + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
-                                                                    + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
-                                                                    );
+        //BR : Validate if Petty Cash Fund with the same Branch and Department exists; AND Industry, Company as per - ma'am grace 04/07/2026 11:50 AM
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(getModel()),
+                " sPettyIDx != " + SQLUtil.toSQL(getModel().getPettyId())
+                + " AND sBranchCD = " + SQLUtil.toSQL(getModel().getBranchCode())
+                + " AND sDeptIDxx = " + SQLUtil.toSQL(getModel().getDepartment())
+                + " AND sCompnyID = " + SQLUtil.toSQL(getModel().getCompanyId())
+                + " AND sIndstCdx = " + SQLUtil.toSQL(getModel().getIndustryId())
+                //+ " AND sPettyMgr = " + SQLUtil.toSQL(getModel().getCashFundManager())
+                //+ " AND sPettyDsc = " + SQLUtil.toSQL(getModel().getDescription())
+        );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
             if (MiscUtil.RecordCount(loRS) > 0) {
-                if(loRS.next()){
-                    if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
-                        poJSON = setJSON("error", "Cash fund already exists in the database.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
+                if (loRS.next()) {
+                    if (loRS.getString("sPettyIDx") != null && !"".equals(loRS.getString("sPettyIDx"))) {
+                        poJSON = setJSON("error", "Petty Cash fund already exists in the database.\nCheck petty cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
                     }
                 }
             }
@@ -360,57 +371,58 @@ public class CashFund extends Parameter {
         }
         return poJSON;
     }
-    
+
     /**
-     * Returns the Cash Fund model instance.
+     * Returns the Petty Cash Fund model instance.
      *
-     * @return Model_Cash_Fund object
+     * @return Model_PettyCash object
      */
     @Override
-    public Model_Cash_Fund getModel() {
+    public Model_PettyCash getModel() {
         return poModel;
     }
-    
+
     /**
-    * Searches a Cash Fund record using the given value.
-    *
-    * @param value   the search key
-    * @param byCode  true to search by code, false to search by description
-    * @return JSONObject containing the selected record or an error message if none was selected
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Searches a Petty Cash Fund record using the given value.
+     *
+     * @param value the search key
+     * @param byCode true to search by code, false to search by description
+     * @return JSONObject containing the selected record or an error message if
+     * none was selected
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
         String lsCondition = "";
-        
-        if(psCompanyId != null && !"".equals(psCompanyId)){
+
+        if (psCompanyId != null && !"".equals(psCompanyId)) {
             lsCondition = " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
         }
-        if(psIndustryId != null && !"".equals(psIndustryId)){
-            if(lsCondition.isEmpty()){
+        if (psIndustryId != null && !"".equals(psIndustryId)) {
+            if (lsCondition.isEmpty()) {
                 lsCondition = " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
             } else {
                 lsCondition = lsCondition + " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
             }
         }
-        if(psBranchCode != null && !"".equals(psBranchCode)){
-            if(lsCondition.isEmpty()){
+        if (psBranchCode != null && !"".equals(psBranchCode)) {
+            if (lsCondition.isEmpty()) {
                 lsCondition = " AND a.sBranchCD = " + SQLUtil.toSQL(psBranchCode);
             } else {
                 lsCondition = lsCondition + " AND a.sBranchCD = " + SQLUtil.toSQL(psBranchCode);
             }
-        
+
         }
-        if(psDepartmentId != null && !"".equals(psDepartmentId)){
-            if(lsCondition.isEmpty()){
+        if (psDepartmentId != null && !"".equals(psDepartmentId)) {
+            if (lsCondition.isEmpty()) {
                 lsCondition = " AND a.sDeptIDxx = " + SQLUtil.toSQL(psDepartmentId);
             } else {
                 lsCondition = lsCondition + " AND a.sDeptIDxx = " + SQLUtil.toSQL(psDepartmentId);
             }
         }
-        if(!lsCondition.isEmpty()){
+        if (!lsCondition.isEmpty()) {
             lsSQL = lsSQL + " " + lsCondition;
         }
         System.out.println("MySQL : " + lsSQL);
@@ -418,30 +430,30 @@ public class CashFund extends Parameter {
                 lsSQL,
                 value,
                 "ID»Description»Branch»Department»Custodian",
-                "sCashFIDx»sCashFDsc»xBranchNm»xDeptName»xCustdian",
-                "a.sCashFIDx»a.sCashFDsc»IFNULL(d.sBranchNm, '')»IFNULL(e.sDeptName, '')»f.sCompnyNm",
+                "sPettyIDx»sPettyDsc»xBranchNm»xDeptName»xCustdian",
+                "a.sPettyIDx»a.sPettyDsc»IFNULL(d.sBranchNm, '')»IFNULL(e.sDeptName, '')»f.sCompnyNm",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
-            return poModel.openRecord((String) poJSON.get("sCashFIDx"));
+            return poModel.openRecord((String) poJSON.get("sPettyIDx"));
         } else {
             poJSON = new JSONObject();
             poJSON = setJSON("error", "No record loaded.");
             return poJSON;
         }
     }
-    
+
     /**
-    * Searches for a branch and assigns it to the current Cash Fund model.
-    *
-    * @param value     the search key
-    * @param byCode    true to search by code, false to search by description
-    * @param isSearch  indicates if the action is triggered from search
-    * @return JSONObject containing the search result
-    * @throws ExceptionInInitializerError if initialization fails
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Searches for a branch and assigns it to the current Petty Cash Fund model.
+     *
+     * @param value the search key
+     * @param byCode true to search by code, false to search by description
+     * @param isSearch indicates if the action is triggered from search
+     * @return JSONObject containing the search result
+     * @throws ExceptionInInitializerError if initialization fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -453,17 +465,17 @@ public class CashFund extends Parameter {
 
         return poJSON;
     }
-    
+
     /**
-    * Searches for a department and assigns it to the current Cash Fund model.
-    *
-    * @param value   the search key
-    * @param byCode  true to search by code, false to search by description
-    * @return JSONObject containing the search result
-    * @throws ExceptionInInitializerError if initialization fails
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Searches for a department and assigns it to the current Petty Cash Fund model.
+     *
+     * @param value the search key
+     * @param byCode true to search by code, false to search by description
+     * @return JSONObject containing the search result
+     * @throws ExceptionInInitializerError if initialization fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Department object = new ParamControllers(poGRider, logwrapr).Department();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -474,16 +486,17 @@ public class CashFund extends Parameter {
         }
         return poJSON;
     }
-    
+
     /**
-    * Searches a Cash Fund custodian using the given value.
-    *
-    * @param value   the search key
-    * @param byCode  true to search by code, false to search by description
-    * @return JSONObject containing the selected record or an error message if none was selected
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Searches a Petty Cash Fund custodian using the given value.
+     *
+     * @param value the search key
+     * @param byCode true to search by code, false to search by description
+     * @return JSONObject containing the selected record or an error message if
+     * none was selected
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     public JSONObject searchCustodian(String value, boolean byCode) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         
@@ -491,17 +504,17 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "The Finance Department configuration is missing. This field is required to proceed.\nPlease contact your system administrator for assistance.");
             return poJSON;
         }
-        
-        String lsSQL = "SELECT " 
+        String lsSQL = "SELECT "
                 + "   a.sEmployID "
                 + " , a.sDeptIDxx "
                 + " , a.sBranchCd "
-                + " , b.sCompnyNm AS EmployNme" 
+                + " , b.sCompnyNm AS EmployNme"
                 + " FROM Employee_Master001 a" 
-                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID" ; 
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployID"; 
         lsSQL = MiscUtil.addCondition(lsSQL, " a.dFiredxxx IS NULL "
-                                               + " AND a.sDeptIDxx = " + SQLUtil.toSQL( System.getProperty("sys.dept.finance"))
-                                            );
+                + " AND a.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance"))
+        //                                                + " AND a.sBranchCd = " + SQLUtil.toSQL(poModel.getBranchCode())
+        );
         lsSQL = lsSQL + " GROUP BY sEmployID ";
         System.out.println("Executing SQL: " + lsSQL);
         JSONObject loJSON = ShowDialogFX.Browse(poGRider,
@@ -514,17 +527,18 @@ public class CashFund extends Parameter {
         if (loJSON != null) {
             System.out.println("Employee ID " + (String) loJSON.get("sEmployID"));
             System.out.println("Employee Name " + (String) loJSON.get("EmployNme"));
-            poModel.setCashFundManager((String) loJSON.get("sEmployID"));
+            poModel.setPettyManager((String) loJSON.get("sEmployID"));
         } else {
             loJSON = setJSON("error", "No record loaded.");
             return loJSON;
         }
-        
+
         poJSON = setJSON("success", "success");
         return poJSON;
     }
+
     /**
-    * Loads cash fund ledger records within the given date range.
+    * Loads petty cash ledger records within the given date range.
     *
     * @param fsDateFrom start date (inclusive)
     * @param fsDateTo   end date (inclusive)
@@ -535,16 +549,15 @@ public class CashFund extends Parameter {
     public JSONObject loadLedger(String fsDateFrom, String fsDateTo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paLedger = new ArrayList<>();
-        
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).CashFundLedger()),
-                " sCashFIDx = " + SQLUtil.toSQL(getModel().getCashFundId())
+        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).PettyCashFundLedger()),
+                " sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
                 + " AND cReversex = '+'"
                 + " AND dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom)
                 + " AND " + SQLUtil.toSQL(fsDateTo)
             );
         
 //        lsSQL = lsSQL + " GROUP BY nLedgerNo ORDER BY dTransact ASC ";
-        lsSQL = lsSQL + " GROUP BY sCashFIDx, sSourceCD, sSourceNo, cReversex ORDER BY dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -553,9 +566,9 @@ public class CashFund extends Parameter {
         }
 
         while (loRS.next()) {
-            Model_Cash_Fund_Ledger loObject = new CashflowModels(poGRider).CashFundLedger();
+            Model_PettyCashLedger loObject = new CashflowModels(poGRider).PettyCashFundLedger();
 //            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
-            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
             if (isJSONSuccess(poJSON)) {
                 paLedger.add((Model) loObject);
             } else {
@@ -569,10 +582,10 @@ public class CashFund extends Parameter {
     * Retrieves a specific ledger record from the transaction list.
     * 
     * @param row The index of the record to retrieve.
-    * @return The Model_Cash_Fund_Ledger instance at the specified row.
+    * @return The Model_PettyCashLedger instance at the specified row.
     */
-    public Model_Cash_Fund_Ledger LedgerList(int row) {
-        return (Model_Cash_Fund_Ledger) paLedger.get(row);
+    public Model_PettyCashLedger LedgerList(int row) {
+        return (Model_PettyCashLedger) paLedger.get(row);
     }
     /**
      * Returns the total number of records in the ledger transaction list.
@@ -583,25 +596,26 @@ public class CashFund extends Parameter {
         return this.paLedger.size();
     }
     /**
-    * Returns a readable status of the current Cash Fund transaction.
-    *
-    * @return String representing the transaction status (e.g., "OPEN", "ACTIVE", "DEACTIVATED", or "UNKNOWN")
-    */
-    public String getStatus(){
-        switch(poModel.getTransactionStatus()){
-            case CashFundStatus.OPEN:
+     * Returns a readable status of the current Petty Cash Fund transaction.
+     *
+     * @return String representing the transaction status (e.g., "OPEN",
+     * "ACTIVE", "DEACTIVATED", or "UNKNOWN")
+     */
+    public String getStatus() {
+        switch (poModel.getTransactionStatus()) {
+            case PettyCashStatus.OPEN:
                 return "OPEN";
-            case CashFundStatus.ACTIVE:
+            case PettyCashStatus.ACTIVE:
                 return "ACTIVE";
-            case CashFundStatus.DEACTIVATED:
+            case PettyCashStatus.DEACTIVATED:
                 return "INACTIVE";
             default:
                 return "UNKNOWN";
         }
     }
-    
+
     /**
-     * Builds the SQL query used for browsing Cash Fund records.
+     * Builds the SQL query used for browsing Petty Cash Fund records.
      *
      * @return SQL query string with record status condition applied
      */
@@ -619,179 +633,181 @@ public class CashFund extends Parameter {
             lsCondition = "a.cTranStat = " + SQLUtil.toSQL(psRecdStat);
         }
 
-        String lsSQL = " SELECT         "
-                    + "    a.sCashFIDx "
-                    + "  , a.sBranchCD "
-                    + "  , a.sDeptIDxx "
-                    + "  , a.sCompnyID "
-                    + "  , a.sIndstCdx "
-                    + "  , a.sCashFDsc "
-                    + "  , a.nBalancex "
-                    + "  , a.nBegBalxx "
-                    + "  , a.dBegDatex "
-                    + "  , a.sCashFMgr "
-                    + "  , a.nLedgerNo "
-                    + "  , a.dLastTran "
-                    + "  , a.cTranStat "
-                    + "  , a.sModified "
-                    + "  , a.dModified "
-                    + "  , b.sDescript as xIndustry "     
-                    + "  , c.sCompnyNm as xCompanyx "     
-                    + "  , d.sBranchNm AS xBranchNm "     
-                    + "  , e.sDeptName AS xDeptName "     
-                    + "  , f.sCompnyNm AS xCustdian "     
-                    + " FROM CashFund a             "
-                    + " LEFT JOIN Industry b ON b.sIndstCdx = a.sIndstCdx      "
-                    + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID       "
-                    + " LEFT JOIN Branch d ON d.sBranchCd = a.sBranchCD        "
-                    + " LEFT JOIN Department e ON e.sDeptIDxx = a.sDeptIDxx    "
-                    + " LEFT JOIN Client_Master f ON f.sClientID = a.sCashFMgr ";
+        String lsSQL = "SELECT "
+                + "a.sPettyIDx "
+                + ",a.sBranchCD "
+                + ",a.sDeptIDxx "
+                + ",a.sCompnyID "
+                + ",a.sIndstCdx "
+                + ",a.sPettyDsc "
+                + ",a.nBalancex "
+                + ",a.nBegBalxx  "
+                + ",a.dBegDatex "
+                + ",a.sPettyMgr "
+                + ",a.nLedgerNo "
+                + ",a.dLastTran "
+                + ",a.cTranStat "
+                + ",a.sModified "
+                + ",a.dModified "
+                + ",b.sDescript as xIndustry "
+                + ",c.sCompnyNm as xCompanyx "
+                + ",d.sBranchNm AS xBranchNm "
+                + ",e.sDeptName AS xDeptName "
+                + ",f.sCompnyNm AS xCustdian "
+                + "FROM PettyCash a "
+                + "LEFT JOIN Industry b ON b.sIndstCdx = a.sIndstCdx "
+                + "LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
+                + "LEFT JOIN Branch d ON d.sBranchCd = a.sBranchCD "
+                + "LEFT JOIN Department e ON e.sDeptIDxx = a.sDeptIDxx "
+                + "LEFT JOIN Client_Master f ON f.sClientID = a.sPettyMgr";
 
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
     
     /**
-     * Displays the status history of the current Cash Fund record.
+     * Displays the status history of the current Petty Cash Fund record.
      * <p>
-     * Retrieves status changes, maps internal codes to readable values,
-     * fetches the entry user and date, and displays the history via the UI.
+     * Retrieves status changes, maps internal codes to readable values, fetches
+     * the entry user and date, and displays the history via the UI.
      *
      * @throws SQLException if a database error occurs
      * @throws GuanzonException if a system error occurs
      * @throws Exception for other unexpected errors
      */
-    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception {
         CachedRowSet crs = getStatusHistory();
-        
+
         crs.beforeFirst();
-        
-        while(crs.next()){
-            
-            switch(crs.getString("cRefrStat")){
+
+        while (crs.next()) {
+
+            switch (crs.getString("cRefrStat")) {
                 case "":
                     crs.updateString("cRefrStat", "-");
                     break;
-                case CashFundStatus.OPEN:
+                case PettyCashStatus.OPEN:
                     crs.updateString("cRefrStat", "OPEN");
                     break;
-                case CashFundStatus.ACTIVE:
+                case PettyCashStatus.ACTIVE:
                     crs.updateString("cRefrStat", "ACTIVE");
                     break;
-                case CashFundStatus.DEACTIVATED:
+                case PettyCashStatus.DEACTIVATED:
                     crs.updateString("cRefrStat", "INACTIVE");
                     break;
                 default:
                     char ch = crs.getString("cRefrStat").charAt(0);
                     String stat = String.valueOf((int) ch - 64);
-                    switch (stat){
+                    switch (stat) {
                         case "":
                             crs.updateString("cRefrStat", "-");
                             break;
-                        case CashFundStatus.OPEN:
+                        case PettyCashStatus.OPEN:
                             crs.updateString("cRefrStat", "OPEN");
                             break;
-                        case CashFundStatus.ACTIVE:
+                        case PettyCashStatus.ACTIVE:
                             crs.updateString("cRefrStat", "ACTIVE");
                             break;
-                        case CashFundStatus.DEACTIVATED:
+                        case PettyCashStatus.DEACTIVATED:
                             crs.updateString("cRefrStat", "INACTIVE");
                             break;
                     }
             }
-            crs.updateRow(); 
+            crs.updateRow();
         }
-        
-        JSONObject loJSON  = getEntryBy();
+
+        JSONObject loJSON = getEntryBy();
         String entryBy = "";
         String entryDate = "";
-        
-        if ("success".equals((String) loJSON.get("result"))){
+
+        if ("success".equals((String) loJSON.get("result"))) {
             entryBy = (String) loJSON.get("sCompnyNm");
             entryDate = (String) loJSON.get("sEntryDte");
         }
-        
-        showStatusHistoryUI("Cash Fund", (String) poModel.getValue("sCashFIDx"), entryBy, entryDate, crs);
+
+        showStatusHistoryUI("Petty Cash Fund", (String) poModel.getValue("sPettyIDx"), entryBy, entryDate, crs);
     }
-    
+
     /**
-    * Retrieves information about who created the current Cash Fund record and when.
-    *
-    * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (date) if successful
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Retrieves information about who created the current Petty Cash Fund record and
+     * when.
+     *
+     * @return JSONObject containing "sCompnyNm" (user) and "sEntryDte" (date)
+     * if successful
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     public JSONObject getEntryBy() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsEntry = "";
         String lsEntryDate = "";
-        String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM "+ poModel.getTable()+" a "
-                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sCashFIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sCashFIDx =  " + SQLUtil.toSQL(poModel.getCashFundId())) ;
+        String lsSQL = " SELECT b.sModified, b.dModified "
+                + " FROM " + poModel.getTable() + " a "
+                + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sPettyIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sPettyIDx =  " + SQLUtil.toSQL(poModel.getPettyId()));
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
-                    if(loRS.getString("sModified").length() > 10){
-                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
-                    } else {
-                        lsEntry = getSysUser(loRS.getString("sModified")); 
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    if (loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))) {
+                        if (loRS.getString("sModified").length() > 10) {
+                            lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified")));
+                        } else {
+                            lsEntry = getSysUser(loRS.getString("sModified"));
+                        }
+                        // Get the LocalDateTime from your result set
+                        LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                        lsEntryDate = dModified.format(formatter);
                     }
-                    // Get the LocalDateTime from your result set
-                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
-                    lsEntryDate =  dModified.format(formatter);
                 }
-            } 
-          }
-          MiscUtil.close(loRS);
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
             poJSON = setJSON("error", e.getMessage());
             return poJSON;
-        } 
-        
+        }
+
         poJSON.put("result", "success");
         poJSON.put("sCompnyNm", lsEntry);
         poJSON.put("sEntryDte", lsEntryDate);
         return poJSON;
     }
-    
+
     /**
-    * Retrieves the company name of a system user based on their user ID.
-    *
-    * @param fsId the system user ID
-    * @return the company name of the user
-    * @throws SQLException if a database error occurs
-    * @throws GuanzonException if a system error occurs
-    */
+     * Retrieves the company name of a system user based on their user ID.
+     *
+     * @param fsId the system user ID
+     * @return the company name of the user
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if a system error occurs
+     */
     public String getSysUser(String fsId) throws SQLException, GuanzonException {
         String lsEntry = "";
-        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
-                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
+        String lsSQL = " SELECT b.sCompnyNm from xxxSysUser a "
+                + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId));
         System.out.println("SQL " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                lsEntry = loRS.getString("sCompnyNm");
-            } 
-          }
-          MiscUtil.close(loRS);
+            if (MiscUtil.RecordCount(loRS) > 0L) {
+                if (loRS.next()) {
+                    lsEntry = loRS.getString("sCompnyNm");
+                }
+            }
+            MiscUtil.close(loRS);
         } catch (SQLException e) {
             poJSON = setJSON("error", e.getMessage());
-        } 
+        }
         return lsEntry;
     }
-    
+
     private static String xsDateShort(Date fdValue) {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
         String date = sdf.format(fdValue);
         return date;
     }
-    
+
     private LocalDate strToDate(String val) {
         DateTimeFormatter date_formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(val, date_formatter);

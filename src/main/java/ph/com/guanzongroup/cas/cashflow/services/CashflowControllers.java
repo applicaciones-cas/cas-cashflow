@@ -30,6 +30,8 @@ import ph.com.guanzongroup.cas.cashflow.OtherPaymentStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.OtherPayments;
 import ph.com.guanzongroup.cas.cashflow.Payee;
 import ph.com.guanzongroup.cas.cashflow.PaymentRequest;
+import ph.com.guanzongroup.cas.cashflow.PettyCash;
+import ph.com.guanzongroup.cas.cashflow.PettyCashDisbursement;
 import ph.com.guanzongroup.cas.cashflow.RecurringExpense;
 import ph.com.guanzongroup.cas.cashflow.RecurringExpenseSchedule;
 import ph.com.guanzongroup.cas.cashflow.RecurringIssuance;
@@ -437,7 +439,7 @@ public class CashflowControllers {
         poOtherPayments.initialize();
         return poOtherPayments;
     }
-    
+
     public OtherPaymentStatusUpdate OtherPaymentStatusUpdate() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.OtherPaymentStatusUpdate: Application driver is not set.");
@@ -507,7 +509,7 @@ public class CashflowControllers {
         poWithholdingTaxDeductions.newRecord();
         return poWithholdingTaxDeductions;
     }
-    
+
     public CheckTransfers CheckTransfers() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckTransfers: Application driver is not set.");
@@ -526,7 +528,7 @@ public class CashflowControllers {
         poCheckTransfer.setWithParent(false);
         return poCheckTransfer;
     }
-    
+
     public CheckDeposits CheckDeposits() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckDeposits: Application driver is not set.");
@@ -545,7 +547,7 @@ public class CashflowControllers {
         poCheckDeposit.setWithParent(false);
         return poCheckDeposit;
     }
-    
+
     public CheckReleases CheckReleases() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CheckRelease: Application driver is not set.");
@@ -564,7 +566,7 @@ public class CashflowControllers {
         poCheckRelease.setWithParent(false);
         return poCheckRelease;
     }
-    
+
     public RecurringExpense RecurringExpense() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashflowControllers.RecurringExpense: Application driver is not set.");
@@ -601,7 +603,7 @@ public class CashflowControllers {
         poRecurringExpenseSchedule.initialize();
         return poRecurringExpenseSchedule;
     }
-    
+
     public CashFund CashFund() throws SQLException, GuanzonException {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CashFund: Application driver is not set.");
@@ -620,7 +622,26 @@ public class CashflowControllers {
         poCashFund.newRecord();
         return poCashFund;
     }
-    
+
+    public PettyCash PettyCash() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CashFund: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashFund != null) {
+            return poPettyCash;
+        }
+
+        poPettyCash = new PettyCash();
+        poPettyCash.setApplicationDriver(poGRider);
+        poPettyCash.setWithParentClass(false);
+        poPettyCash.setLogWrapper(poLogWrapper);
+        poPettyCash.initialize();
+        poPettyCash.newRecord();
+        return poPettyCash;
+    }
+
     public CashAdvance CashAdvance() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CashAdvance: Application driver is not set.");
@@ -639,7 +660,7 @@ public class CashflowControllers {
         poCashAdvance.setWithParent(false);
         return poCashAdvance;
     }
-    
+
     public CashLiquidation CashLiquidation() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CashLiquidation: Application driver is not set.");
@@ -658,7 +679,7 @@ public class CashflowControllers {
         poCashLiquidation.setWithParent(false);
         return poCashLiquidation;
     }
-    
+
     public CashDisbursement CashDisbursement() {
         if (poGRider == null) {
             poLogWrapper.severe("CashFlowcontrollers.CashDisbursement: Application driver is not set.");
@@ -677,6 +698,26 @@ public class CashflowControllers {
         poCashDisbursement.setWithParent(false);
         return poCashDisbursement;
     }
+
+
+    public PettyCashDisbursement PettyCashDisbursement() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.PettyCashDisbursement: Application driver is not set.");
+            return null;
+        }
+
+        if (poPettyCashDisbursement != null) {
+            return poPettyCashDisbursement;
+        }
+
+        poPettyCashDisbursement = new PettyCashDisbursement();
+        poPettyCashDisbursement.setApplicationDriver(poGRider);
+        poPettyCashDisbursement.setBranchCode(poGRider.getBranchCode());
+        poPettyCashDisbursement.setLogWrapper(poLogWrapper);
+        poPettyCashDisbursement.setVerifyEntryNo(true);
+        poPettyCashDisbursement.setWithParent(false);
+        return poPettyCashDisbursement;
+    }
     @Override
     protected void finalize() throws Throwable {
         try {
@@ -685,7 +726,7 @@ public class CashflowControllers {
             poRecurringIssuance = null;
             poCheckTransfer = null;
             poCheckDeposit = null;
-            poCheckRelease= null;
+            poCheckRelease = null;
             poParticular = null;
             poPayee = null;
             poRecurringIssuance = null;
@@ -715,6 +756,7 @@ public class CashflowControllers {
             poCashFund = null;
             poCashLiquidation = null;
             poCashDisbursement = null;
+            poPettyCashDisbursement = null;
             poLogWrapper = null;
             poGRider = null;
         } finally {
@@ -758,6 +800,8 @@ public class CashflowControllers {
     private RecurringExpense poRecurringExpense;
     private RecurringExpenseSchedule poRecurringExpenseSchedule;
     private CashFund poCashFund;
+    private PettyCash poPettyCash;
     private CashLiquidation poCashLiquidation;
     private CashDisbursement poCashDisbursement;
+    private PettyCashDisbursement poPettyCashDisbursement;
 }

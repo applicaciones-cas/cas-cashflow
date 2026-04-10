@@ -22,21 +22,21 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
+import ph.com.guanzongroup.cas.cashflow.status.PettyCashDisbursementStatus;
 
 /**
  *
- * @author Arsiela 03-24-2026
+ * @author Arsiela 04-01-2026
  */
-public class Model_Cash_Disbursement extends Model {
+public class Model_PettyCash_Disbursement extends Model {
 
     Model_Branch poBranch;
     Model_Industry poIndustry;
     Model_Company poCompany;
     Model_Department poDepartment;
-    Model_Cash_Fund poCashFund;
     Model_Client_Master poCreditTo;
     Model_Client_Master poClient;
+    Model_PettyCash poPettyCash;
 
     @Override
     public void initialize() {
@@ -52,13 +52,7 @@ public class Model_Cash_Disbursement extends Model {
             poEntity.updateNull("dModified");
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateObject("nTranTotl", 0.0000);
-            poEntity.updateObject("nVATSales", 0.0000);
-            poEntity.updateObject("nVATAmtxx", 0.0000);
-            poEntity.updateObject("nZroVATSl", 0.0000);
-            poEntity.updateObject("nVatExmpt", 0.0000);
-            poEntity.updateObject("nWTaxTotl", 0.0000);
-            poEntity.updateObject("nNetTotal", 0.0000);
-            poEntity.updateString("cTranStat", CashDisbursementStatus.OPEN);
+            poEntity.updateString("cTranStat", PettyCashDisbursementStatus.OPEN);
             poEntity.updateString("cCollectd", Logical.NO);
             poEntity.updateString("cVchrPrnt", Logical.NO);
             //end - assign default values
@@ -81,9 +75,7 @@ public class Model_Cash_Disbursement extends Model {
             poClient = clientModel.ClientMaster();
 
             CashflowModels gl = new CashflowModels(poGRider);
-            poCashFund = gl.CashFund();
-//            poCreditToOthers = gl.Payee();
-//            poPettyCash = gl.PettyCashMaster();
+            poPettyCash = gl.PettyCashMaster();
 //            end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -218,29 +210,21 @@ public class Model_Cash_Disbursement extends Model {
         return (String) getValue("sReferNox");
     }
 
-    public JSONObject setSourceCode(String sourceCode) {
-        return setValue("sSourceCd", sourceCode);
-    }
+//    public JSONObject setSourceCode(String sourceCode) {
+//        return setValue("sSourceCd", sourceCode);
+//    }
+//
+//    public String getSourceCode() {
+//        return (String) getValue("sSourceCd");
+//    }
 
-    public String getSourceCode() {
-        return (String) getValue("sSourceCd");
-    }
-
-    public JSONObject setSourceNo(String sourceNo) {
-        return setValue("sSourceNo", sourceNo);
-    }
-
-    public String getSourceNo() {
-        return (String) getValue("sSourceNo");
-    }
-
-    public JSONObject setCashFundId(String cashFundId) {
-        return setValue("sCashFIDx", cashFundId);
-    }
-
-    public String getCashFundId() {
-        return (String) getValue("sCashFIDx");
-    }
+//    public JSONObject setSourceNo(String sourceNo) {
+//        return setValue("sSourceNo", sourceNo);
+//    }
+//
+//    public String getSourceNo() {
+//        return (String) getValue("sSourceNo");
+//    }
 
     public JSONObject setTransactionTotal(Double transactionTotal) {
         return setValue("nTranTotl", transactionTotal);
@@ -252,73 +236,7 @@ public class Model_Cash_Disbursement extends Model {
         }
         return Double.valueOf(getValue("nTranTotl").toString());
     }
-
-    public JSONObject setVatableSales(Double vatableSales) {
-        return setValue("nVATSales", vatableSales);
-    }
-
-    public Double getVatableSales() {
-        if (getValue("nVATSales") == null || "".equals(getValue("nVATSales"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nVATSales").toString());
-    }
-
-    public JSONObject setVatAmount(Double vatAmount) {
-        return setValue("nVATAmtxx", vatAmount);
-    }
-
-    public Double getVatAmount() {
-        if (getValue("nVATAmtxx") == null || "".equals(getValue("nVATAmtxx"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nVATAmtxx").toString());
-    }
-
-    public JSONObject setZeroVatSales(Double zeroVatSales) {
-        return setValue("nZroVATSl", zeroVatSales);
-    }
-
-    public Double getZeroVatSales() {
-        if (getValue("nZroVATSl") == null || "".equals(getValue("nZroVATSl"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nZroVATSl").toString());
-    }
-
-    public JSONObject setVatExempt(Double vatExempt) {
-        return setValue("nVatExmpt", vatExempt);
-    }
-
-    public Double getVatExempt() {
-        if (getValue("nVatExmpt") == null || "".equals(getValue("nVatExmpt"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nVatExmpt").toString());
-    }
-
-    public JSONObject setWithTaxTotal(Double withholdingTaxTotal) {
-        return setValue("nWTaxTotl", withholdingTaxTotal);
-    }
-
-    public Double getWithTaxTotal() {
-        if (getValue("nWTaxTotl") == null || "".equals(getValue("nWTaxTotl"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nWTaxTotl").toString());
-    }
-
-    public JSONObject setNetTotal(Double netTotal) {
-        return setValue("nNetTotal", netTotal);
-    }
-
-    public Double getNetTotal() {
-        if (getValue("nNetTotal") == null || "".equals(getValue("nNetTotal"))) {
-            return 0.0000;
-        }
-        return Double.valueOf(getValue("nNetTotal").toString());
-    }
-
+    
     public boolean isPrinted() {
         return ((String) getValue("cVchrPrnt")).equals("1");
     }
@@ -326,7 +244,7 @@ public class Model_Cash_Disbursement extends Model {
     public JSONObject isPrinted(boolean isPrinted) {
         return setValue("cVchrPrnt", isPrinted ? "1" : "0");
     }
-
+    
     public JSONObject isCollected(boolean isCollected) {
         return setValue("cCollectd", isCollected ? "1" : "0");
     }
@@ -465,24 +383,24 @@ public class Model_Cash_Disbursement extends Model {
         }
     }
     
-    public Model_Cash_Fund CashFund() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sCashFIDx"))) {
-            if (poCashFund.getEditMode() == EditMode.READY
-                    && poCashFund.getCashFundId().equals((String) getValue("sCashFIDx"))) {
-                return poCashFund;
+    public Model_PettyCash PettyCash() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sPettyIDx"))) {
+            if (poPettyCash.getEditMode() == EditMode.READY
+                    && poPettyCash.getPettyId().equals((String) getValue("sPettyIDx"))) {
+                return poPettyCash;
             } else {
-                poJSON = poCashFund.openRecord((String) getValue("sCashFIDx"));
+                poJSON = poPettyCash.openRecord((String) getValue("sPettyIDx"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
-                    return poCashFund;
+                    return poPettyCash;
                 } else {
-                    poCashFund.initialize();
-                    return poCashFund;
+                    poPettyCash.initialize();
+                    return poPettyCash;
                 }
             }
         } else {
-            poCashFund.initialize();
-            return poCashFund;
+            poPettyCash.initialize();
+            return poPettyCash;
         }
     }
 

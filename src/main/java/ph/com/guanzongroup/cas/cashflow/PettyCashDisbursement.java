@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -73,35 +72,26 @@ import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
-import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.services.ParamControllers;
-import org.guanzon.cas.tbjhandler.TBJEntry;
-import org.guanzon.cas.tbjhandler.TBJTransaction;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
+import ph.com.guanzongroup.cas.cashflow.status.PettyCashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
-import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
+import ph.com.guanzongroup.cas.cashflow.validator.PettyCashDisbursementValidator;
 
 /**
  *
- * @author Arsiela 03/24/2026
+ * @author Arsiela 04/06/2026
  */
-public class CashDisbursement extends Transaction {
+public class PettyCashDisbursement extends Transaction {
     public String psIndustryId = "";
     public String psCompanyId = "";
     public String psDepartmentId = "";
@@ -109,14 +99,11 @@ public class CashDisbursement extends Transaction {
     public String psBranch = "";
     public String psPayee = "";
     
-    public Journal poJournal;
-    public List<WithholdingTaxDeductions> paWTaxDeductions;
     public List<Model> paMaster;
-    public List<Model> paCashAdvances;
     public List<TransactionAttachment> paAttachments;
     
     /**
-    * Initializes a new Cash Disbursement transaction.
+    * Initializes a new Petty Cash Disbursement transaction.
     * 
     * This method sets the source code, instantiates the master, detail, and journal 
     * controllers, and resets all associated data lists (Cash Advances, W-Tax, and Attachments).
@@ -126,15 +113,12 @@ public class CashDisbursement extends Transaction {
     * @throws GuanzonException if a business logic or validation error occurs.
     */
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "CDsb";
+        SOURCE_CODE = "PDsb";
 
-        poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
-        poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
-        poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
+        poMaster = new CashflowModels(poGRider).PettyCashDisbursementMaster();
+        poDetail = new CashflowModels(poGRider).PettyCashDisbursementDetail();
 
         paMaster = new ArrayList<Model>();
-        paCashAdvances = new ArrayList<Model>();
-        paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
         paAttachments = new ArrayList<>();
 
         return initialize();
@@ -193,8 +177,6 @@ public class CashDisbursement extends Transaction {
             throws CloneNotSupportedException, SQLException, GuanzonException {
         resetMaster();
         Detail().clear();
-        resetJournal();
-        WTaxDeduction().clear();
         
         poJSON = newTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
@@ -227,18 +209,6 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        poJSON = populateJournal();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
-            return poJSON;
-        }
-        
-        poJSON = populateWithholdingTaxDeduction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
-            return poJSON;
-        }
-        
         poJSON = loadAttachments();
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction attachments.\n" + (String) poJSON.get("message"));
@@ -261,24 +231,12 @@ public class CashDisbursement extends Transaction {
     * @throws ScriptException if an error occurs during script-based processing.
     */
    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
-       poJSON = updateTransaction();
-       if (!isJSONSuccess(poJSON)) {
-           poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
-           return poJSON;
-       }
-
-        poJSON = populateJournal();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
+        poJSON = updateTransaction();
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
-        
-        poJSON = populateWithholdingTaxDeduction();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
-            return poJSON;
-        }
-        
+       
         poJSON = loadAttachments();
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction attachments.\n" + (String) poJSON.get("message"));
@@ -341,7 +299,7 @@ public class CashDisbursement extends Transaction {
     public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         
-        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poJSON = loObject.openRecord(Master().getTransactionNo());
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -349,17 +307,17 @@ public class CashDisbursement extends Transaction {
         }
 
         switch(loObject.getTransactionStatus()){
-            case CashDisbursementStatus.VOID:
-            case CashDisbursementStatus.CANCELLED:
+            case PettyCashDisbursementStatus.VOID:
+            case PettyCashDisbursementStatus.CANCELLED:
                 poJSON = setJSON("error","Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
                 return poJSON;
-            case CashDisbursementStatus.CONFIRMED:
+            case PettyCashDisbursementStatus.CONFIRMED:
                 if(isEntry){
                     poJSON = setJSON("error", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
                     return poJSON;
                 }
                 break;
-            case CashDisbursementStatus.APPROVED:
+            case PettyCashDisbursementStatus.APPROVED:
                 poJSON = setJSON("error","Transaction status was already approved!\nCheck transaction history.");
                 return poJSON;
         }
@@ -385,15 +343,15 @@ public class CashDisbursement extends Transaction {
     */
     public String getStatus(String lsStatus) {
         switch (lsStatus) {
-            case CashDisbursementStatus.VOID:
+            case PettyCashDisbursementStatus.VOID:
                 return "Voided";
-            case CashDisbursementStatus.CANCELLED:
+            case PettyCashDisbursementStatus.CANCELLED:
                 return "Cancelled";
-            case CashDisbursementStatus.APPROVED:
+            case PettyCashDisbursementStatus.APPROVED:
                 return "Approved";
-            case CashDisbursementStatus.CONFIRMED:
+            case PettyCashDisbursementStatus.CONFIRMED:
                 return "Confirmed";
-            case CashDisbursementStatus.OPEN:
+            case PettyCashDisbursementStatus.OPEN:
                 return "Open";
             default:
                 return "Unknown";
@@ -412,17 +370,17 @@ public class CashDisbursement extends Transaction {
     */
     public boolean isAllowed(String current, String target) {
         switch (target) {
-            case CashDisbursementStatus.VOID:
-                return current.equals(CashDisbursementStatus.OPEN); //Allow void when current status is open
+            case PettyCashDisbursementStatus.VOID:
+                return current.equals(PettyCashDisbursementStatus.OPEN); //Allow void when current status is open
 
-            case CashDisbursementStatus.CANCELLED:
-                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow void when current status is confirmed
+            case PettyCashDisbursementStatus.CANCELLED:
+                return current.equals(PettyCashDisbursementStatus.CONFIRMED); //Allow void when current status is confirmed
 
-            case CashDisbursementStatus.CONFIRMED:
-                return current.equals(CashDisbursementStatus.OPEN); //Allow confirm when current status is open
+            case PettyCashDisbursementStatus.CONFIRMED:
+                return current.equals(PettyCashDisbursementStatus.OPEN); //Allow confirm when current status is open
 
-            case CashDisbursementStatus.APPROVED:
-                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow approve when current status is confirmed
+            case PettyCashDisbursementStatus.APPROVED:
+                return current.equals(PettyCashDisbursementStatus.CONFIRMED); //Allow approve when current status is confirmed
 
             default:
                 return false;
@@ -446,14 +404,14 @@ public class CashDisbursement extends Transaction {
     */
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        String lsStatus = CashDisbursementStatus.CONFIRMED;
+        String lsStatus = PettyCashDisbursementStatus.CONFIRMED;
         
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No transacton was loaded.");
             return poJSON;
         }
         
-        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poJSON = loObject.openRecord(Master().getTransactionNo());
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -485,13 +443,6 @@ public class CashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -523,14 +474,14 @@ public class CashDisbursement extends Transaction {
             ScriptException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashDisbursementStatus.APPROVED;
+        String lsStatus = PettyCashDisbursementStatus.APPROVED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
         
-        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poJSON = loObject.openRecord(Master().getTransactionNo());
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -563,13 +514,6 @@ public class CashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -601,14 +545,14 @@ public class CashDisbursement extends Transaction {
             ScriptException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashDisbursementStatus.VOID;
+        String lsStatus = PettyCashDisbursementStatus.VOID;
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
         
-        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poJSON = loObject.openRecord(Master().getTransactionNo());
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -637,7 +581,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+        if(PettyCashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
@@ -647,14 +591,7 @@ public class CashDisbursement extends Transaction {
         }
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
-        
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
+       
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -686,14 +623,14 @@ public class CashDisbursement extends Transaction {
             ScriptException {
         poJSON = new JSONObject();
 
-        String lsStatus = CashDisbursementStatus.CANCELLED;
+        String lsStatus = PettyCashDisbursementStatus.CANCELLED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON = setJSON("error", "No record was loaded.");
             return poJSON;
         }
         
-        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poJSON = loObject.openRecord(Master().getTransactionNo());
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -717,7 +654,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+        if(PettyCashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
@@ -728,13 +665,6 @@ public class CashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
         if (!isJSONSuccess(poJSON)) {
@@ -760,7 +690,7 @@ public class CashDisbursement extends Transaction {
     private String setCashFund() throws SQLException, GuanzonException{
         Model_Cash_Fund loObj = new CashflowModels(poGRider).CashFund();
         int lnCountCashFund = 0;
-        String lsCashFundID = "";
+        String lsPettyID = "";
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
                     " sBranchCD = " + SQLUtil.toSQL(poGRider.getBranchCode())
                     + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
@@ -774,7 +704,7 @@ public class CashDisbursement extends Transaction {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     lnCountCashFund++;
-                    lsCashFundID = loRS.getString("sCashFIDx") ;
+                    lsPettyID = loRS.getString("sCashFIDx") ;
                 }
             }
             MiscUtil.close(loRS);
@@ -784,8 +714,8 @@ public class CashDisbursement extends Transaction {
         
         //BR: Use the Cash Fund ID based on the log in branch and dept ng requesting employee or if 1 Cash Fund ID is defined, use this as the default
         if(lnCountCashFund == 1){
-            if(lsCashFundID != null && !"".equals(lsCashFundID)){
-                Master().setCashFundId(lsCashFundID);
+            if(lsPettyID != null && !"".equals(lsPettyID)){
+                Master().setPettyId(lsPettyID);
             }
         }
         
@@ -942,7 +872,7 @@ public class CashDisbursement extends Transaction {
     * @throws SQLException if a database access error occurs.
     * @throws GuanzonException if business logic validation fails.
     */
-    public JSONObject SearchCashFund(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchPettyCash(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         if(Master().getIndustryId() == null || "".equals(Master().getIndustryId())){
             poJSON = setJSON("error", "Industry cannot be empty.");
             return poJSON;
@@ -960,7 +890,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
-        CashFund object = new CashflowControllers(poGRider, logwrapr).CashFund();
+        PettyCash object = new CashflowControllers(poGRider, logwrapr).PettyCash();
         object.setRecordStatus(RecordStatus.ACTIVE);
         object.setIndustryId(Master().getIndustryId());
         object.setCompanyId(Master().getCompanyId());
@@ -968,7 +898,7 @@ public class CashDisbursement extends Transaction {
         object.setDepartmentId(Master().getDepartmentRequest());
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
-            Master().setCashFundId(object.getModel().getCashFundId());
+            Master().setPettyId(object.getModel().getPettyId());
         }
 
         return poJSON;
@@ -1126,7 +1056,7 @@ public class CashDisbursement extends Transaction {
                 poJSON = setJSON("error", "Department cannot be empty.");
                 return poJSON;
             }
-            if(Master().getCashFundId() == null || "".equals(Master().getCashFundId())){
+            if(Master().getPettyId() == null || "".equals(Master().getPettyId())){
                 poJSON = setJSON("error", "Cash fund cannot be empty.");
                 return poJSON;
             }
@@ -1187,13 +1117,7 @@ public class CashDisbursement extends Transaction {
                     if(fsParticular.equals(Detail(lnCtr).getParticularId())){
                         if(!Detail(lnCtr).isReverse()){
                             Detail(lnCtr).isReverse(true);
-                            Detail(lnCtr).setReferNo(Detail(fnRow).getReferNo());
                             Detail(lnCtr).setAmount(Detail(fnRow).getAmount());
-                            Detail(lnCtr).setDetailVatAmount(Detail(fnRow).getDetailVatAmount());
-                            Detail(lnCtr).setDetailVatExempt(Detail(fnRow).getDetailVatExempt());
-                            Detail(lnCtr).setDetailVatRate(Detail(fnRow).getDetailVatRate());
-                            Detail(lnCtr).setDetailVatSales(Detail(fnRow).getDetailVatSales());
-                            Detail(lnCtr).setDetailZeroVat(Detail(fnRow).getDetailZeroVat());
 
                             //Reset value of the current selected row
                             Detail().remove(fnRow);
@@ -1217,226 +1141,6 @@ public class CashDisbursement extends Transaction {
         return poJSON;
     }
     
-    public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        poJSON.put("row", row);
-        
-        if(WTaxDeduction(row).getModel().getPeriodFrom() == null || WTaxDeduction(row).getModel().getPeriodTo() == null){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Period date is not set.");
-            return poJSON;
-        }
-        
-        //validate period
-        poJSON = checkPeriodDate(row);
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        int lnRow = 1;
-        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-            if(WTaxDeduction(lnCtr).getModel().isReverse()){
-                lnRow++;
-            }
-            if(lnCtr != row){
-                if(WTaxDeduction(lnCtr).getModel().getTaxCode() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())){
-                    if(WTaxDeduction(lnCtr).getModel().getTaxRateId() == null || "".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Particular at row "+lnRow+" is not set.");
-                        return poJSON;
-                    }
-                }
-            }
-        }
-        
-        TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            WTaxDeduction(row).getModel().setTaxCode(object.getModel().getTaxCode());
-            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxCode());
-        }
-        poJSON.put("row", row);
-        return poJSON;
-    }
-
-    public JSONObject SearchWTParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Tax Code is not set.");
-            poJSON.put("row", row);
-            return poJSON;
-        }
-        
-        //validate period
-        poJSON = checkPeriodDate(row);
-        if ("error".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        object.setIndustryId(Master().getIndustryId());
-        poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
-        if ("success".equals((String) poJSON.get("result"))) {
-            JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId(),object.getModel().getTaxType());
-            if (!isJSONSuccess(loJSON)) {
-                if((boolean) loJSON.get("reverse")){
-                    return loJSON;
-                } else {
-                    row = (int) loJSON.get("row");
-                    WTaxDeduction(row).getModel().isReverse(true);
-                    WTaxDeduction(row).getModel().setBaseAmount(0.00);
-                    WTaxDeduction(row).getModel().setTaxAmount(0.00);
-                }
-            }
-            
-            WTaxDeduction(row).getModel().setTaxRateId(object.getModel().getTaxRateId());
-            WTaxDeduction(row).getModel().setBIRForm(object.getModel().getTaxType());
-            System.out.println("Tax Code : " + WTaxDeduction(row).getModel().getTaxRateId());
-            System.out.println("Particular : " + WTaxDeduction(row).getModel().WithholdingTax().AccountChart().getDescription());
-        }
-        
-        poJSON.put("row", row);
-        return poJSON;
-    }
-    
-    /*Validate detail exisitence*/
-    /**
-    * Validates if an account code already exists in other detail rows to prevent duplicates.
-    * 
-    * If a duplicate is found, the account code for the current row is cleared 
-    * and an error message identifying the conflicting row is returned.
-    * 
-    * @param fnRow      The index of the current row being edited.
-    * @param fsAcctCode The account code to check.
-    * @return A {@link JSONObject} with a "success" status if unique, or "error" 
-    *         if the code already exists in another row.
-    */
-    public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode){
-        poJSON = new JSONObject();
-
-        for(int lnCtr = 0;lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
-            if(fsAcctCode.equals(poJournal.Detail(lnCtr).getAccountCode()) && fnRow != lnCtr){
-                poJSON.put("row", lnCtr);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Account code " + fsAcctCode + " already exists at row " + (lnCtr+1) + ".");
-                poJournal.Detail(fnRow).setAccountCode("");
-                return poJSON;
-            }
-        }
-
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    
-    /**
-    * Validates withholding tax deductions for consistency and duplicates within a specific period.
-    * This method ensures:
-    * The tax type remains consistent across all withholding tax deductions.
-    * The same tax rate is not duplicated within the same fiscal year and quarter.
-    * @param fnRow      The index of the current row being validated.
-    * @param fsTaxRated The Tax Rate ID to check for duplicates.
-    * @param fsTaxType  The Tax Type to verify against existing entries.
-    * @return A {@link JSONObject} containing "success" if valid, or an "error" status with 
-    *         details regarding the conflicting row and reversal status.
-    */
-    private JSONObject checkExistTaxRate(int fnRow, String fsTaxRated, String fsTaxType){
-        JSONObject loJSON = new JSONObject();
-        try {
-            int lnRow = 0;
-            for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1; lnCtr++){
-                if(WTaxDeduction(lnCtr).getModel().isReverse()){
-                    lnRow++;
-                }
-                if(WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                    if(WTaxDeduction(lnCtr).getModel().isReverse() && !fsTaxType.equals(WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxType()) ){
-                        loJSON.put("result", "error");
-                        loJSON.put("reverse", true);
-                        loJSON.put("row", lnCtr);
-                        loJSON.put("message", "Tax type must be equal to other withholding tax deductions.");
-                        return loJSON;
-                    }
-                    
-                    //Check the tax rate
-                    if(fsTaxRated.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())
-                        && fnRow != lnCtr){
-                        //Check Period Date do not allow when taxratedid was already covered of the specific period date
-                        if(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom())).getYear() 
-                            == strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear()){
-                            //Check Period date per quarter
-                            if( getQuarter(strToDate(xsDateShort(WTaxDeduction(lnCtr).getModel().getPeriodFrom()))) 
-                                == getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom()))) 
-                                    ){
-                                if(WTaxDeduction(lnCtr).getModel().isReverse()){
-                                    loJSON.put("result", "error");
-                                    loJSON.put("message", "Particular " + WTaxDeduction(lnCtr).getModel().WithholdingTax().AccountChart().getDescription() + " already exists at row " + (lnRow) + ".");
-                                    loJSON.put("row", lnCtr);
-                                    loJSON.put("reverse", true);
-                                    return loJSON;
-                                } else {
-                                    loJSON.put("result", "error");
-                                    loJSON.put("reverse", false);
-                                    loJSON.put("row", lnCtr);
-                                    return loJSON;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            loJSON.put("result", "error");
-            loJSON.put("message", MiscUtil.getException(ex));
-            return loJSON;
-        }
-    
-        loJSON.put("result", "success");
-        return loJSON;
-    }
-    
-    /**
-     * Validate period date
-     * @param fnRow pass withholding tax deduction selected row
-     * @return 
-     */
-    public JSONObject checkPeriodDate(int fnRow){
-        //Validate period from must be per quarter per year.
-        if(WTaxDeduction(fnRow).getModel().getPeriodFrom() != null){
-            if(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo())).getYear() 
-                != strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())).getYear() ){
-                poJSON.put("row", fnRow);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Period Date must be with the same year at row "+(fnRow + 1)+".");
-                return poJSON;
-            }
-            
-            if( (getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodTo()))) 
-                != getQuarter(strToDate(xsDateShort(WTaxDeduction(fnRow).getModel().getPeriodFrom())))) ){
-                poJSON.put("row", fnRow);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Period date must be in the same quarter at row "+(fnRow + 1)+".");
-                return poJSON;
-            }
-        }
-        
-        poJSON.put("row", fnRow);
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    /**
-    * Determines the calendar quarter (1 to 4) for a given date.
-    * 
-    * @param fdDate The date to evaluate.
-    * @return The quarter index: 1 (Jan-Mar), 2 (Apr-Jun), 3 (Jul-Sep), or 4 (Oct-Dec).
-    */
-    private int getQuarter(LocalDate fdDate){
-        int month = fdDate.getMonthValue();
-        int quarter = ((month - 1) / 3) + 1;
-        return quarter;
-    }
-    
     /**
     * Calculates and validates transaction totals, including VAT components and net amounts.
     *
@@ -1451,19 +1155,10 @@ public class CashDisbursement extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("column", "");
         Double ldblTransactionTotal = 0.0000;
-        Double ldblVATSalesTotal = 0.0000;
-        Double ldblVATAmountTotal = 0.0000;
-        Double ldblVATExemptTotal = 0.0000;
-        Double ldblZeroVATSales = 0.0000;
-        computeTaxAmount();
-        computeDetailFields(isValidate);
         
         for (int lnCntr = 0; lnCntr <= getDetailCount() - 1; lnCntr++) {
             if(Detail(lnCntr).isReverse()){
                 ldblTransactionTotal += Detail(lnCntr).getAmount();
-                ldblVATSalesTotal += Detail(lnCntr).getDetailVatSales();
-                ldblVATAmountTotal += Detail(lnCntr).getDetailVatAmount();
-                ldblVATExemptTotal += Detail(lnCntr).getDetailVatExempt();
 
             }
         }
@@ -1475,170 +1170,11 @@ public class CashDisbursement extends Transaction {
                 return poJSON;
             }
         }
-        if(ldblVATSalesTotal < 0.0000) {
-            poJSON = setJSON("error", "Invalid Vat Sales Total.");
-            poJSON.put("column", "nVATSales");
-            if(isValidate){
-                return poJSON;
-            }
-        }
-        if(ldblVATAmountTotal < 0.0000) {
-            poJSON = setJSON("error", "Invalid Vat Amount Total.");
-            poJSON.put("column", "nVATAmtxx");
-            if(isValidate){
-                return poJSON;
-            }
-        }
-        if(ldblVATExemptTotal < 0.0000) {
-            poJSON = setJSON("error", "Invalid Vat Exempt Total.");
-            poJSON.put("column", "nVatExmpt");
-            if(isValidate){
-                return poJSON;
-            }
-        }
         
-        double lnNetAmountDue = ldblTransactionTotal - Master().getWithTaxTotal();
-        if (lnNetAmountDue < 0.0000) {
-            poJSON = setJSON("error", "Invalid Net Total Amount.");
-            poJSON.put("column", "nNetTotal");
-            if(isValidate){
-                return poJSON;
-            }
-        }
-
         Master().setTransactionTotal(ldblTransactionTotal);
-        Master().setVatableSales(ldblVATSalesTotal);
-        Master().setVatAmount(ldblVATAmountTotal);
-        Master().setVatExempt(ldblVATExemptTotal);
-        Master().setZeroVatSales(ldblZeroVATSales);
-        Master().setNetTotal(lnNetAmountDue);
         
         poJSON = setJSON("success", "computed successfully");
         poJSON.put("column", "");
-        return poJSON;
-    }
-    /**
-    * Calculates withholding tax amounts for all applicable deductions and updates the master total.
-    * 
-    * This method computes individual tax amounts based on the assigned tax rates and base amounts. 
-    * It validates that neither the total base amount nor the total tax amount exceeds the 
-    * transaction's vatable sales before updating the master record.
-    * 
-    * @return A {@link JSONObject} containing a "success" status if the calculation is valid, 
-    *         or an "error" status with a descriptive message if validation fails or an exception occurs.
-    */
-    public JSONObject computeTaxAmount(){
-        poJSON = new JSONObject();
-        
-//        set/compute value to tax amount
-        Double ldblTaxAmount = 0.0000;
-        Double ldblDetTaxAmt = 0.0000;
-        Double ldblTotalBaseAmount = 0.0000;
-        for(int lnCtr = 0;lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-            if(WTaxDeduction(lnCtr).getModel().isReverse()){
-                if(WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 && 
-                    WTaxDeduction(lnCtr).getModel().getTaxRateId() != null && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                    try {
-                        ldblDetTaxAmt = WTaxDeduction(lnCtr).getModel().getBaseAmount() * (WTaxDeduction(lnCtr).getModel().WithholdingTax().getTaxRate() / 100);
-                    } catch (SQLException | GuanzonException ex) {
-                        Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                        poJSON = setJSON("error", MiscUtil.getException(ex));
-                        return poJSON;
-                    }
-                    WTaxDeduction(lnCtr).getModel().setTaxAmount(ldblDetTaxAmt);
-                }
-                ldblTaxAmount += WTaxDeduction(lnCtr).getModel().getTaxAmount();
-                ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
-            }
-        }
-        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
-        if(ldblTotalBaseAmount > ldblVatSales){
-            poJSON = setJSON("error", "Tax Base amount cannot be greater than the net vatable sales.");
-            return poJSON;
-        }
-        
-        if(ldblTaxAmount > ldblVatSales){
-            poJSON = setJSON("error", "Tax amount cannot be greater than the net vatable sales.");
-            return poJSON;
-        }
-        
-        Master().setWithTaxTotal(ldblTaxAmount);
-        
-        poJSON = setJSON("success", "Tax computed successfully");
-        return poJSON;
-    }
-    /**
-    * Iterates through all detail rows to compute their respective VAT and tax values.
-    * 
-    * @param isValidate Set to true to stop execution and return an error immediately 
-    *                   if any row calculation fails validation.
-    * @return A {@link JSONObject} indicating "success" if all rows are processed, 
-    *         or an "error" status if a specific row fails validation.
-    */
-    public JSONObject computeDetailFields(boolean isValidate){
-                
-        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-            //Compute VAT
-            poJSON = computeDetail(lnCtr);
-            if ("error".equals((String) poJSON.get("result"))) {
-                if(isValidate){
-                    return poJSON;
-                }
-            }
-        }
-        
-        poJSON = setJSON("success", "success");
-        return poJSON;
-    }
-    /**
-    * Calculates the VAT Sales, VAT Amount, and VAT Exempt values for a specific detail row.
-    * 
-    * <p>This method applies a 12% VAT calculation on the non-exempt portion of the row's total 
-    * amount and updates the row model with the results.</p>
-    * 
-    * @param fnRow The index of the detail row to calculate.
-    * @return A {@link JSONObject} with "success" status, or "error" if the input 
-    *         values (such as negative exempt amounts) are invalid.
-    */
-    private JSONObject computeDetail(int fnRow){
-        poJSON = new JSONObject();
-        Double ldblAmount = Detail(fnRow).getAmount();
-        Double ldblVATExempt = Detail(fnRow).getDetailVatExempt();
-        Double ldblVATSales = Detail(fnRow).getDetailVatSales();
-        Double ldblVATAmount = 0.0000;
-        
-        if(ldblVATExempt < 0.0000){
-            poJSON = setJSON("error", "Vat Exempt amount cannot be negative.");
-            return poJSON;
-        }
-        
-        if(Detail(fnRow).getReferNo() != null && !"".equals(Detail(fnRow).getReferNo())){
-            if(ldblVATExempt > 0.0000 && ldblVATExempt < ldblAmount){
-                ldblAmount = ldblAmount - ldblVATExempt;
-                ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
-                ldblVATSales = ldblAmount - ldblVATAmount;
-
-                Detail(fnRow).setDetailVatAmount(ldblVATAmount);
-                Detail(fnRow).setDetailVatSales(ldblVATSales);
-            } else if(ldblVATExempt == 0.0000){
-                ldblVATAmount = ldblAmount - (ldblAmount / 1.12);
-                ldblVATSales = ldblAmount - ldblVATAmount;
-
-                Detail(fnRow).setDetailVatAmount(ldblVATAmount);
-                Detail(fnRow).setDetailVatSales(ldblVATSales);
-                Detail(fnRow).setDetailVatExempt(0.0000);
-            } else {
-                Detail(fnRow).setDetailVatAmount(0.0000);
-                Detail(fnRow).setDetailVatSales(0.0000);
-                Detail(fnRow).setDetailVatExempt(ldblAmount);
-            }
-        } else {
-            Detail(fnRow).setDetailVatAmount(0.0000);
-            Detail(fnRow).setDetailVatSales(0.0000);
-            Detail(fnRow).setDetailVatExempt(ldblAmount);
-        }
-        
-        poJSON = setJSON("success", "success");
         return poJSON;
     }
     /**
@@ -1687,7 +1223,7 @@ public class CashDisbursement extends Transaction {
         }
 
         while (loRS.next()) {
-            Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+            Model_PettyCash_Disbursement loObject = new CashflowModels(poGRider).PettyCashDisbursementMaster();
             poJSON = loObject.openRecord(loRS.getString("sTransNox"));
             if (isJSONSuccess(poJSON)) {
                 paMaster.add((Model) loObject);
@@ -1696,404 +1232,6 @@ public class CashDisbursement extends Transaction {
             }
         }
         MiscUtil.close(loRS);
-        return poJSON;
-    }
-    /**
-    * Loads a list of liquidated cash advances that have not yet been linked to a cash disbursement.
-    * 
-    * <p>This method filters records based on industry, payee, and transaction number. 
-    * It specifically excludes cash advances that are already present in the current 
-    * master table to prevent duplicate processing.</p>
-    * 
-    * @param fsIndustry The industry description to filter by.
-    * @param fsPayee    The payee name keyword to filter by.
-    * @param fsTransNo  The transaction number keyword to filter by.
-    * @return A {@link JSONObject} indicating "success" if records were found and loaded 
-    *         into {@code paCashAdvances}, otherwise returns an "error" status.
-    * @throws SQLException     If a database access error occurs.
-    * @throws GuanzonException If an application-level error occurs while opening records.
-    */
-    public JSONObject loadCashAdvanceList(String fsIndustry, String fsPayee, String fsTransNo) throws SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        paCashAdvances = new ArrayList<>();
-        if (fsIndustry == null) { fsIndustry = ""; }
-        if (fsPayee == null) { fsPayee = ""; }
-        if (fsTransNo == null) { fsTransNo = ""; }
-        
-        String lsSQL = MiscUtil.addCondition(cashAdvanceSQL(),
-                " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-                + " AND c.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry + "%")
-                + " AND e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee + "%")
-                + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%")
-                + " AND a.cTranStat = " + SQLUtil.toSQL(CashAdvanceStatus.LIQUIDATED)
-            );
-        
-        lsSQL = lsSQL 
-                + " AND a.sTransNox NOT IN ( SELECT sSourceNo FROM " + Master().getTable()
-                + " WHERE sSourceNo =  a.sTransNox "
-                + " AND sSourceCd = " + SQLUtil.toSQL(CashDisbursementStatus.SourceCode.CASHADVANCE)
-                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.VOID)
-                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.CANCELLED)
-                + " )";
-        
-        lsSQL = lsSQL + " ORDER BY a.dTransact ASC ";
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        if (MiscUtil.RecordCount(loRS) <= 0) {
-            poJSON = setJSON("error", "No record found.");
-            return poJSON;
-        }
-
-        while (loRS.next()) {
-            Model_Cash_Advance loObject = new CashflowModels(poGRider).CashAdvanceMaster();
-            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
-            if (isJSONSuccess(poJSON)) {
-                paCashAdvances.add((Model) loObject);
-            } else {
-                return poJSON;
-            }
-        }
-        MiscUtil.close(loRS);
-        return poJSON;
-    }
-    /**
-    * Populates the current transaction's master and detail records using data from a specific Cash Advance.
-    * 
-    * <p>This method retrieves the Cash Advance master and its non-reversed details, maps them to the 
-    * current object, sets the source reference, and recomputes all transaction totals.</p>
-    * 
-    * @param fsTransNo The transaction number of the source Cash Advance record.
-    * @return A {@link JSONObject} indicating "success" or an "error" if the records cannot be loaded.
-    * @throws SQLException If a database access error occurs.
-    * @throws GuanzonException If an application-level error occurs during data mapping.
-    * @throws CloneNotSupportedException If an error occurs while duplicating record models.
-    */
-    public JSONObject populateDetail(String fsTransNo) throws SQLException, GuanzonException, CloneNotSupportedException{
-        poJSON = new JSONObject();
-        
-        if(getEditMode() != EditMode.ADDNEW){
-            poJSON = setJSON("error", "Invalid update mode.\nUnable to populate detail.");
-            return poJSON;
-        }
-        
-        String lsCashDisbursement = existCashDisbursement(fsTransNo, CashDisbursementStatus.SourceCode.CASHADVANCE);
-        if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
-            poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement.\nKindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
-            return poJSON;
-        }
-        
-        Model_Cash_Advance loMaster = new CashflowModels(poGRider).CashAdvanceMaster();
-        poJSON = loMaster.openRecord(fsTransNo);
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
-        
-        Model_Cash_Advance_Detail loDetail = new CashflowModels(poGRider).CashAdvanceDetail();
-        String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loDetail),
-                " sTransNox = " + SQLUtil.toSQL(fsTransNo)
-                + " AND cReversex = " + SQLUtil.toSQL(CashAdvanceStatus.Reverse.INCLUDE)
-            );
-        
-        lsSQL = lsSQL + " ORDER BY nEntryNox ASC ";
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        if (MiscUtil.RecordCount(loRS) <= 0) {
-            poJSON = setJSON("error", "No cash advance detail found.");
-            return poJSON;
-        }
-
-        removeDetails(); // Remove all details
-        
-        //Populate Master
-        Master().setIndustryId(loMaster.getIndustryId());
-        Master().setCompanyId(loMaster.getCompanyId());
-        Master().setBranchCode(loMaster.getBranchCode());
-        Master().setCashFundId(loMaster.getCashFundId());
-        Master().setClientId(loMaster.getClientId());
-        Master().setPayeeName(loMaster.Payee().getCompanyName());
-        Master().setSourceNo(loMaster.getTransactionNo());
-        Master().setSourceCode(CashDisbursementStatus.SourceCode.CASHADVANCE);
-        Master().setDepartmentRequest(loMaster.getDepartmentRequest());
-        Master().setVoucherNo(getVoucherNo());
-        
-        while (loRS.next()) {
-            poJSON = loDetail.openRecord(loRS.getString("sTransNox"),loRS.getInt("nEntryNox"));
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
-            AddDetail();
-            System.out.println("Detail Count : " + getDetailCount());
-            Detail(getDetailCount()-1).setReferNo(loDetail.getORNo());
-            Detail(getDetailCount()-1).setAmount(loDetail.getTransactionAmount());
-            Detail(getDetailCount()-1).setDetailVatExempt(loDetail.getTransactionAmount());
-            Detail(getDetailCount()-1).setEntryNo(getDetailCount());
-        }
-        MiscUtil.close(loRS);
-        
-        computeFields(false);
-        
-        return poJSON;
-    }
-    
-    /**
-     * Check existing Cash Disbursement
-     * @return
-     * @throws SQLException 
-     */
-    public String existCashDisbursement(String fsSourceNo, String fsSourceCode) throws SQLException{
-        if(fsSourceNo == null || "".equals(fsSourceNo)){
-            return "";
-        }
-        Model_Cash_Disbursement loMaster = new CashflowModels(poGRider).CashDisbursementMaster();
-        String lsSQL = MiscUtil.makeSelect(loMaster);
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                " sSourceNo = " + SQLUtil.toSQL(fsSourceNo)
-                + " AND sSourceCD = " + SQLUtil.toSQL(fsSourceCode)
-                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.CANCELLED)
-                + " AND cTranStat != " + SQLUtil.toSQL(CashDisbursementStatus.VOID)
-                + " AND sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
-        );
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        poJSON = new JSONObject();
-        if (MiscUtil.RecordCount(loRS) > 0) {
-            while (loRS.next()) {
-                // Print the result set
-                System.out.println("--------------------------CASH DISBURSEMENT--------------------------");
-                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                System.out.println("------------------------------------------------------------------------------");
-                if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
-                    return loRS.getString("sTransNox");
-                }  
-            }
-        }
-        MiscUtil.close(loRS);
-
-        return "";
-    }
-    
-    private static String psNoCategory = "EMPTY";
-    /**
-     * Populate Journal information
-     * @return
-     * @throws SQLException
-     * @throws GuanzonException
-     * @throws CloneNotSupportedException
-     * @throws ScriptException 
-     */
-    public JSONObject populateJournal() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
-        poJSON = new JSONObject();
-        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
-            poJSON = setJSON("error", "No record to load");
-            return poJSON;
-        }
-        
-        if(poJournal == null || getEditMode() == EditMode.READY){
-            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-            poJournal.InitTransaction();
-        }
-        
-        String lsJournal = existJournal();
-        if(lsJournal != null && !"".equals(lsJournal)){
-            switch(getEditMode()){
-                case EditMode.READY:
-                    poJSON = poJournal.OpenTransaction(lsJournal);
-                    if (!isJSONSuccess(poJSON)){
-                        return poJSON;
-                    }
-                break;
-                case EditMode.UPDATE:
-                    if(poJournal.getEditMode() == EditMode.READY || poJournal.getEditMode() == EditMode.UNKNOWN){
-                        poJSON = poJournal.OpenTransaction(lsJournal);
-                        if (!isJSONSuccess(poJSON)){
-                            return poJSON;
-                        }
-                        poJournal.UpdateTransaction();
-                    } 
-                break;
-            }
-        } else {
-            if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() != EditMode.ADDNEW){
-                poJSON = poJournal.NewTransaction();
-                if (!isJSONSuccess(poJSON)){
-                    return poJSON;
-                }
-                
-                //retreiving using column index
-                JSONObject jsonmaster = new JSONObject();
-                for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
-                    System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
-                    jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
-                }
-                    
-                JSONArray jsondetails = new JSONArray();
-                JSONObject jsondetail = new JSONObject();
-                for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
-                    jsondetail = new JSONObject();
-                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
-                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
-                        jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
-                    }
-                    jsondetails.add(jsondetail);
-                }
-
-                jsondetail = new JSONObject();
-                jsondetail.put("Cash_Disbursement", jsonmaster);
-                jsondetail.put("Cash_Disbursement_Detail", jsondetails);
-                    
-                TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryId(), ""); 
-                tbj.setGRiderCAS(poGRider);
-                tbj.setData(jsondetail);
-                jsonmaster = tbj.processRequest();
-
-                if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
-                    List<TBJEntry> xlist = tbj.getJournalEntries();
-                    for (TBJEntry xlist1 : xlist) {
-                        System.out.println("Account:" + xlist1.getAccount() );
-                        System.out.println("Debit:" + xlist1.getDebit());
-                        System.out.println("Credit:" + xlist1.getCredit());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
-                        poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
-                        poJournal.AddDetail();
-                    }
-                } else {
-                    System.out.println(jsonmaster.toJSONString());
-                }
-
-                //Journa Entry Master
-                poJournal.Master().setAccountPerId("");
-                poJournal.Master().setIndustryCode(Master().getIndustryId());
-                poJournal.Master().setBranchCode(Master().getBranchCode());
-                poJournal.Master().setDepartmentId(poGRider.getDepartment());
-                poJournal.Master().setTransactionDate(poGRider.getServerDate()); 
-                poJournal.Master().setCompanyId(Master().getCompanyId());
-                poJournal.Master().setSourceCode(getSourceCode());
-                poJournal.Master().setSourceNo(Master().getTransactionNo());
-                
-            } else if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() == EditMode.ADDNEW) {
-                poJSON.put("result", "success");
-                return poJSON;
-            } 
-//            else {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "No record to load");
-//                return poJSON;
-//            }
-        
-        }
-        
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    
-    /**
-     * Check existing Journal
-     * @return
-     * @throws SQLException 
-     */
-    public String existJournal() throws SQLException{
-        Model_Journal_Master loMaster = new CashflowModels(poGRider).Journal_Master();
-        String lsSQL = MiscUtil.makeSelect(loMaster);
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-        );
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        poJSON = new JSONObject();
-        if (MiscUtil.RecordCount(loRS) > 0) {
-            while (loRS.next()) {
-                // Print the result set
-                System.out.println("--------------------------JOURNAL ENTRY--------------------------");
-                System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                System.out.println("------------------------------------------------------------------------------");
-                if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
-                    return loRS.getString("sTransNox");
-                }  
-            }
-        }
-        MiscUtil.close(loRS);
-
-        return "";
-    }
-    /**
-    * Manages the withholding tax deduction list based on the current edit mode.
-    * 
-    * In READY mode, it fetches and loads existing linked deductions from the database. 
-    * In ADDNEW mode, it initializes the list with a default entry using the transaction date. 
-    * In UPDATE mode, it transitions all existing deduction records into an editable state.
-    * 
-    * @return A JSONObject indicating "success" or an "error" message if the operation fails.
-    * @throws SQLException If a database access error occurs.
-    * @throws GuanzonException If an application-level error occurs.
-    * @throws CloneNotSupportedException If a model cloning error occurs.
-    * @throws ScriptException If a scripting error occurs during processing.
-    */
-    public JSONObject populateWithholdingTaxDeduction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
-        poJSON = new JSONObject();
-        if(getEditMode() == EditMode.UNKNOWN || Master().getEditMode() == EditMode.UNKNOWN){
-            poJSON.put("result", "error");
-            poJSON.put("message", "No record to load");
-            return poJSON;
-        }
-        
-        switch(getEditMode()){
-            case EditMode.READY:
-                paWTaxDeductions = new ArrayList<>();
-                Model_Withholding_Tax_Deductions loMaster = new CashflowModels(poGRider).Withholding_Tax_Deductions();
-                String lsSQL = MiscUtil.makeSelect(loMaster);
-                lsSQL = MiscUtil.addCondition(lsSQL,
-                        " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                        + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                );
-                System.out.println("Executing SQL: " + lsSQL);
-                ResultSet loRS = poGRider.executeQuery(lsSQL);
-                poJSON = new JSONObject();
-                if (MiscUtil.RecordCount(loRS) > 0) {
-                    while (loRS.next()) {
-                        // Print the result set
-                        System.out.println("--------------------------WITHHOLDING TAX DEDUCTIONS--------------------------");
-                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                        System.out.println("------------------------------------------------------------------------------");
-                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
-                            paWTaxDeductions.add( new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
-                            poJSON = paWTaxDeductions.get(paWTaxDeductions.size() - 1).openRecord(loRS.getString("sTransNox"));
-                            if ("error".equals((String) poJSON.get("result"))){
-                                if(Master().getWithTaxTotal() > 0.0000){
-                                    return poJSON;
-                                } 
-                            } else {
-                                //add tax code
-                                paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().setTaxCode(paWTaxDeductions.get(paWTaxDeductions.size() - 1).getModel().WithholdingTax().getTaxCode());
-                            }
-                        }  
-                    }
-                }
-                MiscUtil.close(loRS);
-            break;
-            case EditMode.ADDNEW:   
-                if(paWTaxDeductions.isEmpty()){
-                    paWTaxDeductions.add(new CashflowControllers(poGRider,logwrapr).WithholdingTaxDeductions());
-                    //set default period date
-                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
-                    paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
-                }
-            break;
-            case EditMode.UPDATE:
-                for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.READY){
-                        poJSON = WTaxDeduction(lnCtr).updateRecord();
-                        if ("error".equals((String) poJSON.get("result"))){
-                            return poJSON;
-                        }
-                    }
-                }
-            break;
-        }
-        
-        poJSON.put("result", "success");
         return poJSON;
     }
     /**
@@ -2115,15 +1253,8 @@ public class CashDisbursement extends Transaction {
         paAttachments = new ArrayList<>();
         String lsSourceCode = "";
         TransactionAttachment loAttachment = new SysTableContollers(poGRider, null).TransactionAttachment();
-        List loList;
-        if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
-            loList = loAttachment.getAttachments(Master().getSourceCode(), Master().getSourceNo());
-            lsSourceCode = Master().getSourceCode();
-        } else {
-            loList = loAttachment.getAttachments(getSourceCode(), Master().getTransactionNo());
-            lsSourceCode = getSourceCode();
-        }
-        
+        List loList = loAttachment.getAttachments(getSourceCode(), Master().getTransactionNo());
+        lsSourceCode = getSourceCode();
         for (int lnCtr = 0; lnCtr <= loList.size() - 1; lnCtr++) {
             paAttachments.add(TransactionAttachment());
             poJSON = paAttachments.get(getTransactionAttachmentCount() - 1).openRecord((String) loList.get(lnCtr));
@@ -2359,7 +1490,7 @@ public class CashDisbursement extends Transaction {
                 "sCompnyID = " + SQLUtil.toSQL(Master().getCompanyId())); //get voucher no account to company ma'am she 03-31-2026
         lsSQL = lsSQL + " ORDER BY sVoucherx DESC LIMIT 1";
 
-        String branchVoucherNo = CashDisbursementStatus.DEFAULT_VOUCHER_NO;  // default value
+        String branchVoucherNo = PettyCashDisbursementStatus.DEFAULT_VOUCHER_NO;  // default value
 
         ResultSet loRS = null;
         try {
@@ -2382,21 +1513,21 @@ public class CashDisbursement extends Transaction {
     /**
     * Returns the master record model for the current cash disbursement transaction.
     * 
-    * @return The {@link Model_Cash_Disbursement} instance representing the transaction header.
+    * @return The {@link Model_PettyCash_Disbursement} instance representing the transaction header.
     */
     @Override
-    public Model_Cash_Disbursement Master() { 
-        return (Model_Cash_Disbursement) poMaster; 
+    public Model_PettyCash_Disbursement Master() { 
+        return (Model_PettyCash_Disbursement) poMaster; 
     }
     /**
     * Returns the detail record model at the specified row index.
     * 
     * @param row The index of the detail row to retrieve.
-    * @return The {@link Model_Cash_Disbursement_Detail} instance for the given row.
+    * @return The {@link Model_PettyCash_Disbursement_Detail} instance for the given row.
     */
     @Override
-    public Model_Cash_Disbursement_Detail Detail(int row) {
-        return (Model_Cash_Disbursement_Detail) paDetail.get(row); 
+    public Model_PettyCash_Disbursement_Detail Detail(int row) {
+        return (Model_PettyCash_Disbursement_Detail) paDetail.get(row); 
     }
     /**
     * Adds a new detail row to the transaction list after validating the current entries.
@@ -2409,8 +1540,7 @@ public class CashDisbursement extends Transaction {
     */
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
-            if ((Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId()))
-                && (Master().getSourceNo() == null || "".equals(Master().getSourceNo()))){
+            if ((Detail(getDetailCount() - 1).getParticularId() == null || "".equals(Detail(getDetailCount() - 1).getParticularId()))){
                 poJSON = new JSONObject();
                 poJSON = setJSON("error", "Last row has empty item.");
                 return poJSON;
@@ -2436,20 +1566,11 @@ public class CashDisbursement extends Transaction {
             detail.remove();
         }
         
-        Iterator<WithholdingTaxDeductions> wtDeduction = WTaxDeduction().iterator();
-        while (wtDeduction.hasNext()) {
-            WithholdingTaxDeductions item = wtDeduction.next();
-            wtDeduction.remove();
-        }
-        
         //Reset Journal when all details was removed
-        resetJournal();
         paAttachments = new ArrayList<>();
 //        setSearchIndustry("");
 //        setSearchPayee("");
 //        Master().setIndustryId("");
-        Master().setSourceNo("");
-        Master().setSourceCode("");
         Master().setCreditedTo("");
         Master().setRemarks("");
         initFields();
@@ -2461,10 +1582,10 @@ public class CashDisbursement extends Transaction {
     * Retrieves a specific cash disbursement record from the transaction list.
     * 
     * @param row The index of the record to retrieve.
-    * @return The Model_Cash_Disbursement instance at the specified row.
+    * @return The Model_PettyCash_Disbursement instance at the specified row.
     */
-    public Model_Cash_Disbursement TransactionList(int row) {
-        return (Model_Cash_Disbursement) paMaster.get(row);
+    public Model_PettyCash_Disbursement TransactionList(int row) {
+        return (Model_PettyCash_Disbursement) paMaster.get(row);
     }
     /**
      * Returns the total number of records in the cash disbursement transaction list.
@@ -2474,95 +1595,13 @@ public class CashDisbursement extends Transaction {
     public int getTransactionListCount() {
         return this.paMaster.size();
     }
-    /**
-    * Retrieves a specific cash advance record from the cash advance list.
-    * 
-    * @param row The index of the record to retrieve.
-    * @return The Model_Cash_Advance instance at the specified row.
-    */
-    public Model_Cash_Advance CashAdvancesList(int row) {
-        return (Model_Cash_Advance) paCashAdvances.get(row);
-    }
-    /**r
-     * Returns the total number of records in the cash advance list.
-     * 
-     * @return The size of the cash advance list.
-     */
-    public int getCashAdvancesCount() {
-        return this.paCashAdvances.size();
-    }
-    /**
-    * Returns the complete list of withholding tax deductions.
-    * 
-    * @return A List of WithholdingTaxDeductions.
-    */
-    public List<WithholdingTaxDeductions> WTaxDeduction() {
-        return paWTaxDeductions; 
-    }
-    /**
-    * Retrieves a specific withholding tax deduction record by row index.
-    * 
-    * @param row The index of the deduction to retrieve.
-    * @return The WithholdingTaxDeductions instance at the specified row.
-    */
-    public WithholdingTaxDeductions WTaxDeduction(int row) {
-        return (WithholdingTaxDeductions) paWTaxDeductions.get(row); 
-    }
-    
-    public int getWTaxDeductionsCount() {
-        return paWTaxDeductions.size();
-    }
-    
-    public Journal Journal(){
-        try{
-            if (poJournal == null) {
-                poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-                poJournal.InitTransaction();
-            }
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-        }
-        return poJournal;
-    }
-    
-    public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        if (getWTaxDeductionsCount() > 0) {
-            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId().isEmpty()) {
-                poJSON = new JSONObject();
-                poJSON.put("result", "error");
-                poJSON.put("message", "Last row has empty item.");
-                return poJSON;
-            }
-        }
-        paWTaxDeductions.add(new CashflowControllers(poGRider, logwrapr).WithholdingTaxDeductions());
-        //set default period date
-        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(Master().getTransactionDate());
-        paWTaxDeductions.get(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(Master().getTransactionDate());
-        poJSON.put("result", "success");
-        return poJSON;
-    }
-    
-    public JSONObject removeWTDeduction(int fnRow) {
-        if (WTaxDeduction(fnRow).getEditMode() == EditMode.ADDNEW) {
-            WTaxDeduction().remove(fnRow);
-        } else {
-            WTaxDeduction(fnRow).getModel().isReverse(false);
-        }
-        //Compute Tax Amount
-        computeTaxAmount();
-        
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
 
     /*RESET CACHE ROW SET*/
     /**
      * Resets the master record to its default initial state.
      */
     public void resetMaster() {
-        poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
+        poMaster = new CashflowModels(poGRider).PettyCashDisbursementMaster();
     }
     
     /**
@@ -2570,15 +1609,6 @@ public class CashDisbursement extends Transaction {
      */
     public void resetOthers() {
         paAttachments = new ArrayList<>();
-    }
-    
-    public void resetJournal() {
-        try {
-            poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
-            poJournal.InitTransaction();
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
-        }
     }
 
     /**
@@ -2589,9 +1619,7 @@ public class CashDisbursement extends Transaction {
      */
     public void resetTransaction(){
         resetMaster();
-        resetJournal();
         Detail().clear();
-        WTaxDeduction().clear();
         paAttachments = new ArrayList<>();
     }
    
@@ -2606,9 +1634,8 @@ public class CashDisbursement extends Transaction {
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
-            if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
-                && (Detail(lnCtr).getReferNo() == null || "".equals(Detail(lnCtr).getReferNo()))
-               && (Master().getSourceCode() == null || "".equals(Master().getSourceCode()))) {
+            if (Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId())
+               ) {
                 deleteDetail(lnCtr);
             } 
             lnCtr--;
@@ -2618,7 +1645,6 @@ public class CashDisbursement extends Transaction {
             if (
                 (Detail(getDetailCount() - 1).getParticularId() != null && !"".equals(Detail(getDetailCount() - 1).getParticularId()))
                 && Detail(getDetailCount() - 1).getAmount() > 0.0000
-                && (Master().getSourceCode() == null || "".equals(Master().getSourceCode()))
                 ) {
                 AddDetail();
             }
@@ -2628,114 +1654,6 @@ public class CashDisbursement extends Transaction {
             AddDetail();
         }
     }
-    
-    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
-        int lnCtr = Journal().getDetailCount() - 1;
-        while (lnCtr >= 0) {
-            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
-                Journal().Detail().remove(lnCtr);
-            } else {
-                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
-                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
-                        Journal().Detail().remove(lnCtr);
-                    }
-                }
-            }
-            lnCtr--;
-        }
-        if ((Journal().getDetailCount() - 1) >= 0) {
-            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
-                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-                Journal().AddDetail();
-                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-            }
-        }
-        if ((Journal().getDetailCount() - 1) < 0) {
-            Journal().AddDetail();
-            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-        }
-    
-    }
-    
-    public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
-        int lnCtr = getWTaxDeductionsCount() - 1;
-        Date fromdate = null, todate = null;
-        boolean lbProceed = false;
-        while (lnCtr >= 0) {
-            if (!lbProceed) {
-                fromdate = null;
-                todate = null;
-            }
-            if (WTaxDeduction(lnCtr).getModel().getTaxCode() == null
-                    || "".equals(WTaxDeduction(lnCtr).getModel().getTaxCode())) {
-                System.out.println("REMOVE WTAX : " + WTaxDeduction(lnCtr).getModel().getTransactionNo());
-                fromdate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodFrom();
-                todate = WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getPeriodTo();
-                WTaxDeduction().remove(lnCtr);
-                lbProceed = true;
-            }
-            lnCtr--;
-        }
-        if ((getWTaxDeductionsCount() - 1) >= 0) {
-            if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode() != null
-                    && !"".equals(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxCode())) {
-                AddWTaxDeduction();
-            }
-        }
-
-        if ((getWTaxDeductionsCount() - 1) < 0) {
-            AddWTaxDeduction();
-        }
-        if (lbProceed) {
-            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(fromdate);
-            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(todate);
-        }
-    }
-    
-    
-    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
-        poJSON = new JSONObject();
-        String lsJournal = existJournal();
-        if(lsJournal != null && !"".equals(lsJournal)){
-            //Update Journal
-            switch(fsStatus){
-                case CashDisbursementStatus.CONFIRMED:
-                    //Confirm Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    poJSON = poJournal.ConfirmTransaction("");
-                    if (!isJSONSuccess(poJSON)) {
-                        return poJSON;
-                    }
-                    break;
-                case CashDisbursementStatus.VOID:
-                    //Void Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    poJSON = poJournal.VoidTransaction("");
-                    if (!isJSONSuccess(poJSON)) {
-                        return poJSON;
-                    }
-
-                    break;
-                case CashDisbursementStatus.CANCELLED:
-                    //Cancel Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    poJSON = poJournal.CancelTransaction("");
-                    if (!isJSONSuccess(poJSON)) {
-                        return poJSON;
-                    }
-                    break;
-            }
-        }
-    
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
-    
     /*Convert Date to String*/
     private static String xsDateShort(Date fdValue) {
         if(fdValue == null){
@@ -2755,7 +1673,7 @@ public class CashDisbursement extends Transaction {
      * Sets default master record values for a new transaction.
      * 
      * Configures the branch, industry, and company identifiers, sets the current 
-     * server date, and initializes the status to {@link CashDisbursementStatus#OPEN}.
+     * server date, and initializes the status to {@link PettyCashDisbursementStatus#OPEN}.
      * 
      * @return A {@link JSONObject} indicating the initialization result.
      */
@@ -2770,7 +1688,7 @@ public class CashDisbursement extends Transaction {
             Master().setCompanyId(psCompanyId);
             Master().setDepartmentRequest(Master().getDepartmentRequest());
             Master().setTransactionDate(poGRider.getServerDate());
-            Master().setTransactionStatus(CashDisbursementStatus.OPEN);
+            Master().setTransactionStatus(PettyCashDisbursementStatus.OPEN);
             Master().setVoucherNo(getVoucherNo());
 
         } catch (SQLException ex) {
@@ -2790,7 +1708,7 @@ public class CashDisbursement extends Transaction {
      */
     @Override
     protected JSONObject isEntryOkay(String status) {
-        GValidator loValidator = new CashDisbursementValidator();
+        GValidator loValidator = new PettyCashDisbursementValidator();
         loValidator.setApplicationDriver(poGRider);
         loValidator.setTransactionStatus(status);
         loValidator.setMaster(Master());
@@ -2798,59 +1716,6 @@ public class CashDisbursement extends Transaction {
         return poJSON;
     }
     
-    
-    private JSONObject validateJournal(){
-        poJSON = new JSONObject();
-        poJSON.put("continue", false);
-        
-        double ldblCreditAmt = 0.0000;
-        double ldblDebitAmt = 0.0000;
-        boolean lbHasJournal = false;
-        for(int lnCtr = 0; lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
-            ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
-            ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
-            
-            if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
-                if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
-                    if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
-                        return poJSON;
-                    }
-                }
-            }
-            
-            if(!lbHasJournal){
-                lbHasJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
-            }   
-        }
-        
-        if(lbHasJournal || poGRider.getUserLevel() > UserRight.ENCODER){
-            if(ldblDebitAmt == 0.0000 ){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid journal entry debit amount.");
-                return poJSON;
-            }
-
-            if(ldblCreditAmt == 0.0000){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Invalid journal entry credit amount.");
-                return poJSON;
-            }
-
-            if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Debit should be equal to credit amount.");
-                return poJSON;
-            }
-        }
-        
-        
-        poJSON.put("result", "sucess");
-        poJSON.put("message", "sucess");
-        poJSON.put("continue", lbHasJournal);
-        return poJSON;
-    }
     
     /**
      * Prepares and validates the transaction data before committing to the database.
@@ -2871,74 +1736,24 @@ public class CashDisbursement extends Transaction {
         /*Put system validations and other assignments here*/
         System.out.println("Class Edit Mode : " + getEditMode());
         System.out.println("Master Edit Mode : " + Master().getEditMode());
-        System.out.println("Journal Class Edit Mode : " + poJournal.getEditMode());
-        System.out.println("Journal Master Edit Mode : " + poJournal.Master().getEditMode());
         //Re-set the transaction no and voucher no
         if(getEditMode() == EditMode.ADDNEW){
             Master().setTransactionNo(Master().getNextCode());
             Master().setVoucherNo(getVoucherNo());
         }
         
-        String lsCashDisbursement = existCashDisbursement(Master().getSourceNo(), Master().getSourceCode());
-        if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
-            poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement.\nKindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
-            return poJSON;
-        }
-        
         poJSON = isEntryOkay(Master().getTransactionStatus());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-        //Recompute tax amount
-        poJSON = computeTaxAmount();
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
-        
-        //Recompute fields to validate
-        poJSON = computeFields(true);
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
-        
         //Validate Detail
         for(int lnCtr = 0;lnCtr <= getDetailCount()-1;lnCtr++){
             if ((Detail(lnCtr).getParticularId() == null || "".equals(Detail(lnCtr).getParticularId()))
                 ){
-                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo()) 
-                    || Detail(lnCtr).getAmount() > 0.0000){
+                if(Detail(lnCtr).getAmount() > 0.0000){
                     poJSON = setJSON("error", "Particular cannot be empty at row " + (lnCtr+1) );
                     return poJSON;
                 }
-            }
-        }
-        
-        //Validate Withholding Tax Deductions
-        Double ldblTotalBaseAmount = 0.0000;
-        if(Master().getWithTaxTotal() > 0.0000){
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if (WTaxDeduction(lnCtr).getModel().isReverse()
-                    && WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 
-                    && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId()) 
-                    && WTaxDeduction(lnCtr).getModel().getTaxRateId() != null
-                    ) {
-                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                        //validate period
-                        poJSON = checkPeriodDate(lnCtr);
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                    }
-                    
-                    ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
-                }
-            }
-            
-            double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
-            if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
-                poJSON = setJSON("error", "Total tax base amount must be equal to net vatable sales.");
-                return poJSON;
             }
         }
         
@@ -2951,7 +1766,7 @@ public class CashDisbursement extends Transaction {
                 if(item.getEditMode() == EditMode.ADDNEW){
                     detail.remove(); // Correctly remove the item
                 } else {
-                    item.setValue("cReversex", CashDisbursementStatus.Reverse.EXCLUDE);
+                    item.setValue("cReversex", PettyCashDisbursementStatus.Reverse.EXCLUDE);
                 }
             }
         }
@@ -2969,95 +1784,78 @@ public class CashDisbursement extends Transaction {
             }
         }
         
-        Iterator<WithholdingTaxDeductions> loObject = WTaxDeduction().iterator();
-        while (loObject.hasNext()) {
-            WithholdingTaxDeductions item = loObject.next(); // Store the item before checking conditions
-            String lsTaxRateId = (String) item.getModel().getTaxRateId();
-            double lsAmount = item.getModel().getBaseAmount();
-            if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
-                if(item.getEditMode() == EditMode.ADDNEW){
-                    loObject.remove(); // Correctly remove the item
-                } else {
-                    item.getModel().isReverse(false);
-                }
-            }
-        }
-        
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
         }
+        
         //Recompute amounts
-        computeTaxAmount();
         computeFields(false);
         
         Master().setModifiedBy(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
-        //Save attachment only for manual entry
-        if(Master().getSourceNo() == null || "".equals(Master().getSourceNo())){
-            //assign other info on attachment
-            for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
-                TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
-                TransactionAttachmentList(lnCtr).getModel().setSourceCode(getSourceCode());
-                TransactionAttachmentList(lnCtr).getModel().setBranchCode(Master().getBranchCode());
-                TransactionAttachmentList(lnCtr).getModel().setImagePath(System.getProperty("sys.default.path.temp.attachments"));
+        //assign other info on attachment
+        for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount()- 1; lnCtr++) {
+            TransactionAttachmentList(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
+            TransactionAttachmentList(lnCtr).getModel().setSourceCode(getSourceCode());
+            TransactionAttachmentList(lnCtr).getModel().setBranchCode(Master().getBranchCode());
+            TransactionAttachmentList(lnCtr).getModel().setImagePath(System.getProperty("sys.default.path.temp.attachments"));
 
-                String lsOriginalFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
-                //Check existing file name in database
-                if(EditMode.ADDNEW == TransactionAttachmentList(lnCtr).getModel().getEditMode()){
-                    int lnCopies = 0;
-                    String fsFilePath = TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + TransactionAttachmentList(lnCtr).getModel().getFileName();
-                    String lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
-                    while ("error".equals((String)checkExistingFileName(lsNewFileName).get("result"))) {
-                        lnCopies++;
-                        //Rename the file
-                        int dotIndex = TransactionAttachmentList(lnCtr).getModel().getFileName().lastIndexOf(".");
-                        if (dotIndex == -1) {
-                            lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName() +"_"+lnCopies;
-                        } else {
-                            lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName().substring(0, dotIndex) +"_"+ lnCopies +TransactionAttachmentList(lnCtr).getModel().getFileName().substring(dotIndex);
-                        }
-                    }
-
-                    if(lnCopies > 0){
-                        Path source = Paths.get(fsFilePath);
-                        try {
-                            // Copy file into the target directory with a new name
-                            Path target = Paths.get(System.getProperty("sys.default.path.temp.attachments")).resolve(lsNewFileName);
-                            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
-                            //check if file is existing
-                            int lnChecker = 0;
-                            File file = new File(TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + lsNewFileName);
-                            while(!file.exists() && lnChecker < 5){
-                                Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);  
-                                System.out.println("Re-Copying... " + lnChecker);
-                                lnChecker++;
-                            }
-                            TransactionAttachmentList(lnCtr).getModel().setFileName(lsNewFileName);
-                            System.out.println("File copied successfully as " + lsNewFileName);
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
+            String lsOriginalFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+            //Check existing file name in database
+            if(EditMode.ADDNEW == TransactionAttachmentList(lnCtr).getModel().getEditMode()){
+                int lnCopies = 0;
+                String fsFilePath = TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + TransactionAttachmentList(lnCtr).getModel().getFileName();
+                String lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName();
+                while ("error".equals((String)checkExistingFileName(lsNewFileName).get("result"))) {
+                    lnCopies++;
+                    //Rename the file
+                    int dotIndex = TransactionAttachmentList(lnCtr).getModel().getFileName().lastIndexOf(".");
+                    if (dotIndex == -1) {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName() +"_"+lnCopies;
+                    } else {
+                        lsNewFileName = TransactionAttachmentList(lnCtr).getModel().getFileName().substring(0, dotIndex) +"_"+ lnCopies +TransactionAttachmentList(lnCtr).getModel().getFileName().substring(dotIndex);
                     }
                 }
 
-                //Upload Attachment when send status is 0
-                try {
-                    if("0".equals(TransactionAttachmentList(lnCtr).getModel().getSendStatus())){
-                        poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr,lsOriginalFileName);
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            return poJSON;
+                if(lnCopies > 0){
+                    Path source = Paths.get(fsFilePath);
+                    try {
+                        // Copy file into the target directory with a new name
+                        Path target = Paths.get(System.getProperty("sys.default.path.temp.attachments")).resolve(lsNewFileName);
+                        Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
+                        //check if file is existing
+                        int lnChecker = 0;
+                        File file = new File(TransactionAttachmentList(lnCtr).getModel().getImagePath() + "/" + lsNewFileName);
+                        while(!file.exists() && lnChecker < 5){
+                            Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);  
+                            System.out.println("Re-Copying... " + lnChecker);
+                            lnChecker++;
                         }
+                        TransactionAttachmentList(lnCtr).getModel().setFileName(lsNewFileName);
+                        System.out.println("File copied successfully as " + lsNewFileName);
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-                } catch (Exception ex) {
-                    Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                    poJSON = setJSON("error", MiscUtil.getException(ex));
-                    return poJSON;
                 }
-
             }
+
+            //Upload Attachment when send status is 0
+            try {
+                if("0".equals(TransactionAttachmentList(lnCtr).getModel().getSendStatus())){
+                    poJSON = uploadCASAttachments(poGRider, System.getProperty("sys.default.access.token"), lnCtr,lsOriginalFileName);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                }
+            } catch (Exception ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON = setJSON("error", MiscUtil.getException(ex));
+                return poJSON;
+            }
+
         }
         
         System.out.println("--------------------------WILL SAVE---------------------------------------------");
@@ -3082,7 +1880,7 @@ public class CashDisbursement extends Transaction {
     @Override
     public JSONObject save() throws CloneNotSupportedException, SQLException, GuanzonException {
         /*Put saving business rules here*/
-        return isEntryOkay(CashDisbursementStatus.OPEN);
+        return isEntryOkay(PettyCashDisbursementStatus.OPEN);
     }
 
     /**
@@ -3108,80 +1906,21 @@ public class CashDisbursement extends Transaction {
             System.out.println("-----------------------------------------------------------------------");
             }
             
-            if(Master().getSourceNo() == null || "".equals(Master().getSourceNo())){
-                //Save Attachments
-                System.out.println("-----------------------------SAVE TRANSACTION ATTACHMENT------------------------------------------");
-                for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
-                    if (paAttachments.get(lnCtr).getEditMode() == EditMode.ADDNEW || paAttachments.get(lnCtr).getEditMode() == EditMode.UPDATE) {
-                        paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-                        paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
-                        paAttachments.get(lnCtr).setWithParentClass(true);
-                        poJSON = paAttachments.get(lnCtr).saveRecord();
-                        if (!isJSONSuccess(poJSON)) {
-                            return poJSON;
-                        }
-                    }
-                }
-                System.out.println("-----------------------------------------------------------------------");
-            }
-            
-            System.out.println("--------------------------SAVE WITHHOLDING TAX DEDUCTION---------------------------------------------");
-            //Save Withholding Tax Deductions
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    WTaxDeduction(lnCtr).getModel().setSourceCode(getSourceCode());
-                    WTaxDeduction(lnCtr).getModel().setSourceNo(Master().getTransactionNo());
-                    WTaxDeduction(lnCtr).getModel().setModifyingBy(poGRider.getUserID());
-                    WTaxDeduction(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
-                    WTaxDeduction(lnCtr).setWithParentClass(true);
-                    WTaxDeduction(lnCtr).setWithUI(false);
-                    poJSON = WTaxDeduction(lnCtr).saveRecord();
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        System.out.println("Save Withholding Tax Deduction : " + poJSON.get("message"));
+            //Save Attachments
+            System.out.println("-----------------------------SAVE TRANSACTION ATTACHMENT------------------------------------------");
+            for (int lnCtr = 0; lnCtr <= getTransactionAttachmentCount() - 1; lnCtr++) {
+                if (paAttachments.get(lnCtr).getEditMode() == EditMode.ADDNEW || paAttachments.get(lnCtr).getEditMode() == EditMode.UPDATE) {
+                    paAttachments.get(lnCtr).getModel().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                    paAttachments.get(lnCtr).getModel().setModifiedDate(poGRider.getServerDate());
+                    paAttachments.get(lnCtr).setWithParentClass(true);
+                    poJSON = paAttachments.get(lnCtr).saveRecord();
+                    if (!isJSONSuccess(poJSON)) {
                         return poJSON;
                     }
-                }
-            }
-            
-//            Save Journal
-            System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
-            if(poJournal != null){
-                if(poJournal.getEditMode() == EditMode.ADDNEW || poJournal.getEditMode() == EditMode.UPDATE){
-                    poJSON = validateJournal();
-                    boolean lbContinue = (boolean) poJSON.get("continue");
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", poJSON.get("message").toString());
-                        return poJSON;
-                    } 
-                    if(lbContinue){
-                        poJournal.Master().setSourceNo(Master().getTransactionNo());
-                        poJournal.Master().setModifyingId(poGRider.getUserID());
-                        poJournal.Master().setModifiedDate(poGRider.getServerDate());
-                        poJournal.setWithParent(true);
-                        poJSON = poJournal.SaveTransaction();
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            System.out.println("Save Journal : " + poJSON.get("message"));
-                            return poJSON;
-                        }
-                    }
-                } else {
-                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid Update mode for Journal.");
-                        return poJSON;
-                    }
-                }
-            } else {
-                if (poGRider.getUserLevel() > UserRight.ENCODER) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "Journal is not set.");
-                    return poJSON;
                 }
             }
             System.out.println("-----------------------------------------------------------------------");
             
-        
         } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON = setJSON("error", MiscUtil.getException(ex));
@@ -3216,7 +1955,7 @@ public class CashDisbursement extends Transaction {
             }
         }
 
-        SQL_BROWSE =  "  SELECT "
+        SQL_BROWSE = " SELECT "
                     + "   a.sTransNox "
                     + " , a.sCompnyID "
                     + " , a.sBranchCd "
@@ -3224,7 +1963,7 @@ public class CashDisbursement extends Transaction {
                     + " , a.nEntryNox "
                     + " , a.dTransact "
                     + " , a.sVoucherx "
-                    + " , a.sCashFIDx "
+                    + " , a.sPettyIDx "
                     + " , a.sClientID "
                     + " , a.sPayeeNme "
                     + " , a.sCrdtedTo "
@@ -3232,32 +1971,24 @@ public class CashDisbursement extends Transaction {
                     + " , a.sAddressx "
                     + " , a.sRemarksx "
                     + " , a.sReferNox "
-                    + " , a.sSourceCd "
-                    + " , a.sSourceNo "
                     + " , a.nTranTotl "
-                    + " , a.nVATSales "
-                    + " , a.nVATAmtxx "
-                    + " , a.nZroVATSl "
-                    + " , a.nVatExmpt "
-                    + " , a.nWTaxTotl "
-                    + " , a.nNetTotal "
                     + " , a.cVchrPrnt "
                     + " , a.cCollectd "
                     + " , a.cTranStat "
                     + " , a.sApproved "
-                    + " , b.sCompnyNm AS sCompanyx "
-                    + " , c.sDescript AS sIndustry "
-                    + " , d.sDeptName AS sDeptName "
-                    + " , e.sCompnyNm AS sPayeexxx "
-                    + " , f.sCashFDsc AS sCashFund "
-                    + " , g.sBranchNm AS sBranchNm "
-                    + " , h.sCompnyNm AS sCreditTo "
-                    + " FROM Cash_Disbursement a   "
+                    + " , b.sCompnyNm AS sCompanyx    "
+                    + " , c.sDescript AS sIndustry    "
+                    + " , d.sDeptName AS sDeptName    "
+                    + " , e.sCompnyNm AS sPayeexxx    "
+                    + " , f.sPettyDsc AS sPettyDsc    "
+                    + " , g.sBranchNm AS sBranchNm    "
+                    + " , h.sCompnyNm AS sCreditTo    "
+                    + " FROM PettyCash_Disbursement a "  
                     + " LEFT JOIN Company b ON b.sCompnyID = a.sCompnyID       "
                     + " LEFT JOIN Industry c ON c.sIndstCdx = a.sIndstCdx      "
                     + " LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptReqs    "
                     + " LEFT JOIN Client_Master e ON e.sClientID = a.sClientID "
-                    + " LEFT JOIN CashFund f ON f.sCashFIDx = a.sCashFIDx      "
+                    + " LEFT JOIN PettyCash f ON f.sPettyIDx = a.sPettyIDx     "
                     + " LEFT JOIN Branch g ON g.sBranchCd = a.sBranchCd        "
                     + " LEFT JOIN Client_Master h ON h.sClientID = a.sCrdtedTo ";
         if(lsCondition != null && !"".equals(lsCondition)){
@@ -3460,7 +2191,7 @@ public class CashDisbursement extends Transaction {
         
         try {
             String watermarkPath = "";
-            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CashDisbursement.jrxml";
+            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/PettyCashDisbursement.jrxml";
             jasperReport = JasperCompileManager.compileReport(jrxmlPath);
 
             watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
@@ -3499,7 +2230,7 @@ public class CashDisbursement extends Transaction {
                 params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
             }
             //Get Confirmer
-            JSONObject loJSONConfirm = getUpdateStatusBy(CashDisbursementStatus.CONFIRMED);
+            JSONObject loJSONConfirm = getUpdateStatusBy(PettyCashDisbursementStatus.CONFIRMED);
             if(!isJSONSuccess(loJSONConfirm)){
                 return loJSONConfirm;
             } else {
@@ -3508,7 +2239,7 @@ public class CashDisbursement extends Transaction {
                 }
             }
             //Get Approver
-            JSONObject loJSONApprover = getUpdateStatusBy(CashDisbursementStatus.APPROVED);
+            JSONObject loJSONApprover = getUpdateStatusBy(PettyCashDisbursementStatus.APPROVED);
             if(!isJSONSuccess(loJSONApprover)){
                 return loJSONApprover;
             } else {
@@ -3527,18 +2258,10 @@ public class CashDisbursement extends Transaction {
             List<String> laParticular = new ArrayList<>();
             String lsParticular = "";
             for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-//                if(Master().getSourceNo() != null && !"".equals(Master().getSourceNo())){
-//                    lsParticular = Detail(lnCtr).CashAdvanceDetail(Master().getSourceNo()).getParticular().toUpperCase();
-//                    if(!laParticular.contains(lsParticular)){
-//                        laParticular.add(lsParticular);
-//                    }
-//                } else { 
-                    //All detail will have a particular description - Arsiela 04/06/2026
-                    lsParticular = Detail(lnCtr).Particular().getDescription().toUpperCase();
-                    if(!laParticular.contains(lsParticular)){
-                        laParticular.add(lsParticular);
-                    }
-//                }
+                lsParticular = Detail(lnCtr).Particular().getDescription().toUpperCase();
+                if(!laParticular.contains(lsParticular)){
+                    laParticular.add(lsParticular);
+                }
             }
 
             //Particular
@@ -3808,19 +2531,19 @@ public class CashDisbursement extends Transaction {
                 case "":
                     crs.updateString("cRefrStat", "-");
                     break;
-                case CashDisbursementStatus.OPEN:
+                case PettyCashDisbursementStatus.OPEN:
                     crs.updateString("cRefrStat", "OPEN");
                     break;
-                case CashDisbursementStatus.CONFIRMED:
+                case PettyCashDisbursementStatus.CONFIRMED:
                     crs.updateString("cRefrStat", "CONFIRMED");
                     break;
-                case CashDisbursementStatus.CANCELLED:
+                case PettyCashDisbursementStatus.CANCELLED:
                     crs.updateString("cRefrStat", "CANCELLED");
                     break;
-                case CashDisbursementStatus.VOID:
+                case PettyCashDisbursementStatus.VOID:
                     crs.updateString("cRefrStat", "VOID");
                     break;
-                case CashDisbursementStatus.APPROVED:
+                case PettyCashDisbursementStatus.APPROVED:
                     crs.updateString("cRefrStat", "APPROVED");
                     break;
                 default:
@@ -3828,19 +2551,19 @@ public class CashDisbursement extends Transaction {
                     String stat = String.valueOf((int) ch - 64);
 
                     switch (stat) {
-                        case CashDisbursementStatus.OPEN:
+                        case PettyCashDisbursementStatus.OPEN:
                             crs.updateString("cRefrStat", "OPEN");
                             break;
-                        case CashDisbursementStatus.CONFIRMED:
+                        case PettyCashDisbursementStatus.CONFIRMED:
                             crs.updateString("cRefrStat", "CONFIRMED");
                             break;
-                        case CashDisbursementStatus.CANCELLED:
+                        case PettyCashDisbursementStatus.CANCELLED:
                             crs.updateString("cRefrStat", "CANCELLED");
                             break;
-                        case CashDisbursementStatus.VOID:
+                        case PettyCashDisbursementStatus.VOID:
                             crs.updateString("cRefrStat", "VOID");
                             break;
-                        case CashDisbursementStatus.APPROVED:
+                        case PettyCashDisbursementStatus.APPROVED:
                             crs.updateString("cRefrStat", "APPROVED");
                             break;
                     }
@@ -3857,7 +2580,7 @@ public class CashDisbursement extends Transaction {
             entryDate = (String) loJSON.get("sEntryDte");
         }
 
-        showStatusHistoryUI("Cash Disbursement", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+        showStatusHistoryUI("Petty Cash Disbursement", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
     }
     /**
      * Retrieves the user and timestamp of who created the current transaction.

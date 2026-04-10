@@ -15,6 +15,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund_Ledger;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
@@ -36,6 +37,9 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCashLedger;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Payment_Monitor;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Schedule;
@@ -761,6 +765,75 @@ public class CashflowModels {
         return poCashDisbursementDetail;
     }
     
+    
+    
+    public Model_PettyCash_Disbursement PettyCashDisbursementMaster() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.PettyCashDisbursement: Application driver is not set.");
+            return null;
+        }
+
+        if (poPettyCashDisbursement == null){
+            poPettyCashDisbursement = new Model_PettyCash_Disbursement();
+            poPettyCashDisbursement.setApplicationDriver(poGRider);
+            poPettyCashDisbursement.setXML("Model_PettyCash_Disbursement");
+            poPettyCashDisbursement.setTableName("PettyCash_Disbursement");
+            poPettyCashDisbursement.initialize();
+        }
+
+        return poPettyCashDisbursement;
+    }
+    
+    public Model_PettyCash_Disbursement_Detail PettyCashDisbursementDetail() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.PettyCashDisbursementDetail: Application driver is not set.");
+            return null;
+        }
+
+        if (poPettyCashDisbursementDetail == null){
+            poPettyCashDisbursementDetail = new Model_PettyCash_Disbursement_Detail();
+            poPettyCashDisbursementDetail.setApplicationDriver(poGRider);
+            poPettyCashDisbursementDetail.setXML("Model_PettyCash_Disbursement_Detail");
+            poPettyCashDisbursementDetail.setTableName("PettyCash_Disbursement_Detail");
+            poPettyCashDisbursementDetail.initialize();
+        }
+
+        return poPettyCashDisbursementDetail;
+    }
+    
+    public Model_Cash_Fund_Ledger CashFundLedger() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.CashFundLedger: Application driver is not set.");
+            return null;
+        }
+
+        if (poCashFundLedger == null){
+            poCashFundLedger = new Model_Cash_Fund_Ledger();
+            poCashFundLedger.setApplicationDriver(poGRider);
+            poCashFundLedger.setXML("Model_CashFund_Ledger");
+            poCashFundLedger.setTableName("CashFund_Ledger");
+            poCashFundLedger.initialize();
+        }
+
+        return poCashFundLedger;
+    }
+    
+    public Model_PettyCashLedger PettyCashFundLedger() {
+        if (poGRider == null) {
+            System.err.println("CashflowModels.PettyCashFundLedger: Application driver is not set.");
+            return null;
+        }
+
+        if (poPettyCashFundLedger == null){
+            poPettyCashFundLedger = new Model_PettyCashLedger();
+            poPettyCashFundLedger.setApplicationDriver(poGRider);
+            poPettyCashFundLedger.setXML("Model_PettyCash_Ledger");
+            poPettyCashFundLedger.setTableName("PettyCash_Ledger");
+            poPettyCashFundLedger.initialize();
+        }
+
+        return poPettyCashFundLedger;
+    }
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -794,8 +867,12 @@ public class CashflowModels {
             poRecurringExpenseMonitor = null;
             poPettyCash = null;
             poCashFund = null;
+            poCashFundLedger = null;
             poCashDisbursement = null;
             poCashDisbursementDetail = null;
+            poPettyCashFundLedger = null;
+            poPettyCashDisbursement = null;
+            poPettyCashDisbursementDetail = null;
 
             poGRider = null;
         } finally {
@@ -845,6 +922,10 @@ public class CashflowModels {
     private Model_Recurring_Expense_Schedule poRecurringExpenseSchedule;
     private Model_Recurring_Expense_Payment_Monitor poRecurringExpenseMonitor;
     private Model_Cash_Fund poCashFund;
+    private Model_Cash_Fund_Ledger poCashFundLedger;
     private Model_Cash_Disbursement poCashDisbursement;
     private Model_Cash_Disbursement_Detail poCashDisbursementDetail;
+    private Model_PettyCashLedger poPettyCashFundLedger;
+    private Model_PettyCash_Disbursement poPettyCashDisbursement;
+    private Model_PettyCash_Disbursement_Detail poPettyCashDisbursementDetail;
 }
