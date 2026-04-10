@@ -307,12 +307,12 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer.");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
+            psApprover = (String) poJSON.get("sUserIDxx");
         }   
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
-        setApproving((String) poJSON.get("sUserIDxx"));
-        psApprover = (String) poJSON.get("sUserIDxx");
         return poJSON;
     }
     
@@ -335,7 +335,9 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
                 poJSON.put("result", "error");
                 return poJSON;
+            case DisbursementStatic.CONFIRMED:
             case DisbursementStatic.VERIFIED:
+            case DisbursementStatic.APPROVED:
                 if(isEntry){
                     poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
                     poJSON.put("result", "error");
@@ -373,6 +375,10 @@ public class DisbursementVoucher extends Transaction {
                 return "Authorized";
             case DisbursementStatic.RETURNED:
                 return "Returned";
+            case DisbursementStatic.APPROVED:
+                return "Approved";
+            case DisbursementStatic.CONFIRMED:
+                return "Confirmed";
             default:
                 return "Open";
         }
@@ -382,10 +388,11 @@ public class DisbursementVoucher extends Transaction {
         switch (target) {
             case DisbursementStatic.RETURNED:
                 return current.equals(DisbursementStatic.VERIFIED)
-                    || current.equals(DisbursementStatic.CERTIFIED);
+                    || current.equals(DisbursementStatic.CERTIFIED)
+                    || current.equals(DisbursementStatic.APPROVED);
 
             case DisbursementStatic.CANCELLED:
-                return current.equals(DisbursementStatic.VERIFIED)
+                return current.equals(DisbursementStatic.CONFIRMED)
                     || current.equals(DisbursementStatic.RETURNED);
 
             case DisbursementStatic.VOID:
@@ -393,15 +400,23 @@ public class DisbursementVoucher extends Transaction {
 
             case DisbursementStatic.DISAPPROVED:
                 return current.equals(DisbursementStatic.VERIFIED)
+                    || current.equals(DisbursementStatic.CONFIRMED)
+                    || current.equals(DisbursementStatic.APPROVED)
                     || current.equals(DisbursementStatic.RETURNED)
                     || current.equals(DisbursementStatic.CERTIFIED);
 
-            case DisbursementStatic.VERIFIED:
+            case DisbursementStatic.CONFIRMED:
                 return current.equals(DisbursementStatic.OPEN)
                     || current.equals(DisbursementStatic.RETURNED);
 
-            case DisbursementStatic.CERTIFIED:
+            case DisbursementStatic.VERIFIED:
+                return current.equals(DisbursementStatic.CONFIRMED);
+                
+            case DisbursementStatic.APPROVED:
                 return current.equals(DisbursementStatic.VERIFIED);
+                
+            case DisbursementStatic.CERTIFIED:
+                return current.equals(DisbursementStatic.APPROVED);
 
             case DisbursementStatic.AUTHORIZED:
                 return current.equals(DisbursementStatic.CERTIFIED);
@@ -464,9 +479,9 @@ public class DisbursementVoucher extends Transaction {
     }
     
     /*Update Transaction Status*/
-    public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+    public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        String lsStatus = DisbursementStatic.VERIFIED;
+        String lsStatus = DisbursementStatic.CONFIRMED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -489,9 +504,10 @@ public class DisbursementVoucher extends Transaction {
         
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
+            case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                 if(existCheckPayments() == null || "".equals(existCheckPayments())){
                     poJSON.put("result", "error");
-                    poJSON.put("message", "No active digital payment linked. Please update the disbursement voucher.");
+                    poJSON.put("message", "No active check payment linked. Please update the disbursement voucher.");
                     return poJSON;
                 }
                 break;
@@ -517,6 +533,53 @@ public class DisbursementVoucher extends Transaction {
         } 
         
         //validator
+        poJSON = isEntryOkay(DisbursementStatic.CONFIRMED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction confirmed successfully.");
+        return poJSON;
+    }
+    
+    public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = DisbursementStatic.VERIFIED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+        
+        Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load disbursement.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
+        
+        //Check Department Section
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        } 
+        
+        //validator
         poJSON = isEntryOkay(DisbursementStatic.VERIFIED);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -531,6 +594,59 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction verified successfully.");
+        return poJSON;
+    }
+    
+    public JSONObject ApproveTransaction(String remarks)
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        
+        String lsStatus = DisbursementStatic.APPROVED;
+        
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //Update Related transaction to DV ex. JE
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction approved successfully.");
         return poJSON;
     }
 
@@ -572,11 +688,11 @@ public class DisbursementVoucher extends Transaction {
             poGRider.beginTrans("UPDATE STATUS", "CertifyTransaction", SOURCE_CODE, Master().getTransactionNo());
 
             //Update Related transaction to DV ex. JE
-            poJSON = updateRelatedTransactions(lsStatus);
-            if (!"success".equals((String) poJSON.get("result"))) {
-                poGRider.rollbackTrans();
-                return poJSON;
-            }
+//            poJSON = updateRelatedTransactions(lsStatus);
+//            if (!"success".equals((String) poJSON.get("result"))) {
+//                poGRider.rollbackTrans();
+//                return poJSON;
+//            }
 
             //change status
             poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
@@ -719,6 +835,65 @@ public class DisbursementVoucher extends Transaction {
 
             poGRider.commitTrans();
         }
+        
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction disapproved successfully.");
+        return poJSON;
+    }
+    
+    public JSONObject DisApproveTransaction(String remarks)
+            throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+
+        String lsStatus = DisbursementStatic.DISAPPROVED;
+        
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (!isAllowed((String) poMaster.getValue("cTranStat"), lsStatus)) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already "+getStatus((String) poMaster.getValue("cTranStat"))+".");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "DisApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //Update Related transaction to DV
+        poJSON = updateLinkedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
         
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -1236,7 +1411,7 @@ public class DisbursementVoucher extends Transaction {
         
         WithholdingTax object = new CashflowControllers(poGRider, logwrapr).WithholdingTax();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
+        object.setIndustryId(Master().getIndustryID());
         poJSON = object.searchRecord(value, byCode,WTaxDeduction(row).getModel().getTaxCode());
         if ("success".equals((String) poJSON.get("result"))) {
             JSONObject loJSON = checkExistTaxRate(row, object.getModel().getTaxRateId(),object.getModel().getTaxType());
@@ -1246,6 +1421,8 @@ public class DisbursementVoucher extends Transaction {
                 } else {
                     row = (int) loJSON.get("row");
                     WTaxDeduction(row).getModel().isReverse(true);
+                    WTaxDeduction(row).getModel().setBaseAmount(0.00);
+                    WTaxDeduction(row).getModel().setTaxAmount(0.00);
                 }
             }
             
@@ -1426,9 +1603,14 @@ public class DisbursementVoucher extends Transaction {
     
     public String getVoucherNo() throws SQLException {
         String lsSQL = "SELECT sVouchrNo FROM Disbursement_Master";
+        //Branch code is not stated in BR
+        //Do not include branch code according to ma'am grace 03/28/2026
+        //According to ma'am she 03/31/2026 voucher number
+//        lsSQL = MiscUtil.addCondition(lsSQL,
+//                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
         lsSQL = MiscUtil.addCondition(lsSQL,
-                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
-                + " ORDER BY sVouchrNo DESC LIMIT 1");
+                "sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())); //get voucher account to company ma'am she 03-31-2026
+        lsSQL = lsSQL + " ORDER BY sVouchrNo DESC LIMIT 1";
 
         String branchVoucherNo = DisbursementStatic.DEFAULT_VOUCHER_NO;  // default value
 
@@ -1653,7 +1835,7 @@ public class DisbursementVoucher extends Transaction {
         double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
         if(ldblTotalBaseAmount > ldblVatSales){
             poJSON.put("result", "error");
-            poJSON.put("message", "Base amount cannot be greater than the net vatable sales.");
+            poJSON.put("message", "Tax Base amount cannot be greater than the net vatable sales.");
             return poJSON;
         }
         
@@ -2645,6 +2827,47 @@ public class DisbursementVoucher extends Transaction {
             }
         }
         
+        //Recompute tax amount
+        poJSON = computeTaxAmount();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //Recompute fields to validate
+        poJSON = computeFields(true);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //Validate Withholding Tax Deductions
+        Double ldblTotalBaseAmount = 0.0000;
+        if(Master().getWithTaxTotal() > 0.0000){
+            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+                if (WTaxDeduction(lnCtr).getModel().isReverse()
+                    && WTaxDeduction(lnCtr).getModel().getBaseAmount() > 0.0000 
+                    && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId()) 
+                    && WTaxDeduction(lnCtr).getModel().getTaxRateId() != null
+                    ) {
+                    if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+                        //validate period
+                        poJSON = checkPeriodDate(lnCtr);
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    }
+                    
+                    ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
+                }
+            }
+
+            double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
+            if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Total tax base amount must be equal to net vatable sales.");
+                return poJSON;
+            }
+        }
+        
         //Seek Approval
 //        poJSON = callApproval();
 //        if (!"success".equals((String) poJSON.get("result"))) {
@@ -2666,7 +2889,7 @@ public class DisbursementVoucher extends Transaction {
             //do not allow a single item detail with no quantity order
             if (Detail(0).getAmount() == 0.0000) {
                 poJSON.put("result", "error");
-                poJSON.put("message", "Your order has zero quantity.");
+                poJSON.put("message", "Disbursement detail cannot be zero.");
                 return poJSON;
             }
         }
@@ -2677,22 +2900,26 @@ public class DisbursementVoucher extends Transaction {
             String lsTaxRateId = (String) item.getModel().getTaxRateId();
             double lsAmount = item.getModel().getBaseAmount();
             if (lsAmount <= 0.0000 || "".equals(lsTaxRateId) || lsTaxRateId == null) {
-                loObject.remove(); // Correctly remove the item
+                if(item.getEditMode() == EditMode.ADDNEW){
+                    loObject.remove(); // Correctly remove the item
+                } else {
+                    item.getModel().isReverse(false);
+                }
             }
         }
         
         //Validate Withholding Tax Deductions
-        if(Master().getWithTaxTotal() > 0.0000){
-            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
-                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
-                    //validate period
-                    poJSON = checkPeriodDate(lnCtr);
-                    if ("error".equals((String) poJSON.get("result"))) {
-                        return poJSON;
-                    }
-                }
-            }
-        }
+//        if(Master().getWithTaxTotal() > 0.0000){
+//            for(int lnCtr = 0; lnCtr <= getWTaxDeductionsCount() - 1;lnCtr++){
+//                if(WTaxDeduction(lnCtr).getEditMode() == EditMode.ADDNEW || WTaxDeduction(lnCtr).getEditMode() == EditMode.UPDATE){
+//                    //validate period
+//                    poJSON = checkPeriodDate(lnCtr);
+//                    if ("error".equals((String) poJSON.get("result"))) {
+//                        return poJSON;
+//                    }
+//                }
+//            }
+//        }
         
         /*Put system validations and other assignments here*/
         boolean lbUpdated = false;
@@ -2817,6 +3044,9 @@ public class DisbursementVoucher extends Transaction {
             Detail(lnCtr).setEntryNo(lnCtr + 1);
         }
         
+        //Recompute amounts
+        computeTaxAmount();
+        computeFields(false);
         Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
@@ -3171,8 +3401,8 @@ public class DisbursementVoucher extends Transaction {
         if(lsJournal != null && !"".equals(lsJournal)){
             //Update Journal
             switch(fsStatus){
-                case DisbursementStatic.CERTIFIED:
-                    //Void Journal
+                case DisbursementStatic.APPROVED:
+                    //Confirm Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
                     if(psApprover != null && !"".equals(psApprover)){
