@@ -235,6 +235,7 @@ public class DisbursementVoucher extends Transaction {
         
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
+            case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
                     poJSON.put("message", "Unable to load check payment.\n" + (String) poJSON.get("message"));
@@ -276,6 +277,7 @@ public class DisbursementVoucher extends Transaction {
         
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
+            case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                     poJSON = populateCheck();
                     if (!"success".equals((String) poJSON.get("result"))) {
                     poJSON.put("message", "Unable to load check payment.\n" + (String) poJSON.get("message"));
@@ -438,7 +440,8 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
         String lsCheck = "";
         //If DV Type is Check : VOID linked OTHER PAYMENT
-        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+            || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             lsCheck = existOtherPayments();
             if(lsCheck != null && !"".equals(lsCheck)){
                 OtherPayments loObject = new CashflowControllers(poGRider, logwrapr).OtherPayments();
@@ -455,7 +458,7 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
         } else {
-            //Else DV Type is OYHER Payment : VOID linked CHECK PAYMENT
+            //Else DV Type is OTHER Payment : VOID linked CHECK PAYMENT
             lsCheck = existCheckPayments();
             if(lsCheck != null && !"".equals(lsCheck)){
                 CheckPayments loObject = new CashflowControllers(poGRider, logwrapr).CheckPayments();
@@ -1304,7 +1307,8 @@ public class DisbursementVoucher extends Transaction {
             } else {
                 Master().setPayeeID(object.getModel().getPayeeID());
                 System.out.println("Payee : " +  Master().Payee().getPayeeName());
-                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+                    || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                     CheckPayments().getModel().setPayeeID(Master().getPayeeID());
                 }
             }
@@ -1327,7 +1331,8 @@ public class DisbursementVoucher extends Transaction {
                 setSearchClient(object.getModel().Client().getCompanyName());
                 Master().setPayeeID(object.getModel().getPayeeID());
                 Master().setSupplierClientID(object.getModel().getClientID());
-                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+                    || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                     CheckPayments().getModel().setPayeeID(Master().getPayeeID());
                 }
             }
@@ -1785,6 +1790,7 @@ public class DisbursementVoucher extends Transaction {
 
         switch(Master().getDisbursementType()){
             case DisbursementStatic.DisbursementType.CHECK:
+            case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                 if (Logical.YES.equals(Master().getBankPrint())) {
                     poCheckPayments.getModel().setAmount(Master().getNetTotal());
                 } else {
@@ -2116,35 +2122,112 @@ public class DisbursementVoucher extends Transaction {
      * @throws SQLException
      * @throws GuanzonException 
      */
-    public JSONObject loadTransactionList(String fsIndustry, String fsValue1, String fsValue2, String fsValue3, boolean isBank, boolean isAuthorization) throws SQLException, GuanzonException {
+//    public JSONObject loadTransactionList(String fsIndustry, String fsValue1, String fsValue2, String fsValue3, boolean isBank, boolean isAuthorization) throws SQLException, GuanzonException {
+//        poJSON = new JSONObject();
+//        paMaster = new ArrayList<>();
+//        if (fsIndustry == null) { fsIndustry = ""; }
+//        if (fsValue1 == null) { fsValue1 = ""; }
+//        if (fsValue2 == null) { fsValue2 = ""; }
+//        if (fsValue3 == null) { fsValue3 = ""; }
+//        initSQL();
+//        //set default retrieval for supplier / reference no
+//        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+//                    "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+//                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
+//                    + " AND a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
+//                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
+//                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
+//                    + " ) ");
+//        //if method was called in certification/checka auhorization/check update change the condition into bank and bank account and check no
+//        if(isBank){
+//            lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+//                    " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
+//                    + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2))
+//                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
+//                    + ( fsValue3.isEmpty() ? "" : " AND g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsValue3));
+//        }
+//        
+//        if(isAuthorization){
+//            lsSQL = lsSQL + " AND a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK);
+//        }
+//        
+//        String lsCondition = "";
+//        if (psTranStat != null) {
+//            if (psTranStat.length() > 1) {
+//                for (int lnCtr = 0; lnCtr <= this.psTranStat.length() - 1; lnCtr++) {
+//                    lsCondition = lsCondition + ", " + SQLUtil.toSQL(Character.toString(this.psTranStat.charAt(lnCtr)));
+//                }
+//                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+//            } else {
+//                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
+//            }
+//            lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+//        }
+//
+//        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+//        System.out.println("Executing SQL: " + lsSQL);
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//        if (MiscUtil.RecordCount(loRS) <= 0) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "No record found.");
+//            return poJSON;
+//        }
+//
+//        while (loRS.next()) {
+//            Model_Disbursement_Master loObject = new CashflowModels(poGRider).DisbursementMaster();
+//            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+//            if ("success".equals((String) poJSON.get("result"))) {
+//                paMaster.add((Model) loObject);
+//            } else {
+//                return poJSON;
+//            }
+//        }
+//        MiscUtil.close(loRS);
+//        return poJSON;
+//    }
+    /**
+    * Loads a list of disbursement transactions based on filters.
+    *
+    * @param fsIndustry Industry description filter (matched using LIKE).
+    * @param fsValue1   Primary search value:
+    *                   - Payee/Company name (CONFIRMED, VERIFIED, APPROVED)
+    *                   - Bank name (CERTIFIED, AUTHORIZED)
+    * @param fsValue2   Secondary search value:
+    *                   - Voucher number (CONFIRMED, VERIFIED, APPROVED)
+    *                   - Account number (CERTIFIED, AUTHORIZED)
+    * @param fsForm     Transaction stage (e.g., CONFIRMED, VERIFIED, APPROVED, CERTIFIED, AUTHORIZED).
+    *
+    * @return JSONObject containing:
+    *         - "result": "success" or "error"
+    *         - "message": error message if no records found
+    *
+    * @throws SQLException        if database query fails
+    * @throws GuanzonException    if business logic processing fails
+    *
+    * Process:
+    * 1. Initialize filters and base SQL query.
+    * 2. Apply company + industry filter.
+    * 3. Apply transaction status filter (single or multiple).
+    * 4. Apply form-specific conditions:
+    *    - CONFIRMED/VERIFIED/APPROVED → filter by voucher + payee/company
+    *    - CERTIFIED → filter by bank + account
+    *    - AUTHORIZED → same as CERTIFIED + restrict disbursement type
+    * 5. Execute query and validate results.
+    * 6. For each record:
+    *    - Load full transaction via sTransNox
+    *    - Add to master list if successful
+    * 7. Return final JSON result.
+    */
+    public JSONObject loadTransactionList(String fsIndustry, String fsValue1, String fsValue2, String fsForm) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paMaster = new ArrayList<>();
         if (fsIndustry == null) { fsIndustry = ""; }
         if (fsValue1 == null) { fsValue1 = ""; }
         if (fsValue2 == null) { fsValue2 = ""; }
-        if (fsValue3 == null) { fsValue3 = ""; }
         initSQL();
-        //set default retrieval for supplier / reference no
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                     "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
-                    + " AND a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
-                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
-                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
-                    + " ) ");
-        //if method was called in certification/checka auhorization/check update change the condition into bank and bank account and check no
-        if(isBank){
-            lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                    " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
-                    + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2))
-                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry)
-                    + ( fsValue3.isEmpty() ? "" : " AND g.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsValue3));
-        }
-        
-        if(isAuthorization){
-            lsSQL = lsSQL + " AND a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK);
-        }
-        
+                    + " AND k.sDescript LIKE " + SQLUtil.toSQL("%" + fsIndustry));
         String lsCondition = "";
         if (psTranStat != null) {
             if (psTranStat.length() > 1) {
@@ -2156,6 +2239,44 @@ public class DisbursementVoucher extends Transaction {
                 lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
             }
             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+        }
+        switch(fsForm){
+            case DisbursementStatic.CONFIRMED:
+            default:
+                 lsSQL = MiscUtil.addCondition(lsSQL, 
+                     " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
+                    + " ) ");
+            break;
+            case DisbursementStatic.VERIFIED:
+                 lsSQL = MiscUtil.addCondition(lsSQL, 
+                     " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
+                    + " ) ");
+            break;
+            case DisbursementStatic.APPROVED:
+                 lsSQL = MiscUtil.addCondition(lsSQL, 
+                     " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                    + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                    + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
+                    + " ) ");
+            break;
+            case DisbursementStatic.CERTIFIED:
+                lsSQL = MiscUtil.addCondition(lsSQL, 
+                        " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                        + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2));
+            break;
+            case DisbursementStatic.AUTHORIZED:
+                lsSQL = MiscUtil.addCondition(lsSQL, 
+                        " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
+                        + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                        + " AND ( a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
+                        + " OR  a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT)
+                        + " ) ");
+            break;
+            
         }
 
         lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
@@ -2203,8 +2324,9 @@ public class DisbursementVoucher extends Transaction {
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                     "  a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                     + " AND a.cBankPrnt = '0' AND i.sBankName LIKE " + SQLUtil.toSQL("%" + fsBankName)
-                    + " AND a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
-                    + " AND ( g.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " AND ( a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
+                    + " OR a.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT)
+                    + " ) AND ( g.cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
                     + " OR g.cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
                     + " ) AND g.cPrintxxx = " + SQLUtil.toSQL(CheckStatus.PrintStatus.OPEN)
                     + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsBankAccount)
@@ -2820,7 +2942,8 @@ public class DisbursementVoucher extends Transaction {
         }
         
         //Validate Check payment
-        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+            || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             poJSON = validateCheckPayment();
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -2972,7 +3095,8 @@ public class DisbursementVoucher extends Transaction {
                 }
                 
                 if (lbUpdated) {
-                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+                        || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                         lbUpdated = loRecord.CheckPayments().getModel().getBankID().equals(CheckPayments().getModel().getBankID());
                         if (lbUpdated) {
                             lbUpdated = loRecord.CheckPayments().getModel().getBankAcountID().equals(CheckPayments().getModel().getBankAcountID());
@@ -3089,6 +3213,7 @@ public class DisbursementVoucher extends Transaction {
             
             switch(Master().getDisbursementType()){
                 case DisbursementStatic.DisbursementType.CHECK:
+                case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                     System.out.println("--------------------------SAVE CHECK PAYMENT---------------------------------------------");
                     //Save Check Payment
                     if(poCheckPayments != null){
@@ -3461,6 +3586,7 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.DISAPPROVED:
                 switch(Master().getDisbursementType()){
                     case DisbursementStatic.DisbursementType.CHECK:
+                    case DisbursementStatic.DisbursementType.CHECK_DEPOSIT:
                         //Save Check Payment
                         if(poCheckPayments != null){
                             poCheckPayments.setWithParentClass(true);
@@ -4254,7 +4380,8 @@ public class DisbursementVoucher extends Transaction {
             if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
                 Master().setPayeeID(fsPayeeId);
                 setSearchPayee(Master().Payee().getPayeeName());
-                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+                    || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                     CheckPayments().getModel().setPayeeID(Master().getPayeeID());
                 }
             } else {
@@ -4280,7 +4407,8 @@ public class DisbursementVoucher extends Transaction {
                 if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
                     Master().setPayeeID(Master().Payee().getPayeeID());
                     setSearchPayee(Master().Payee().getPayeeName());
-                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+                    if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+                        || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                         CheckPayments().getModel().setPayeeID(Master().getPayeeID());
                     }
                 }
@@ -4611,7 +4739,8 @@ public class DisbursementVoucher extends Transaction {
         Model_Check_Payments loMaster = new CashflowModels(poGRider).CheckPayments();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         
-        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+        if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+            || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
@@ -4834,7 +4963,8 @@ public class DisbursementVoucher extends Transaction {
         Model_Other_Payments loMaster = new CashflowModels(poGRider).OtherPayments();
         String lsSQL = MiscUtil.makeSelect(loMaster);
         
-        if(!DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())){
+        if(!DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
+            && !DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
@@ -5223,7 +5353,8 @@ public class DisbursementVoucher extends Transaction {
                 + " LEFT JOIN Particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN Check_Payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN Other_Payments h ON a.sTransNox = h.sSourceNo"
-                + " LEFT JOIN Banks i ON (g.sBankIDxx = i.sBankIDxx AND a.cDisbrsTp = "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + ") OR (h.sBankIDxx = i.sBankIDxx AND a.cDisbrsTp != "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + ")"
+                + " LEFT JOIN Banks i ON (g.sBankIDxx = i.sBankIDxx AND ( a.cDisbrsTp = "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + " OR a.cDisbrsTp = "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT) + " ) "
+                                 + ") OR (h.sBankIDxx = i.sBankIDxx AND ( a.cDisbrsTp != "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK) + " AND a.cDisbrsTp != "+  SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT) + " ) )"
                 + " LEFT JOIN Bank_Account_Master j ON g.sBnkActID = j.sBnkActID OR h.sBnkActID = j.sBnkActID"
                 + " LEFT JOIN Industry k ON k.sIndstCdx = a.sIndstCdx";
     }
@@ -5273,50 +5404,32 @@ public class DisbursementVoucher extends Transaction {
             if ("error".equals((String) poJSON.get("result"))){
                 return poJSON;
             }
-            poJSON = UpdateTransaction();
-            if ("error".equals((String) poJSON.get("result"))){
-                return poJSON;
-            }
             
-            System.out.println("CHECK TRansaction : " + CheckPayments().getModel().getTransactionNo());
-            
-            if (!Master().isPrinted()) {
-                poJSON.put("message", "Check printing requires the Disbursement to be printed first.");
-                poJSON.put("result", "error");
-                return poJSON;
-            }
-            
-            if(Master().CheckPayments().getCheckNo() == null  || "".equals(Master().CheckPayments().getCheckNo())){
-                poJSON.put("message", "Check printing requires to assign Check No before printing");
-                poJSON.put("result", "error");
-                return poJSON;
-            }
-
-            if (CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint())) {
-                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                    boolean proceed = ShowMessageFX.YesNo(
-                            null,
-                            "Check Printing",
-                            "This check has already been printed and recorded.\n"
-                            + "Reprinting should only be done with proper authorization.\n"
-                            + "Do you wish to proceed with reprinting?"
-                    );
-                    if (proceed) {
-                        poJSON = callApproval();
-                        if (!"success".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                    } else {
-                        return poJSON;
-                    }
+            if (!CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint())) {
+                poJSON = UpdateTransaction();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
                 }
+
+                System.out.println("CHECK TRansaction : " + CheckPayments().getModel().getTransactionNo());
+
+                if (!Master().isPrinted()) {
+                    poJSON.put("message", "Check printing requires the Disbursement to be printed first.");
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+
+                if(Master().CheckPayments().getCheckNo() == null  || "".equals(Master().CheckPayments().getCheckNo())){
+                    poJSON.put("message", "Check printing requires to assign Check No before printing");
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+
+                CheckPayments().getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
+                CheckPayments().getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
+                CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
+                CheckPayments().getModel().setDatePrint(poGRider.getServerDate());
             }
-            
-//            CheckPayments().getModel().setTransactionStatus(""); //TODO
-            CheckPayments().getModel().setPrint(CheckStatus.PrintStatus.PRINTED);
-            CheckPayments().getModel().setProcessed(CheckStatus.PrintStatus.PRINTED);
-            CheckPayments().getModel().setLocation(CheckStatus.PrintStatus.PRINTED);
-            CheckPayments().getModel().setDatePrint(poGRider.getServerDate());
             
             String bank = Master().CheckPayments().Banks().getBankCode();
             String transactionno = fsTransactionNos.get(lnCtr);
@@ -5373,12 +5486,14 @@ public class DisbursementVoucher extends Transaction {
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-
-                //Save Disbursement
-                pbIsUpdateAmountPaid = true;
-                poJSON = SaveTransaction();
-                if ("error".equals((String) poJSON.get("result"))){
-                    return poJSON;
+                
+                //Save Disbursement only if check print is not yet printed
+                if (!CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint())) {
+                    pbIsUpdateAmountPaid = true;
+                    poJSON = SaveTransaction();
+                    if ("error".equals((String) poJSON.get("result"))){
+                        return poJSON;
+                    }
                 }
             } else {
                 poJSON.put("result", "error");
@@ -5416,13 +5531,20 @@ public class DisbursementVoucher extends Transaction {
      */
     private String getDocumentCode(String fsBankAccountId){
         try {
-            String lsSQL =   " SELECT "                                                        
-                        + " CONCAT(a.sBankCode,c.sSlipType,'Chk') AS sDocCodex "            
-                        + " FROM Banks a "                                                  
-                        + " LEFT JOIN Bank_Account_Master b ON b.sBankIDxx = a.sBankIDxx "  
-                        + " LEFT JOIN Branch_Bank_Account c ON c.sBnkActID = b.sBnkActID "  ;
-            lsSQL = MiscUtil.addCondition(lsSQL, " b.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
-                                                + " AND c.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
+//            String lsSQL =   " SELECT "                                                        
+//                        + " CONCAT(a.sBankCode,c.sSlipType,'Chk') AS sDocCodex "            
+//                        + " FROM Banks a "                                                  
+//                        + " LEFT JOIN Bank_Account_Master b ON b.sBankIDxx = a.sBankIDxx "  
+//                        + " LEFT JOIN Branch_Bank_Account c ON c.sBnkActID = b.sBnkActID "  ;
+
+            //New query from ma'am she 04-11-2026 08:59 AM
+            String lsSQL = " SELECT CONCAT(c.sBankCode,b.sSlipType,'Chk') AS sDocCodex " 
+                            + " FROM Bank_Account_Master a " 
+                            + "	LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx " 
+                            + ", Branch_Bank_Account b ";
+            lsSQL = MiscUtil.addCondition(lsSQL, " a.sBnkActID = b.sBnkActID "
+                                                    + " AND a.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
+                                                    + " AND b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             try {
@@ -5793,11 +5915,13 @@ public class DisbursementVoucher extends Transaction {
 //                    proceedAfterViewerClosed();
 //                    return poJSON;
 //                }
-                
-                poJSON = UpdateTransaction();
-                if ("error".equals((String) poJSON.get("result"))){
-                    proceedAfterViewerClosed();
-                    return poJSON;
+                //Update the transaction only if it is not yet printed
+                if(!Master().isPrinted()){
+                    poJSON = UpdateTransaction();
+                    if ("error".equals((String) poJSON.get("result"))){
+                        proceedAfterViewerClosed();
+                        return poJSON;
+                    }
                 }
                 
                 Map<String, Object> params = new HashMap<>();
@@ -6059,15 +6183,18 @@ public class DisbursementVoucher extends Transaction {
                                             try {
                                                 pbIsPrinted = JasperPrintManager.printReport(jasperPrint, true);
                                                 if (pbIsPrinted) {
-                                                    Master().isPrinted(true);
-                                                    Master().setDatePrint(poGRider.getServerDate());
+                                                    //Update the transaction only if it is not yet printed
+                                                    if(!Master().isPrinted()){
+                                                        Master().isPrinted(true);
+                                                        Master().setDatePrint(poGRider.getServerDate());
 
-                                                    Master().setModifyingId(poGRider.getUserID());
-                                                    Master().setModifiedDate(poGRider.getServerDate());
-                                                    poJSON = SaveTransaction();
-                                                    if(!"error".equals((String) poJSON.get("result"))){
-                                                        poJSON.put("result", "success");
-                                                        poJSON.put("message",  "Transaction Printed Successfully.");
+                                                        Master().setModifyingId(poGRider.getUserID());
+                                                        Master().setModifiedDate(poGRider.getServerDate());
+                                                        poJSON = SaveTransaction();
+                                                        if(!"error".equals((String) poJSON.get("result"))){
+                                                            poJSON.put("result", "success");
+                                                            poJSON.put("message",  "Transaction Printed Successfully.");
+                                                        }
                                                     }
                                                     CustomJasperViewer.this.dispose();
                                                 } else {
