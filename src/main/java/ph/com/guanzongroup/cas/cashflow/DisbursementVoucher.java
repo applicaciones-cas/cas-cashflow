@@ -86,6 +86,9 @@ import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.model.Model_POR_Detail;
+import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
@@ -493,6 +496,32 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    public String getEmployeeID(String fsUserId) throws SQLException, GuanzonException {
+        String lsUpdateBy = "";
+        String lsDate = "";
+        String lsSQL = "SELECT a.sEmployNo, a.sUserIDxx FROM xxxSysUser a ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx = "+ SQLUtil.toSQL(fsUserId)) ;
+        System.out.println("Execute SQL Employee ID : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sEmployNo") != null && !"".equals(loRS.getString("sEmployNo"))){
+                    return loRS.getString("sEmployNo");
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return "";
+        } 
+        
+        poJSON.put("result", "success");
+        return "";
+    }
+    
     private String checkPosition(String fsStatus, String fsUserId) throws SQLException, GuanzonException{
         String lsPosition = "";
         switch(fsStatus){
@@ -503,7 +532,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             case DisbursementStatic.VERIFIED:
             case DisbursementStatic.APPROVED:
-                lsPosition = "%General%Accounting%";
+                lsPosition = "%General%Account%";
                 break;
             case DisbursementStatic.CERTIFIED:
             case DisbursementStatic.AUTHORIZED:
@@ -520,7 +549,7 @@ public class DisbursementVoucher extends Transaction {
                            "LEFT JOIN Client_Master c ON c.sClientID = a.sEmployID " +
                            "LEFT JOIN Department d ON d.sDeptIDxx = a.sDeptIDxx ";
            lsSQL = MiscUtil.addCondition(lsSQL,
-                   " a.sEmployID = " + SQLUtil.toSQL(fsUserId)
+                   " a.sEmployID = " + SQLUtil.toSQL(getEmployeeID( fsUserId))
                    + " a.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance")) 
                    + " b.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
                     );
@@ -6272,13 +6301,15 @@ public class DisbursementVoucher extends Transaction {
         private final String sParticular;
         private final String sDepartment;
         private final String sSourceNo;
-        private final Double nTotalAmount;
+        private final String sSourceCode;
+        private Double nTotalAmount;
 
-        public TransactionPaymentSummaryDetail(Integer rowNo, String particular, String department, String sourceNo, Double totalAmt) {
+        public TransactionPaymentSummaryDetail(Integer rowNo, String particular, String department, String sourceNo,String sourceCode, Double totalAmt) {
             this.nRowNo = rowNo;
             this.sParticular = particular;
             this.sDepartment = department;
             this.sSourceNo = sourceNo;
+            this.sSourceCode = sourceCode;
             this.nTotalAmount = totalAmt;
         }
 
@@ -6297,9 +6328,17 @@ public class DisbursementVoucher extends Transaction {
         public String getsSourceNo() {
             return sSourceNo;
         }
+        
+        public String getsSourceCode() {
+            return sSourceCode;
+        }
 
         public Double getnTotalAmount() {
             return nTotalAmount;
+        }
+        
+        public void setnTotalAmount(Double fdblAmount) {
+            nTotalAmount = fdblAmount;
         }
     }
     
@@ -6540,6 +6579,8 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
                 
+                params.put("dblAdvances",Master().getAdvancesTotal());
+                
                 if(Master().isPrinted()){
                     watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
                 } else {
@@ -6547,52 +6588,46 @@ public class DisbursementVoucher extends Transaction {
                 }
                 params.put("watermarkImagePath", watermarkPath);
                 List<TransactionPaymentSummaryDetail> Details = new ArrayList<>();
-                List<String> laParticular = new ArrayList<>();
-                List<Model> laObject = new ArrayList<>();
-                List<String> laSourceNo = new ArrayList<>();
-                String lsParticular = "";
-                String lsDepartment = "";
-                String lsSourceNo = "";
                 for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
                     switch(Detail(lnCtr).getSourceCode()){
                         case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                            
+                            poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                            if(!isJSONSuccess(poJSON)){
+                                return poJSON;
+                            }
                         case DisbursementStatic.SourceCode.PO_RECEIVING:
-                            if(!laObject.contains(Detail(lnCtr).PRF())){
-                                laObject.add(Detail(lnCtr).PRF());
+                            poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                            if(!isJSONSuccess(poJSON)){
+                                return poJSON;
                             }
                         case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                            lsParticular = particular(Detail(lnCtr).getSourceCode());
-                            if(!laParticular.contains(lsParticular)){
-                                laParticular.add(lsParticular);
+                            poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                            if(!isJSONSuccess(poJSON)){
+                                return poJSON;
                             }
                             break;
                         case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                            lsParticular = particular(Detail(lnCtr).SOADetail().getSourceCode());
-                            if(!laParticular.contains(lsParticular)){
-                                laParticular.add(lsParticular);
+                            switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                                    poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                                    if(!isJSONSuccess(poJSON)){
+                                        return poJSON;
+                                    }
+                                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                                    poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                                    if(!isJSONSuccess(poJSON)){
+                                        return poJSON;
+                                    }
+                                case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                                    poJSON = getPRFDetail(Detail(lnCtr).PRF(),Details);
+                                    if(!isJSONSuccess(poJSON)){
+                                        return poJSON;
+                                    }
+                                    break;
                             }
                             break;
                     }
                 }
-                
-                //Particular
-                lsParticular = ""; //Reset value
-                for(int lnCtr = 0;lnCtr <= laParticular.size()-1;lnCtr++){
-                    if(lsParticular.isEmpty()){
-                        lsParticular = laParticular.get(lnCtr);
-                    } else {
-                        lsParticular = lsParticular + " AND " + laParticular.get(lnCtr);
-                    }
-                }
-                
-                Details.add(new TransactionPaymentSummaryDetail(
-                        1,
-                        lsParticular,
-                        lsDepartment,
-                        lsSourceNo,
-                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getNetTotal(), false).replace(",", ""))
-                ));
                 
                 JasperPrint currentPrint = JasperFillManager.fillReport(
                         jasperReport,
@@ -6639,14 +6674,96 @@ public class DisbursementVoucher extends Transaction {
         return ("success".equals((String) foJSON.get("result")) || !"error".equals((String) foJSON.get("result")));
     }
     
-    private JSONObject getPRFDetail(Model_Payment_Request_Master foObject) throws SQLException, GuanzonException{
+    private JSONObject getPRFDetail(Model_Payment_Request_Master foObject,  List<TransactionPaymentSummaryDetail> Details ) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
+//        double ldblMasterDiscount = foObject.getDiscountAmount();
+        double lnAmount = 0.0000;
         
         for(int lnCtr = 0; lnCtr < foObject.getEntryNo();lnCtr++){
             Model_Payment_Request_Detail loObject = new CashflowModels(poGRider).PaymentRequestDetail();
             poJSON = loObject.openRecord(foObject.getTransactionNo(), lnCtr+1);
             if(!isJSONSuccess(poJSON)){
                 return poJSON;
+            }
+            if(!loObject.isReverse()){
+                continue;
+            }
+            
+            lnAmount = loObject.getAmount();
+//            if(ldblMasterDiscount > 0.0000){
+//                if(ldblMasterDiscount > lnAmount){
+//                    ldblMasterDiscount = ldblMasterDiscount - lnAmount;
+//                    lnAmount = 0.0000;
+//                } else {
+//                    lnAmount = lnAmount - ldblMasterDiscount;
+//                    ldblMasterDiscount = 0.0000;
+//                }
+//            }
+            boolean lbExist = false;
+            for(int lnRow = 0;lnRow < Details.size();lnRow++){
+                if(Details.get(lnRow).getsSourceCode().equals(DisbursementStatic.SourceCode.PAYMENT_REQUEST)){
+                    if(Details.get(lnRow).getsSourceNo().equals(foObject.getTransactionNo())
+                       && Details.get(lnRow).getsParticular().equals(loObject.Particular().getDescription())){
+                        Details.get(lnRow).setnTotalAmount(Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", "")));
+                        lbExist = true;
+                    }
+                }
+            }
+            
+            if(!lbExist){
+                Details.add(new TransactionPaymentSummaryDetail(
+                        Details.size()+1,
+                        loObject.Particular().getDescription(),
+                        foObject.Department().getDescription(),
+                        foObject.getSeriesNo(),
+                        DisbursementStatic.SourceCode.PAYMENT_REQUEST,
+                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))
+                ));
+            }
+        }
+    
+        return poJSON;
+    }
+    
+    private JSONObject getPOReceivingDetail(Model_POR_Master foObject,  List<TransactionPaymentSummaryDetail> Details ) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        double lnAmount = 0.0000;
+        
+        for(int lnCtr = 0; lnCtr < foObject.getEntryNo();lnCtr++){
+            Model_POR_Detail loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
+            poJSON = loObject.openRecord(foObject.getTransactionNo(), lnCtr+1);
+            if(!isJSONSuccess(poJSON)){
+                return poJSON;
+            }
+            if(!loObject.isReverse()){
+                continue;
+            }
+            String lsCategory = loObject.Inventory().CategoryLevel2().getDescription();
+            if(lsCategory == null || "".equals(lsCategory)){
+                lsCategory = loObject.Inventory().Category().getDescription();
+            }
+            lnAmount = loObject.getTotal().doubleValue();
+            boolean lbExist = false;
+            for(int lnRow = 0;lnRow < Details.size();lnRow++){
+                if(Details.get(lnRow).getsSourceCode().equals(DisbursementStatic.SourceCode.PAYMENT_REQUEST)){
+                    if(Details.get(lnRow).getsSourceNo().equals(foObject.getTransactionNo())
+                       && Details.get(lnRow).getsParticular().equals(lsCategory)){
+                        lnAmount = lnAmount + Details.get(lnRow).getnTotalAmount();
+                        Details.get(lnRow).setnTotalAmount(Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", "")));
+                        lbExist = true;
+                    }
+                }
+            }
+            
+            if(!lbExist){
+                Details.add(new TransactionPaymentSummaryDetail(
+                        Details.size()+1,
+                        lsCategory,
+                        foObject.getDepartmentId(),
+                        foObject.getReferenceNo(),
+                        DisbursementStatic.SourceCode.PO_RECEIVING,
+                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))
+                ));
             }
         }
     
