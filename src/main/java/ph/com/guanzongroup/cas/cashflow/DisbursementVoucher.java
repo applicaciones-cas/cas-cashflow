@@ -283,16 +283,6 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "The Finance Department configuration is missing. This field is required to proceed.\nPlease contact your system administrator for assistance.");
             return poJSON;
         }
-
-        if(!pbPrint){
-            String lsUserId = poGRider.getUserID();
-            String lsPosition = checkPosition(Master().getTransactionStatus(), lsUserId);
-            if(lsPosition == null || "".equals(lsPosition) ){
-                poJSON.put("result", "error" );
-                poJSON.put("message", "User is not an authorized officer." );
-                return poJSON;
-            }
-        }
         
         poJSON = updateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -544,7 +534,7 @@ public class DisbursementVoucher extends Transaction {
         return "";
     }
     
-    private String checkPosition(String fsStatus, String fsUserId) throws SQLException, GuanzonException{
+    public String checkPosition(String fsStatus, String fsUserId) throws SQLException, GuanzonException{
         String lsSQL = " SELECT   " +
                     "  a.sUserIDxx, " +
                     "  d.sCompnyNm, " +
