@@ -564,10 +564,8 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.VERIFIED:
             case DisbursementStatic.APPROVED:
                 lsPosition = "%Account%";
-                lsSQL = MiscUtil.addCondition(lsSQL, " ( c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
-                                                + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
-                                                + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
-                                                + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
+                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
+                                                + " AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
                 );
                 break;
             case DisbursementStatic.CERTIFIED:
