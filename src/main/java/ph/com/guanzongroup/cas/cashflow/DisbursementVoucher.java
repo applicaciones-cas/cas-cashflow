@@ -558,32 +558,44 @@ public class DisbursementVoucher extends Transaction {
             default:
             case DisbursementStatic.OPEN:
             case DisbursementStatic.CONFIRMED:
-                lsPosition = "%Account%Payable%";
+                lsPosition = "%Payable%";
                 lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) );
                 break;
             case DisbursementStatic.VERIFIED:
             case DisbursementStatic.APPROVED:
-                lsPosition = "%General%Account%";
-                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) );
+                lsPosition = "%Account%";
+                lsSQL = MiscUtil.addCondition(lsSQL, " ( c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
+                                                + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+                                                + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+                                                + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
+                );
                 break;
             case DisbursementStatic.CERTIFIED:
             case DisbursementStatic.AUTHORIZED:
                 lsPosition = "%Manager%";
-                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) );
+                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition)
+                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+                );
                 break;
             case DisbursementStatic.RETURNED:
             case DisbursementStatic.DISAPPROVED:
-                lsSQL = MiscUtil.addCondition(lsSQL, "  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
-                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%General%Account%") 
+                lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
+                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%") 
+                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+                                    + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
                                     );
                 break;
-            case DisbursementStatic.VOID:
-            case DisbursementStatic.CANCELLED:
-                lsSQL = MiscUtil.addCondition(lsSQL, "  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
-                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%General%Account%") 
-                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%Payable%") 
-                                    );
-                break;
+//            case DisbursementStatic.VOID:
+//            case DisbursementStatic.CANCELLED:
+//                lsSQL = MiscUtil.addCondition(lsSQL, "  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
+//                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%General%Account%") 
+//                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%Payable%") 
+//                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+//                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+//                                    );
+//                break;
         }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
