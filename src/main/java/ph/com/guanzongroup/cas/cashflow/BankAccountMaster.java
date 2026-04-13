@@ -242,13 +242,13 @@ public class BankAccountMaster extends Parameter{
         return poJSON;
     }
     
-    public JSONObject loadLedgerList() throws SQLException, GuanzonException, CloneNotSupportedException {
+    public JSONObject loadLedgerList(String fsDateFrom, String fsDateTo) throws SQLException, GuanzonException, CloneNotSupportedException {
         if (getModel().getBankAccountId()== null || getModel().getBankAccountId().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "No record Loaded. Please load Bank Account.");
             return poJSON;
         }
-        
+        List<String> lsFilter = new ArrayList<>();
         paLedger.clear();
         
         String lsSQL = "SELECT " +
@@ -257,10 +257,24 @@ public class BankAccountMaster extends Parameter{
                             ", b.sSourceCd" +
                             ", b.sSourceNo" +
                         " FROM Bank_Account_Master a " +
-                            " LEFT JOIN Bank_Account_Ledger b ON a.sBnkActID = b.sBnkActID " +
-                        " ORDER BY b.nLedgerNo";
+                            " LEFT JOIN Bank_Account_Ledger b ON a.sBnkActID = b.sBnkActID " ;
+//                        " ORDER BY b.nLedgerNo";
+        
+        if (fsDateFrom != null && fsDateTo != null) {
+            lsFilter.add("b.dTransact BETWEEN "
+                    + SQLUtil.toSQL(java.sql.Date.valueOf(fsDateFrom))
+                    + " AND "
+                    + SQLUtil.toSQL(java.sql.Date.valueOf(fsDateTo)));
+        }
+        
+        lsFilter.add("a.sBnkActID=" + SQLUtil.toSQL(getModel().getBankAccountId()) + " ORDER BY b.nLedgerNo");
 
-        lsSQL = MiscUtil.addCondition(lsSQL, "a.sBnkActID=" + SQLUtil.toSQL(getModel().getBankAccountId()));
+        // Append WHERE clause if any filter exists
+        if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+
+//        lsSQL = MiscUtil.addCondition(lsSQL, );
         
         ResultSet loRS = poGRider.executeQuery(lsSQL);
 
@@ -284,5 +298,14 @@ public class BankAccountMaster extends Parameter{
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+   
+    
+    public int getLedgerListCount() {
+        return this.paLedger.size();
+    }
+    public Model_Bank_Account_Ledger LedgerList(int row) {
+        return (Model_Bank_Account_Ledger) paLedger.get(row);
     }
 }

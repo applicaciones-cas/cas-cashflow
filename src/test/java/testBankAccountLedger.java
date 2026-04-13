@@ -41,7 +41,7 @@ public class testBankAccountLedger {
                 Assert.fail((String) loJSON.get("message"));
             }           
             
-            loJSON = record.loadLedgerList();
+            loJSON = record.loadLedgerList("2026-01-01","2026-04-13");
             if ("error".equals((String) loJSON.get("result"))) {
                 Assert.fail((String) loJSON.get("message"));
             }           
