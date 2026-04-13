@@ -555,7 +555,7 @@ public class DisbursementVoucher extends Transaction {
                  );
         String lsPosition = "";
         switch(fsStatus){
-            default:
+            //Who can entry/update and confirmed the transaction
             case DisbursementStatic.OPEN:
             case DisbursementStatic.CONFIRMED:
                 lsPosition = "%Payable%";
@@ -563,6 +563,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             case DisbursementStatic.VERIFIED:
             case DisbursementStatic.APPROVED:
+                //Who can verify and approve the transaction
                 lsPosition = "%Account%";
                 lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
                                                 + " AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
@@ -570,6 +571,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             case DisbursementStatic.CERTIFIED:
             case DisbursementStatic.AUTHORIZED:
+                //Who can certify and authorized the transaction
                 lsPosition = "%Manager%";
                 lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition)
                                         + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
@@ -577,7 +579,24 @@ public class DisbursementVoucher extends Transaction {
                 );
                 break;
             case DisbursementStatic.RETURNED:
+                if(DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())){
+                    //Who can update the returned transaction
+                    lsPosition = "%Account%";
+                    lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
+                                                    + " AND c.sPositnNm LIKE " + SQLUtil.toSQL("%Payable%") 
+                    );
+                    break;
+                } else {
+                    //Who can return the transaction
+                    lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
+                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%") 
+                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+                                        + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
+                                        );
+                }
             case DisbursementStatic.DISAPPROVED:
+                //Who can disapproved the transaction
                 lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
                                     + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%") 
                                     + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
