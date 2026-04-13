@@ -2,8 +2,8 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
-import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Parameter;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -11,7 +11,6 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.cas.client.model.Model_AP_Client_Ledger;
-import org.guanzon.cas.client.services.ClientModels;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.BanksBranch;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -27,8 +26,8 @@ public class BankAccountMaster extends Parameter{
     
     String psCompany = "";
     
-    public List<Model_AP_Client_Ledger> getLedgerList() {
-        return (List<Model_AP_Client_Ledger>) (List<?>) paLedger;
+    public List<Model_Bank_Account_Ledger> getLedgerList() {
+        return (List<Model_Bank_Account_Ledger>) (List<?>) paLedger;
     }
     
     @Override
@@ -37,6 +36,8 @@ public class BankAccountMaster extends Parameter{
         
         CashflowModels model = new CashflowModels(poGRider);
         poModel = model.Bank_Account_Master();
+        
+        paLedger = new ArrayList<>();        
         
         super.initialize();
     }
@@ -241,10 +242,6 @@ public class BankAccountMaster extends Parameter{
         return poJSON;
     }
     
-    public CachedRowSet loadLedger(){
-        return null;
-    }
-    
     public JSONObject loadLedgerList() throws SQLException, GuanzonException, CloneNotSupportedException {
         if (getModel().getBankAccountId()== null || getModel().getBankAccountId().isEmpty()) {
             poJSON.put("result", "error");
@@ -255,7 +252,7 @@ public class BankAccountMaster extends Parameter{
         paLedger.clear();
         
         String lsSQL = "SELECT " +
-                            "  a.sClientID" +
+                            "  a.sBnkActID" +
                             ", b.nLedgerNo" +
                             ", b.sSourceCd" +
                             ", b.sSourceNo" +
@@ -274,8 +271,8 @@ public class BankAccountMaster extends Parameter{
         }
 
         while (loRS.next()) {
-            Model_AP_Client_Ledger loLedger = new ClientModels(poGRider).APClientLedger();
-            poJSON = loLedger.openRecord(loRS.getString("sClientID"), loRS.getString("nLedgerNo"));
+            Model_Bank_Account_Ledger loLedger = new CashflowModels(poGRider).Bank_Account_Ledger();
+            poJSON = loLedger.openRecord(loRS.getString("sBnkActID"), loRS.getString("nLedgerNo"));
 
             if ("success".equals((String) poJSON.get("result"))) {
                 paLedger.add(loLedger);
