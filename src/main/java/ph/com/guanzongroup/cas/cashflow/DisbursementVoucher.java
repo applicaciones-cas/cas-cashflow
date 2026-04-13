@@ -3917,7 +3917,7 @@ public class DisbursementVoucher extends Transaction {
             }   
         }
         
-        if(lbHasJournal || poGRider.getUserLevel() > UserRight.ENCODER){
+        if(lbHasJournal){
             if(ldblDebitAmt == 0.0000 ){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid journal entry debit amount.");
