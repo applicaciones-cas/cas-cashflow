@@ -181,6 +181,7 @@ public class CheckTransfers extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
             if (!Detail(lnCtr).isReverse()) continue;
@@ -300,6 +301,7 @@ public class CheckTransfers extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -721,6 +723,7 @@ public class CheckTransfers extends Transaction {
                     poJSON.put("message", "User is not an authorized approving officer..");
                     return poJSON;
                 }
+                setApproving((String) poJSON.get("sUserIDxx"));
             }
         }
         
@@ -947,7 +950,73 @@ public class CheckTransfers extends Transaction {
         return loJSON;
     }
     
-    
+    /**
+     * Loads check payment records based on the provided filtering criteria.
+     *
+     * <p>
+     * This method dynamically builds an SQL query to retrieve check payment
+     * transactions from the {@code Check_Payments} table, including related
+     * information from {@code Banks}, {@code Payee}, and
+     * {@code Disbursement_Master}. The query supports filtering by check number
+     * (bank name), payee name, and check date range.</p>
+     *
+     * <p>
+     * <b>Note:</b> The {@code Disbursement_Master} table was not originally
+     * part of this query. It was later included due to a business requirement
+     * related to disbursement BR (Business Rule) adjustments.</p>
+     *
+     * <p>
+     * The following conditions are always applied:
+     * <ul>
+     * <li>Check is not released ({@code a.cReleased = '0'})</li>
+     * <li>Transaction status is not equal to 3 ({@code a.cTranStat <> 3})</li>
+     * <li>Check is marked for printing ({@code a.cPrintxxx = '1'})</li>
+     * <li>Only disbursement type {@code '0'} is included
+     * ({@code c.cDisbrsTp = '0'})</li>
+     * </ul>
+     * </p>
+     *
+     * <p>
+     * <b>Important:</b> The condition {@code c.cDisbrsTp = '0'} is explicitly
+     * applied because {@code c.cDisbrsTp = '1'} represents <i>check
+     * deposit</i>, which must be excluded from this result set.</p>
+     *
+     * <p>
+     * If records are found, they are loaded into the {@code paChecks} list by
+     * calling {@code ChecksList()} and {@code openRecord()} using the
+     * transaction number. Otherwise, an empty list is initialized.</p>
+     *
+     * @param fscheckno the check number or bank name filter (prefix matching
+     * using LIKE). If {@code null} or empty, this filter is ignored.
+     * @param fspayee the payee name filter (prefix matching using LIKE). If
+     * {@code null} or empty, this filter is ignored.
+     * @param dateFrom the start date for filtering check dates (inclusive).
+     * Must be used together with {@code dateThru}. If {@code null}, date
+     * filtering is ignored.
+     * @param dateThru the end date for filtering check dates (inclusive). Must
+     * be used together with {@code dateFrom}. If {@code null}, date filtering
+     * is ignored.
+     *
+     * @return a {@code JSONObject} containing the result of the operation:
+     * <ul>
+     * <li>{@code result} - "success" if records are found, otherwise
+     * "error"</li>
+     * <li>{@code message} - descriptive message of the operation result</li>
+     * <li>{@code continue} - (optional) flag indicating continuation on
+     * error</li>
+     * </ul>
+     *
+     * @throws SQLException if a database access error occurs during query
+     * execution
+     * @throws GuanzonException if an application-specific error occurs
+     *
+     * @author Teejei De Celis
+     * @date Modified: April 10, 2026
+     *
+     * @see SQLUtil#toSQL(Object)
+     * @see MiscUtil#RecordCount(ResultSet)
+     * @see MiscUtil#close(ResultSet)
+     */
     public JSONObject loadCheckPayment(String Bank, LocalDate dateFrom, LocalDate dateThru) throws SQLException, GuanzonException {
         JSONObject loJSON = new JSONObject();
         String lsSQL = "SELECT DISTINCT "
@@ -961,11 +1030,15 @@ public class CheckTransfers extends Transaction {
                 + "  b.sBankName AS bankname, "
                 + "  d.sPayeeNme AS payeename, "
                 + "  a.cReleased, "
-                + "  a.cTranStat "
+                + "  a.cTranStat, "
+                + "  a.sSourceNo, "
+                + "  a.sSourceCd, "
+                + "  c.cDisbrsTp  "
                 + " FROM "
                 + "  Check_Payments a "
                 + "  LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
-                + "  LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx";
+                + "  LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
+                + "  LEFT JOIN Disbursement_Master c ON a.sSourceNo = c.sTransNox ";
 
         // Build filter conditions dynamically
         List<String> lsFilter = new ArrayList<>();
@@ -981,7 +1054,7 @@ public class CheckTransfers extends Transaction {
                     + SQLUtil.toSQL(java.sql.Date.valueOf(dateThru)));
         }
 
-        lsFilter.add("a.cReleased = '0' AND a.cTranStat <> 3 AND cPrintxxx = '1'");
+        lsFilter.add("a.cReleased = '0' AND a.cTranStat <> 3 AND a.cPrintxxx = '1' AND c.cDisbrsTp = '0'");
 
         // Append WHERE clause if any filter exists
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
@@ -1956,6 +2029,7 @@ public class CheckTransfers extends Transaction {
                 poJSON.put("message", "User is not an authorized approving officer..");
                 return poJSON;
             }
+            setApproving((String) poJSON.get("sUserIDxx"));
         }
     poJSON.put("result", "success");
     return poJSON;
