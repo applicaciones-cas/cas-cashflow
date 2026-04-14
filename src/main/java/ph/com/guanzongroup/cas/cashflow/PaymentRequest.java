@@ -2231,7 +2231,7 @@ public class PaymentRequest extends Transaction {
     public String getSeriesNoByBranch() throws SQLException {
         String lsSQL = "SELECT sSeriesNo FROM Payment_Request_Master";
         lsSQL = MiscUtil.addCondition(lsSQL,
-                "sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
+                "sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
                 + " ORDER BY sSeriesNo DESC LIMIT 1");
 
         String branchSeriesNo = PaymentRequestStaticData.default_Branch_Series_No;  // default value
