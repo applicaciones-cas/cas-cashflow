@@ -309,11 +309,11 @@ public class Model_Disbursement_Detail extends Model {
                             lsPOTransNo = SOADetail().PaymentRequestMaster().getSourceNo();
                         }
                     } else if(SOATaggingStatic.POReceiving.equals(SOADetail().getSourceCode())){
-                        pdblAdvancesAmount += SOADetail().PurchasOrderReceivingMaster().getAmountPaid().doubleValue(); //Only get the amount paid reflected at PO Receiving during POSTING
-//                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
-//                        if ("error".equals((String) poJSON.get("result"))) {
-//                            return poJSON;
-//                        }
+//                        pdblAdvancesAmount += SOADetail().PurchasOrderReceivingMaster().getAmountPaid().doubleValue(); //Only get the amount paid reflected at PO Receiving during POSTING
+                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                         return poJSON;
                     }
                 break;
@@ -324,11 +324,11 @@ public class Model_Disbursement_Detail extends Model {
                     }
                     break;
                 case DisbursementStatic.SourceCode.PO_RECEIVING:
-                    pdblAdvancesAmount += POReceiving().getAmountPaid().doubleValue();  //Only get the amount paid reflected at PO Receiving during POSTING
-//                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
-//                    if ("error".equals((String) poJSON.get("result"))) {
-//                        return poJSON;
-//                    }
+//                    pdblAdvancesAmount += POReceiving().getAmountPaid().doubleValue();  //Only get the amount paid reflected at PO Receiving during POSTING
+                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                     return poJSON;
             }
 
@@ -432,11 +432,12 @@ public class Model_Disbursement_Detail extends Model {
             poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
                 return poJSON;
             }
-            
-            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
-                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
-                    llistPurchaseOrder.add(loDetail.getOrderNo());
-                } 
+            if(loDetail.getQuantity().doubleValue() > 0.0000){
+                if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
+                    if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
+                        llistPurchaseOrder.add(loDetail.getOrderNo());
+                    } 
+                }
             }
         }
         
