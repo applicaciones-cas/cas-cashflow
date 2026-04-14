@@ -1464,7 +1464,7 @@ public class DisbursementVoucher extends Transaction {
                 "",
                 "Transaction No»Transaction Date»DV No»Branch»Supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
-                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, IFNULL(d.sPayeeNme, ''))",
                 0);
 
         if (poJSON != null) {
@@ -1512,7 +1512,7 @@ public class DisbursementVoucher extends Transaction {
                 "",
                 "Transaction No»Transaction Date»DV No»Branch»Supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
-                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, '')",
+                "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, IFNULL(d.sPayeeNme, ''))",
                 0);
 
         if (poJSON != null) {
@@ -2497,6 +2497,7 @@ public class DisbursementVoucher extends Transaction {
             } else {
                 lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
             }
+             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
         switch(fsForm){
             case DisbursementStatic.CONFIRMED:
@@ -2506,7 +2507,7 @@ public class DisbursementVoucher extends Transaction {
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
                     + " ) "
-                    + " AND " + lsCondition);
+                    );
             break;
             case DisbursementStatic.VERIFIED:
                  lsSQL = MiscUtil.addCondition(lsSQL, 
@@ -2514,20 +2515,22 @@ public class DisbursementVoucher extends Transaction {
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
                     + " ) "
-                    + " AND " + lsCondition);
+                    );
             break;
             case DisbursementStatic.APPROVED:
                  lsSQL = MiscUtil.addCondition(lsSQL, 
                      " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
-                    + " ) ");
+                    + " ) "
+                    );
             break;
             case DisbursementStatic.CERTIFIED:
                 lsSQL = MiscUtil.addCondition(lsSQL, 
                         " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
                         + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2)
-                        + " AND " + lsCondition);
+                        + " AND " 
+                        );
             break;
             case DisbursementStatic.AUTHORIZED:
                 lsSQL = MiscUtil.addCondition(lsSQL, 
@@ -2536,7 +2539,7 @@ public class DisbursementVoucher extends Transaction {
                         + " AND ( a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
                         + " OR  a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT)
                         + " ) "
-                        + " AND " + lsCondition);
+                        );
             break;
             
         }
@@ -5671,8 +5674,8 @@ public class DisbursementVoucher extends Transaction {
                 + " a.sVouchrNo,"
                 + " a.dTransact,"
                 + " c.sBranchNm,"
-                + " d.sPayeeNme,"
-                + " e.sCompnyNm AS supplier,"
+                + " d.sPayeeNme," 
+                + " IFNULL(e.sCompnyNm, IFNULL(d.sPayeeNme, '')) AS supplier,"
                 + " f.sDescript,"
                 + " a.nNetTotal, "
                 + " a.cDisbrsTp, "
@@ -6621,8 +6624,8 @@ public class DisbursementVoucher extends Transaction {
                                 } else {
                                     // Disable all other buttons
                                     button.setEnabled(false);
-                                    poJSON.put("result", "error");
-                                    poJSON.put("message",  "Transaction print aborted!");
+//                                    poJSON.put("result", "error");
+//                                    poJSON.put("message",  "Transaction print aborted!");
                                 }
                             }
                         }
