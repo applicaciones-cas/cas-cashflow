@@ -6219,6 +6219,7 @@ public class DisbursementVoucher extends Transaction {
                 System.out.println("payee : " + Master().CheckPayments().Payee().getPayeeName());
                 params.put("voucherNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
+                params.put("sRemarks", Master().getRemarks());
                 params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
@@ -6674,6 +6675,7 @@ public class DisbursementVoucher extends Transaction {
                 System.out.println("payee : " + Master().CheckPayments().Payee().getPayeeName());
                 params.put("voucherNo", Master().getVoucherNo());
                 params.put("dTransDte", new java.sql.Date(Master().getTransactionDate().getTime()));
+                params.put("sRemarks", Master().getRemarks());
                 params.put("sPayeeNme", Master().CheckPayments().Payee().getPayeeName());
                 params.put("sBankName", Master().CheckPayments().Banks().getBankName());
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
@@ -6951,7 +6953,7 @@ public class DisbursementVoucher extends Transaction {
         
         Details.add(new TransactionPaymentSummaryDetail(
                 Details.size()+1,
-                foObject.getRemarks(),
+                particular(DisbursementStatic.SourceCode.AP_ADJUSTMENT) + " - " + foObject.getRemarks(),
                 "",
                 foObject.getReferenceNo(),
                 foObject.getTransactionNo(),
