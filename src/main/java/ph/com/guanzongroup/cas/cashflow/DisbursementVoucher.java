@@ -6790,12 +6790,7 @@ public class DisbursementVoucher extends Transaction {
                 }
                 
                 params.put("dblAdvances",Master().getAdvancesTotal());
-                
-                if(Master().isPrinted()){
-                    watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
-                } else {
-                    watermarkPath = watermarkPath + "none.png" ; //"D:\\GGC_Maven_Systems\\Reports\\images\\none.png";
-                }
+                watermarkPath = watermarkPath + "none.png" ; //"D:\\GGC_Maven_Systems\\Reports\\images\\none.png";
                 params.put("watermarkImagePath", watermarkPath);
 
                 double ldblTotalDiscount = 0.0000;
