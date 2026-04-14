@@ -5742,25 +5742,7 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
             
-            if (CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint())) {
-                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                    boolean proceed = ShowMessageFX.YesNo(
-                            null,
-                            "Check Printing",
-                            "This check has already been printed and recorded.\n"
-                            + "Reprinting should only be done with proper authorization.\n"
-                            + "Do you wish to proceed with reprinting?"
-                    );
-                    if (proceed) {
-                        poJSON = callApproval();
-                        if (!"success".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                    } else {
-                        return poJSON;
-                    }
-                }
-            } else {
+            if (!CheckStatus.PrintStatus.PRINTED.equals(Master().CheckPayments().getPrint())) {
                 poJSON = UpdateTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -6807,6 +6789,7 @@ public class DisbursementVoucher extends Transaction {
                             if(!isJSONSuccess(poJSON)){
                                 return poJSON;
                             }
+                            break;
                         case DisbursementStatic.SourceCode.PO_RECEIVING:
                             ldblDiscountRate = Detail(lnCtr).POReceiving().getDiscountRate().doubleValue();
                             if(ldblDiscountRate > 0.0000){
@@ -6817,6 +6800,7 @@ public class DisbursementVoucher extends Transaction {
                             if(!isJSONSuccess(poJSON)){
                                 return poJSON;
                             }
+                            break;
                         case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                             poJSON = getAPAdjustment(Detail(lnCtr).APAdjustment(),Details);
                             if(!isJSONSuccess(poJSON)){
