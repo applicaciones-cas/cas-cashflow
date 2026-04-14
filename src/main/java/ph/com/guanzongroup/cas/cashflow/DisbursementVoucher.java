@@ -2529,7 +2529,6 @@ public class DisbursementVoucher extends Transaction {
                 lsSQL = MiscUtil.addCondition(lsSQL, 
                         " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
                         + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2)
-                        + " AND " 
                         );
             break;
             case DisbursementStatic.AUTHORIZED:
