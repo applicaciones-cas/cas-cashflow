@@ -444,7 +444,8 @@ public class DisbursementVoucher extends Transaction {
                 return current.equals(DisbursementStatic.CONFIRMED);
                 
             case DisbursementStatic.APPROVED:
-                return current.equals(DisbursementStatic.VERIFIED);
+                return current.equals(DisbursementStatic.VERIFIED)
+                    || current.equals(DisbursementStatic.RETURNED_I);
                 
             case DisbursementStatic.CERTIFIED:
                 return current.equals(DisbursementStatic.APPROVED);
