@@ -402,6 +402,7 @@ public class DisbursementVoucher extends Transaction {
                 return "Certified";
             case DisbursementStatic.AUTHORIZED:
                 return "Authorized";
+            case DisbursementStatic.RETURNED_I:
             case DisbursementStatic.RETURNED:
                 return "Returned";
             case DisbursementStatic.APPROVED:
@@ -415,6 +416,7 @@ public class DisbursementVoucher extends Transaction {
     
     public boolean isAllowed(String current, String target) {
         switch (target) {
+            case DisbursementStatic.RETURNED_I:
             case DisbursementStatic.RETURNED:
                 return current.equals(DisbursementStatic.VERIFIED)
                     || current.equals(DisbursementStatic.CERTIFIED)
@@ -431,7 +433,7 @@ public class DisbursementVoucher extends Transaction {
                 return current.equals(DisbursementStatic.VERIFIED)
                     || current.equals(DisbursementStatic.CONFIRMED)
                     || current.equals(DisbursementStatic.APPROVED)
-                    || current.equals(DisbursementStatic.RETURNED)
+                    || current.equals(DisbursementStatic.RETURNED_I)
                     || current.equals(DisbursementStatic.CERTIFIED);
 
             case DisbursementStatic.CONFIRMED:
@@ -579,22 +581,19 @@ public class DisbursementVoucher extends Transaction {
                 );
                 break;
             case DisbursementStatic.RETURNED:
-                if(DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())){
-                    //Who can update the returned transaction
-                    lsPosition = "%Account%";
-                    lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) 
-                                                    + " AND c.sPositnNm LIKE " + SQLUtil.toSQL("%Payable%") 
-                    );
-                    break;
-                } else {
-                    //Who can return the transaction
-                    lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
-                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%") 
-                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
-                                        + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
-                                        + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
-                                        );
-                }
+                //Who can return the transaction
+                lsSQL = MiscUtil.addCondition(lsSQL, " ( c.sPositnNm LIKE " + SQLUtil.toSQL("%Account%") 
+                                    + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
+                                    );
+                break;
+            case DisbursementStatic.RETURNED_I:
+                //Who can initial return the transaction
+                lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
+                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Head%") 
+                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%Executive%") 
+                                    + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
+                                    );
+                break;
             case DisbursementStatic.DISAPPROVED:
                 //Who can disapproved the transaction
                 lsSQL = MiscUtil.addCondition(lsSQL, " (  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
@@ -1284,6 +1283,17 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+//        String lsCurrStat = loObject.getTransactionStatus();
+//        if("ABCDEFGHIJ".contains(lsCurrStat)){
+//            lsCurrStat = String.valueOf(lsCurrStat.getBytes()[0] - 64);
+//        }
+        switch(loObject.getTransactionStatus()){
+            case DisbursementStatic.CERTIFIED:
+            case DisbursementStatic.APPROVED:
+                lsStatus = DisbursementStatic.RETURNED_I;
+            break; 
+        }
+        
         if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
             poJSON.put("result", "error");
             poJSON.put("message", "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
@@ -1346,7 +1356,7 @@ public class DisbursementVoucher extends Transaction {
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
-        String lsStatus = DisbursementStatic.RETURNED;
+        String lsStatus = DisbursementStatic.RETURNED_I;
         
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
@@ -2486,7 +2496,6 @@ public class DisbursementVoucher extends Transaction {
             } else {
                 lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
             }
-            lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
         switch(fsForm){
             case DisbursementStatic.CONFIRMED:
@@ -2495,14 +2504,16 @@ public class DisbursementVoucher extends Transaction {
                      " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
-                    + " ) ");
+                    + " ) "
+                    + " AND " + lsCondition);
             break;
             case DisbursementStatic.VERIFIED:
                  lsSQL = MiscUtil.addCondition(lsSQL, 
                      " a.sVouchrNo LIKE " + SQLUtil.toSQL("%" + fsValue2)
                     + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsValue1)
                     + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsValue1) 
-                    + " ) ");
+                    + " ) "
+                    + " AND " + lsCondition);
             break;
             case DisbursementStatic.APPROVED:
                  lsSQL = MiscUtil.addCondition(lsSQL, 
@@ -2514,7 +2525,8 @@ public class DisbursementVoucher extends Transaction {
             case DisbursementStatic.CERTIFIED:
                 lsSQL = MiscUtil.addCondition(lsSQL, 
                         " i.sBankName LIKE " + SQLUtil.toSQL("%" + fsValue1)
-                        + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2));
+                        + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2)
+                        + " AND " + lsCondition);
             break;
             case DisbursementStatic.AUTHORIZED:
                 lsSQL = MiscUtil.addCondition(lsSQL, 
@@ -2522,7 +2534,8 @@ public class DisbursementVoucher extends Transaction {
                         + " AND j.sActNumbr LIKE " + SQLUtil.toSQL("%" + fsValue2)
                         + " AND ( a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK)
                         + " OR  a.cDisbrsTp = "  + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT)
-                        + " ) ");
+                        + " ) "
+                        + " AND " + lsCondition);
             break;
             
         }
@@ -3431,6 +3444,56 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", MiscUtil.getException(ex));
                 return poJSON;
             }
+        } else if (DisbursementStatic.RETURNED_I.equals(Master().getTransactionStatus())) {
+            try {
+                DisbursementVoucher loRecord = new CashflowControllers(poGRider, null).DisbursementVoucher();
+                poJSON = loRecord.InitTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                poJSON = loRecord.OpenTransaction(Master().getTransactionNo());
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Journal().getDetailCount() == Journal().getDetailCount()-1;
+                }
+                
+                //Check disbursement detail
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Detail(lnCtr).getAmount()), String.format("%.4f", Detail(lnCtr).getAmount())));
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+                
+                //Check Journal
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.Journal().getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getDebitAmount()), String.format("%.4f", Journal().Detail(lnCtr).getDebitAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getCreditAmount()), String.format("%.4f", Journal().Detail(lnCtr).getCreditAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+                
+                if (lbUpdated) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "No update has been made.");
+                    return poJSON;
+                }
+            } catch (ScriptException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON.put("result", "error");
+                poJSON.put("message", MiscUtil.getException(ex));
+                return poJSON;
+            }
         }
         
         for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
@@ -3835,6 +3898,7 @@ public class DisbursementVoucher extends Transaction {
                     }
                     break;
                 case DisbursementStatic.RETURNED:
+                case DisbursementStatic.RETURNED_I:
                     //Return Journal
                     poJournal.setWithParent(true);
                     poJournal.setWithUI(false);
@@ -5360,7 +5424,7 @@ public class DisbursementVoucher extends Transaction {
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.CANCELLED)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.VOID)
                     + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.DISAPPROVED)
-                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
+//                    + " AND a.cTranStat != " + SQLUtil.toSQL(DisbursementStatic.RETURNED)
                     + " AND ( e.sCompnyNm LIKE " + SQLUtil.toSQL("%"+client + "%") 
                     + "    OR d.sPayeeNme LIKE "+ SQLUtil.toSQL("%"+client+"%")+" )"
             );
@@ -6995,6 +7059,9 @@ public class DisbursementVoucher extends Transaction {
                 case DisbursementStatic.RETURNED:
                     crs.updateString("cRefrStat", "RETURNED");
                     break;
+                case DisbursementStatic.RETURNED_I:
+                    crs.updateString("cRefrStat", "RETURNED+");
+                    break;
                 case DisbursementStatic.DISAPPROVED:
                     crs.updateString("cRefrStat", "DISAPPROVED");
                     break;
@@ -7029,6 +7096,9 @@ public class DisbursementVoucher extends Transaction {
                             break;
                         case DisbursementStatic.RETURNED:
                             crs.updateString("cRefrStat", "RETURNED");
+                            break;
+                        case DisbursementStatic.RETURNED_I:
+                            crs.updateString("cRefrStat", "RETURNED+");
                             break;
                         case DisbursementStatic.DISAPPROVED:
                             crs.updateString("cRefrStat", "DISAPPROVED");

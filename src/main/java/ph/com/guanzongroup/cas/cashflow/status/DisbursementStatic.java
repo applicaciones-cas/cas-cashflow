@@ -12,6 +12,7 @@ public class DisbursementStatic {
     public static final  String VOID = "5";
     public static final  String DISAPPROVED= "6";
     public static final  String RETURNED = "9";
+    public static final  String RETURNED_I = "I";
     
     public static final  String CONFIRMED = "7";
     public static final  String APPROVED = "8";
