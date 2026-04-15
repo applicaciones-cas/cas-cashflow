@@ -417,10 +417,11 @@ public class DisbursementVoucher extends Transaction {
     public boolean isAllowed(String current, String target) {
         switch (target) {
             case DisbursementStatic.RETURNED_I:
+                return current.equals(DisbursementStatic.CERTIFIED)
+                    || current.equals(DisbursementStatic.APPROVED);
             case DisbursementStatic.RETURNED:
                 return current.equals(DisbursementStatic.VERIFIED)
-                    || current.equals(DisbursementStatic.CERTIFIED)
-                    || current.equals(DisbursementStatic.APPROVED);
+                    || current.equals(DisbursementStatic.RETURNED_I);
 
             case DisbursementStatic.CANCELLED:
                 return current.equals(DisbursementStatic.CONFIRMED)
@@ -6178,6 +6179,7 @@ public class DisbursementVoucher extends Transaction {
                      + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
                      + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
@@ -6840,8 +6842,13 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
                 
+                double ldblTotalDetailAmount = 0.0000;
+                for(int lnCtr = 0;lnCtr < Details.size();lnCtr++){
+                    ldblTotalDetailAmount += Details.get(lnCtr).getnTotalAmount();
+                }
+                
                 params.put("nDiscount",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblTotalDiscount, false).replace(",", "")));
-                params.put("nTtlAmntx",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotal(), false).replace(",", "")));
+                params.put("nTtlAmntx",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblTotalDetailAmount, false).replace(",", "")));
                 params.put("nAdvances",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getAdvancesTotal(), false).replace(",", "")));
                 params.put("nVatableSales",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", "")));
                 params.put("nVatAmount",Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATAmount(), false).replace(",", "")));
@@ -6995,8 +7002,12 @@ public class DisbursementVoucher extends Transaction {
     
     private JSONObject getAPAdjustment(Model_AP_Payment_Adjustment foObject,  List<TransactionPaymentSummaryDetail> Details ) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
-        double lnAmount = foObject.getNetTotal().doubleValue();
-        
+        double lnAmount = 0.0000;
+        if(foObject.getCreditAmount().doubleValue() > 0.0000){
+            lnAmount = -Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(foObject.getCreditAmount().doubleValue(), false).replace(",", ""));
+        } else {
+            lnAmount = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(foObject.getDebitAmount().doubleValue(), false).replace(",", ""));
+        }
         Details.add(new TransactionPaymentSummaryDetail(
                 Details.size()+1,
                 particular(DisbursementStatic.SourceCode.AP_ADJUSTMENT) + " - " + foObject.getRemarks(),
@@ -7004,7 +7015,8 @@ public class DisbursementVoucher extends Transaction {
                 foObject.getReferenceNo(),
                 foObject.getTransactionNo(),
                 DisbursementStatic.SourceCode.AP_ADJUSTMENT,
-                Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))
+                lnAmount
+                
         ));
     
         return poJSON;
@@ -7116,6 +7128,7 @@ public class DisbursementVoucher extends Transaction {
                         + " FROM Disbursement_Master a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
