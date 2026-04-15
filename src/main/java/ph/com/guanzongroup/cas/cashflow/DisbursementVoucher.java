@@ -2123,29 +2123,31 @@ public class DisbursementVoucher extends Transaction {
                 
         try {
             for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-                //Compute VAT
-                switch(Detail(lnCtr).getSourceCode()){
-                    case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                        switch(Detail(lnCtr).SOADetail().getSourceCode()){
-                            case SOATaggingStatic.PaymentRequest:
-                            case SOATaggingStatic.APPaymentAdjustment:
-                                poJSON = computeDetail(lnCtr);
-                                if ("error".equals((String) poJSON.get("result"))) {
-                                    if(isValidate){
-                                        return poJSON;
+                if(Detail(lnCtr).getAmountApplied() != 0.0000){
+                    //Compute VAT
+                    switch(Detail(lnCtr).getSourceCode()){
+                        case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                            switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                                case SOATaggingStatic.PaymentRequest:
+                                case SOATaggingStatic.APPaymentAdjustment:
+                                    poJSON = computeDetail(lnCtr);
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        if(isValidate){
+                                            return poJSON;
+                                        }
                                     }
-                                }
-                        }
-                    break;
-                    case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                    case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                        poJSON = computeDetail(lnCtr);
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            if(isValidate){
-                                return poJSON;
                             }
-                        }
-                    break;
+                        break;
+                        case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                        case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                            poJSON = computeDetail(lnCtr);
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                if(isValidate){
+                                    return poJSON;
+                                }
+                            }
+                        break;
+                    }
                 }
             }
         } catch (SQLException | GuanzonException ex) {
@@ -6333,7 +6335,7 @@ public class DisbursementVoucher extends Transaction {
                 List<String> laParticular = new ArrayList<>();
                 String lsParticular = "";
                 for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-                    if(Detail(lnCtr).getAmountApplied() > 0.0000){
+                    if(Detail(lnCtr).getAmountApplied() != 0.0000){
                         //populate particular
                         switch(Detail(lnCtr).getSourceCode()){
                             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
