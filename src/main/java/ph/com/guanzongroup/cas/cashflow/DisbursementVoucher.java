@@ -2098,16 +2098,29 @@ public class DisbursementVoucher extends Transaction {
                 ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
             }
         }
-        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
-        if(ldblTotalBaseAmount > ldblVatSales){
+//        double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
+//        if(ldblTotalBaseAmount > ldblVatSales){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Tax Base amount cannot be greater than the net vatable sales.");
+//            return poJSON;
+//        }
+//        
+//        if(ldblTaxAmount > ldblVatSales){
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
+//            return poJSON;
+//        }
+        
+        double ldblTransTotal = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotal(), false).replace(",", ""));
+        if(ldblTotalBaseAmount > ldblTransTotal){
             poJSON.put("result", "error");
-            poJSON.put("message", "Tax Base amount cannot be greater than the net vatable sales.");
+            poJSON.put("message", "Tax Base amount cannot be greater than the transaction total.");
             return poJSON;
         }
         
-        if(ldblTaxAmount > ldblVatSales){
+        if(ldblTaxAmount > ldblTransTotal){
             poJSON.put("result", "error");
-            poJSON.put("message", "Tax amount cannot be greater than the net vatable sales.");
+            poJSON.put("message", "Tax amount cannot be greater than the transaction total.");
             return poJSON;
         }
         
@@ -3272,12 +3285,12 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
 
-            double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
-            if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Total tax base amount must be equal to net vatable sales.");
-                return poJSON;
-            }
+//            double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
+//            if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Total tax base amount must be equal to net vatable sales.");
+//                return poJSON;
+//            }
         }
         
         //Seek Approval

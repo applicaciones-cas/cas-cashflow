@@ -351,23 +351,45 @@ public class Model_Disbursement_Detail extends Model {
     }
     
     private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
-        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
-        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
-            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
-                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
-                    return poJSON;
+        String lsSQL =  " SELECT e.sTransNox, SUM(e.nAmtPaidx) AS nPRFPaidx, SUM(e.nTranTotl) AS nPRFTotal, SUM(e.nDiscAmtx) AS nPRFDiscx FROM Disbursement_Master a " +
+                        " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox   " +
+                        " LEFT JOIN AP_Payment_Master c ON c.sTransNox = b.sSourceNo AND b.sSourceCd = "+ SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)+
+                        " LEFT JOIN AP_Payment_Detail d ON d.sTransNox = c.sTransNox  " +
+                        " LEFT JOIN Payment_Request_Master e ON (e.sTransNox = b.sSourceNo AND b.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
+                            + " ) OR (e.sTransNox = b.sDetlSrce AND e.sTransNox = d.sSourceNo AND d.sSourceCd =  " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
+                            + " )  " ;
+        try {
+            for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " e.sSourceNo = " + SQLUtil.toSQL(faPOTransNo.get(lnCtr))
+                        + " AND e.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
+                        + " AND a.sTransNox != " + SQLUtil.toSQL(getTransactionNo()) 
+                );
+                lsSQL = lsSQL + " GROUP BY e.sTransNox ";
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) >= 0) {
+                    while (loRS.next()) {
+                        if(loRS.getDouble("nPRFPaidx") > 0.0000){
+                            // Print the result set
+                            System.out.println("--------------------------PRF--------------------------");
+                            System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                            System.out.println("nPRFPaidx: " + loRS.getDouble("nPRFPaidx"));
+                            System.out.println("nPRFTotal: " + loRS.getDouble("nPRFTotal"));
+                            System.out.println("nPRFDiscx: " + loRS.getDouble("nPRFDiscx"));
+                            System.out.println("------------------------------------------------------------------------------");
+                            pdblAdvancesAmount += loRS.getDouble("nPRFTotal");
+                            pdblDiscountAmount += loRS.getDouble("nPRFDiscx");
+                        }
+                    }
                 }
-                
-                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
-                    return poJSON;
-                }
-                pdblDiscountAmount += (Double) poJSON.get("discount");
-                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
+                MiscUtil.close(loRS);
             }
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+            return poJSON;
         }
         
         poJSON.put("result", "success");
@@ -375,42 +397,67 @@ public class Model_Disbursement_Detail extends Model {
         return poJSON;
     }
     
-    private JSONObject setPRFDiscount(String fsPOTransNo){
-        String lsSQL = "";
-        double ldDiscount = 0.0000;
-        try {
-            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
-            loModel.initialize();
-            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
-                    " sSourceNo = " + SQLUtil.toSQL(fsPOTransNo)
-                    + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
-                    + " AND cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PAID in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
-            );
-            System.out.println("Executing SQL: " + lsSQL);
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            poJSON = new JSONObject();
-            if (MiscUtil.RecordCount(loRS) >= 0) {
-                while (loRS.next()) {
-                    // Print the result set
-                    System.out.println("--------------------------PRF--------------------------");
-                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
-                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
-                    System.out.println("------------------------------------------------------------------------------");
-                    ldDiscount = ldDiscount + loRS.getDouble("nDiscAmtx"); 
-                }
-            }
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            poJSON.put("discount", ldDiscount);
-            poJSON.put("result", "error");
-            poJSON.put("message", e.getMessage());
-        }
-        poJSON.put("discount", ldDiscount);
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
+//    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
+//        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+//        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+//            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
+//                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+//                    return poJSON;
+//                }
+//                
+//                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+//                    return poJSON;
+//                }
+//                pdblDiscountAmount += (Double) poJSON.get("discount");
+//                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
+//            }
+//        }
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
+//    
+//    private JSONObject setPRFDiscount(String fsPOTransNo){
+//        String lsSQL = "";
+//        double ldDiscount = 0.0000;
+//        try {
+//            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
+//            loModel.initialize();
+//            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
+//                    " sSourceNo = " + SQLUtil.toSQL(fsPOTransNo)
+//                    + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
+//                    + " AND cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PAID in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
+//            );
+//            System.out.println("Executing SQL: " + lsSQL);
+//            ResultSet loRS = poGRider.executeQuery(lsSQL);
+//            poJSON = new JSONObject();
+//            if (MiscUtil.RecordCount(loRS) >= 0) {
+//                while (loRS.next()) {
+//                    // Print the result set
+//                    System.out.println("--------------------------PRF--------------------------");
+//                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+//                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
+//                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
+//                    System.out.println("------------------------------------------------------------------------------");
+//                    ldDiscount = ldDiscount + loRS.getDouble("nDiscAmtx"); 
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            poJSON.put("discount", ldDiscount);
+//            poJSON.put("result", "error");
+//            poJSON.put("message", e.getMessage());
+//        }
+//        poJSON.put("discount", ldDiscount);
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
     
     private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
