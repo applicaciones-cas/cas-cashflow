@@ -6986,10 +6986,10 @@ public class DisbursementVoucher extends Transaction {
             if(lsCategory == null || "".equals(lsCategory)){
                 lsCategory = loObject.Inventory().Category().getDescription();
             }
-            lnAmount = loObject.getTotal().doubleValue();
+            lnAmount = loObject.getUnitPrce().doubleValue() * loObject.getQuantity().doubleValue();
             boolean lbExist = false;
             for(int lnRow = 0;lnRow < Details.size();lnRow++){
-                if(Details.get(lnRow).getsSourceCode().equals(DisbursementStatic.SourceCode.PAYMENT_REQUEST)){
+                if(Details.get(lnRow).getsSourceCode().equals(DisbursementStatic.SourceCode.PO_RECEIVING)){
                     if(Details.get(lnRow).getsSourceNo().equals(foObject.getTransactionNo())
                        && Details.get(lnRow).getsParticular().equals(lsCategory)){
                         lnAmount = lnAmount + Details.get(lnRow).getnTotalAmount();
