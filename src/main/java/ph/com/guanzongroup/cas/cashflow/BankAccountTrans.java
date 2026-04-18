@@ -555,9 +555,7 @@ public class BankAccountTrans {
     *                        and updating the account’s last transaction date.
     * @param amount          the check amount to be cleared. This value will decrease the
     *                        outstanding balance of the account.
-    * @param updateMode      the edit mode for the transaction. Must be either
-    *                        {@link EditMode#ADDNEW} to add a new clearing record or
-    *                        {@link EditMode#DELETE} to rollback/remove a clearing record.
+     * @param reverse
     *
     * @return a {@link JSONObject} containing the result of the operation:
     *         <ul>
