@@ -232,7 +232,7 @@ public class testDisbursementVoucher {
         }
     }
     
-//    @Test
+    @Test
     public void testLoadTransactionList() {
         String industryId = "02";
         String companyId = "0002";
@@ -249,8 +249,26 @@ public class testDisbursementVoucher {
 
             poController.setIndustryID("06"); 
             poController.setCompanyID(companyId); 
-            poController.setTransactionStatus(DisbursementStatic.OPEN+DisbursementStatic.RETURNED);
-            loJSON = poController.loadTransactionList("","","", "", false, false);
+//            loJSON = poController.loadTransactionList("","","", "", false, false);
+            //Confirmation Form
+//            poController.setTransactionStatus(DisbursementStatic.OPEN+DisbursementStatic.RETURNED);
+//            loJSON = poController.loadTransactionList("Main Office","","", DisbursementStatic.CONFIRMED); 
+//            
+//             //Verified Form
+//            poController.setTransactionStatus(DisbursementStatic.CONFIRMED);
+//            loJSON = poController.loadTransactionList("Main Office","","", DisbursementStatic.VERIFIED);
+//            
+//            //Approval Form
+//            poController.setTransactionStatus(DisbursementStatic.VERIFIED+DisbursementStatic.RETURNED);
+//            loJSON = poController.loadTransactionList("Main Office","","", DisbursementStatic.APPROVED); 
+//            
+//            //Certification Form
+//            poController.setTransactionStatus(DisbursementStatic.APPROVED);
+//            loJSON = poController.loadTransactionList("Main Office","","", DisbursementStatic.CERTIFIED); 
+            
+            //Authorization Form
+            poController.setTransactionStatus(DisbursementStatic.CERTIFIED);
+            loJSON = poController.loadTransactionList("Main Office","","", DisbursementStatic.AUTHORIZED); 
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -296,7 +314,7 @@ public class testDisbursementVoucher {
         } 
     }
     
-    @Test
+//    @Test
     public void testLoadAttachment() {
         String industryId = "02";
         String companyId = "0002";

@@ -320,6 +320,13 @@ public class Model_Disbursement_Master extends Model {
     public String getTransactionStatus() {
         return (String) getValue("cTranStat");
     }
+    
+    public String getConvertedTransactionStatus() {
+        if("ABCDEFGHIJ".contains((String) getValue("cTranStat"))){
+            return String.valueOf(((String) getValue("cTranStat")).getBytes()[0] - 64);
+        }
+        return (String) getValue("cTranStat");
+    }
 
     public JSONObject setModifyingId(String modifyingId) {
         return setValue("sModified", modifyingId);

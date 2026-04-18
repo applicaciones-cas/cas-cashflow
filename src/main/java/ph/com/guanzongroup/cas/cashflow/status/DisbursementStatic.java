@@ -4,19 +4,24 @@ import org.guanzon.cas.inv.InvTransCons;
 
 public class DisbursementStatic {
         
-    public static final String OPEN = "0";
+    public static final  String OPEN = "0";
     public static final  String VERIFIED = "1";
     public static final  String CERTIFIED = "2";
     public static final  String CANCELLED = "3";
     public static final  String AUTHORIZED = "4";
     public static final  String VOID = "5";
-    public static final  String  DISAPPROVED= "6";
+    public static final  String DISAPPROVED= "6";
     public static final  String RETURNED = "9";
+    public static final  String RETURNED_I = "I";
+    
+    public static final  String CONFIRMED = "7";
+    public static final  String APPROVED = "8";
         
     public static class DisbursementType  {
         public static final String CHECK = "0";
-        public static final  String WIRED = "1";
-        public static final  String DIGITAL_PAYMENT = "2";
+        public static final  String CHECK_DEPOSIT = "1";
+        public static final  String WIRED = "2";
+        public static final  String DIGITAL_PAYMENT = "3";
     }
     public static class DefaultValues {
         public static final String default_Branch_Series_No = "0000000001";

@@ -6,6 +6,7 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -281,8 +282,8 @@ public class Model_Disbursement_Detail extends Model {
         return this.InvType;
     }
     
-    public JSONObject setDetailAdvances() {
-        return getAdvancesAmount();
+    public JSONObject setDetailAdvances(String fsTransactionNo) {
+        return getAdvancesAmount(fsTransactionNo);
     }
     
     private double pdblAdvancesAmount = 0.0000;
@@ -295,7 +296,7 @@ public class Model_Disbursement_Detail extends Model {
         return pdblDiscountAmount;
     }
     
-    private JSONObject getAdvancesAmount(){
+    private JSONObject getAdvancesAmount(String fsTransactionNo){
         poJSON = new JSONObject();
         pdblAdvancesAmount = 0.0000;
         pdblDiscountAmount = 0.0000;
@@ -309,11 +310,11 @@ public class Model_Disbursement_Detail extends Model {
                             lsPOTransNo = SOADetail().PaymentRequestMaster().getSourceNo();
                         }
                     } else if(SOATaggingStatic.POReceiving.equals(SOADetail().getSourceCode())){
-                        pdblAdvancesAmount += SOADetail().PurchasOrderReceivingMaster().getAmountPaid().doubleValue(); //Only get the amount paid reflected at PO Receiving during POSTING
-//                        poJSON = getPOAdvancesInPOReceiving(getDetailSource());
-//                        if ("error".equals((String) poJSON.get("result"))) {
-//                            return poJSON;
-//                        }
+//                        pdblAdvancesAmount += SOADetail().PurchasOrderReceivingMaster().getAmountPaid().doubleValue(); //Only get the amount paid reflected at PO Receiving during POSTING
+                        poJSON = getPOAdvancesInPOReceiving(getDetailSource(),fsTransactionNo);
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                         return poJSON;
                     }
                 break;
@@ -324,11 +325,11 @@ public class Model_Disbursement_Detail extends Model {
                     }
                     break;
                 case DisbursementStatic.SourceCode.PO_RECEIVING:
-                    pdblAdvancesAmount += POReceiving().getAmountPaid().doubleValue();  //Only get the amount paid reflected at PO Receiving during POSTING
-//                    poJSON = getPOAdvancesInPOReceiving(getSourceNo());
-//                    if ("error".equals((String) poJSON.get("result"))) {
-//                        return poJSON;
-//                    }
+//                    pdblAdvancesAmount += POReceiving().getAmountPaid().doubleValue();  //Only get the amount paid reflected at PO Receiving during POSTING //conflict in Disbursement Voucher History.
+                    poJSON = getPOAdvancesInPOReceiving(getSourceNo(),fsTransactionNo);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
                     return poJSON;
             }
 
@@ -336,7 +337,7 @@ public class Model_Disbursement_Detail extends Model {
                 llistPurchaseOrder.add(lsPOTransNo);
             }
 
-            poJSON = getAdvancePayment(llistPurchaseOrder);
+            poJSON = getAdvancePayment(llistPurchaseOrder,fsTransactionNo);
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
@@ -350,24 +351,46 @@ public class Model_Disbursement_Detail extends Model {
         return poJSON;
     }
     
-    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
-        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
-        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
-            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
-                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
-                    return poJSON;
+    private JSONObject getAdvancePayment(List<String> faPOTransNo, String fsTransactionNo) throws SQLException, GuanzonException {
+        String lsSQL =  " SELECT e.sTransNox, SUM(e.nAmtPaidx) AS nPRFPaidx, SUM(e.nTranTotl) AS nPRFTotal, SUM(e.nDiscAmtx) AS nPRFDiscx FROM Disbursement_Master a " +
+                        " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox   " +
+                        " LEFT JOIN AP_Payment_Master c ON c.sTransNox = b.sSourceNo AND b.sSourceCd = "+ SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)+
+                        " LEFT JOIN AP_Payment_Detail d ON d.sTransNox = c.sTransNox  " +
+                        " LEFT JOIN Payment_Request_Master e ON (e.sTransNox = b.sSourceNo AND b.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
+                            + " ) OR (e.sTransNox = b.sDetlSrce AND e.sTransNox = d.sSourceNo AND d.sSourceCd =  " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
+                            + " )  " ;
+        try {
+            for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " e.sSourceNo = " + SQLUtil.toSQL(faPOTransNo.get(lnCtr))
+                        + " AND e.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
+                        + " AND a.sTransNox != " + SQLUtil.toSQL(fsTransactionNo) 
+                );
+                lsSQL = lsSQL + " GROUP BY e.sTransNox ";
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                if (MiscUtil.RecordCount(loRS) >= 0) {
+                    while (loRS.next()) {
+                        if(loRS.getDouble("nPRFPaidx") > 0.0000){
+                            // Print the result set
+                            System.out.println("--------------------------PRF--------------------------");
+                            System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                            System.out.println("nPRFPaidx: " + loRS.getDouble("nPRFPaidx"));
+                            System.out.println("nPRFTotal: " + loRS.getDouble("nPRFTotal"));
+                            System.out.println("nPRFDiscx: " + loRS.getDouble("nPRFDiscx"));
+                            System.out.println("------------------------------------------------------------------------------");
+                            pdblAdvancesAmount += loRS.getDouble("nPRFTotal");
+                            pdblDiscountAmount += loRS.getDouble("nPRFDiscx");
+                        }
+                    }
                 }
-                
-                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
-                if ("error".equals((String) poJSON.get("result"))) {
-                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
-                    return poJSON;
-                }
-                pdblDiscountAmount += (Double) poJSON.get("discount");
-                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
+                MiscUtil.close(loRS);
             }
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+            return poJSON;
         }
         
         poJSON.put("result", "success");
@@ -375,44 +398,69 @@ public class Model_Disbursement_Detail extends Model {
         return poJSON;
     }
     
-    private JSONObject setPRFDiscount(String fsPOTransNo){
-        String lsSQL = "";
-        double ldDiscount = 0.0000;
-        try {
-            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
-            loModel.initialize();
-            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
-                    " sSourceNo = " + SQLUtil.toSQL(fsPOTransNo)
-                    + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
-                    + " AND cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PAID in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
-            );
-            System.out.println("Executing SQL: " + lsSQL);
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            poJSON = new JSONObject();
-            if (MiscUtil.RecordCount(loRS) >= 0) {
-                while (loRS.next()) {
-                    // Print the result set
-                    System.out.println("--------------------------PRF--------------------------");
-                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
-                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
-                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
-                    System.out.println("------------------------------------------------------------------------------");
-                    ldDiscount = ldDiscount + loRS.getDouble("nDiscAmtx"); 
-                }
-            }
-            MiscUtil.close(loRS);
-        } catch (SQLException e) {
-            poJSON.put("discount", ldDiscount);
-            poJSON.put("result", "error");
-            poJSON.put("message", e.getMessage());
-        }
-        poJSON.put("discount", ldDiscount);
-        poJSON.put("result", "success");
-        poJSON.put("message", "success");
-        return poJSON;
-    }
+//    private JSONObject getAdvancePayment(List<String> faPOTransNo) throws SQLException, GuanzonException {
+//        Model_PO_Master loObject = new PurchaseOrderModels(poGRider).PurchaseOrderMaster();
+//        for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+//            if(faPOTransNo.get(lnCtr) != null && !"".equals(faPOTransNo.get(lnCtr))){
+//                poJSON = loObject.openRecord(faPOTransNo.get(lnCtr));
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+//                    return poJSON;
+//                }
+//                
+//                poJSON = setPRFDiscount(faPOTransNo.get(lnCtr));
+//                if ("error".equals((String) poJSON.get("result"))) {
+//                    poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Purchase Order.");
+//                    return poJSON;
+//                }
+//                pdblDiscountAmount += (Double) poJSON.get("discount");
+//                pdblAdvancesAmount += (loObject.getAmountPaid().doubleValue());//  - (Double) poJSON.get("discount"));
+//            }
+//        }
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
+//    
+//    private JSONObject setPRFDiscount(String fsPOTransNo){
+//        String lsSQL = "";
+//        double ldDiscount = 0.0000;
+//        try {
+//            Model_Payment_Request_Master loModel = new CashflowModels(poGRider).PaymentRequestMaster();
+//            loModel.initialize();
+//            lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loModel),
+//                    " sSourceNo = " + SQLUtil.toSQL(fsPOTransNo)
+//                    + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
+//                    + " AND cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.PAID) //get PAID in PRF by default since dv does not allow to modify Applied Amount so it must be based on paid amount in PRF
+//            );
+//            System.out.println("Executing SQL: " + lsSQL);
+//            ResultSet loRS = poGRider.executeQuery(lsSQL);
+//            poJSON = new JSONObject();
+//            if (MiscUtil.RecordCount(loRS) >= 0) {
+//                while (loRS.next()) {
+//                    // Print the result set
+//                    System.out.println("--------------------------PRF--------------------------");
+//                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+//                    System.out.println("nAmtPaidx: " + loRS.getDouble("nAmtPaidx"));
+//                    System.out.println("nDiscAmtx: " + loRS.getDouble("nDiscAmtx"));
+//                    System.out.println("------------------------------------------------------------------------------");
+//                    ldDiscount = ldDiscount + loRS.getDouble("nDiscAmtx"); 
+//                }
+//            }
+//            MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//            poJSON.put("discount", ldDiscount);
+//            poJSON.put("result", "error");
+//            poJSON.put("message", e.getMessage());
+//        }
+//        poJSON.put("discount", ldDiscount);
+//        poJSON.put("result", "success");
+//        poJSON.put("message", "success");
+//        return poJSON;
+//    }
     
-    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo) throws SQLException, GuanzonException{
+    private JSONObject getPOAdvancesInPOReceiving(String fsTransNo,String fsTransactionNo) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
         Model_POR_Master loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
         poJSON = loObject.openRecord(fsTransNo);
@@ -432,23 +480,82 @@ public class Model_Disbursement_Detail extends Model {
             poJSON.put("message",(String) poJSON.get("message") + "\nWhile reloading PO Receiving Detail.");
                 return poJSON;
             }
-            
-            if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
-                if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
-                    llistPurchaseOrder.add(loDetail.getOrderNo());
-                } 
+            if(loDetail.getQuantity().doubleValue() > 0.0000){
+                if(loDetail.getOrderNo() != null && !"".equals(loDetail.getOrderNo())){
+                    if(!llistPurchaseOrder.contains(loDetail.getOrderNo())){
+                        llistPurchaseOrder.add(loDetail.getOrderNo());
+                    } 
+                }
             }
         }
         
-        
-        poJSON = getAdvancePayment(llistPurchaseOrder);
+        poJSON = getAdvancePayment(llistPurchaseOrder,fsTransactionNo);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+        
+        //Get Amount Paid from PO that not yet reflect on previous PO Receiving
+        //1. Check Previous PO Receiving of PO that is already PAID
+        //2. Check the PO Qty and Amount reflected on PAID PO Receiving
+        for(int lnCtr = 0; lnCtr < llistPurchaseOrder.size(); lnCtr++){
+            double ldblPOAmtPaid = getPORPayment(llistPurchaseOrder.get(lnCtr),loObject); 
+            if(ldblPOAmtPaid > 0.0000){
+                if(pdblAdvancesAmount > ldblPOAmtPaid){
+                    pdblAdvancesAmount = pdblAdvancesAmount - ldblPOAmtPaid;
+                } else {
+                    pdblAdvancesAmount = 0.0000;
+                }
+            }
         }
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
+    }
+    //Get Payment from PO Receiving
+    private Double getPORPayment(String fsPOTransNo, Model_POR_Master foObjet) throws SQLException, GuanzonException {
+        Double ldblAmtPaid = 0.0000;
+        String lsSQL =  " SELECT SUM(b.nUnitPrce * b.nQuantity) AS nPOAmount, a.sTransNox AS sTransNox " +
+                        " FROM PO_Receiving_Master a " +
+                        " LEFT JOIN PO_Receiving_Detail b ON b.sTransNox = a.sTransNox ";
+        try {
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " b.sOrderNox = " + SQLUtil.toSQL(fsPOTransNo)
+                    + " AND a.cPurposex = " + SQLUtil.toSQL(PurchaseOrderReceivingStatus.Purpose.REGULAR)
+                    + " AND a.cTranStat = " + SQLUtil.toSQL(PurchaseOrderReceivingStatus.PAID)
+                    + " AND a.sTransNox != " + SQLUtil.toSQL(foObjet.getTransactionNo()) 
+                    + " AND a.dTransact < " + SQLUtil.toSQL(xsDateShort(foObjet.getTransactionDate())) 
+            );
+            lsSQL = lsSQL + " GROUP BY a.sTransNox ";
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            poJSON = new JSONObject();
+            if (MiscUtil.RecordCount(loRS) >= 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------PREVIOUS PO RECEIVING--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("nPOAmount: " + loRS.getDouble("nPOAmount"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    ldblAmtPaid += loRS.getDouble("nPOAmount");
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("ERROR: " + e.getMessage());
+            return 0.0000;
+        }
+        
+        return ldblAmtPaid;
+    }
+    
+    private static String xsDateShort(Date fdValue) {
+        if(fdValue == null){
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
     }
 
     public Model_Particular Particular() throws SQLException, GuanzonException {
