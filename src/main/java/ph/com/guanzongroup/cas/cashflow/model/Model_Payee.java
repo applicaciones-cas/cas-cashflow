@@ -9,6 +9,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.client.model.Model_AP_Client_Master;
 import org.guanzon.cas.client.model.Model_Client_Address;
 import org.guanzon.cas.client.model.Model_Client_Master;
 import org.guanzon.cas.client.services.ClientModels;
@@ -20,6 +21,7 @@ public class Model_Payee extends Model {
     Model_Client_Master poClient;
     Model_Client_Address poClientAddress;
     Model_Client_Master poAPClient;
+    Model_AP_Client_Master poAPClientMaster;
     Model_Particular poParticular;
 
     @Override
@@ -46,6 +48,7 @@ public class Model_Payee extends Model {
             poClient = model.ClientMaster();
             poClientAddress = model.ClientAddress();
             poAPClient = model.ClientMaster();
+            poAPClientMaster = model.APClientMaster();
 
             CashflowModels gl = new CashflowModels(poGRider);
             poParticular = gl.Particular();
@@ -165,6 +168,27 @@ public class Model_Payee extends Model {
         } else {
             poAPClient.initialize();
             return poAPClient;
+        }
+    }
+
+    public Model_AP_Client_Master APClientMaster() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sAPClntID"))) {
+            if (poAPClientMaster.getEditMode() == EditMode.READY
+                    && poAPClientMaster.getClientId().equals((String) getValue("sAPClntID"))) {
+                return poAPClientMaster;
+            } else {
+                poJSON = poAPClientMaster.openRecord((String) getValue("sAPClntID"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poAPClientMaster;
+                } else {
+                    poAPClientMaster.initialize();
+                    return poAPClientMaster;
+                }
+            }
+        } else {
+            poAPClientMaster.initialize();
+            return poAPClientMaster;
         }
     }
 

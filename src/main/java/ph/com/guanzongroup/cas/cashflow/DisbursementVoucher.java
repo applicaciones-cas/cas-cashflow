@@ -1623,6 +1623,14 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
         poJSON.put("row", row);
         
+        //BR - vat registered and non vat client (supplier) ito ang pwede pagbasehan kung i-enable ang wtax
+        //0: Not Vat Registered; 1: Vat Registered; 2: Not BIR Registered / Special Suppliers / Small Business
+        if("2".equals((String) Master().Payee().APClientMaster().getValue("cVATRegis"))){ 
+            poJSON.put("result", "error");
+            poJSON.put("message", "Supplier is not taxable.");
+            return poJSON;
+        }
+        
         if(WTaxDeduction(row).getModel().getPeriodFrom() == null || WTaxDeduction(row).getModel().getPeriodTo() == null){
             poJSON.put("result", "error");
             poJSON.put("message", "Period date is not set.");
@@ -2119,16 +2127,16 @@ public class DisbursementVoucher extends Transaction {
             }
         } else {
             
-//            try { 
+            try { 
                 //BR - vat registered and non vat client (supplier) ito ang pwede pagbasehan kung i-enable ang wtax
                 //0: Not Vat Registered; 1: Vat Registered; 2: Not BIR Registered / Special Suppliers / Small Business
-//                if("2".equals((String) Master().Payee().APClient().getValue("cVATRegis"))){ //TODO  cVATRegis 
-//                    if(ldblTotalBaseAmount > 0.0000){
-//                       poJSON.put("result", "error");
-//                       poJSON.put("message", "Supplier is not taxable.");
-//                       return poJSON;
-//                   }
-//                }
+                if("2".equals((String) Master().Payee().APClientMaster().getValue("cVATRegis"))){ 
+                    if(ldblTotalBaseAmount > 0.0000){
+                       poJSON.put("result", "error");
+                       poJSON.put("message", "Supplier is not taxable.");
+                       return poJSON;
+                   }
+                }
                 
                 if(ldblTotalBaseAmount > ldblTransTotal){
                     poJSON.put("result", "error");
@@ -2141,12 +2149,12 @@ public class DisbursementVoucher extends Transaction {
                     poJSON.put("message", "Tax amount cannot be greater than the transaction total.");
                     return poJSON;
                 }
-//            } catch (GuanzonException | SQLException ex) {
-//                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-//                poJSON.put("result", "error");
-//                poJSON.put("message", MiscUtil.getException(ex));
-//                return poJSON;
-//            } 
+            } catch (GuanzonException | SQLException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON.put("result", "error");
+                poJSON.put("message", MiscUtil.getException(ex));
+                return poJSON;
+            } 
         }
         
         Master().setWithTaxTotal(ldblTaxAmount);
