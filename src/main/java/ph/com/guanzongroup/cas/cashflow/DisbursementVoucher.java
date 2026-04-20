@@ -6352,7 +6352,9 @@ public class DisbursementVoucher extends Transaction {
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
+                params.put("sConfirmer","");
                 params.put("sVerifier","");
+                params.put("sApprover","");
                 params.put("sCertifier","");
                 params.put("sAuthorizer","");
                 
@@ -6364,6 +6366,15 @@ public class DisbursementVoucher extends Transaction {
                 if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
                     params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
                 }
+                //Get Confirmer
+                JSONObject loJSONConfirmer = getUpdateStatusBy(DisbursementStatic.CONFIRMED);
+                if("error".equals((String) loJSONConfirmer.get("result"))){
+                    return loJSONConfirmer;
+                } else {
+                    if((String) loJSONConfirmer.get("sUpdateByx") != null && !"".equals((String) loJSONConfirmer.get("sUpdateByx"))){
+                        params.put("sConfirmer", (String) loJSONConfirmer.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirmer.get("sUpdateDte"))); 
+                    }
+                }
                 //Get Verifiers
                 JSONObject loJSONVerified = getUpdateStatusBy(DisbursementStatic.VERIFIED);
                 if("error".equals((String) loJSONVerified.get("result"))){
@@ -6371,6 +6382,15 @@ public class DisbursementVoucher extends Transaction {
                 } else {
                     if((String) loJSONVerified.get("sUpdateByx") != null && !"".equals((String) loJSONVerified.get("sUpdateByx"))){
                         params.put("sVerifier", (String) loJSONVerified.get("sUpdateByx") + " " + String.valueOf((String) loJSONVerified.get("sUpdateDte"))); 
+                    }
+                }
+                //Get Approver
+                JSONObject loJSONApprover = getUpdateStatusBy(DisbursementStatic.APPROVED);
+                if("error".equals((String) loJSONApprover.get("result"))){
+                    return loJSONApprover;
+                } else {
+                    if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
+                        params.put("sApprover", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
                     }
                 }
                 //Get Certifier
@@ -6808,7 +6828,9 @@ public class DisbursementVoucher extends Transaction {
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
+                params.put("sConfirmer","");
                 params.put("sVerifier","");
+                params.put("sApprover","");
                 params.put("sCertifier","");
                 params.put("sAuthorizer","");
                 
@@ -6820,6 +6842,15 @@ public class DisbursementVoucher extends Transaction {
                 if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
                     params.put("sEncoder",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
                 }
+                //Get Confirmer
+                JSONObject loJSONConfirmer = getUpdateStatusBy(DisbursementStatic.CONFIRMED);
+                if("error".equals((String) loJSONConfirmer.get("result"))){
+                    return loJSONConfirmer;
+                } else {
+                    if((String) loJSONConfirmer.get("sUpdateByx") != null && !"".equals((String) loJSONConfirmer.get("sUpdateByx"))){
+                        params.put("sConfirmer", (String) loJSONConfirmer.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirmer.get("sUpdateDte"))); 
+                    }
+                }
                 //Get Verifiers
                 JSONObject loJSONVerified = getUpdateStatusBy(DisbursementStatic.VERIFIED);
                 if("error".equals((String) loJSONVerified.get("result"))){
@@ -6827,6 +6858,15 @@ public class DisbursementVoucher extends Transaction {
                 } else {
                     if((String) loJSONVerified.get("sUpdateByx") != null && !"".equals((String) loJSONVerified.get("sUpdateByx"))){
                         params.put("sVerifier", (String) loJSONVerified.get("sUpdateByx") + " " + String.valueOf((String) loJSONVerified.get("sUpdateDte"))); 
+                    }
+                }
+                //Get Approver
+                JSONObject loJSONApprover = getUpdateStatusBy(DisbursementStatic.APPROVED);
+                if("error".equals((String) loJSONApprover.get("result"))){
+                    return loJSONApprover;
+                } else {
+                    if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
+                        params.put("sApprover", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
                     }
                 }
                 //Get Certifier
