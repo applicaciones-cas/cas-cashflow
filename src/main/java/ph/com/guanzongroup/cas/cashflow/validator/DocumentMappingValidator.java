@@ -77,7 +77,7 @@ public class DocumentMappingValidator implements GValidator{
         
         if (poGrider.getUserLevel() < UserRight.SYSADMIN){
             poJSON.put("result", "error");
-            poJSON.put("message", "User is not allowed to modify the record.");
+            poJSON.put("message", "User is not allowed to save/modify the record.");
             return poJSON;
         }
         

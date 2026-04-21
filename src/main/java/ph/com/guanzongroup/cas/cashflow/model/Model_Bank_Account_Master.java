@@ -42,6 +42,7 @@ public class Model_Bank_Account_Master extends Model {
             poEntity.updateNull("dLastPost");
             poEntity.updateNull("sAcctCode");
             poEntity.updateObject("sBranchCd", poGRider.getBranchCode());
+            poEntity.updateObject("sIndstCdx", poGRider.getIndustry());
             poEntity.updateObject("nOBegBalx", 0.00);
             poEntity.updateObject("nABegBalx", 0.00);
             poEntity.updateObject("nOBalance", 0.00);
@@ -53,6 +54,7 @@ public class Model_Bank_Account_Master extends Model {
             poEntity.updateObject("nSgnatory", 1);
             poEntity.updateObject("sSlipType", "DS");
             poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            
             //end - assign default values
 
             poEntity.insertRow();
