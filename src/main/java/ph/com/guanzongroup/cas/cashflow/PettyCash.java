@@ -551,13 +551,14 @@ public class PettyCash extends Parameter {
         paLedger = new ArrayList<>();
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).PettyCashFundLedger()),
                 " sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
-                + " AND cReversex = '+'"
+                + " AND cReversex = '0'"
                 + " AND dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom)
                 + " AND " + SQLUtil.toSQL(fsDateTo)
             );
         
 //        lsSQL = lsSQL + " GROUP BY nLedgerNo ORDER BY dTransact ASC ";
-        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
+//        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY sPettyIDx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -568,7 +569,8 @@ public class PettyCash extends Parameter {
         while (loRS.next()) {
             Model_PettyCashLedger loObject = new CashflowModels(poGRider).PettyCashFundLedger();
 //            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
-            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
+//            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
+            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
             if (isJSONSuccess(poJSON)) {
                 paLedger.add((Model) loObject);
             } else {

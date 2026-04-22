@@ -22,9 +22,7 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
-import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
-import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
@@ -538,13 +536,14 @@ public class CashFund extends Parameter {
         
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).CashFundLedger()),
                 " sCashFIDx = " + SQLUtil.toSQL(getModel().getCashFundId())
-                + " AND cReversex = '+'"
+                + " AND cReversex = "  + SQLUtil.toSQL(CashFundStatus.Reverse.INCLUDE)
                 + " AND dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom)
                 + " AND " + SQLUtil.toSQL(fsDateTo)
             );
         
 //        lsSQL = lsSQL + " GROUP BY nLedgerNo ORDER BY dTransact ASC ";
-        lsSQL = lsSQL + " GROUP BY sCashFIDx, sSourceCD, sSourceNo, cReversex ORDER BY dTransact ASC ";
+//        lsSQL = lsSQL + " GROUP BY sCashFIDx, sSourceCD, sSourceNo, cReversex ORDER BY dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY sCashFIDx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -555,7 +554,8 @@ public class CashFund extends Parameter {
         while (loRS.next()) {
             Model_Cash_Fund_Ledger loObject = new CashflowModels(poGRider).CashFundLedger();
 //            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
-            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+//            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"),loRS.getString("cReversex"));
+            poJSON = loObject.openRecord(loRS.getString("sCashFIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
             if (isJSONSuccess(poJSON)) {
                 paLedger.add((Model) loObject);
             } else {
