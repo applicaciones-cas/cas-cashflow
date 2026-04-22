@@ -126,7 +126,7 @@ public class CashDisbursement extends Transaction {
     * @throws GuanzonException if a business logic or validation error occurs.
     */
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "CDsb";
+        SOURCE_CODE = "CFDv";
 
         poMaster = new CashflowModels(poGRider).CashDisbursementMaster();
         poDetail = new CashflowModels(poGRider).CashDisbursementDetail();
@@ -563,9 +563,23 @@ public class CashDisbursement extends Transaction {
         
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
         
-        //Update Related transaction to DV
+        //Update Related transaction to cash disbursement
         poJSON = updateRelatedTransactions(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        
+        try {
+            //Update CASH FUND Balance and Generate Ledger
+            LocalDate transDate = strToDate(xsDateShort(Master().getTransactionDate()));
+            CashFundTrans loTrans = new CashFundTrans(poGRider);
+            loTrans.InitTransaction(Master().getCashFundId(), Master().getBranchCode(), Master().getDepartmentRequest());
+            loTrans.Disbursement(Master().getTransactionNo(), transDate,  Master().getTransactionTotal(), false);
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message",MiscUtil.getException(ex));
             poGRider.rollbackTrans();
             return poJSON;
         }

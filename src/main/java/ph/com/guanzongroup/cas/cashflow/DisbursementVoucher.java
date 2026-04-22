@@ -344,7 +344,10 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
-    
+    private String psForm = "";
+    public void setForm(String fsForm){
+        psForm = fsForm;
+    }
     public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         
@@ -364,10 +367,49 @@ public class DisbursementVoucher extends Transaction {
                 poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
                 poJSON.put("result", "error");
                 return poJSON;
-            case DisbursementStatic.CONFIRMED:
             case DisbursementStatic.VERIFIED:
             case DisbursementStatic.APPROVED:
+            case DisbursementStatic.CONFIRMED:
                 if(isEntry){
+                    poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                    poJSON.put("result", "error");
+                    return poJSON;
+                } else {
+                    //Check FORM
+                    if(DisbursementStatic.CONFIRMED.equals(psForm)){
+                        if(!DisbursementStatic.CONFIRMED.equals(loObject.getTransactionStatus())
+                            && !DisbursementStatic.OPEN.equals(loObject.getTransactionStatus())){
+                            poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                            poJSON.put("result", "error");
+                            return poJSON;
+                        }
+                    } else if(DisbursementStatic.VERIFIED.equals(psForm)){
+                        if(!DisbursementStatic.VERIFIED.equals(loObject.getTransactionStatus())
+                            && !DisbursementStatic.CONFIRMED.equals(loObject.getTransactionStatus())){
+                            poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                            poJSON.put("result", "error");
+                            return poJSON;
+                        }
+                    } else if(DisbursementStatic.APPROVED.equals(psForm)){
+                        if(!DisbursementStatic.APPROVED.equals(loObject.getTransactionStatus())
+                            && !DisbursementStatic.VERIFIED.equals(loObject.getTransactionStatus())){
+                            poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                            poJSON.put("result", "error");
+                            return poJSON;
+                        }
+                    }
+                }
+                break;
+                
+            case DisbursementStatic.RETURNED_I:
+                if(!DisbursementStatic.APPROVED.equals(psForm)){
+                    poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
+                    poJSON.put("result", "error");
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.RETURNED:
+                if(!DisbursementStatic.CONFIRMED.equals(psForm)){
                     poJSON.put("message", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
                     poJSON.put("result", "error");
                     return poJSON;
@@ -382,7 +424,8 @@ public class DisbursementVoucher extends Transaction {
                 return poJSON;
             }
         }
-        
+        //Clear value
+        psForm = "";
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -607,7 +650,11 @@ public class DisbursementVoucher extends Transaction {
                                     + " ) AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%") 
                                     );
                 break;
-//            case DisbursementStatic.VOID:
+            case DisbursementStatic.VOID:
+            case DisbursementStatic.CANCELLED:
+                //Who can VOID Transaction
+                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL("%Payable%") 
+                                    );
 //            case DisbursementStatic.CANCELLED:
 //                lsSQL = MiscUtil.addCondition(lsSQL, "  c.sPositnNm LIKE " + SQLUtil.toSQL("%Manager%") 
 //                                    + " OR c.sPositnNm LIKE " + SQLUtil.toSQL("%General%Account%") 
@@ -688,12 +735,20 @@ public class DisbursementVoucher extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        //1. Check the position of the current user
+        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+        if(lsPosition1 == null || "".equals(lsPosition1) ){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not an authorized officer." );
+            return poJSON;
+        }
         
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         } 
+        //2. Check the position of the approving officer
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
@@ -797,6 +852,14 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+//        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -805,6 +868,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -842,6 +906,14 @@ public class DisbursementVoucher extends Transaction {
         
         String lsStatus = DisbursementStatic.CERTIFIED;
         
+//        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -850,6 +922,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -911,6 +984,13 @@ public class DisbursementVoucher extends Transaction {
         poJSON = new JSONObject();
 
         String lsStatus = DisbursementStatic.AUTHORIZED;
+//        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
         
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
@@ -920,6 +1000,8 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -988,6 +1070,14 @@ public class DisbursementVoucher extends Transaction {
 
         String lsStatus = DisbursementStatic.DISAPPROVED;
         
+        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -996,6 +1086,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -1064,6 +1155,14 @@ public class DisbursementVoucher extends Transaction {
 
         String lsStatus = DisbursementStatic.DISAPPROVED;
         
+        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -1072,6 +1171,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -1144,6 +1244,14 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "Unable to load disbursement.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
+        
+        //Allow to void transaction only if user is from account payable
+        String lsPosition = checkPosition(lsStatus, poGRider.getUserID());
+        if(lsPosition == null || "".equals(lsPosition) ){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not an authorized officer." );
+            return poJSON;
+        } 
         
         if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
             poJSON.put("result", "error");
@@ -1223,6 +1331,14 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        //1. Check the position of the current user
+        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+        if(lsPosition1 == null || "".equals(lsPosition1) ){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not an authorized officer." );
+            return poJSON;
+        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -1231,6 +1347,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -1310,6 +1427,14 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+//        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -1318,6 +1443,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -1362,6 +1488,14 @@ public class DisbursementVoucher extends Transaction {
 
         String lsStatus = DisbursementStatic.RETURNED_I;
         
+//        //1. Check the position of the current user
+//        String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+//        if(lsPosition1 == null || "".equals(lsPosition1) ){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User is not an authorized officer." );
+//            return poJSON;
+//        }
+        
         String lsUserId = poGRider.getUserID();
         poJSON = callApproval();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -1370,6 +1504,7 @@ public class DisbursementVoucher extends Transaction {
         if(psApprover != null && !"".equals(psApprover)){
             lsUserId = psApprover;
         }
+        //2. Check the position of the approving officer
         String lsPosition = checkPosition(lsStatus, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
@@ -7096,13 +7231,16 @@ public class DisbursementVoucher extends Transaction {
                     }
                 }
             }
-            
+            String lsInvoiceNo = foObject.getSalesInvoice();
+            if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
+                lsInvoiceNo = foObject.getReferenceNo();
+            }
             if(!lbExist){
                 Details.add(new TransactionPaymentSummaryDetail(
                         Details.size()+1,
                         lsCategory,
                         foObject.Department().getDescription(),
-                        foObject.getReferenceNo(),
+                        lsInvoiceNo,
                         foObject.getTransactionNo(),
                         DisbursementStatic.SourceCode.PO_RECEIVING,
                         Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))

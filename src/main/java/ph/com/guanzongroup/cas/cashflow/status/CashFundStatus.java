@@ -16,7 +16,7 @@ public class CashFundStatus {
     
     
     public static class Reverse  {
-        public static final  String INCLUDE = "+"; 
-        public static final  String EXCLUDE = "-"; 
+        public static final  String INCLUDE = "0"; 
+        public static final  String EXCLUDE = "1"; 
     }
 }
