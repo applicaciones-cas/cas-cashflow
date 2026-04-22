@@ -53,7 +53,7 @@ public class Model_Cash_Fund_Ledger extends Model {
             ID = "sCashFIDx";
             ID2 = "sSourceCD";
             ID3 = "sSourceNo";
-            ID4 = "cReversex";
+//            ID4 = "cReversex";
 
             //initialize reference objects
             CashflowModels gl = new CashflowModels(poGRider);

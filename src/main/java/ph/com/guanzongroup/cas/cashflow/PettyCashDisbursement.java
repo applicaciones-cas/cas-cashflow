@@ -113,7 +113,7 @@ public class PettyCashDisbursement extends Transaction {
     * @throws GuanzonException if a business logic or validation error occurs.
     */
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
-        SOURCE_CODE = "PDsb";
+        SOURCE_CODE = "PCDv";
 
         poMaster = new CashflowModels(poGRider).PettyCashDisbursementMaster();
         poDetail = new CashflowModels(poGRider).PettyCashDisbursementDetail();
@@ -513,6 +513,20 @@ public class PettyCashDisbursement extends Transaction {
         }
         
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
+        
+        try {
+            //Update Petty Cash Balance and Generate Ledger
+            LocalDate transDate = strToDate(xsDateShort(Master().getTransactionDate()));
+            PettyCashTrans loTrans = new PettyCashTrans(poGRider);
+            loTrans.InitTransaction(Master().getPettyId(), Master().getBranchCode(), Master().getDepartmentRequest());
+            loTrans.Disbursement(Master().getTransactionNo(), transDate,  Master().getTransactionTotal(), false);
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message",MiscUtil.getException(ex));
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
         
         //change status
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);

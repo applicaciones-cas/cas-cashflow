@@ -14,8 +14,8 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class Model_PettyCashLedger extends Model {
 
-    Model_Branch poBranch;
-    Model_Department poDepartment;
+//    Model_Branch poBranch;
+//    Model_Department poDepartment;
     Model_PettyCash poPettyCash;
 
     @Override
@@ -36,7 +36,7 @@ public class Model_PettyCashLedger extends Model {
             poEntity.updateObject("nDebtAmtx", 0.0000);
             poEntity.updateObject("nCrdtAmtx", 0.0000);
 
-            poEntity.updateObject("cReversex", "+");
+            poEntity.updateObject("cReversex", "0");
 
             //end - assign default values
             poEntity.insertRow();
@@ -44,15 +44,15 @@ public class Model_PettyCashLedger extends Model {
             poEntity.absolute(1);
 
             ID = "sPettyIDx";
-            ID2 = "sBranchCD";
-            ID3 = "sDeptIDxx";
-            ID4 = "sSourceCD";
-            ID5 = "sSourceNo";
+//            ID2 = "sBranchCD";
+//            ID3 = "sDeptIDxx";
+            ID2 = "sSourceCD";
+            ID3 = "sSourceNo";
 
             //initialize reference objects
-            ParamModels model = new ParamModels(poGRider);
-            poBranch = model.Branch();
-            poDepartment = model.Department();
+//            ParamModels model = new ParamModels(poGRider);
+//            poBranch = model.Branch();
+//            poDepartment = model.Department();
 
             CashflowModels gl = new CashflowModels(poGRider);
             poPettyCash = gl.PettyCashMaster();
@@ -78,28 +78,28 @@ public class Model_PettyCashLedger extends Model {
         return (String) getValue("sPettyIDx");
     }
 
-    public JSONObject setBranchCode(String branchCD) {
-        return setValue("sBranchCD", branchCD);
-    }
+//    public JSONObject setBranchCode(String branchCD) {
+//        return setValue("sBranchCD", branchCD);
+//    }
+//
+//    public String getBranchCode() {
+//        return (String) getValue("sBranchCD");
+//    }
+//
+//    public JSONObject setDepartmentID(String deptIDxx) {
+//        return setValue("sDeptIDxx", deptIDxx);
+//    }
+//
+//    public String getDepartmentID() {
+//        return (String) getValue("sDeptIDxx");
+//    }
 
-    public String getBranchCode() {
-        return (String) getValue("sBranchCD");
-    }
-
-    public JSONObject setDepartmentID(String deptIDxx) {
-        return setValue("sDeptIDxx", deptIDxx);
-    }
-
-    public String getDepartmentID() {
-        return (String) getValue("sDeptIDxx");
-    }
-
-    public JSONObject setLedgerNo(String ledgerNo) {
+    public JSONObject setLedgerNo(int ledgerNo) {
         return setValue("nLedgerNo", ledgerNo);
     }
 
-    public String getLedgerNo() {
-        return (String) getValue("nLedgerNo");
+    public int getLedgerNo() {
+        return (int) getValue("nLedgerNo");
     }
 
     public JSONObject setSourceCode(String sourceCD) {
@@ -186,45 +186,45 @@ public class Model_PettyCashLedger extends Model {
         }
     }
 
-    public Model_Branch Branch() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sBranchCD"))) {
-            if (poBranch.getEditMode() == EditMode.READY
-                    && poBranch.getBranchCode().equals((String) getValue("sBranchCD"))) {
-                return poBranch;
-            } else {
-                poJSON = poBranch.openRecord((String) getValue("sBranchCD"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poBranch;
-                } else {
-                    poBranch.initialize();
-                    return poBranch;
-                }
-            }
-        } else {
-            poBranch.initialize();
-            return poBranch;
-        }
-    }
-
-    public Model_Department Department() throws SQLException, GuanzonException {
-        if (!"".equals((String) getValue("sDeptIDxx"))) {
-            if (poDepartment.getEditMode() == EditMode.READY
-                    && poDepartment.getDepartmentId().equals((String) getValue("sDeptIDxx"))) {
-                return poDepartment;
-            } else {
-                poJSON = poDepartment.openRecord((String) getValue("sDeptIDxx"));
-
-                if ("success".equals((String) poJSON.get("result"))) {
-                    return poDepartment;
-                } else {
-                    poDepartment.initialize();
-                    return poDepartment;
-                }
-            }
-        } else {
-            poDepartment.initialize();
-            return poDepartment;
-        }
-    }
+//    public Model_Branch Branch() throws SQLException, GuanzonException {
+//        if (!"".equals((String) getValue("sBranchCD"))) {
+//            if (poBranch.getEditMode() == EditMode.READY
+//                    && poBranch.getBranchCode().equals((String) getValue("sBranchCD"))) {
+//                return poBranch;
+//            } else {
+//                poJSON = poBranch.openRecord((String) getValue("sBranchCD"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poBranch;
+//                } else {
+//                    poBranch.initialize();
+//                    return poBranch;
+//                }
+//            }
+//        } else {
+//            poBranch.initialize();
+//            return poBranch;
+//        }
+//    }
+//
+//    public Model_Department Department() throws SQLException, GuanzonException {
+//        if (!"".equals((String) getValue("sDeptIDxx"))) {
+//            if (poDepartment.getEditMode() == EditMode.READY
+//                    && poDepartment.getDepartmentId().equals((String) getValue("sDeptIDxx"))) {
+//                return poDepartment;
+//            } else {
+//                poJSON = poDepartment.openRecord((String) getValue("sDeptIDxx"));
+//
+//                if ("success".equals((String) poJSON.get("result"))) {
+//                    return poDepartment;
+//                } else {
+//                    poDepartment.initialize();
+//                    return poDepartment;
+//                }
+//            }
+//        } else {
+//            poDepartment.initialize();
+//            return poDepartment;
+//        }
+//    }
 }

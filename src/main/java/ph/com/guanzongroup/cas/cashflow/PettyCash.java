@@ -361,7 +361,7 @@ public class PettyCash extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if (loRS.next()) {
                     if (loRS.getString("sPettyIDx") != null && !"".equals(loRS.getString("sPettyIDx"))) {
-                        poJSON = setJSON("error", "Petty Cash fund already exists in the database.\nCheck petty cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
+                        poJSON = setJSON("error", "Unable to proceed.\nA Petty Cash Fund with same Branch, Department, Company, and Industry is already registered.\n\nCheck petty cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
                     }
                 }
             }
@@ -551,13 +551,14 @@ public class PettyCash extends Parameter {
         paLedger = new ArrayList<>();
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(new CashflowModels(poGRider).PettyCashFundLedger()),
                 " sPettyIDx = " + SQLUtil.toSQL(getModel().getPettyId())
-                + " AND cReversex = '+'"
+                + " AND cReversex = '0'"
                 + " AND dTransact BETWEEN " + SQLUtil.toSQL(fsDateFrom)
                 + " AND " + SQLUtil.toSQL(fsDateTo)
             );
         
 //        lsSQL = lsSQL + " GROUP BY nLedgerNo ORDER BY dTransact ASC ";
-        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
+//        lsSQL = lsSQL + " GROUP BY sPettyIDx, sBranchCD, sDeptIDxx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY sPettyIDx, sSourceCD, sSourceNo ORDER BY dTransact ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -568,7 +569,8 @@ public class PettyCash extends Parameter {
         while (loRS.next()) {
             Model_PettyCashLedger loObject = new CashflowModels(poGRider).PettyCashFundLedger();
 //            poJSON = loObject.openRecord(loRS.getString("nLedgerNo"));
-            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
+//            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sBranchCD"),loRS.getString("sDeptIDxx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
+            poJSON = loObject.openRecord(loRS.getString("sPettyIDx"),loRS.getString("sSourceCD"),loRS.getString("sSourceNo"));
             if (isJSONSuccess(poJSON)) {
                 paLedger.add((Model) loObject);
             } else {
