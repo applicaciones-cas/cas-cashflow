@@ -361,7 +361,7 @@ public class PettyCash extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if (loRS.next()) {
                     if (loRS.getString("sPettyIDx") != null && !"".equals(loRS.getString("sPettyIDx"))) {
-                        poJSON = setJSON("error", "Unable to proceed. A Petty Cash Fund with same Branch, Department, Company, and Industry is already registered.\nCheck petty cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
+                        poJSON = setJSON("error", "Unable to proceed.\nA Petty Cash Fund with same Branch, Department, Company, and Industry is already registered.\n\nCheck petty cash fund ID : <" + loRS.getString("sPettyIDx") + ">");
                     }
                 }
             }

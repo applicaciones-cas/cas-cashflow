@@ -348,7 +348,7 @@ public class CashFund extends Parameter {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     if(loRS.getString("sCashFIDx") != null && !"".equals(loRS.getString("sCashFIDx"))){
-                        poJSON = setJSON("error", "Unable to proceed. A Cash Fund with same Branch, Department, Company, and Industry is already registered.\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
+                        poJSON = setJSON("error", "Unable to proceed.\nA Cash Fund with same Branch, Department, Company, and Industry is already registered.\n\nCheck cash fund ID : <" + loRS.getString("sCashFIDx") + ">");
                     }
                 }
             }
