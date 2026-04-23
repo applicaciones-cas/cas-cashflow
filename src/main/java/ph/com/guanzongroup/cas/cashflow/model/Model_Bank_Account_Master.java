@@ -1,10 +1,12 @@
 package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
@@ -36,12 +38,13 @@ public class Model_Bank_Account_Master extends Model {
 
             //assign default values
 //            poEntity.updateNull("nEntryNox");
-            poEntity.updateNull("dBegBalxx");
+            poEntity.updateObject("dBegBalxx" , SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateNull("dDueDatex");
             poEntity.updateNull("dLastTran");
             poEntity.updateNull("dLastPost");
             poEntity.updateNull("sAcctCode");
             poEntity.updateObject("sBranchCd", poGRider.getBranchCode());
+            poEntity.updateObject("sIndstCdx", poGRider.getIndustry());
             poEntity.updateObject("nOBegBalx", 0.00);
             poEntity.updateObject("nABegBalx", 0.00);
             poEntity.updateObject("nOBalance", 0.00);
@@ -53,6 +56,7 @@ public class Model_Bank_Account_Master extends Model {
             poEntity.updateObject("nSgnatory", 1);
             poEntity.updateObject("sSlipType", "DS");
             poEntity.updateObject("cRecdStat", RecordStatus.ACTIVE);
+            
             //end - assign default values
 
             poEntity.insertRow();
@@ -74,6 +78,11 @@ public class Model_Bank_Account_Master extends Model {
             logwrapr.severe(e.getMessage());
             System.exit(1);
         }
+    }
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
     }
 
     public JSONObject setBankAccountId(String id) {

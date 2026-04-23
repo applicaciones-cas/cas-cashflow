@@ -94,6 +94,18 @@ public class BankAccountMaster extends Parameter{
             return poJSON;
         }
         
+        if (poModel.getBranch() == null ||  poModel.getBranch().isEmpty()){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Bank branch must not be empty.");
+            return poJSON;
+        }
+        
+        if (poModel.getClearingDays() <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Clearing days must be greater than zero.");
+            return poJSON;
+        }
+        
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());
         
