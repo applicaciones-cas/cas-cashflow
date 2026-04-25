@@ -131,6 +131,8 @@ public class DisbursementVoucher extends Transaction {
     public String psIndustry = "";
     public String psClient = "";
     public String psPayee = "";
+    public String psBankName = "";
+    public String psBankAccountNo = "";
     public String psParticular = "";
     public String psApprover = "";
     public boolean pbIsUpdateAmountPaid = false;
@@ -175,11 +177,15 @@ public class DisbursementVoucher extends Transaction {
     public void setSearchClient(String clientName) { psClient = clientName; }
     public void setSearchPayee(String payeeName) { psPayee = payeeName; }
     public void setSearchParticular(String particular) { psParticular = particular; }
+    public void setSearchBankName(String bankName) { psBankName = bankName; }
+    public void setSearchBankAccountNo(String bankAccountNo) { psBankAccountNo = bankAccountNo; }
     public String getSearchIndustry() { return psIndustry; }
     public String getSearchBranch() { return psBranch; }
     public String getSearchClient() { return psClient; }
     public String getSearchPayee() { return psPayee; }
     public String getSearchParticular() { return psParticular; }
+    public String getSearchBankName() { return psBankName; }
+    public String getSearchBankAccountNo() { return psBankAccountNo; }
     
     public JSONObject NewTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
         if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
@@ -1846,7 +1852,7 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchBankAccount(String value, String Banks, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchBankAccount(String value, String Banks, boolean byCode, boolean bySearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
         object.setCompanyId(Master().getCompanyID());
@@ -1858,7 +1864,10 @@ public class DisbursementVoucher extends Transaction {
         }
         
         if ("success".equals((String) poJSON.get("result"))) {
-            switch(Master().getDisbursementType()){
+            if(bySearch){
+                setSearchBankAccountNo(object.getModel().getAccountNo());
+            } else {
+                switch(Master().getDisbursementType()){
                 case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
                 case DisbursementStatic.DisbursementType.WIRED:
                     OtherPayments().getModel().setBankID(object.getModel().getBankId());
@@ -1868,27 +1877,32 @@ public class DisbursementVoucher extends Transaction {
                     CheckPayments().getModel().setBankID(object.getModel().getBankId());
                     CheckPayments().getModel().setBankAcountID(object.getModel().getBankAccountId());
                 break;
+                }
+                Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
             }
-            Master().setBankPrint(String.valueOf(object.getModel().isBankPrinting() ? 1 : 0));
         }
         return poJSON;
     }
 
-    public JSONObject SearchBanks(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchBanks(String value, boolean byCode, boolean bySearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Banks object = new ParamControllers(poGRider, logwrapr).Banks();
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            CheckPayments().getModel().setBankID(object.getModel().getBankID());
-            switch(Master().getDisbursementType()){
-                case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
-                case DisbursementStatic.DisbursementType.WIRED:
-                    OtherPayments().getModel().setBankID(object.getModel().getBankID());
-                break;
-                default:
-                    CheckPayments().getModel().setBankID(object.getModel().getBankID());
-                break;
+            if(bySearch){
+                setSearchBankName(object.getModel().getBankName());
+            } else {
+                CheckPayments().getModel().setBankID(object.getModel().getBankID());
+                switch(Master().getDisbursementType()){
+                    case DisbursementStatic.DisbursementType.DIGITAL_PAYMENT:
+                    case DisbursementStatic.DisbursementType.WIRED:
+                        OtherPayments().getModel().setBankID(object.getModel().getBankID());
+                    break;
+                    default:
+                        CheckPayments().getModel().setBankID(object.getModel().getBankID());
+                    break;
+                }
             }
         }
 
