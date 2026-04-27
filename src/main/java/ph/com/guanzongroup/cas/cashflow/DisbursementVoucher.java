@@ -204,6 +204,14 @@ public class DisbursementVoucher extends Transaction {
     * @throws GuanzonException if business logic validation fails
     */
     public JSONObject NewTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
+        //Clear Data
+        resetMaster();
+        Detail().clear();
+        resetJournal();
+        resetCheckPayment();
+        resetOtherPayment();
+        WTaxDeduction().clear();
+        
         if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
             poJSON.put("result", "error");
             poJSON.put("message", "The Finance Department configuration is missing. This field is required to proceed.\nPlease contact your system administrator for assistance.");
@@ -217,13 +225,6 @@ public class DisbursementVoucher extends Transaction {
             poJSON.put("message", "User is not authorized to create a disbursement voucher." );
             return poJSON;
         }
-        
-        resetMaster();
-        Detail().clear();
-        resetJournal();
-        resetCheckPayment();
-        resetOtherPayment();
-        WTaxDeduction().clear();
         
         poJSON = newTransaction();
         if ("error".equals((String) poJSON.get("result"))) {
