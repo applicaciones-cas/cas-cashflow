@@ -698,7 +698,7 @@ public class DisbursementVoucher extends Transaction {
                     "  b.sPositnID " +
                     "FROM xxxSysUser a " +
                     "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
-                    "LEFT JOIN POSITION c ON c.sPositnID = b.sPositnID  " +
+                    "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
                     "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
                     "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
         
