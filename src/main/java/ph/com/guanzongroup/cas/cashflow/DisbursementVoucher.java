@@ -146,7 +146,14 @@ public class DisbursementVoucher extends Transaction {
     
     public List<Model> paMaster;
     public List<TransactionAttachment> paAttachments;
-    
+    /**
+    * Initializes a disbursement transaction by setting up models, controllers,
+    * and required data collections.
+    *
+    * @return initialized transaction data as a {@link JSONObject}
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if initialization fails due to business logic
+    */
     public JSONObject InitTransaction() throws SQLException, GuanzonException {
         SOURCE_CODE = "DISb";
 
@@ -187,6 +194,15 @@ public class DisbursementVoucher extends Transaction {
     public String getSearchBankName() { return psBankName; }
     public String getSearchBankAccountNo() { return psBankAccountNo; }
     
+    /**
+    * Creates a new disbursement transaction after validating configuration
+    * and user authorization, then initializes default values.
+    *
+    * @return transaction result as a {@link JSONObject}
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic validation fails
+    */
     public JSONObject NewTransaction() throws CloneNotSupportedException, SQLException, GuanzonException {
         if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
             poJSON.put("result", "error");
@@ -227,11 +243,30 @@ public class DisbursementVoucher extends Transaction {
         initFields();
         return poJSON;
     }
-
+    
+    /**
+     * Saves the current transaction.
+     *
+     * @return result as a {@link JSONObject}
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if saving fails due to business logic
+     * @throws CloneNotSupportedException if cloning fails
+     */
     public JSONObject SaveTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         return saveTransaction();
     }
-
+    
+    /**
+     * Opens an existing transaction and loads all related data including journal,
+     * tax deductions, attachments, and payment details.
+     *
+     * @param transactionNo the transaction number to open
+     * @return result as a {@link JSONObject}
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if business logic fails
+     * @throws ScriptException if script processing fails
+     */
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
         //Reset Transaction
         resetTransaction();
@@ -281,7 +316,17 @@ public class DisbursementVoucher extends Transaction {
         computeFields(false); //Recompute fields
         return poJSON;
     }
-
+    
+    /**
+     * Updates the current transaction after validating configuration and
+     * reloads related data such as journal, tax deductions, and payment details.
+     *
+     * @return result as a {@link JSONObject}
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if business logic fails
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws ScriptException if script processing fails
+     */
     public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         
         if(System.getProperty("sys.dept.finance") == null || "".equals(System.getProperty("sys.dept.finance"))){
@@ -330,6 +375,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Requests approval if the current user lacks sufficient rights and
+     * validates the approving officer.
+     *
+     * @return result as a {@link JSONObject}
+     */
     public JSONObject callApproval(){
         poJSON = new JSONObject();
         if (poGRider.getUserLevel() <= UserRight.ENCODER) {
@@ -350,10 +401,27 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+    /**
+    * Sets the form identifier for the transaction.
+    *
+    * @param fsForm the form name or code
+    */
     private String psForm = "";
     public void setForm(String fsForm){
         psForm = fsForm;
     }
+    
+    /**
+    * Validates if the transaction can be updated based on its current status
+    * and form context, reloading data if status has changed.
+    *
+    * @param isEntry true if called during entry mode, false otherwise
+    * @return result as a {@link JSONObject}
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject checkUpdateTransaction(boolean isEntry) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         
@@ -437,6 +505,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Returns the descriptive label of a transaction status code.
+    *
+    * @param lsStatus the status code
+    * @return corresponding status description
+    */
     public String getStatus(String lsStatus){
         switch(lsStatus){
             case DisbursementStatic.VOID:
@@ -463,6 +537,13 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /**
+    * Checks if a transition from the current status to the target status is allowed.
+    *
+    * @param current current transaction status
+    * @param target target status to transition into
+    * @return true if transition is allowed, false otherwise
+    */
     public boolean isAllowed(String current, String target) {
         switch (target) {
             case DisbursementStatic.RETURNED_I:
@@ -563,6 +644,14 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Retrieves the employee ID linked to a system user ID.
+    *
+    * @param fsUserId system user ID
+    * @return employee number if found, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
     public String getEmployeeID(String fsUserId) throws SQLException, GuanzonException {
         String lsUpdateBy = "";
         String lsDate = "";
@@ -589,6 +678,15 @@ public class DisbursementVoucher extends Transaction {
         return "";
     }
     
+    /**
+    * Checks if a user has an allowed position for a specific transaction status.
+    *
+    * @param fsStatus transaction status
+    * @param fsUserId user ID
+    * @return position name if authorized, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
     public String checkPosition(String fsStatus, String fsUserId) throws SQLException, GuanzonException{
         String lsSQL = " SELECT   " +
                     "  a.sUserIDxx, " +
@@ -688,6 +786,19 @@ public class DisbursementVoucher extends Transaction {
     }
     
     /*Update Transaction Status*/
+    
+    /**
+    * Confirms a disbursement transaction after validating status, payments,
+    * user authorization, and required approvals.
+    *
+    * @param remarks confirmation remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = DisbursementStatic.CONFIRMED;
@@ -777,6 +888,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Verifies a disbursement transaction after validating its status and user authorization.
+    *
+    * @param remarks verification remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         String lsStatus = DisbursementStatic.VERIFIED;
@@ -834,6 +956,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Approves a disbursement transaction after validating status, authorization,
+    * and related transactions, then commits the update.
+    *
+    * @param remarks approval remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject ApproveTransaction(String remarks)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -905,7 +1039,20 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "Transaction approved successfully.");
         return poJSON;
     }
-
+    
+    /**
+     * Certifies one or more disbursement transactions after validating approval,
+     * authorization, and entry rules, then updates their status.
+     *
+     * @param remarks certification remarks
+     * @param fasTransactionNo list of transaction numbers to certify
+     * @return result as a {@link JSONObject}
+     * @throws ParseException if parsing fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if business logic fails
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws ScriptException if script processing fails
+     */
     public JSONObject CertifyTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -985,6 +1132,19 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Authorizes one or more disbursement transactions after validating approval,
+    * user role, and linked/related transactions, then updates their status.
+    *
+    * @param remarks authorization remarks
+    * @param fasTransactionNo list of transaction numbers to authorize
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject AuthorizeTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -1070,6 +1230,19 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Disapproves one or more disbursement transactions after validating user
+     * authorization, entry rules, and linked/related transactions, then updates status.
+     *
+     * @param remarks disapproval remarks
+     * @param fasTransactionNo list of transaction numbers to disapprove
+     * @return result as a {@link JSONObject}
+     * @throws ParseException if parsing fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if business logic fails
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws ScriptException if script processing fails
+     */
     public JSONObject DisApproveTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -1155,6 +1328,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Disapproves a disbursement transaction after validating user authorization,
+    * current status, and related transactions, then updates its status.
+    *
+    * @param remarks disapproval remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject DisApproveTransaction(String remarks)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -1232,7 +1417,19 @@ public class DisbursementVoucher extends Transaction {
         poJSON.put("message", "Transaction disapproved successfully.");
         return poJSON;
     }
-        
+    
+    /**
+    * Voids a disbursement transaction after validating status, user authorization,
+    * and related/linked transactions, then updates its status.
+    *
+    * @param remarks voiding remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */   
     public JSONObject VoidTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
@@ -1301,6 +1498,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Cancels a disbursement transaction after validating current status,
+    * user authorization, approval hierarchy, and related transactions.
+    *
+    * @param remarks cancellation remarks
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject CancelTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
@@ -1392,6 +1601,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Returns a disbursement transaction after validating status, user authorization,
+     * approval level, and related transactions. Handles both initial and normal return cases.
+     *
+     * @param remarks return remarks
+     * @return result as a {@link JSONObject}
+     * @throws ParseException if parsing fails
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if business logic fails
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws ScriptException if script processing fails
+     */
     public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
 
@@ -1488,6 +1709,19 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Returns multiple disbursement transactions after validating approval authority,
+    * status rules, and linked/related transactions. Processes each transaction in sequence.
+    *
+    * @param remarks return remarks
+    * @param fasTransactionNo list of transaction numbers to return
+    * @return result as a {@link JSONObject}
+    * @throws ParseException if parsing fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws ScriptException if script processing fails
+    */
     public JSONObject ReturnTransaction(String remarks,List<String> fasTransactionNo)
             throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
@@ -1574,6 +1808,17 @@ public class DisbursementVoucher extends Transaction {
     }
     
     /*Search Master References*/
+    
+    /**
+    * Searches disbursement transactions based on filters (company, branch, payee, client,
+    * and transaction status) and opens the selected record.
+    *
+    * @return result as a {@link JSONObject}
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws ScriptException if script execution fails
+    */
     public JSONObject SearchTransaction() throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         String lsTransStat = "";
@@ -1621,6 +1866,17 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /**
+    * Searches disbursement transactions filtered by reference number and other
+    * criteria (company, payee, and status), then opens the selected record.
+    *
+    * @param fsReferenceNo reference/transaction number filter
+    * @return result as a {@link JSONObject}
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if business logic fails
+    * @throws ScriptException if script execution fails
+    */
     public JSONObject SearchTransaction(String fsReferenceNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         if(fsReferenceNo == null) { fsReferenceNo = ""; }
@@ -1669,6 +1925,16 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /**
+    * Searches for an Industry record based on a value.
+    *
+    * @param value   the search keyword or code
+    * @param byCode  true if searching by industry code, false if by description
+    * @return JSONObject containing the result of the search operation
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -1681,6 +1947,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Searches for a Branch record and updates relevant fields based on the result.
+    *
+    * @param value     the search keyword or branch code
+    * @param byCode    true if searching by branch code, false if by branch name
+    * @param isSearch  true to set search field, false to assign branch to master record
+    * @return JSONObject containing the result of the search operation
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchBranch(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -1698,6 +1975,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Searches for a Branch record based on a value.
+    *
+    * @param value     the search keyword or branch code
+    * @param byCode    true if searching by branch code, false if by branch name
+    * @param isSearch  true to set search display value, false to assign to master record
+    * @return JSONObject containing the result of the search operation
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -1720,6 +2008,16 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
+    /**
+    * Searches for a Supplier (Payee) record based on a company value.
+    *
+    * @param value     the search keyword or company name/code
+    * @param byCode    true if searching by code, false if by company name
+    * @param isSearch  true to set search display values only, false to assign values to master record
+    * @return JSONObject containing the result of the search operation
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchSupplier(String value, boolean byCode, boolean isSearch) throws SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -1744,6 +2042,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
+    /**
+    * Searches for a Particular record and assigns or displays the result.
+    *
+    * @param value     the search keyword or particular code
+    * @param row       the detail row index where the result will be applied
+    * @param byCode    true if searching by code, false if by description
+    * @param isSearch  true to set search display value, false to assign to detail record
+    * @return JSONObject containing the result of the search operation
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database access error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchParticular(String value, int row, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Particular object = new CashflowControllers(poGRider, logwrapr).Particular();
         object.setRecordStatus(RecordStatus.ACTIVE);
@@ -1760,6 +2070,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Searches and assigns a Tax Code after validating supplier and period data.
+    *
+    * @param value   tax code or keyword
+    * @param row     target row index
+    * @param byCode  true to search by code, false otherwise
+    * @return JSONObject with result status and row index
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchTaxCode(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         poJSON = new JSONObject();
         poJSON.put("row", row);
@@ -1811,6 +2132,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
+    /**
+    * Searches and assigns a Withholding Tax Particular after validation.
+    *
+    * @param value   search keyword or code
+    * @param row     target row index
+    * @param byCode  true to search by code, false otherwise
+    * @return JSONObject with result status and row index
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject SearchParticular(String value, int row, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         if(WTaxDeduction(row).getModel().getTaxCode() == null || "".equals(WTaxDeduction(row).getModel().getTaxCode())){
             poJSON.put("result", "error");
@@ -1852,7 +2184,19 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchBankAccount(String value, String Banks, boolean byCode, boolean bySearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    /**
+    * Searches for a Bank Account and assigns or displays the result.
+    *
+    * @param value     search keyword or account number
+    * @param Banks     optional bank filter
+    * @param byCode    true to search by code, false otherwise
+    * @param isSearch  true to set display value, false to assign to payment record
+    * @return JSONObject with result status
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
+    public JSONObject SearchBankAccount(String value, String Banks, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus(RecordStatus.ACTIVE);
         object.setCompanyId(Master().getCompanyID());
@@ -1864,7 +2208,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         if ("success".equals((String) poJSON.get("result"))) {
-            if(bySearch){
+            if(isSearch){
                 setSearchBankAccountNo(object.getModel().getAccountNo());
             } else {
                 switch(Master().getDisbursementType()){
@@ -1884,13 +2228,24 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchBanks(String value, boolean byCode, boolean bySearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    /**
+    * Searches for a Bank and assigns or displays the result.
+    *
+    * @param value     search keyword or bank code
+    * @param byCode    true to search by code, false otherwise
+    * @param isSearch  true to set display value, false to assign to payment record
+    * @return JSONObject with result status
+    * @throws ExceptionInInitializerError if initialization fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
+    public JSONObject SearchBanks(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Banks object = new ParamControllers(poGRider, logwrapr).Banks();
         object.setRecordStatus(RecordStatus.ACTIVE);
 
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            if(bySearch){
+            if(isSearch){
                 setSearchBankName(object.getModel().getBankName());
             } else {
                 CheckPayments().getModel().setBankID(object.getModel().getBankID());
@@ -1911,6 +2266,13 @@ public class DisbursementVoucher extends Transaction {
     /*END of search references*/
     
     /*Validate detail exisitence*/
+    /**
+    * Checks if an account code already exists in the journal details.
+    *
+    * @param fnRow      current row index
+    * @param fsAcctCode account code to validate
+    * @return JSONObject indicating if duplicate exists or not
+    */
     public JSONObject checkExistAcctCode(int fnRow, String fsAcctCode){
         poJSON = new JSONObject();
 
@@ -2019,12 +2381,24 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Gets the quarter (1–4) of the given date.
+    *
+    * @param fdDate the date to evaluate
+    * @return the quarter number (1 to 4)
+    */
     private int getQuarter(LocalDate fdDate){
         int month = fdDate.getMonthValue();
         int quarter = ((month - 1) / 3) + 1;
         return quarter;
     }
     
+    /**
+    * Generates the next voucher number based on the latest record per company.
+    *
+    * @return the next formatted voucher number
+    * @throws SQLException if a database error occurs
+    */
     public String getVoucherNo() throws SQLException {
         String lsSQL = "SELECT sVouchrNo FROM Disbursement_Master";
         //Branch code is not stated in BR
@@ -2232,6 +2606,11 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Computes withholding tax amount and validates tax base rules.
+    *
+    * @return JSONObject containing computation result and message
+    */
     public JSONObject computeTaxAmount(){
         poJSON = new JSONObject();
         
@@ -2314,6 +2693,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
    
+    /**
+    * Computes detail fields and validates amounts per row.
+    *
+    * @param isValidate true to stop and return on validation error
+    * @return JSONObject containing result status and message
+    */
     public JSONObject computeDetailFields(boolean isValidate){
                 
         try {
@@ -2357,6 +2742,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Computes VAT, exempt, and applied amounts for a detail row.
+    *
+    * @param fnRow detail row index
+    * @return JSONObject containing computation result and message
+    */
     private JSONObject computeDetail(int fnRow){
         poJSON = new JSONObject();
         poJSON = Detail(fnRow).setDetailAdvances(Master().getTransactionNo());
@@ -2908,7 +3299,15 @@ public class DisbursementVoucher extends Transaction {
         MiscUtil.close(loRS);
         return poJSON;
     }
+    
     List<String> paAttachmentsSource;
+    /**
+    * Loads and downloads all attachments for transaction details.
+    *
+    * @return JSONObject containing load result and message
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject loadAttachments()
             throws SQLException,
             GuanzonException {
@@ -2982,24 +3381,53 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
+    /**
+    * Creates a new TransactionAttachment instance.
+    *
+    * @return new TransactionAttachment object
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     private TransactionAttachment TransactionAttachment()
             throws SQLException,
             GuanzonException {
         return new SysTableContollers(poGRider, null).TransactionAttachment();
     }
-
+    
+    /**
+    * Gets the list of transaction attachments.
+    *
+    * @return list of TransactionAttachment objects
+    */
     private List<TransactionAttachment> TransactionAttachmentList() {
         return paAttachments;
     }
-
+    
+    /**
+    * Gets a transaction attachment by row index.
+    *
+    * @param row index of the attachment
+    * @return TransactionAttachment object
+    */
     public TransactionAttachment TransactionAttachmentList(int row) {
         return (TransactionAttachment) paAttachments.get(row);
     }
     
+    /**
+    * Gets the source description of a transaction attachment.
+    *
+    * @param row index of the attachment
+    * @return source description string
+    */
     public String TransactionAttachmentSource(int row) {
         return (String) paAttachmentsSource.get(row);
     }
 
+    /**
+    * Gets the total number of transaction attachments.
+    *
+    * @return attachment count
+    */
     public int getTransactionAttachmentCount() {
         if (paAttachments == null) {
             paAttachments = new ArrayList<>();
@@ -3008,24 +3436,51 @@ public class DisbursementVoucher extends Transaction {
         return paAttachments.size();
     }
     
+    /**
+    * Gets the master disbursement model.
+    *
+    * @return Disbursement master model
+    */
     @Override
     public Model_Disbursement_Master Master() { 
         return (Model_Disbursement_Master) poMaster; 
     }
     
+    /**
+    * Gets a detail record by row index.
+    *
+    * @param row detail row index
+    * @return disbursement detail model
+    */
     @Override
     public Model_Disbursement_Detail Detail(int row) {
         return (Model_Disbursement_Detail) paDetail.get(row); 
     }
     
+    /**
+    * Gets the list of withholding tax deductions.
+    *
+    * @return list of WTax deduction models
+    */
     public List<WithholdingTaxDeductions> WTaxDeduction() {
         return paWTaxDeductions; 
     }
     
+    /**
+    * Gets a withholding tax deduction by row index.
+    *
+    * @param row deduction row index
+    * @return withholding tax deduction model
+    */
     public WithholdingTaxDeductions WTaxDeduction(int row) {
         return (WithholdingTaxDeductions) paWTaxDeductions.get(row); 
     }
     
+    /**
+    * Gets or initializes the CheckPayments controller.
+    *
+    * @return CheckPayments instance
+    */
     public CheckPayments CheckPayments() {
         try {
             if (poCheckPayments == null) {
@@ -3038,6 +3493,11 @@ public class DisbursementVoucher extends Transaction {
         return poCheckPayments;
     }
     
+    /**
+    * Gets or initializes the OtherPayments controller.
+    *
+    * @return OtherPayments instance
+    */
     public OtherPayments OtherPayments() {
         try{
             if (poOtherPayments == null) {
@@ -3050,6 +3510,11 @@ public class DisbursementVoucher extends Transaction {
         return poOtherPayments;
     }
     
+    /**
+    * Gets or initializes the Journal controller.
+    *
+    * @return Journal instance
+    */
     public Journal Journal(){
         try{
             if (poJournal == null) {
@@ -3062,10 +3527,23 @@ public class DisbursementVoucher extends Transaction {
         return poJournal;
     }
     
+    /**
+    * Gets the number of withholding tax deductions.
+    *
+    * @return deduction count
+    */
     public int getWTaxDeductionsCount() {
         return paWTaxDeductions.size();
     }
     
+    /**
+    * Adds a new Withholding Tax Deduction row after validating the last entry.
+    *
+    * @return JSONObject indicating success or error status
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business logic error occurs
+    */
     public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         if (getWTaxDeductionsCount() > 0) {
@@ -3084,6 +3562,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Removes or marks a Withholding Tax Deduction row as reversed.
+    *
+    * @param fnRow row index to remove or reverse
+    * @return JSONObject indicating operation result
+    */
     public JSONObject removeWTDeduction(int fnRow) {
         if (WTaxDeduction(fnRow).getEditMode() == EditMode.ADDNEW) {
             WTaxDeduction().remove(fnRow);
@@ -3098,6 +3582,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Adds a new detail record after validating the last entry.
+    *
+    * @return JSONObject indicating success or error status
+    * @throws CloneNotSupportedException if cloning fails
+    */
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
             if (Detail(getDetailCount() - 1).getSourceNo().isEmpty()) {
@@ -3111,6 +3601,11 @@ public class DisbursementVoucher extends Transaction {
         return addDetail();
     }
     
+    /**
+    * Removes all detail records and resets related data (WTax, journal, attachments).
+    *
+    * @return JSONObject indicating operation result
+    */
     public JSONObject removeDetails() {
         poJSON = new JSONObject();
         Iterator<Model> detail = Detail().iterator();
@@ -3138,21 +3633,37 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Gets the full list of Disbursement Master records.
+    *
+    * @return list of Disbursement Master models
+    */
     public List<Model_Disbursement_Master> getMasterList() {
         return (List<Model_Disbursement_Master>) (List<?>) paMaster;
     }
 
+    /**
+    * Gets a specific Disbursement Master record by index.
+    *
+    * @param masterRow index of the master record
+    * @return Disbursement Master model
+    */
     public Model_Disbursement_Master getMaster(int masterRow) {
         return (Model_Disbursement_Master) paMaster.get(masterRow);
     }
 
     /*RESET CACHE ROW SET*/
+    /**
+     * Resets the master record to default state.
+     */
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
 //        Master().setIndustryID(psIndustryId);
         Master().setCompanyID(psCompanyId);
     }
-
+    /**
+     * Resets journal transaction.
+     */
     public void resetJournal() {
         try {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
@@ -3162,6 +3673,9 @@ public class DisbursementVoucher extends Transaction {
         }
     }
 
+    /**
+     * Resets check payment controller.
+     */
     public void resetCheckPayment(){
         try {
             poCheckPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
@@ -3169,7 +3683,10 @@ public class DisbursementVoucher extends Transaction {
             Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+    
+    /**
+     * Resets other payment controller.
+     */
     public void resetOtherPayment(){
         try {
             poOtherPayments = new CashflowControllers(poGRider, logwrapr).OtherPayments();
@@ -3177,7 +3694,10 @@ public class DisbursementVoucher extends Transaction {
             Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
-
+    
+    /**
+     * Resets the entire transaction including master, details, WTax, and UI fields.
+     */
     public void resetTransaction(){
         resetMaster();
         resetJournal();
@@ -3192,10 +3712,18 @@ public class DisbursementVoucher extends Transaction {
         setSearchClient("");
         setSearchParticular("");
         setSearchPayee("");
+        setSearchBankAccountNo("");
+        setSearchBankName("");
+        
         psApprover = "";
         pbPrint = false;
     }
     
+    /**
+    * Reloads detail records by removing invalid entries and ensuring at least one valid row exists.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    */
     public void ReloadDetail() throws CloneNotSupportedException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
@@ -3253,6 +3781,14 @@ public class DisbursementVoucher extends Transaction {
 //    }
 //    
 //    
+    /**
+    * Cleans journal details by removing invalid or empty entries,
+    * ensures at least one valid row exists, and adds a new detail row
+    * when the last entry is valid and contains amounts.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    */
     public void ReloadJournal() throws CloneNotSupportedException, SQLException{
         int lnCtr = Journal().getDetailCount() - 1;
         while (lnCtr >= 0) {
@@ -3317,6 +3853,15 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /**
+    * Reloads withholding tax deductions by removing invalid entries,
+    * ensuring at least one valid record exists, and preserving period
+    * dates when a row is removed.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if a business rule violation occurs
+    */
     private JSONObject validateCheckPayment(){
         poJSON = new JSONObject();
         if(Logical.YES.equals(Master().getBankPrint())){
@@ -3351,6 +3896,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Initializes disbursement master fields with default values such as branch,
+    * company, transaction date, and status.
+    *
+    * @return JSON result indicating success or error details
+    */
     @Override
     public JSONObject initFields() {
         //Put initial model values here/
@@ -3374,6 +3925,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
 
+    /**
+    * Validates the current entry using DisbursementValidator.
+    *
+    * @param status transaction status to validate against
+    * @return JSON result of validation
+    */
     @Override
     protected JSONObject isEntryOkay(String status) {
         GValidator loValidator = new DisbursementValidator();
@@ -3384,6 +3941,16 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Validates and prepares disbursement data before saving.
+    * Performs field validation, recomputation, and change detection
+    * to ensure data integrity and prevent redundant updates.
+    *
+    * @return JSON result indicating success or validation error
+    * @throws SQLException database error
+    * @throws GuanzonException custom validation error
+    * @throws CloneNotSupportedException cloning error
+    */
     @Override
     public JSONObject willSave() throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
@@ -3726,6 +4293,14 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Saves the disbursement after validating entry rules.
+    *
+    * @return JSON result from entry validation
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if database error occurs
+    * @throws GuanzonException if validation or business rule fails
+    */
    @Override
     public JSONObject save() throws CloneNotSupportedException, SQLException, GuanzonException {
         /*Put saving business rules here*/
@@ -3733,6 +4308,12 @@ public class DisbursementVoucher extends Transaction {
 
     }
 
+    /**
+    * Saves all related disbursement transactions including check/other payments,
+    * bank account updates, journal entries, withholding tax deductions, and linked records.
+    *
+    * @return JSON result indicating success or failure of save operation
+    */
     @Override
     public JSONObject saveOthers() {
         try {
@@ -3984,6 +4565,13 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Extracts unique category codes from disbursement details based on source type.
+    *
+    * @return list of distinct category codes from detail records
+    * @throws SQLException database error
+    * @throws GuanzonException custom business rule error
+    */
     private List<String> getCategoryDetail() throws SQLException, GuanzonException{
         //get detail per category
         List<String> laPerCategory = new ArrayList();
@@ -4020,25 +4608,34 @@ public class DisbursementVoucher extends Transaction {
         return laPerCategory;
     } 
     
+    /**
+    * Called after successful save completion.
+    */
     @Override
     public void saveComplete() {
         /*This procedure was called when saving was complete*/
         System.out.println("Transaction saved successfully.");
     }
     
+    /**
+    * Sets flag for updating amount paid status.
+    *
+    * @param fdblAmountPaid true if amount paid should be updated
+    */
     public void setUpdateAmountPaid(boolean fdblAmountPaid){
         pbIsUpdateAmountPaid = fdblAmountPaid;
     }
     
     /**
-     * Update linked transaction in DV Detail
-     * @param fsStatus
-     * @return
-     * @throws SQLException
-     * @throws GuanzonException
-     * @throws CloneNotSupportedException
-     * @throws ParseException 
-     */
+    * Updates all linked transactions related to the disbursement voucher details.
+    *
+    * @param fsStatus transaction status used for update rules
+    * @return JSON result indicating success or failure
+    * @throws SQLException database error
+    * @throws GuanzonException business validation error
+    * @throws CloneNotSupportedException cloning error
+    * @throws ParseException date parsing error
+    */
     public JSONObject updateLinkedTransactions(String fsStatus) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
         poJSON = new JSONObject();
         //Call Class for updating of linked transactions in DV Details
@@ -4055,6 +4652,18 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Updates related journal and payment transactions based on the disbursement status.
+    * Handles confirmation, voiding, cancellation, return, and disapproval of records.
+    *
+    * @param fsStatus transaction status used to determine update action
+    * @return JSON result indicating success or failure
+    * @throws ParseException if date parsing fails
+    * @throws SQLException database error
+    * @throws GuanzonException business rule violation
+    * @throws CloneNotSupportedException cloning error
+    * @throws ScriptException scripting error during processing
+    */
     public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         
@@ -4162,6 +4771,13 @@ public class DisbursementVoucher extends Transaction {
     }
     
     /*Convert Date to String*/
+    /**
+    * Converts a Date to a short string format (yyyy-MM-dd).
+    * Returns default value if input is null.
+    *
+    * @param fdValue date value
+    * @return formatted date string
+    */
     private static String xsDateShort(Date fdValue) {
         if(fdValue == null){
             return "1900-01-01";
@@ -4170,13 +4786,25 @@ public class DisbursementVoucher extends Transaction {
         String date = sdf.format(fdValue);
         return date;
     }
-
+    
+    /**
+     * Converts a date string (yyyy-MM-dd) to LocalDate.
+     *
+     * @param val date string
+     * @return LocalDate representation
+     */
     private LocalDate strToDate(String val) {
         DateTimeFormatter date_formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         LocalDate localDate = LocalDate.parse(val, date_formatter);
         return localDate;
     }
     
+    /**
+    * Validates journal entries including debit/credit balance,
+    * account code presence, and valid reporting dates.
+    *
+    * @return JSON validation result with continue flag
+    */
     private JSONObject validateJournal(){
         poJSON = new JSONObject();
         poJSON.put("continue", false);
@@ -4236,6 +4864,14 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    
+    /**
+     * Resets journal entries if the given source transaction does not exist
+     * in the current detail list and journal is in ADDNEW mode.
+     *
+     * @param fsSourceNo source transaction number
+     * @param fsSourceCode source transaction code
+     */
     private void resetJournal(String fsSourceNo, String fsSourceCode){
         boolean lbExist = false;
         for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
@@ -4297,6 +4933,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Validates that detail records do not mix incompatible source codes.
+    *
+    * @param fsSourceCode source code to validate against existing details
+    * @return JSON result indicating success or validation error
+    */
     private JSONObject validateDetailSourceCode(String fsSourceCode){
         for(int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++){
             if(Detail(lnCtr).getSourceCode() != null && !"".equals(Detail(lnCtr).getSourceCode())){
@@ -4317,6 +4959,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Returns a human-readable description of a source code.
+    *
+    * @param fsSourceCode source code
+    * @return description of the source code
+    */
     public String getSourceCodeDescription(String fsSourceCode){
         switch(fsSourceCode){
             case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
@@ -4497,6 +5145,17 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+    * Loads SOA-related transactions and maps them into disbursement details.
+    * Handles linked sources such as Payment Request, PO Receiving, and AP Adjustments,
+    * computes balances, VAT, and validates each detail before adding to the list.
+    *
+    * @param transactionNo SOA transaction number
+    * @return JSON result indicating success or failure
+    * @throws CloneNotSupportedException cloning error
+    * @throws GuanzonException business rule error
+    * @throws SQLException database error
+    */
     private JSONObject setSOAToDetail(String transactionNo) throws CloneNotSupportedException, GuanzonException, SQLException{
         SOATagging loController = new CashflowControllers(poGRider, logwrapr).SOATagging();
         loController.InitTransaction();
@@ -5396,6 +6055,12 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    /**
+     * Retrieves the latest (maximum) check number used for the current bank account.
+     *
+     * @return highest check number as String
+     * @throws SQLException database error during query execution
+     */
     public String getMaxCheckNo() throws SQLException {
         String lsCheckNo = "";
         String lsSQL = " SELECT "
@@ -5613,6 +6278,14 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+   /**
+    * Retrieves linked disbursement voucher transactions for a given source.
+    *
+    * @param sourceNo source transaction number
+    * @param sourceCode source transaction code
+    * @param client client name filter
+    * @return concatenated voucher numbers of linked transactions
+    */
     public String getLinkedPayment(String sourceNo, String sourceCode, String client){
         String lsTransactionNo = "";
         try {
