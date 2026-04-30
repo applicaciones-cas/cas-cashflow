@@ -14,6 +14,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.h2.tools.RunScript;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
 import org.junit.Assert;
 import org.junit.jupiter.api.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -49,7 +50,7 @@ public class DocumentMappingTest {
             System.exit(1);
         }
 
-        if (!instance.logUser("gRider", "M001000001")){
+        if (!instance.logUser("gRider", "M001250015")){
             System.err.println(instance.getMessage());
             System.exit(1);
         }
@@ -128,6 +129,106 @@ public class DocumentMappingTest {
     // The methods must be annotated with annotation @Test. For example:
     //
     @Test
+    public void testNewTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        JSONObject loJSON;
+            
+            loJSON = poTrans.DocumentMapping().InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().NewTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().Master().setDocumentCode("GCsDSChk");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().Master().setDesciption("GCash Diposit Slip Check");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().Master().setEntryNo(3);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().Master().setEntryNo(3);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(0).setFieldCode("sActNumbr");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(0).setFontName("Arial");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(0).setFontSize(11);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            poTrans.DocumentMapping().AddDetail();
+            loJSON = poTrans.DocumentMapping().Detail(1).setFieldCode("nTotalDep");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(1).setFontName("Arial");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(1).setFontSize(11);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            poTrans.DocumentMapping().AddDetail();
+            loJSON = poTrans.DocumentMapping().Detail(2).setFieldCode("nTotalDep");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(2).setFontName("Arial");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().Detail(2).setFontSize(11);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            poTrans.DocumentMapping().AddDetail();
+            poTrans.DocumentMapping().AddDetail();
+            
+            loJSON = poTrans.DocumentMapping().SaveTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+                System.out.println((String) loJSON.get("message"));
+            }
+            
+            
+    }
+    
+    @Test
     public void testOpenTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
             
@@ -137,9 +238,9 @@ public class DocumentMappingTest {
                 Assert.fail();
             }
             
-            poTrans.DocumentMapping().setVerifyEntryNo(false);
+//            poTrans.DocumentMapping().setVerifyEntryNo(false);
 
-            loJSON = poTrans.DocumentMapping().OpenTransaction("MBTDSChk");
+            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -161,6 +262,116 @@ public class DocumentMappingTest {
                     System.out.println("");
                  }
             }
+            
+    }
+    
+    @Test
+    public void testUpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
+        JSONObject loJSON;
+            
+            loJSON = poTrans.DocumentMapping().InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+//            poTrans.DocumentMapping().setVerifyEntryNo(false);
+
+            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            instance.getDepartment();
+
+            System.out.println("");
+            int detailSize = poTrans.DocumentMapping().Detail().size();
+            if (detailSize > 0) {
+                 for (int lnCtr = 0; lnCtr < poTrans.DocumentMapping().Detail().size(); lnCtr++) {
+                    System.out.println("DETAIL------------------- " + (lnCtr + 1));
+                    System.out.println("document code : " + poTrans.DocumentMapping().Detail(lnCtr).getDocumentCode());
+                    System.out.println("font: " + poTrans.DocumentMapping().Detail(lnCtr).getFontName());
+                    System.out.println("PARTICULAR ID : " + String.valueOf(poTrans.DocumentMapping().Detail(lnCtr).getFontSize()));
+                    System.out.println("");
+                 }
+            }
+            loJSON = poTrans.DocumentMapping().UpdateTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().Detail(0).setFontSize(0);
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            loJSON = poTrans.DocumentMapping().SaveTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+                System.out.println((String) loJSON.get("message"));
+            }
+    }
+    
+    @Test
+    public void testDeactivateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
+        JSONObject loJSON;
+            
+            loJSON = poTrans.DocumentMapping().InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().DeactivateTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+    }
+    
+    @Test
+    public void testActivateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
+        JSONObject loJSON;
+            
+            loJSON = poTrans.DocumentMapping().InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            loJSON = poTrans.DocumentMapping().ActivateTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+    }
+    @Test
+    public void testSourceCode() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
+        JSONObject loJSON;
+            
+            loJSON = poTrans.DocumentMapping().InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+           poTrans.DocumentMapping().getSourceCode();
+           System.out.println("Source Code " + poTrans.DocumentMapping().getSourceCode());
+          
     }
     
     
