@@ -663,7 +663,7 @@ public class PaymentRequest extends Transaction {
     
     public void copyFile(String fsPath){
         Path source = Paths.get(fsPath);
-        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments");
+        Path targetDir = Paths.get(System.getProperty("sys.default.path.temp.attachments"));
 
         try {
             // Ensure target directory exists
@@ -1274,7 +1274,7 @@ public class PaymentRequest extends Transaction {
                     Path source = Paths.get(fsFilePath);
                     try {
                         // Copy file into the target directory with a new name
-                        Path target = Paths.get(System.getProperty("sys.default.path.temp") + "/attachments").resolve(lsNewFileName);
+                        Path target = Paths.get(System.getProperty("sys.default.path.temp.attachments")).resolve(lsNewFileName);
                         Files.copy(source, target, StandardCopyOption.REPLACE_EXISTING);
                         //check if file is existing
                         int lnChecker = 0;

@@ -271,6 +271,7 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject OpenTransaction(String transactionNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException {
         //Reset Transaction
         resetTransaction();
+        pbIsUpdateAmountPaid = false; //reset the value of update amount paid
         
         poJSON = openTransaction(transactionNo);
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -757,7 +758,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             case DisbursementStatic.VOID:
             case DisbursementStatic.CANCELLED:
-                //Who can VOID Transaction
+                //Who can VOID / Cancel Transaction
                 lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL("%Payable%") 
                                     );
 //            case DisbursementStatic.CANCELLED:
