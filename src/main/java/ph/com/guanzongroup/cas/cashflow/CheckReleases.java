@@ -843,7 +843,7 @@ public class CheckReleases extends Transaction {
         List<String> lsFilter = new ArrayList<>();
 
         if (fscheckno != null && !fscheckno.trim().isEmpty()) {
-            lsFilter.add("b.sBankName LIKE " + SQLUtil.toSQL(fscheckno + "%"));
+            lsFilter.add("a.sCheckNox LIKE " + SQLUtil.toSQL(fscheckno + "%"));
         }
         if (fspayee != null && !fspayee.trim().isEmpty()) {
             lsFilter.add("d.sPayeeNme LIKE " + SQLUtil.toSQL(fspayee + "%"));

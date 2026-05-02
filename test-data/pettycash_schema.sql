@@ -11,6 +11,7 @@ MySQL - 5.7.44-log : Database - gcasys_dbf
 
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 
+DROP TABLE IF EXISTS pettycash;
 /*Table structure for table `pettycash` */
 
 CREATE TABLE `pettycash` (
@@ -35,7 +36,7 @@ CREATE TABLE `pettycash` (
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 /*Table structure for table `pettycash_ledger` */
-
+DROP TABLE IF EXISTS pettycash_ledger;
 CREATE TABLE `pettycash_ledger` (
   `sPettyIDx` varchar(7) NOT NULL,
   `nLedgerNo` smallint(6) unsigned DEFAULT NULL,
@@ -50,6 +51,8 @@ CREATE TABLE `pettycash_ledger` (
   PRIMARY KEY (`sPettyIDx`,`sSourceCD`,`sSourceNo`),
   KEY `pcl_id_no` (`sPettyIDx`,`nLedgerNo`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS pettycash_ledger_history;
 
 CREATE TABLE `pettycash_ledger_history` (
   `sPettyIDx` varchar(7) NOT NULL,
