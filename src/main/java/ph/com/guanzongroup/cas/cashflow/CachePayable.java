@@ -86,8 +86,48 @@ public class CachePayable extends Transaction{
         poJSON.put("message", "Transaction paid successfully.");
         return poJSON;
     }
-
     
+    public JSONObject CancelTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = CachePayableStatus.CANCELLED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        if (lsStatus.equals((String) Master().getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already paid.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(CachePayableStatus.CANCELLED);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+
+        //change status
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction paid successfully.");
+        return poJSON;
+    }
+
     public JSONObject AddDetail() throws CloneNotSupportedException{
         if (Detail(getDetailCount() - 1).getTransactionType().isEmpty() && 
             Detail(getDetailCount() - 1).getGrossAmount() == 0.00) {

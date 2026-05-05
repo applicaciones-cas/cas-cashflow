@@ -332,8 +332,10 @@ public class APPaymentAdjustment extends Parameter {
         String lsSQL = " SELECT "
                 + "   sTransNox "
                 + " , sSourceNo "
+                + " , sSourceCd "
                 + "   FROM Cache_Payable_Master ";
-        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(getModel().getTransactionNo()));
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(getModel().getTransactionNo())
+                                                + " AND sSourceCd = " + SQLUtil.toSQL(psSource_Code));
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
@@ -488,8 +490,25 @@ public class APPaymentAdjustment extends Parameter {
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        String lsCachePayable = getCachePayable();
+        //Update cache payables
+        if(!lsCachePayable.isEmpty()){
+            poJSON = poCachePayable.OpenTransaction(lsCachePayable);
+            if ("error".equals((String) poJSON.get("result"))){
+                return poJSON;
+            }
+        } 
 
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, poModel.getTransactionNo());
+        
+        if(!lsCachePayable.isEmpty()){
+            poCachePayable.setWithParent(true);
+            poJSON = poCachePayable.CancelTransaction(remarks);
+            if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        }
 
         //change status
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
@@ -612,24 +631,6 @@ public class APPaymentAdjustment extends Parameter {
         return poJSON;
     }
     
-    public JSONObject SearchClient(String value, boolean byCode)
-            throws SQLException,
-            GuanzonException {
-        poJSON = new JSONObject();
-
-        Client object = new ClientControllers(poGRider, logwrapr).Client();
-        object.Master().setRecordStatus(RecordStatus.ACTIVE);
-        object.Master().setClientType("1");
-        poJSON = object.Master().searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            getModel().setClientId(object.Master().getModel().getClientId());
-//            getModel().setAddressId(object.ClientAddress().getModel().getAddressId()); //TODO
-//            getModel().setContactId(object.ClientInstitutionContact().getModel().getClientId()); //TODO
-        }
-
-        return poJSON;
-    }
-
     public JSONObject SearchCompany(String value, boolean byCode)
             throws SQLException,
             GuanzonException {
@@ -643,15 +644,76 @@ public class APPaymentAdjustment extends Parameter {
         }
         return poJSON;
     }
+    
+    //Replaced by script below - Arsiela 05-05-2026 
+//    public JSONObject SearchClient(String value, boolean byCode)
+//            throws SQLException,
+//            GuanzonException {
+//        poJSON = new JSONObject();
+//
+//        Client object = new ClientControllers(poGRider, logwrapr).Client();
+//        object.Master().setRecordStatus(RecordStatus.ACTIVE);
+//        object.Master().setClientType("1");
+//        poJSON = object.Master().searchRecord(value, byCode);
+//        if ("success".equals((String) poJSON.get("result"))) {
+//            getModel().setClientId(object.Master().getModel().getClientId());
+////            getModel().setAddressId(object.ClientAddress().getModel().getAddressId()); //TODO
+////            getModel().setContactId(object.ClientInstitutionContact().getModel().getClientId()); //TODO
+//        }
+//
+//        return poJSON;
+//    }
 
-    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchClient(String value, boolean byCode) throws SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
-        object.setRecordStatus("1");
-
-        poJSON = object.searchRecord(value, byCode);
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        
+        poJSON = object.searchRecordbyCompany(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
+            if(object.getModel().getAPClientID() == null || "".equals(object.getModel().getAPClientID())){
+                getModel().setClientId(object.getModel().getClientID());
+            } else {
+                getModel().setClientId(object.getModel().getAPClientID());
+            }
             getModel().setIssuedTo(object.getModel().getPayeeID());
-            getModel().setPayerCode(object.getModel().getRecordStatus());
+        }
+
+        return poJSON;
+    }
+    
+    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+//        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+//        object.setRecordStatus("1");
+//
+//        poJSON = object.searchRecord(value, byCode);
+//        if ("success".equals((String) poJSON.get("result"))) {
+//            getModel().setIssuedTo(object.getModel().getPayeeID());
+//            getModel().setPayerCode(object.getModel().getRecordStatus());
+//        }
+        //Tester Suggestion : Arsiela 05-05-2026
+        String lsClientID = getModel().getClientId();
+        if(lsClientID == null || "".equals(lsClientID)){
+            lsClientID = value;
+        }
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        System.out.println(" lsClientID : " + lsClientID);
+        poJSON = object.searchRecordbyClientID(lsClientID, lsClientID != null && !"".equals(lsClientID));
+        if ("success".equals((String) poJSON.get("result"))) {
+            if ( (object.getModel().getClientID() == null || "".equals(object.getModel().getClientID()))
+                && (object.getModel().getAPClientID() == null || "".equals(object.getModel().getAPClientID()))){
+                poJSON.put("result", "error");
+                poJSON.put("message", "AP Client information for the selected payee is not configured.\nPlease contact the system administrator for assistance.");
+                return poJSON;
+            }
+            
+            getModel().setIssuedTo(object.getModel().getPayeeID());
+            
+            if(object.getModel().getAPClientID() == null || "".equals(object.getModel().getAPClientID())){
+                getModel().setClientId(object.getModel().getClientID());
+            } else {
+                getModel().setClientId(object.getModel().getAPClientID());
+            }
         }
         return poJSON;
     }

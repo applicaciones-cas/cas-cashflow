@@ -1873,16 +1873,31 @@ public class DisbursementVoucher extends Transaction {
     * criteria (company, payee, and status), then opens the selected record.
     *
     * @param fsReferenceNo reference/transaction number filter
+     * @param fsPayee
+     * @param sortBy
     * @return result as a {@link JSONObject}
     * @throws CloneNotSupportedException if cloning fails
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if business logic fails
     * @throws ScriptException if script execution fails
     */
-    public JSONObject SearchTransaction(String fsReferenceNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+    public JSONObject SearchTransaction(String fsReferenceNo, String fsPayee, int sortBy) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         if(fsReferenceNo == null) { fsReferenceNo = ""; }
+        if(fsPayee == null) { fsPayee = ""; }
+        if(sortBy < 0 ) { sortBy = 0; }
         String lsTransStat = "";
+        String lsValue = "";
+//        switch(sortBy){
+//            case 2:
+//                lsValue = fsReferenceNo;
+//                break;
+//            case 4:
+//                lsValue = fsPayee;
+//                break;
+//            default:
+//                lsValue = "";
+//        }
         if(psTranStat != null){
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
@@ -1899,8 +1914,8 @@ public class DisbursementVoucher extends Transaction {
 //                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                          " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                         + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferenceNo)
-                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
-                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + psPayee)
+                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee+"%")
+                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee+"%")
                         + " ) "
                         );
         if (!lsTransStat.isEmpty()) {
@@ -1911,11 +1926,11 @@ public class DisbursementVoucher extends Transaction {
         System.out.println("SQL EXECUTED xxx : " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
-                "",
+                lsValue,
                 "Transaction No»Transaction Date»DV No»Branch»Supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, IFNULL(d.sPayeeNme, ''))",
-                0);
+                sortBy);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
