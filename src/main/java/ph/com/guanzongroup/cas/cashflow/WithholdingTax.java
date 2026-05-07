@@ -13,6 +13,7 @@ import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
 public class WithholdingTax extends Parameter {
@@ -115,11 +116,11 @@ public class WithholdingTax extends Parameter {
             throws SQLException,
             GuanzonException {
         poJSON = new JSONObject();
-        TaxCode object = new ParamControllers(poGRider, logwrapr).TaxCode();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = object.searchRecord(value, byCode);
+        AccountChart loObject = new CashflowControllers(poGRider, logwrapr).AccountChart();
+        loObject.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = loObject.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            poModel.setTaxCode(object.getModel().getTaxCode());
+            poModel.setAccountCode(loObject.getModel().getAccountCode());
         }
         return poJSON;
     }
