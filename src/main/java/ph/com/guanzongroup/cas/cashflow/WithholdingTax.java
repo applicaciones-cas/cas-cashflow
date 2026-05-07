@@ -94,6 +94,7 @@ public class WithholdingTax extends Parameter {
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException {
         String lsSQL = getSQ_Browse();
 
+        lsSQL = lsSQL + " GROUP BY a.sTaxRteID ";
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
