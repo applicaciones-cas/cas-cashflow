@@ -3870,6 +3870,20 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /** Arsiela - 05-06-2026
+    * Automatically assigns the default withholding tax deduction
+    * for the current transaction when applicable.
+    *
+    * Applies only during ADDNEW or UPDATE mode.
+    * Skips VAT-registered payees.
+    * Checks existing withholding tax entries before assigning
+    * the default tax rate.
+    * Computes the tax amount after setting the base amount
+    * and BIR form.
+    *
+    * @throws SQLException if database access fails
+    * @throws GuanzonException if transaction validation fails
+    */
     public void setDefaultWithHoldingTax() throws SQLException, GuanzonException{
         //auto set value for withholding tax
         if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
@@ -3883,14 +3897,15 @@ public class DisbursementVoucher extends Transaction {
                         }
                     } else {
                         if(lsTaxRateId.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
-                            WTaxDeduction(lnCtr).getModel().isReverse(true);
-                            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBIRForm(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().WithholdingTax().getTaxType());
-                            if(Master().getVATSale() > 0.0000){
-                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getVATSale());
-                            } else {
-                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
-                            }
-                            computeTaxAmount();
+//                            WTaxDeduction(lnCtr).getModel().isReverse(true);
+//                            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBIRForm(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().WithholdingTax().getTaxType());
+//                            if(Master().getVATSale() > 0.0000){
+//                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getVATSale());
+//                            } else {
+//                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
+//                            }
+//                            computeTaxAmount();
+//                            computeFields(false);
                             return;
                         }
                     }
@@ -3908,6 +3923,7 @@ public class DisbursementVoucher extends Transaction {
                                 WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
                             }
                             computeTaxAmount();
+                            computeFields(false);
                         }
                     }
                 }
@@ -3915,6 +3931,12 @@ public class DisbursementVoucher extends Transaction {
         }
     }
     
+    /**
+    * Retrieves the default withholding tax rate ID based on the
+    * current industry and matching account description.
+    *
+    * @return the default tax rate ID, or empty string if not found
+    */
     private String getDefaulTaxRateId(){
         String lsTaxRateId = "";
         try {
@@ -3928,6 +3950,7 @@ public class DisbursementVoucher extends Transaction {
                     " LEFT JOIN Account_Chart b ON b.sAcctCode = a.sAcctCode AND b.sIndstCde = " + SQLUtil.toSQL(Master().getIndustryID());
             lsSQL = MiscUtil.addCondition(lsSQL, " b.sDescript LIKE " + SQLUtil.toSQL("%Withholding%Tax%Goods%"));
 //                    + " OR b.sDescript LIKE " + SQLUtil.toSQL("%Withholding%Tax%Goods%"));
+            System.out.println("Execute SQL : " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
                 return "";
@@ -7809,6 +7832,7 @@ public class DisbursementVoucher extends Transaction {
                 double ldblTotalDiscount = 0.0000;
                 double ldblDiscountRate = 0.0000;
                 List<String> laSOA = new ArrayList<>();
+                List<String> laSOASCode = new ArrayList<>();
                 List<TransactionPaymentSummaryDetail> Details = new ArrayList<>();
                 for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
                     switch(Detail(lnCtr).getSourceCode()){
@@ -7837,10 +7861,11 @@ public class DisbursementVoucher extends Transaction {
                             }
                             break;
                         case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                            if(!laSOA.contains(Detail(lnCtr).getSourceNo())){
+                            if(!laSOA.contains(Detail(lnCtr).getSourceNo()) && !laSOASCode.contains(Detail(lnCtr).getSourceCode())){
                                 ldblTotalDiscount += Detail(lnCtr).SOAMaster().getDiscountAmount().doubleValue();
                             }
                             laSOA.add(Detail(lnCtr).getSourceNo());
+                            laSOASCode.add(Detail(lnCtr).getSourceCode());
                             switch(Detail(lnCtr).SOADetail().getSourceCode()){
                                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                                     ldblTotalDiscount += Detail(lnCtr).PRF().getDiscountAmount();
@@ -7848,6 +7873,7 @@ public class DisbursementVoucher extends Transaction {
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
+                                break;
                                 case DisbursementStatic.SourceCode.PO_RECEIVING:
                                     ldblDiscountRate = Detail(lnCtr).POReceiving().getDiscountRate().doubleValue();
                                     if(ldblDiscountRate > 0.0000){
@@ -7858,12 +7884,13 @@ public class DisbursementVoucher extends Transaction {
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
+                                break;
                                 case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                                     poJSON = getAPAdjustment(Detail(lnCtr).SOADetail().APPaymentAdjustmentMaster(),Details);
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
-                                    break;
+                                break;
                             }
                             break;
                     }
