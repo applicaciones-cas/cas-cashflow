@@ -351,16 +351,18 @@ public class Model_Disbursement_Detail extends Model {
         return poJSON;
     }
     
+    //Need to observe computation of advances - already concerned to project manager's
     private JSONObject getAdvancePayment(List<String> faPOTransNo, String fsTransactionNo) throws SQLException, GuanzonException {
-        String lsSQL =  " SELECT e.sTransNox, SUM(e.nAmtPaidx) AS nPRFPaidx, SUM(e.nTranTotl) AS nPRFTotal, SUM(e.nDiscAmtx) AS nPRFDiscx FROM Disbursement_Master a " +
+        String lsSQL = "";
+        try {
+            for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
+                lsSQL =  " SELECT e.sTransNox, SUM(e.nAmtPaidx) AS nPRFPaidx, SUM(e.nTranTotl) AS nPRFTotal, SUM(e.nDiscAmtx) AS nPRFDiscx FROM Disbursement_Master a " +
                         " LEFT JOIN Disbursement_Detail b ON b.sTransNox = a.sTransNox   " +
                         " LEFT JOIN AP_Payment_Master c ON c.sTransNox = b.sSourceNo AND b.sSourceCd = "+ SQLUtil.toSQL(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)+
                         " LEFT JOIN AP_Payment_Detail d ON d.sTransNox = c.sTransNox  " +
                         " LEFT JOIN Payment_Request_Master e ON (e.sTransNox = b.sSourceNo AND b.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
                             + " ) OR (e.sTransNox = b.sDetlSrce AND e.sTransNox = d.sSourceNo AND d.sSourceCd =  " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PAYMENT_REQUEST)
                             + " )  " ;
-        try {
-            for(int lnCtr = 0; lnCtr < faPOTransNo.size(); lnCtr++){
                 lsSQL = MiscUtil.addCondition(lsSQL,
                         " e.sSourceNo = " + SQLUtil.toSQL(faPOTransNo.get(lnCtr))
                         + " AND e.sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.PURCHASE_ORDER)
