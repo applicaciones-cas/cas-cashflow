@@ -1873,16 +1873,31 @@ public class DisbursementVoucher extends Transaction {
     * criteria (company, payee, and status), then opens the selected record.
     *
     * @param fsReferenceNo reference/transaction number filter
+     * @param fsPayee
+     * @param sortBy
     * @return result as a {@link JSONObject}
     * @throws CloneNotSupportedException if cloning fails
     * @throws SQLException if a database error occurs
     * @throws GuanzonException if business logic fails
     * @throws ScriptException if script execution fails
     */
-    public JSONObject SearchTransaction(String fsReferenceNo) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
+    public JSONObject SearchTransaction(String fsReferenceNo, String fsPayee, int sortBy) throws CloneNotSupportedException, SQLException, GuanzonException, ScriptException{
         poJSON = new JSONObject();
         if(fsReferenceNo == null) { fsReferenceNo = ""; }
+        if(fsPayee == null) { fsPayee = ""; }
+        if(sortBy < 0 ) { sortBy = 0; }
         String lsTransStat = "";
+        String lsValue = "";
+//        switch(sortBy){
+//            case 2:
+//                lsValue = fsReferenceNo;
+//                break;
+//            case 4:
+//                lsValue = fsPayee;
+//                break;
+//            default:
+//                lsValue = "";
+//        }
         if(psTranStat != null){
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
@@ -1899,8 +1914,8 @@ public class DisbursementVoucher extends Transaction {
 //                        " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                          " a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                         + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsReferenceNo)
-                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + psPayee)
-                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + psPayee)
+                        + " AND ( d.sPayeeNme LIKE " + SQLUtil.toSQL("%" + fsPayee+"%")
+                        + " OR e.sCompnyNm LIKE " + SQLUtil.toSQL("%" + fsPayee+"%")
                         + " ) "
                         );
         if (!lsTransStat.isEmpty()) {
@@ -1911,11 +1926,11 @@ public class DisbursementVoucher extends Transaction {
         System.out.println("SQL EXECUTED xxx : " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
-                "",
+                lsValue,
                 "Transaction No»Transaction Date»DV No»Branch»Supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»c.sBranchNm»supplier",
                 "a.sTransNox»a.dTransact»a.sVouchrNo»IFNULL(c.sBranchNm, '')»IFNULL(e.sCompnyNm, IFNULL(d.sPayeeNme, ''))",
-                0);
+                sortBy);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sTransNox"));
@@ -3853,6 +3868,104 @@ public class DisbursementVoucher extends Transaction {
             WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodFrom(fromdate);
             WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setPeriodTo(todate);
         }
+    }
+    
+    /** Arsiela - 05-06-2026
+    * Automatically assigns the default withholding tax deduction
+    * for the current transaction when applicable.
+    *
+    * Applies only during ADDNEW or UPDATE mode.
+    * Skips VAT-registered payees.
+    * Checks existing withholding tax entries before assigning
+    * the default tax rate.
+    * Computes the tax amount after setting the base amount
+    * and BIR form.
+    *
+    * @throws SQLException if database access fails
+    * @throws GuanzonException if transaction validation fails
+    */
+    public void setDefaultWithHoldingTax() throws SQLException, GuanzonException{
+        //auto set value for withholding tax
+        if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+            if(!"2".equals((String) Master().Payee().APClientMaster().getValue("cVATRegis"))){ 
+                String lsTaxRateId = getDefaulTaxRateId();
+                for(int lnCtr = 0; lnCtr < getWTaxDeductionsCount(); lnCtr++){
+                    if(WTaxDeduction(lnCtr).getModel().isReverse()){
+                        if (WTaxDeduction(lnCtr).getModel().getTaxRateId() != null
+                            && !"".equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())) {
+                            return;
+                        }
+                    } else {
+                        if(lsTaxRateId.equals(WTaxDeduction(lnCtr).getModel().getTaxRateId())){
+//                            WTaxDeduction(lnCtr).getModel().isReverse(true);
+//                            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBIRForm(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().WithholdingTax().getTaxType());
+//                            if(Master().getVATSale() > 0.0000){
+//                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getVATSale());
+//                            } else {
+//                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
+//                            }
+//                            computeTaxAmount();
+//                            computeFields(false);
+                            return;
+                        }
+                    }
+                }
+                
+                if(DisbursementStatic.OPEN.equals(Master().getTransactionStatus()) || DisbursementStatic.CONFIRMED.equals(Master().getTransactionStatus())){
+                    if (WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId() == null
+                            || "".equals(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().getTaxRateId())) {
+                        if(lsTaxRateId != null && !"".equals(lsTaxRateId)){
+                            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setTaxRateId(lsTaxRateId);
+                            WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBIRForm(WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().WithholdingTax().getTaxType());
+                            if(Master().getVATSale() > 0.0000){
+                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getVATSale());
+                            } else {
+                                WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
+                            }
+                            computeTaxAmount();
+                            computeFields(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    /**
+    * Retrieves the default withholding tax rate ID based on the
+    * current industry and matching account description.
+    *
+    * @return the default tax rate ID, or empty string if not found
+    */
+    private String getDefaulTaxRateId(){
+        String lsTaxRateId = "";
+        try {
+            String lsSQL = "SELECT  " +
+                    " a.sTaxRteID  " +
+                    ", a.sTaxDescr " +
+                    ", a.sTaxTypex " +
+                    ", a.sATaxCode " +
+                    ", b.sDescript AS Account_Name " +
+                    " FROM Withholding_Tax a " +
+                    " LEFT JOIN Account_Chart b ON b.sAcctCode = a.sAcctCode AND b.sIndstCde = " + SQLUtil.toSQL(Master().getIndustryID());
+            lsSQL = MiscUtil.addCondition(lsSQL, " b.sDescript LIKE " + SQLUtil.toSQL("%Withholding%Tax%Goods%"));
+//                    + " OR b.sDescript LIKE " + SQLUtil.toSQL("%Withholding%Tax%Goods%"));
+            System.out.println("Execute SQL : " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            if (MiscUtil.RecordCount(loRS) <= 0) {
+                return "";
+            }
+            
+            while (loRS.next()) {
+                lsTaxRateId = loRS.getString("sTaxRteID");
+            }
+            MiscUtil.close(loRS);
+            
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        
+        return lsTaxRateId;
     }
     
     /**
@@ -6441,22 +6554,22 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sSourceNo AS sSourceNo, "
                 + "IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex"
                 + ", d.sDescript AS IndstryD "
-                + "FROM Cache_Payable_Master a "
-                + "LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
-                + "Branch b "
-                + "WHERE a.sBranchCd = b.sBranchCd "
-                + "AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
-                + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' "
-                + "AND a.cProcessd = '0' " 
+                + " FROM Cache_Payable_Master a "
+                + " LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
+                + " Branch b "
+                + " WHERE a.sBranchCd = b.sBranchCd "
+                + " AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
+                + " AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' "
+                + " AND a.cProcessd = '0' " 
                 +  lsIndustry
-                + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
+                + " AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
                 + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
                 + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
-                + "GROUP BY a.sTransNox ";
+                + " GROUP BY a.sTransNox ";
     }
     
     private String getPaymentRequest(){
@@ -6478,20 +6591,20 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
                 + ", d.sDescript AS IndstryD "
-                + "FROM Payment_Request_Master a "
-                + "LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
-                + "Branch b "
-                + "WHERE a.sBranchCd = b.sBranchCd "
-                + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
-                + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
-                + "AND a.cProcessd = '0' " 
+                + " FROM Payment_Request_Master a "
+                + " LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
+                + " Branch b "
+                + " WHERE a.sBranchCd = b.sBranchCd "
+                + " AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+                + " AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
+                + " AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + lsIndustry
-                + "AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
-                + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
-                + "GROUP BY a.sTransNox ";
+                + " AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
+                + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + " AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + " GROUP BY a.sTransNox ";
     }
     
     private String getSOA(){
@@ -6513,22 +6626,22 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
                 + ", d.sDescript AS IndstryD "
-                + "FROM AP_Payment_Master a "
-                + "LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
-                + "Branch b "
-                + "WHERE a.sBranchCd = b.sBranchCd "
-                + "AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
-                + "AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
-                + "AND a.cProcessd = '0' " 
+                + " FROM AP_Payment_Master a "
+                + " LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
+                + " Branch b "
+                + " WHERE a.sBranchCd = b.sBranchCd "
+                + " AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
+                + " AND (a.nNetTotal - a.nAmtPaidx) > '0.0000' " 
+                + " AND a.cProcessd = '0' " 
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + lsIndustry
-                + "AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + "AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + "AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
+                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
                 + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
                 + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
-                + "GROUP BY a.sTransNox ";
+                + " GROUP BY a.sTransNox ";
     }
     
     private String getInvTypeCategorySQL(){
@@ -7719,6 +7832,7 @@ public class DisbursementVoucher extends Transaction {
                 double ldblTotalDiscount = 0.0000;
                 double ldblDiscountRate = 0.0000;
                 List<String> laSOA = new ArrayList<>();
+                List<String> laSOASCode = new ArrayList<>();
                 List<TransactionPaymentSummaryDetail> Details = new ArrayList<>();
                 for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
                     switch(Detail(lnCtr).getSourceCode()){
@@ -7747,10 +7861,11 @@ public class DisbursementVoucher extends Transaction {
                             }
                             break;
                         case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                            if(!laSOA.contains(Detail(lnCtr).getSourceNo())){
+                            if(!laSOA.contains(Detail(lnCtr).getSourceNo()) && !laSOASCode.contains(Detail(lnCtr).getSourceCode())){
                                 ldblTotalDiscount += Detail(lnCtr).SOAMaster().getDiscountAmount().doubleValue();
                             }
                             laSOA.add(Detail(lnCtr).getSourceNo());
+                            laSOASCode.add(Detail(lnCtr).getSourceCode());
                             switch(Detail(lnCtr).SOADetail().getSourceCode()){
                                 case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
                                     ldblTotalDiscount += Detail(lnCtr).PRF().getDiscountAmount();
@@ -7758,6 +7873,7 @@ public class DisbursementVoucher extends Transaction {
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
+                                break;
                                 case DisbursementStatic.SourceCode.PO_RECEIVING:
                                     ldblDiscountRate = Detail(lnCtr).POReceiving().getDiscountRate().doubleValue();
                                     if(ldblDiscountRate > 0.0000){
@@ -7768,12 +7884,13 @@ public class DisbursementVoucher extends Transaction {
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
+                                break;
                                 case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                                     poJSON = getAPAdjustment(Detail(lnCtr).SOADetail().APPaymentAdjustmentMaster(),Details);
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
                                     }
-                                    break;
+                                break;
                             }
                             break;
                     }
