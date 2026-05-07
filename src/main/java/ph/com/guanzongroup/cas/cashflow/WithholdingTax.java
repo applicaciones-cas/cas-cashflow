@@ -119,7 +119,7 @@ public class WithholdingTax extends Parameter {
         poJSON = new JSONObject();
         AccountChart loObject = new CashflowControllers(poGRider, logwrapr).AccountChart();
         loObject.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = loObject.searchRecord(value, byCode);
+        poJSON = loObject.searchRecordByIndustry(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             poModel.setAccountCode(loObject.getModel().getAccountCode());
         }
