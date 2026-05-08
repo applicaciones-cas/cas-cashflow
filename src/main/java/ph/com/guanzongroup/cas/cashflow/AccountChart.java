@@ -150,10 +150,10 @@ public class AccountChart extends Parameter {
         poModel.setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         poModel.setModifiedDate(poGRider.getServerDate());
         
-        poJSON = checkAccountDuplicate(poModel.getAccountCode(), poModel.getIndustryId());
-        if ("error".equals(poJSON.get("result"))) {
-            return poJSON;
-        }
+//        poJSON = checkAccountDuplicate(poModel.getAccountCode(), poModel.getIndustryId());
+//        if ("error".equals(poJSON.get("result"))) {
+//            return poJSON;
+//        }
 
         poJSON.put("result", "success");
         return poJSON;
@@ -312,7 +312,7 @@ public class AccountChart extends Parameter {
         String lsSQL = getSQ_Browse();
         List<String> lsFilter = new ArrayList<>();
     
-        lsFilter.add("  a.cRecdStat = '2'");
+        lsFilter.add("  a.cRecdStat = '1'");
         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
             lsSQL += " WHERE " + String.join(" AND ", lsFilter);
         }
@@ -483,7 +483,7 @@ public class AccountChart extends Parameter {
      */
     public JSONObject searchParent(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         AccountChart object = new CashflowControllers(poGRider, logwrapr).AccountChart();
-        object.setRecordStatus("2");
+        object.setRecordStatus("1");
 
         poJSON = object.searchRecordParent(value, byCode);
 
@@ -773,12 +773,12 @@ public class AccountChart extends Parameter {
         /**
          * Deactivated status
          */
-        public static final String DEACTIVATED = "1";
+        public static final String DEACTIVATED = "2";
 
         /**
          * Confirmed status
          */
-        public static final String CONFIRMED = "2";
+        public static final String CONFIRMED = "1";
 
         /**
          * Void status
@@ -1068,7 +1068,7 @@ public class AccountChart extends Parameter {
                 + "FROM Account_Chart "
                 + "WHERE sAcctCode = " + SQLUtil.toSQL(fsAcctCode)
                 + " AND sIndstCde = " + SQLUtil.toSQL(fsIndstCde)
-                + " AND cRecdStat IN ('0','2')";
+                + " AND cRecdStat IN ('0','1')";
 
         System.out.println("EXECUTING SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
