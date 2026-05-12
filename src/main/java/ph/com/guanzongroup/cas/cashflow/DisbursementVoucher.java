@@ -3922,11 +3922,12 @@ public class DisbursementVoucher extends Transaction {
                             } else {
                                 WTaxDeduction(getWTaxDeductionsCount() - 1).getModel().setBaseAmount(Master().getTransactionTotal());
                             }
-                            computeTaxAmount();
-                            computeFields(false);
                         }
                     }
                 }
+                
+                computeTaxAmount();
+                computeFields(false);
             }
         }
     }
@@ -4149,6 +4150,7 @@ public class DisbursementVoucher extends Transaction {
                 }
             }
             
+            ldblTotalBaseAmount = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblTotalBaseAmount, false).replace(",", ""));
             double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVATSale(), false).replace(",", ""));
             if(ldblVatSales > 0.0000){
                 if(!Objects.equals(ldblTotalBaseAmount, ldblVatSales)){
