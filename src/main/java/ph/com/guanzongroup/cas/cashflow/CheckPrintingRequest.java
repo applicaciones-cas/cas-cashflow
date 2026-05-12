@@ -429,7 +429,7 @@ public class CheckPrintingRequest extends Transaction {
         BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
         object.setRecordStatus("1");
         if (BankID != null && !BankID.isEmpty()) {
-            poJSON = object.searchRecordbyBanks(value, BankID, byCode);
+            poJSON = object.searchRecordbyBankAccount(value, BankID, byCode);
             if ("success".equals((String) poJSON.get("result"))) {
                 Master().setBankAccountID(object.getModel().getBankAccountId());
             }

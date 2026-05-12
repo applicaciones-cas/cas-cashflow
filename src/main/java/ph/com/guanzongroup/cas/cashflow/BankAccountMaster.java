@@ -226,7 +226,62 @@ public class BankAccountMaster extends Parameter{
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
-    }  
+    }
+    public JSONObject searchRecordbyBankAccount(String value, String bankID, boolean byCode) throws SQLException, GuanzonException{
+        String lsSQL = "";
+        String lsTransStat = "";
+        List<String> lsFilter = new ArrayList<>();
+        if (bankID != null && !bankID.isEmpty()) {
+             lsFilter.add( "a.sBankIDxx = " + SQLUtil.toSQL(bankID));
+        }
+
+        if (psRecdStat.length() > 1) {
+            for (int lnCtr = 0; lnCtr <= psRecdStat.length() - 1; lnCtr++) {
+                lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psRecdStat.charAt(lnCtr)));
+            }
+            lsFilter.add( "  a.cRecdStat IN (" + lsTransStat.substring(2) + ")");
+        } else {
+            lsFilter.add( "  a.cRecdStat = " + SQLUtil.toSQL(psRecdStat));
+        }
+        
+        if (value != null && !value.isEmpty()) {
+            lsFilter.add(  "a.sActNumbr LIKE " + SQLUtil.toSQL(value + "%"));
+        }
+        
+         lsSQL =  "SELECT" +
+                            "  a.sBnkActID" +
+                            ", a.sBankIDxx" +
+                            ", a.sActNumbr" +
+                            ", a.sActNamex" +
+                            ", c.sBranchNm" +
+                            ", a.sCompnyID" +
+                            ", IFNULL(b.sBankName, '') xBankName" +
+                        " FROM Bank_Account_Master a" +
+                            " LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx" +
+                            " LEFT JOIN Branch c ON c.sBranchCd = a.sBranchCd";
+        
+         if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+
+        System.out.println("SQL : " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "ID»Branch Name»Bank»Account No.»Account Name",
+                "sBnkActID»sBranchNm»xBankName»sActNumbr»sActNamex",
+                "a.sBnkActID»c.sBranchNm»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
+                byCode ? 0 : 3);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sBnkActID"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
     
     public JSONObject searchRecordbyBranchBank(String value, boolean byCode) throws SQLException, GuanzonException{
        String lsTransStat = "";
