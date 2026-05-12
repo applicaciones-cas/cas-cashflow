@@ -49,6 +49,7 @@ public class CheckPaymentImporting extends Parameter {
     DisbursementVoucher poDVMaster;
     public Journal poJournal;
     List<Model_Check_Payments> paCheckPayment;  
+    String psCompany = "";
     @Override
     public void initialize() {
         try {
@@ -60,6 +61,9 @@ public class CheckPaymentImporting extends Parameter {
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(CheckPaymentImporting.class.getName()).log(Level.SEVERE, null, ex);
         }
+    }
+    public void setCompanyId(String fsCompanyId){
+        psCompany = fsCompanyId;
     }
 
     @Override
@@ -413,7 +417,7 @@ public class CheckPaymentImporting extends Parameter {
                 " d.cTranStat = " + SQLUtil.toSQL(DisbursementStatic.AUTHORIZED),
                 " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " d.cBankPrnt = " + SQLUtil.toSQL(Logical.YES),
-                " d.sCompnyID = " + SQLUtil.toSQL(poGRider.getCompnyId()),
+                " d.sCompnyID = " + SQLUtil.toSQL(psCompany),
                 " a.cProcessd = " + SQLUtil.toSQL(CheckStatus.PrintStatus.PRINTED),                
                 " d.sVouchrNo = '" + VoucherNo + "'");
                 
