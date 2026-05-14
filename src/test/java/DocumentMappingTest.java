@@ -35,7 +35,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 public class DocumentMappingTest {
     static GRiderCAS instance;
     static CashflowControllers poTrans;
-    
+    static Connection conn = null;
     public DocumentMappingTest() {
     }
     
@@ -55,7 +55,7 @@ public class DocumentMappingTest {
             System.exit(1);
         }
         
-        loadCorePrimary();
+        
         String path;
             String lsTemp;
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
@@ -75,7 +75,7 @@ public class DocumentMappingTest {
             } else {
                 System.out.println("Config file loaded successfully.");
             }
-        
+        loadCorePrimary(); 
     }
     private static boolean loadProperties() {
         try {
@@ -115,6 +115,31 @@ public class DocumentMappingTest {
     
     @AfterAll
     public static void tearDownClass() {
+        killdbcon();
+        
+        // Clear system properties
+        System.clearProperty("sys.default.path.config");
+        System.clearProperty("sys.default.path.metadata");
+        System.clearProperty("sys.default.path.temp");
+
+        System.clearProperty("sys.main.industry");
+        System.clearProperty("sys.general.industry");
+
+        System.clearProperty("sys.dept.finance");
+        System.clearProperty("sys.dept.procurement");
+
+        System.clearProperty("user.selected.industry");
+        System.clearProperty("user.selected.category");
+        System.clearProperty("user.selected.company");
+
+        System.clearProperty("sys.default.client.token");
+        System.clearProperty("sys.default.access.token");
+
+        System.clearProperty("sys.default.path.temp.attachments");
+
+        System.clearProperty("allowed.department");
+
+        System.out.println("System properties cleared.");
     }
     
     @BeforeEach
@@ -371,7 +396,7 @@ public class DocumentMappingTest {
             
            poTrans.DocumentMapping().getSourceCode();
            System.out.println("Source Code " + poTrans.DocumentMapping().getSourceCode());
-          
+           
     }
 
     
@@ -379,7 +404,7 @@ public class DocumentMappingTest {
     
     private static void loadCorePrimary() throws IOException, SQLException {																									
         // 1. Get the raw connection from your poCon object																									
-        Connection conn = instance.getGConnection().getConnection();																									
+         conn = instance.getGConnection().getConnection();																									
 
         try (FileReader schemaReader = new FileReader("test-data/document_mapping_schema.sql");																									
              FileReader dataReader = new FileReader("test-data/document_mapping_data.sql")) {																									
@@ -393,5 +418,17 @@ public class DocumentMappingTest {
         //conn.commit();             // Save everything at once																									
         //conn.setAutoCommit(true);  // Turn it back on																									
         }																									
-    }        
+    }   
+    
+    private static void killdbcon() {
+
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.close();
+                System.out.println("Database connection closed.");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
 }
