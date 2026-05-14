@@ -117,15 +117,18 @@ public class CheckTransfers extends Transaction {
     
 
 
-    public JSONObject SearchChecks(String fsCheckTransNo, String fsCheckNo, int fnRow, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchChecks(String fsCheckTransNo, String fsCheckNo, int fnRow, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException, CloneNotSupportedException {
         CheckPayments object = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         object.setRecordStatus("1");
 
         poJSON = object.searchRecordforChecktrans(fsCheckTransNo, fsCheckNo, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
-            Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
-            computeMasterFields();
+            poJSON = addCheckPaymentToDetail(object.getModel().getTransactionNo());
+            
+//            
+//            Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
+//            computeMasterFields();
         }
 
         return poJSON;
