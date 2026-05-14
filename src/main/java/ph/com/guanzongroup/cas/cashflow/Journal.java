@@ -1,5 +1,6 @@
 package ph.com.guanzongroup.cas.cashflow;
 
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -10,6 +11,7 @@ import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
+import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.appdriver.constant.UserRight;
@@ -18,6 +20,7 @@ import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
@@ -373,8 +376,18 @@ public class Journal extends Transaction {
                                 poJSON.put("row", fnRow);
                                 return poJSON;
                             }
-                            Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
-                            Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
+                            
+                            if(loObject.getCreditAmount() <= 0.0000 && loObject.getDebitAmount() <= 0.0000){
+                                JSONObject loJSON = getOriginalValue(fsAcctCode);
+                                if (!"error".equals((String) loJSON.get("result"))) {
+                                    Detail(lnCtr).setCreditAmount((Double) loJSON.get("credit"));
+                                    Detail(lnCtr).setDebitAmount((Double) loJSON.get("debit"));
+                                }
+                            } else {
+                                Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
+                                Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
+                            }
+                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
                             poJSON.put("row", lnCtr);
                             break;
                         } else {
@@ -395,6 +408,107 @@ public class Journal extends Transaction {
         
         poJSON.put("result", "success");
         poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    private JSONObject getOriginalValue(String fsAcctCode){
+        poJSON = new JSONObject();
+        double ldblDebit = 0.0000;
+        double ldblCredit = 0.0000;
+
+        try {
+            String lsSQL = "SELECT sPayLoadx FROM xxxauditlogdetail ";
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sPayLoadx LIKE " + SQLUtil.toSQL(
+                            "%sAcctCode%" + Master().getTransactionNo() + "%" + fsAcctCode + "%")
+                    + " AND sQryTypex = 'INSERT' "
+                    + " AND sTableNme = 'Journal_Detail' "
+            );
+
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            String lsPayload = "";
+
+            if (loRS.next()) {
+                lsPayload = loRS.getString("sPayLoadx");
+            }
+
+            MiscUtil.close(loRS);
+
+            if (!lsPayload.isEmpty()) {
+                // ==============================
+                // STEP 1: Parse JSON
+                // ==============================
+                JSONParser parser = new JSONParser();
+                JSONObject loJson = (JSONObject) parser.parse(lsPayload);
+                String sql = (String) loJson.get("data");
+                // ==============================
+                // STEP 2: Extract column list
+                // ==============================
+                String columnPart = sql.substring(
+                        sql.indexOf("Journal_Detail(") + "Journal_Detail(".length(),
+                        sql.indexOf("VALUES")
+                ).replace("(", "").replace(")", "").trim();
+
+                String valuePart = sql.substring(
+                        sql.indexOf("VALUES (") + 8,
+                        sql.lastIndexOf(")")
+                );
+
+                // ==============================
+                // STEP 3: Split into arrays
+                // ==============================
+                String[] columns = columnPart.split(",");
+                String[] values = valuePart.split(",");
+
+                // ==============================
+                // STEP 4: Find indexes dynamically
+                // ==============================
+                int lnDebitIndex = -1;
+                int lbCreditIndex = -1;
+
+                for (int i = 0; i < columns.length; i++) {
+                    String col = columns[i].trim();
+
+                    if (col.equalsIgnoreCase("nDebitAmt")) {
+                        lnDebitIndex = i;
+                    }
+
+                    if (col.equalsIgnoreCase("nCredtAmt")) {
+                        lbCreditIndex = i;
+                    }
+                }
+
+                // ==============================
+                // STEP 5: Extract values safely
+                // ==============================
+                if (lnDebitIndex >= 0 && lnDebitIndex < values.length) {
+                    ldblDebit = Double.parseDouble(
+                            values[lnDebitIndex].replaceAll("[^0-9.\\-]", "").trim()
+                    );
+                }
+
+                if (lbCreditIndex >= 0 && lbCreditIndex < values.length) {
+                    ldblCredit = Double.parseDouble(
+                            values[lbCreditIndex].replaceAll("[^0-9.\\-]", "").trim()
+                    );
+                }
+            }
+
+            // ==============================
+            // RESULT
+            // ==============================
+            poJSON.put("result", "success");
+            poJSON.put("message", "success");
+        } catch (Exception ex) {
+            Logger.getLogger(getClass().getName())
+                    .log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poJSON.put("result", "error");
+            poJSON.put("message", MiscUtil.getException(ex));
+        }
+
+        poJSON.put("debit", ldblDebit);
+        poJSON.put("credit", ldblCredit);
         return poJSON;
     }
 
