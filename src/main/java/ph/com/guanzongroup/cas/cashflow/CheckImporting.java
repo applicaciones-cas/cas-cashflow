@@ -541,7 +541,17 @@ public class CheckImporting extends Transaction {
                 CheckRequest bean = new CheckRequest();
                 bean.setVoucherNo(fmt.formatCellValue(row.getCell(2)));
                 bean.setCheckDate(fmt.formatCellValue(row.getCell(3)));
-                bean.setCheckNo(fmt.formatCellValue(row.getCell(18)));
+//                bean.setCheckNo(fmt.formatCellValue(row.getCell(18)));
+                String checkNo = row.getCell(18) == null
+                        ? ""
+                        : fmt.formatCellValue(row.getCell(18));
+
+                if (checkNo.trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Check No. is required at row " + (r + 1));
+            }
+
+                bean.setCheckNo(checkNo);
 
                 String amt = fmt.formatCellValue(row.getCell(4));
                 bean.setAmount(amt.isEmpty() ? BigDecimal.ZERO : new BigDecimal(amt));
