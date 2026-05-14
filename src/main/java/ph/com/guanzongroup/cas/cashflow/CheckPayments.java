@@ -589,4 +589,71 @@ public class CheckPayments extends Parameter {
             return poJSON;
         }
     }
+    public JSONObject searchRecordforChecktrans(String fsTransNo, String fsCheckNo, boolean byCode)
+            throws SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+        String lsSQL = getSQ_Browse(); // your base query
+        String lsvalue = fsTransNo;
+
+        // Build list of filter conditions
+        List<String> conditions = new ArrayList<>();
+        if(!byCode){
+            lsvalue = fsCheckNo;
+        }
+
+        // Filter by Transaction No
+        if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
+            conditions.add("a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransNo + "%"));
+        }
+
+        // Filter by Check No
+        if (fsCheckNo != null && !fsCheckNo.trim().isEmpty()) {
+            conditions.add("a.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo + "%"));
+        }
+
+        // Always-required filters
+        conditions.add("a.cReleased = '0'");
+        conditions.add("a.cTranStat <> 3");
+        conditions.add("a.cPrintxxx = '1'");
+        // Join all conditions
+        String lsFilterCondition = String.join(" AND ", conditions);
+
+        // Append filters to SQL safely
+        if (!lsFilterCondition.isEmpty()) {
+            // Check if lsSQL already has WHERE at the end
+            if (lsSQL.toUpperCase().matches(".*\\bWHERE\\s*$")) {
+                lsSQL += " " + lsFilterCondition;  // just add conditions
+            } else if (lsSQL.toUpperCase().contains("WHERE")) {
+                lsSQL += " AND " + lsFilterCondition; // append with AND
+            } else {
+                lsSQL += " WHERE " + lsFilterCondition; // first WHERE
+            }
+        }
+
+        // Add grouping
+        lsSQL += " GROUP BY a.sTransNox";
+
+        System.out.println("SQL EXECUTED: " + lsSQL);
+
+        // Execute Browse
+        poJSON = ShowDialogFX.Browse(
+                poGRider,
+                lsSQL,
+                lsvalue,
+                "Transaction No»Check No»Banks»Payee»Amount»Check Date",
+                "sTransNox»sCheckNox»xBankName»xPayeeNme»nAmountxx»dCheckDte",
+                "a.sTransNox»a.sCheckNox»IFNULL(b.sBankName, '')»IFNULL(c.sPayeeNme, '')»a.nAmountxx»a.dCheckDte",
+                byCode ? 0:1
+        );
+
+        if (poJSON != null) {
+            return openRecord((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
 }

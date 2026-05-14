@@ -103,13 +103,13 @@ public class CheckDeposits extends Transaction {
         object.setRecordStatus("1");
 
         if (Master().getBanks()== null ||Master().getBanks().isEmpty()) {
-            poJSON = object.searchRecord(value, byCode);
+            poJSON = object.searchRecords(value,Master().getBanks(), byCode);
             if ("success".equals((String) poJSON.get("result"))) {
                 Master().setBankAccount(object.getModel().getBankAccountId());  
                 Master().setBanks(object.getModel().getBankId());
             }
         } else {
-            poJSON = object.searchRecordbyBanks(value, Master().getBanks(), byCode);
+            poJSON = object.searchRecords(value, Master().getBanks(), byCode);
             if ("success".equals((String) poJSON.get("result"))) {
                  Master().setBankAccount(object.getModel().getBankAccountId());  
             }
@@ -1038,18 +1038,18 @@ public class CheckDeposits extends Transaction {
 
         // Set updated values
         switch (fsStatus) {
-            case CheckTransferStatus.CONFIRMED:
+            case CheckDepositStatus.CONFIRMED:
                 issuance.poModel.setLocation("4");
                 issuance.poModel.setModifyingId(poGRider.getUserID());
                 issuance.poModel.setModifiedDate(poGRider.getServerDate());
                 break;
-            case CheckTransferStatus.POSTED:
+            case CheckDepositStatus.POSTED:
                 issuance.poModel.setLocation("2");
                 issuance.poModel.setReleased("1");
                 issuance.poModel.setModifyingId(poGRider.getUserID());
                 issuance.poModel.setModifiedDate(poGRider.getServerDate());
                 break;    
-            case CheckTransferStatus.VOID:
+            case CheckDepositStatus.VOID:
                 issuance.poModel.setLocation("1");
                 issuance.poModel.setReleased("0");
                 issuance.poModel.setModifyingId(poGRider.getUserID());
