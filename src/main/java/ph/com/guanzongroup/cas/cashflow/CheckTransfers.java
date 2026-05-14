@@ -121,7 +121,7 @@ public class CheckTransfers extends Transaction {
         CheckPayments object = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         object.setRecordStatus("1");
 
-        poJSON = object.searchRecordwithFilter(fsCheckTransNo, fsCheckNo, byCode);
+        poJSON = object.searchRecordforChecktrans(fsCheckTransNo, fsCheckNo, byCode);
 
         if ("success".equals((String) poJSON.get("result"))) {
             Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
