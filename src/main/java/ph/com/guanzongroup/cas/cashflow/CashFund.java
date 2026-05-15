@@ -9,6 +9,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -68,8 +70,8 @@ public class CashFund extends Parameter {
             throws SQLException,
             GuanzonException {
         
-        poModel.setIndustryId(poGRider.getIndustry());
-        poModel.setCompanyId(poGRider.getCompnyId());
+        poModel.setIndustryId(psIndustryId);
+        poModel.setCompanyId(psCompanyId);
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartment(poGRider.getDepartment());
         poModel.setBeginningDate(poGRider.getServerDate());
@@ -130,6 +132,20 @@ public class CashFund extends Parameter {
         }   
         
         poJSON = setJSON("success","success");
+        return poJSON;
+    }
+    
+    public JSONObject SaveRecord() throws SQLException{
+        try {
+            poJSON = new JSONObject();
+            poJSON = saveRecord();
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poGRider.rollbackTrans();
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        
         return poJSON;
     }
     
