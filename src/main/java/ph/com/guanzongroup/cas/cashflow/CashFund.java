@@ -252,7 +252,8 @@ public class CashFund extends Parameter {
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+//        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+        if (!poGRider.getDepartment().equals(System.getProperty("sys.dept.finance"))) { //BR: Authorized users from the Finance Department
             poJSON = setJSON("error", "User is not allowed to save record.");
             return poJSON;
         } else {

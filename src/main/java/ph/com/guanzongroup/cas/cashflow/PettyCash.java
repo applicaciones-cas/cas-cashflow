@@ -264,10 +264,11 @@ public class PettyCash extends Parameter {
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
-            poJSON = setJSON("error", "User is not allowed to save record.");
-            return poJSON;
-        } else {
+//        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) { //BR : Authorized users from the Branch
+//            poJSON = setJSON("error", "User is not allowed to save record.");
+//            return poJSON;
+//        } else {
             poJSON = new JSONObject();
             if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
                 poJSON = setJSON("error", "Petty Cash ID must not be empty.");
@@ -322,7 +323,7 @@ public class PettyCash extends Parameter {
                     return poJSON;
                 }
             }
-        }
+//        }
 
         poJSON = checkExistingPettyCash();
         if (!isJSONSuccess(poJSON)) {
