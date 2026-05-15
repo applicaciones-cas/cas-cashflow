@@ -52,6 +52,7 @@ public class CashAdvance extends Transaction {
     public String psIndustry = "";
     public String psBranch = "";
     public String psPayee = "";
+    public String psApprover = "";
     public List<Model> paMaster;
     
     /**
@@ -67,7 +68,8 @@ public class CashAdvance extends Transaction {
         poDetail = new CashflowModels(poGRider).CashAdvanceDetail();
 
         paMaster = new ArrayList<Model>();
-
+        psApprover = "";
+        setApproving("");
         return initialize();
     }
     
@@ -282,6 +284,8 @@ public class CashAdvance extends Transaction {
      */
     public void resetMaster() {
         poMaster = new CashflowModels(poGRider).CashAdvanceMaster();
+        psApprover = "";
+        setApproving("");
     }
     
     /**
@@ -397,15 +401,64 @@ public class CashAdvance extends Transaction {
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
+            String lsUserIDxx = poJSON.get("sUserIDxx").toString();
             if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
                 poJSON = setJSON("error", "User is not an authorized approving officer.");
                 return poJSON;
             }
+            setApproving(lsUserIDxx);
+            psApprover = lsUserIDxx;
         }   
         
         poJSON = setJSON("success", "success");
         return poJSON;
     } 
+    
+    /**
+    * Checks if a user has an allowed position for a specific transaction status.
+    *
+    * @param fsUserId user ID
+    * @return department name if authorized, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
+    public String checkApprover(String fsUserId) throws SQLException, GuanzonException{
+        String lsDepartment = "";
+        String lsSQL = " SELECT   " +
+                    "  a.sUserIDxx, " +
+                    "  d.sCompnyNm, " +
+                    "  e.sDeptName, " +
+                    "  c.sPositnNm, " +
+                    "  b.dFiredxxx, " +
+                    "  b.sDeptIDxx, " +
+                    "  b.sPositnID " +
+                    "FROM xxxSysUser a " +
+                    "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
+                    "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
+                    "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
+                    "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
+        
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " a.sUserIDxx = " + SQLUtil.toSQL(fsUserId)
+//                + " AND b.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance")) 
+                 );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+                        lsDepartment = loRS.getString("sDeptIDxx");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+            return lsDepartment;
+        }
+        return lsDepartment;
+    }
     
     /**
     * Confirm Cash advance transaction
@@ -713,8 +766,19 @@ public class CashAdvance extends Transaction {
         }
         
         if(!pbWthParent){
+            psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to release cash advance." );
                 return poJSON;
             }
         }
@@ -724,7 +788,7 @@ public class CashAdvance extends Transaction {
             return poJSON;
         }
         
-        poJSON = Master().setIssuedBy(poGRider.getUserID());
+        poJSON = Master().setIssuedBy(psApprover);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }

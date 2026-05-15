@@ -108,6 +108,7 @@ public class CashDisbursement extends Transaction {
     public String psIndustry = "";
     public String psBranch = "";
     public String psPayee = "";
+    public String psApprover = "";
     
     public Journal poJournal;
     public List<WithholdingTaxDeductions> paWTaxDeductions;
@@ -136,7 +137,8 @@ public class CashDisbursement extends Transaction {
         paCashAdvances = new ArrayList<Model>();
         paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
         paAttachments = new ArrayList<>();
-
+        psApprover = "";
+        setApproving("");
         return initialize();
     }
 
@@ -191,6 +193,12 @@ public class CashDisbursement extends Transaction {
     */
     public JSONObject NewTransaction()
             throws CloneNotSupportedException, SQLException, GuanzonException {
+        if(!poGRider.getDepartment().equals(System.getProperty("sys.dept.finance"))){ //BR: Authorized users from the Finance
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not authorized to create the transaction." );
+            return poJSON;
+        }
+        
         resetMaster();
         Detail().clear();
         resetJournal();
@@ -261,6 +269,12 @@ public class CashDisbursement extends Transaction {
     * @throws ScriptException if an error occurs during script-based processing.
     */
    public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        if(!poGRider.getDepartment().equals(System.getProperty("sys.dept.finance"))){ //BR: Authorized users from the Finance
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not authorized to update the transaction." );
+            return poJSON;
+        }
+        
        poJSON = updateTransaction();
        if (!isJSONSuccess(poJSON)) {
            poJSON = setJSON((String) poJSON.get("result"),"Unable to update transaction.\n" + (String) poJSON.get("message"));
@@ -318,10 +332,57 @@ public class CashDisbursement extends Transaction {
                 return poJSON;
             }
             setApproving(lsUserIDxx);
+            psApprover = lsUserIDxx;
         }   
         
         poJSON = setJSON("success","success");
         return poJSON;
+    }
+    
+    /**
+    * Checks if a user has an allowed position for a specific transaction status.
+    *
+    * @param fsUserId user ID
+    * @return department name if authorized, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
+    public String checkApprover(String fsUserId) throws SQLException, GuanzonException{
+        String lsDepartment = "";
+        String lsSQL = " SELECT   " +
+                    "  a.sUserIDxx, " +
+                    "  d.sCompnyNm, " +
+                    "  e.sDeptName, " +
+                    "  c.sPositnNm, " +
+                    "  b.dFiredxxx, " +
+                    "  b.sDeptIDxx, " +
+                    "  b.sPositnID " +
+                    "FROM xxxSysUser a " +
+                    "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
+                    "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
+                    "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
+                    "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
+        
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " a.sUserIDxx = " + SQLUtil.toSQL(fsUserId)
+//                + " AND b.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance")) 
+                 );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+                        lsDepartment = loRS.getString("sDeptIDxx");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+            return lsDepartment;
+        }
+        return lsDepartment;
     }
     
     /**
@@ -477,8 +538,19 @@ public class CashDisbursement extends Transaction {
         }
         
         if(!pbWthParent){
+            psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
                 return poJSON;
             }
         }
@@ -555,8 +627,19 @@ public class CashDisbursement extends Transaction {
         }
         
         if(!pbWthParent){
+            psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to approve the transaction." );
                 return poJSON;
             }
         }
@@ -651,6 +734,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        psApprover = poGRider.getUserID();
         if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
@@ -658,6 +742,16 @@ public class CashDisbursement extends Transaction {
                     return poJSON;
                 }
             }
+        }
+        
+        String lsDepartment = poGRider.getDepartment();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            lsDepartment = checkApprover(psApprover);
+        }
+        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User or approving officer is not authorized to void the transaction." );
+            return poJSON;
         }
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -731,6 +825,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
         
+        psApprover = poGRider.getUserID();
         if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
                 poJSON = callApproval();
@@ -738,6 +833,16 @@ public class CashDisbursement extends Transaction {
                     return poJSON;
                 }
             }
+        }
+        
+        String lsDepartment = poGRider.getDepartment();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            lsDepartment = checkApprover(psApprover);
+        }
+        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User or approving officer is not authorized to cancel the transaction." );
+            return poJSON;
         }
         
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -1565,6 +1670,7 @@ public class CashDisbursement extends Transaction {
                 ldblTotalBaseAmount += WTaxDeduction(lnCtr).getModel().getBaseAmount(); 
             }
         }
+        ldblTotalBaseAmount = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblTotalBaseAmount, false).replace(",", ""));
         double ldblVatSales = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getVatableSales(), false).replace(",", ""));
         if(ldblTotalBaseAmount > ldblVatSales){
             poJSON = setJSON("error", "Tax Base amount cannot be greater than the net vatable sales.");
@@ -2607,6 +2713,8 @@ public class CashDisbursement extends Transaction {
         Detail().clear();
         WTaxDeduction().clear();
         paAttachments = new ArrayList<>();
+        psApprover = "";
+        setApproving("");
     }
    
     /**
