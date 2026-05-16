@@ -763,6 +763,7 @@ public class PettyCash extends Parameter {
                 + " FROM " + poModel.getTable() + " a "
                 + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sPettyIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sPettyIDx =  " + SQLUtil.toSQL(poModel.getPettyId()));
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {

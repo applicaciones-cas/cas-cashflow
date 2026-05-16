@@ -570,8 +570,19 @@ public class CashAdvance extends Transaction {
         }
         
         if(!pbWthParent){
+            psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to release cash advance." );
                 return poJSON;
             }
         }
