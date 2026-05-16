@@ -56,6 +56,7 @@ public class CashFund extends Parameter {
         poModel = model.CashFund();
         paLedger = new ArrayList<Model>();
         psApprover = "";
+        pbIsCashFundUse = false;
         super.initialize();
     }
     
@@ -224,12 +225,6 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "Record was already active.");
             return poJSON;
         }
-
-        //validator
-        poJSON = isEntryOkay();
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
         
         if(!pbWthParent){
             psApprover = poGRider.getUserID();
@@ -244,9 +239,15 @@ public class CashFund extends Parameter {
             }
             if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
                 poJSON.put("result", "error" );
-                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+                poJSON.put("message", "User or approving officer is not authorized to activate the record." );
                 return poJSON;
             }
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
@@ -290,12 +291,6 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "Deactivation is only allowed if status is active and balance is 0.00");
             return poJSON;
         }
-
-        //validator
-        poJSON = isEntryOkay();
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
         
         if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
             if(!pbWthParent){
@@ -311,10 +306,16 @@ public class CashFund extends Parameter {
                 }
                 if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
                     poJSON.put("result", "error" );
-                    poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+                poJSON.put("message", "User or approving officer is not authorized to deactivate the record." );
                     return poJSON;
                 }
             }
+        }
+
+        //validator
+        poJSON = isEntryOkay();
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
@@ -456,6 +457,11 @@ public class CashFund extends Parameter {
         return poModel;
     }
     
+    boolean pbIsCashFundUse = false;
+    public void setCashFundUse(boolean fbIsUsing){
+        pbIsCashFundUse = fbIsUsing;
+    }
+    
     /**
     * Searches a Cash Fund record using the given value.
     *
@@ -498,6 +504,12 @@ public class CashFund extends Parameter {
         if(!lsCondition.isEmpty()){
             lsSQL = lsSQL + " " + lsCondition;
         }
+        
+        //if searching is for cash fund use: Cash Advance / Cash Disbursement
+        if(pbIsCashFundUse){
+            lsSQL = lsSQL + " AND DATE(a.dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()));
+        }
+        
         System.out.println("MySQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,

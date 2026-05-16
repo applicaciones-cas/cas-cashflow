@@ -886,6 +886,7 @@ public class CashDisbursement extends Transaction {
                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                     + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
                     + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
+                    + " AND DATE(dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()))
                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -1042,6 +1043,7 @@ public class CashDisbursement extends Transaction {
                 setSearchBranch(object.getModel().getBranchName()); 
             } else {
                 Master().setBranchCode(object.getModel().getBranchCode());
+                Master().setCashFundId("");
             }
         }
 
@@ -1085,6 +1087,7 @@ public class CashDisbursement extends Transaction {
         object.setCompanyId(Master().getCompanyId());
         object.setBranchCode(Master().getBranchCode());
         object.setDepartmentId(Master().getDepartmentRequest());
+        object.setCashFundUse(true);
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setCashFundId(object.getModel().getCashFundId());
@@ -1278,6 +1281,7 @@ public class CashDisbursement extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setDepartmentRequest(object.getModel().getDepartmentId());
+            Master().setCashFundId("");
         }
         return poJSON;
     }

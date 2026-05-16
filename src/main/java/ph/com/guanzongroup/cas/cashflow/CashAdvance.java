@@ -7,9 +7,11 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
@@ -306,6 +308,7 @@ public class CashAdvance extends Transaction {
                                                                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                                                                     + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
                                                                     + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
+                                                                    + " AND DATE(dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()))
                                                                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -582,7 +585,7 @@ public class CashAdvance extends Transaction {
             }
             if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
                 poJSON.put("result", "error" );
-                poJSON.put("message", "User or approving officer is not authorized to release cash advance." );
+                poJSON.put("message", "User or approving officer is not authorized to approve the cash advance." );
                 return poJSON;
             }
         }
@@ -896,7 +899,7 @@ public class CashAdvance extends Transaction {
         object.setCompanyId(Master().getCompanyId());
         object.setBranchCode(Master().getBranchCode());
         object.setDepartmentId(Master().getDepartmentRequest());
-
+        object.setCashFundUse(true);
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setCashFundId(object.getModel().getCashFundId());
@@ -1453,4 +1456,9 @@ public class CashAdvance extends Transaction {
         }
     }
 
+    private static String xsDateShort(Date fdValue) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
+    }
 }
