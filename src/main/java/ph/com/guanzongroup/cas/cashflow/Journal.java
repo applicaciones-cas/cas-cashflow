@@ -368,26 +368,30 @@ public class Journal extends Transaction {
                 }
                 if (lnCtr != fnRow) {
                     if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
-                        if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){
-                            Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
-                            loObject.initialize();
-                            poJSON = loObject.openRecord(Master().getTransactionNo(), lnCtr + 1);
-                            if ("error".equals((String) poJSON.get("result"))) {
-                                poJSON.put("row", fnRow);
-                                return poJSON;
-                            }
+//                        if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){ 
+                        if(!Detail(lnCtr).isReverse()){
+//                            Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
+//                            loObject.initialize();
+//                            poJSON = loObject.openRecord(Master().getTransactionNo(), lnCtr + 1);
+//                            if ("error".equals((String) poJSON.get("result"))) {
+//                                poJSON.put("row", fnRow);
+//                                return poJSON;
+//                            }
+//                            
+//                            if(loObject.getCreditAmount() <= 0.0000 && loObject.getDebitAmount() <= 0.0000){
+//                                JSONObject loJSON = getOriginalValue(fsAcctCode);
+//                                if (!"error".equals((String) loJSON.get("result"))) {
+//                                    Detail(lnCtr).setCreditAmount((Double) loJSON.get("credit"));
+//                                    Detail(lnCtr).setDebitAmount((Double) loJSON.get("debit"));
+//                                }
+//                            } else {
+//                                Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
+//                                Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
+//                            }
+//                            
+//                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
                             
-                            if(loObject.getCreditAmount() <= 0.0000 && loObject.getDebitAmount() <= 0.0000){
-                                JSONObject loJSON = getOriginalValue(fsAcctCode);
-                                if (!"error".equals((String) loJSON.get("result"))) {
-                                    Detail(lnCtr).setCreditAmount((Double) loJSON.get("credit"));
-                                    Detail(lnCtr).setDebitAmount((Double) loJSON.get("debit"));
-                                }
-                            } else {
-                                Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
-                                Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
-                            }
-                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
+                            Detail(lnCtr).isReverse(true);
                             poJSON.put("row", lnCtr);
                             break;
                         } else {

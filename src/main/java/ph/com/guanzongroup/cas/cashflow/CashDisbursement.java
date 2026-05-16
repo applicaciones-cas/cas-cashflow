@@ -2925,6 +2925,12 @@ public class CashDisbursement extends Transaction {
     }
     
     
+    /**
+    * Validates journal entries including debit/credit balance,
+    * account code presence, and valid reporting dates.
+    *
+    * @return JSON validation result with continue flag
+    */
     private JSONObject validateJournal(){
         poJSON = new JSONObject();
         poJSON.put("continue", false);
@@ -2932,18 +2938,25 @@ public class CashDisbursement extends Transaction {
         double ldblCreditAmt = 0.0000;
         double ldblDebitAmt = 0.0000;
         boolean lbHasJournal = false;
+        boolean lbValidateJournal = false;
         for(int lnCtr = 0; lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
-            ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
-            ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
-            
-            if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
-                if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
-                    if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
-                        return poJSON;
+            if(poJournal.Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
+                ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
+                ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
+
+                if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
+                    if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
+                        if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
+                            return poJSON;
+                        }
                     }
                 }
+                
+                if(!lbValidateJournal){
+                    lbValidateJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+                } 
             }
             
             if(!lbHasJournal){
@@ -2951,7 +2964,7 @@ public class CashDisbursement extends Transaction {
             }   
         }
         
-        if(lbHasJournal || poGRider.getUserLevel() > UserRight.ENCODER){
+        if(lbValidateJournal){
             if(ldblDebitAmt == 0.0000 ){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid journal entry debit amount.");
