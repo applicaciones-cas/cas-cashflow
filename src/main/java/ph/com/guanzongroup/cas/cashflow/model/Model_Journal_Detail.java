@@ -7,7 +7,6 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
-import org.guanzon.appdriver.constant.RecordStatus;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 
@@ -29,7 +28,7 @@ public class Model_Journal_Detail extends Model {
             poEntity.updateObject("nEntryNox", 0);
             poEntity.updateObject("nDebitAmt", 0.0000);
             poEntity.updateObject("nCredtAmt", 0.0000);
-//            poEntity.updateObject("cReversex", "+");
+            poEntity.updateObject("cReversex", "+");
             //end - assign default values
 
             poEntity.insertRow();
@@ -91,13 +90,13 @@ public class Model_Journal_Detail extends Model {
         return Double.parseDouble(String.valueOf(getValue("nCredtAmt")));
     }
     
-//    public JSONObject isReverse(boolean isReverse) {
-//        return setValue("cReversex", isReverse ? "+" : "-");
-//    }
-//
-//    public boolean isReverse() {
-//        return ((String) getValue("cReversex")).equals("+");
-//    }
+    public JSONObject isReverse(boolean isReverse) {
+        return setValue("cReversex", isReverse ? "+" : "-");
+    }
+
+    public boolean isReverse() {
+        return ((String) getValue("cReversex")).equals("+");
+    }
     
     public JSONObject setForMonthOf(Date date){
         return setValue("dForMonth", date);
