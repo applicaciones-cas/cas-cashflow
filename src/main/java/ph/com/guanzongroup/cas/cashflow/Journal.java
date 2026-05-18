@@ -392,6 +392,9 @@ public class Journal extends Transaction {
 //                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
                             
                             Detail(lnCtr).isReverse(true);
+                            Detail(lnCtr).setCreditAmount(0.0000);
+                            Detail(lnCtr).setDebitAmount(0.0000);
+                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
                             poJSON.put("row", lnCtr);
                             break;
                         } else {
