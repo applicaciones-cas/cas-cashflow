@@ -38,6 +38,7 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.inv.InvTransCons;
+import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
@@ -993,6 +994,27 @@ public class PaymentRequest extends Transaction {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    
+    
+    /** - Added by Arsiela 05-16-2026
+     * Searches for an active Branch record and updates the local branch state.
+     * 
+     * @param value The search criteria.
+     * @param byCode {@code true} to search by branch code.
+     * @return A {@link JSONObject} containing the search result.
+     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
+     */
+    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setBranchCode(object.getModel().getBranchCode());
+        }
+
+        return poJSON;
     }
 
     public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
