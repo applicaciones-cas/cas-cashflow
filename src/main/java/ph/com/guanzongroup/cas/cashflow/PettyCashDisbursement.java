@@ -79,6 +79,7 @@ import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PettyCashDisbursementStatus;
@@ -702,7 +703,7 @@ public class PettyCashDisbursement extends Transaction {
     * @throws GuanzonException if application error occurs
     */
     private String setCashFund() throws SQLException, GuanzonException{
-        Model_Cash_Fund loObj = new CashflowModels(poGRider).CashFund();
+        Model_PettyCash loObj = new CashflowModels(poGRider).PettyCashMaster();
         int lnCountCashFund = 0;
         String lsPettyID = "";
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
@@ -718,7 +719,7 @@ public class PettyCashDisbursement extends Transaction {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     lnCountCashFund++;
-                    lsPettyID = loRS.getString("sCashFIDx") ;
+                    lsPettyID = loRS.getString("sPettyIDx") ;
                 }
             }
             MiscUtil.close(loRS);
@@ -1103,6 +1104,10 @@ public class PettyCashDisbursement extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setDepartmentRequest(object.getModel().getDepartmentId());
+            String lsPettyId = setCashFund();
+            if(lsPettyId != null && !"".equals(lsPettyId)){
+                Master().setPettyId(lsPettyId);
+            }
         }
         return poJSON;
     }
