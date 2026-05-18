@@ -363,7 +363,8 @@ public class Journal extends Transaction {
         try {
             int lnRow = 0;
             for (int lnCtr = 0; lnCtr <= getDetailCount()- 1; lnCtr++) {
-                if(Detail(lnCtr).getCreditAmount() > 0.0000 || Detail(lnCtr).getDebitAmount() > 0.0000){
+//                if(Detail(lnCtr).getCreditAmount() > 0.0000 || Detail(lnCtr).getDebitAmount() > 0.0000){
+                if(Detail(lnCtr).isReverse()){
                     lnRow++;
                 }
                 if (lnCtr != fnRow) {
