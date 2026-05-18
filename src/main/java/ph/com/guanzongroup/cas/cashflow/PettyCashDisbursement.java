@@ -1108,6 +1108,8 @@ public class PettyCashDisbursement extends Transaction {
             String lsPettyId = setCashFund();
             if(lsPettyId != null && !"".equals(lsPettyId)){
                 Master().setPettyId(lsPettyId);
+            } else {
+                Master().setPettyId("");
             }
         }
         return poJSON;

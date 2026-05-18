@@ -1303,6 +1303,8 @@ public class CashDisbursement extends Transaction {
             String lsCashFund = setCashFund() ;
             if(lsCashFund != null && !"".equals(lsCashFund)){
                 Master().setCashFundId(lsCashFund);
+            } else {
+                Master().setCashFundId("");
             }
         }
         return poJSON;
