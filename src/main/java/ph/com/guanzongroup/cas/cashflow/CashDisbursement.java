@@ -926,9 +926,11 @@ public class CashDisbursement extends Transaction {
             if(lsCashFundID != null && !"".equals(lsCashFundID)){
                 Master().setCashFundId(lsCashFundID);
             }
+        } else {
+            lsCashFundID = "";
         }
         
-        return "";
+        return lsCashFundID;
     }
     
     /*Search Master References*/

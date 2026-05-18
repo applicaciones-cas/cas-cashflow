@@ -733,9 +733,11 @@ public class PettyCashDisbursement extends Transaction {
             if(lsPettyID != null && !"".equals(lsPettyID)){
                 Master().setPettyId(lsPettyID);
             }
+        } else {
+            lsPettyID = "";
         }
         
-        return "";
+        return lsPettyID;
     }
     
     /*Search Master References*/
