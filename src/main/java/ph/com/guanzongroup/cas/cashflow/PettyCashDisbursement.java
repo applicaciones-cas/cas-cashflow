@@ -712,6 +712,7 @@ public class PettyCashDisbursement extends Transaction {
                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                     + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
                     + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
+                    + " AND DATE(dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()))
                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);

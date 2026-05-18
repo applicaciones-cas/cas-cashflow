@@ -1300,7 +1300,10 @@ public class CashDisbursement extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setDepartmentRequest(object.getModel().getDepartmentId());
-            Master().setCashFundId("");
+            String lsCashFund = setCashFund() ;
+            if(lsCashFund != null && !"".equals(lsCashFund)){
+                Master().setCashFundId(lsCashFund);
+            }
         }
         return poJSON;
     }
