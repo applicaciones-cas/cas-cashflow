@@ -3339,9 +3339,9 @@ public class DisbursementVoucher extends Transaction {
                 lsSourceNo = Detail(lnRow).getSourceNo();
                 lsSourceCode = Detail(lnRow).getSourceCode();
                 if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
-//                    lsSourceNo = Detail(lnRow).getDetailSource();
-//                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
-                    continue; //if source is from SOA / Account Payable no need to display the attachment based on ma'am she - 03-04-2026
+                    lsSourceNo = Detail(lnRow).getDetailSource();
+                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
+//                    continue; //if source is from SOA / Account Payable no need to display the attachment based on ma'am she - 03-04-2026 -Disabled Arsiela 05-18-2026 Suggestion to view attachements by testers
                 }
 
                 List loList = loAttachment.getAttachments(lsSourceCode, lsSourceNo);
