@@ -1016,7 +1016,7 @@ public class PaymentRequest extends Transaction {
 //        }
 //
 //        return poJSON;
-        
+        //Filter branch according to record status and company - request by ma'am she 05-18-2026 9:50AM
         String lsSQL = MiscUtil.addCondition("SELECT sBranchCD, sBranchNm, sCompnyID FROM Branch ", 
                                                 " cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
                                                 + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
