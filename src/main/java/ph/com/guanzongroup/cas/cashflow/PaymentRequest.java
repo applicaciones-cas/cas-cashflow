@@ -2048,7 +2048,9 @@ public class PaymentRequest extends Transaction {
 //                " a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID()),
 //                " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID),
 //                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+//        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+//                                                        + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
                                                         + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
