@@ -48,8 +48,8 @@ public class Model_PettyCash extends Model {
             poEntity.absolute(1);
             
             ID = "sPettyIDx";
-            ID2 = "sBranchCD";
-            ID3 = "sDeptIDxx";
+//            ID2 = "sBranchCD";
+//            ID3 = "sDeptIDxx";
 
             //initialize reference objects
             ParamModels model = new ParamModels(poGRider);

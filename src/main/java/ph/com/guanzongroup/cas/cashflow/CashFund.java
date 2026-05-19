@@ -9,6 +9,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -35,6 +37,7 @@ public class CashFund extends Parameter {
     public String psCompanyId = "";
     public String psBranchCode = "";
     public String psDepartmentId = "";
+    public String psApprover = "";
     
     Model_Cash_Fund poModel;
     public List<Model> paLedger;
@@ -52,7 +55,8 @@ public class CashFund extends Parameter {
         CashflowModels model = new CashflowModels(poGRider);
         poModel = model.CashFund();
         paLedger = new ArrayList<Model>();
-        
+        psApprover = "";
+        pbIsCashFundUse = false;
         super.initialize();
     }
     
@@ -68,8 +72,8 @@ public class CashFund extends Parameter {
             throws SQLException,
             GuanzonException {
         
-        poModel.setIndustryId(poGRider.getIndustry());
-        poModel.setCompanyId(poGRider.getCompnyId());
+        poModel.setIndustryId(psIndustryId);
+        poModel.setCompanyId(psCompanyId);
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartment(poGRider.getDepartment());
         poModel.setBeginningDate(poGRider.getServerDate());
@@ -127,9 +131,70 @@ public class CashFund extends Parameter {
                 return poJSON;
             }
 //            setApproving(lsUserIDxx);
+            psApprover = lsUserIDxx;
         }   
         
         poJSON = setJSON("success","success");
+        return poJSON;
+    }
+    
+    /**
+    * Checks if a user has an allowed position for a specific transaction status.
+    *
+    * @param fsUserId user ID
+    * @return department name if authorized, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
+    public String checkApprover(String fsUserId) throws SQLException, GuanzonException{
+        String lsDepartment = "";
+        String lsSQL = " SELECT   " +
+                    "  a.sUserIDxx, " +
+                    "  d.sCompnyNm, " +
+                    "  e.sDeptName, " +
+                    "  c.sPositnNm, " +
+                    "  b.dFiredxxx, " +
+                    "  b.sDeptIDxx, " +
+                    "  b.sPositnID " +
+                    "FROM xxxSysUser a " +
+                    "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
+                    "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
+                    "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
+                    "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
+        
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " a.sUserIDxx = " + SQLUtil.toSQL(fsUserId)
+//                + " AND b.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance")) 
+                 );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+                        lsDepartment = loRS.getString("sDeptIDxx");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+            return lsDepartment;
+        }
+        return lsDepartment;
+    }
+    
+    public JSONObject SaveRecord() throws SQLException{
+        try {
+            poJSON = new JSONObject();
+            poJSON = saveRecord();
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poGRider.rollbackTrans();
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        
         return poJSON;
     }
     
@@ -160,18 +225,29 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "Record was already active.");
             return poJSON;
         }
+        
+        if(!pbWthParent){
+            psApprover = poGRider.getUserID();
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to activate the record." );
+                return poJSON;
+            }
+        }
 
         //validator
         poJSON = isEntryOkay();
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
-        }
-        
-        if(!pbWthParent){
-            poJSON = callApproval();
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
@@ -215,20 +291,31 @@ public class CashFund extends Parameter {
             poJSON = setJSON("error", "Deactivation is only allowed if status is active and balance is 0.00");
             return poJSON;
         }
+        
+        if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
+            if(!pbWthParent){
+                psApprover = poGRider.getUserID();
+                poJSON = callApproval();
+                if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+
+                String lsDepartment = poGRider.getDepartment();
+                if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                    lsDepartment = checkApprover(psApprover);
+                }
+                if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                    poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to deactivate the record." );
+                    return poJSON;
+                }
+            }
+        }
 
         //validator
         poJSON = isEntryOkay();
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
-        }
-        
-        if(CashFundStatus.ACTIVE.equals(poModel.getTransactionStatus())){
-            if(!pbWthParent){
-                poJSON = callApproval();
-                if (!isJSONSuccess(poJSON)) {
-                    return poJSON;
-                }
-            }
         }
         
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sCashFIDx"), "", lsStatus, false, pbWthParent);
@@ -252,7 +339,8 @@ public class CashFund extends Parameter {
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+//        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+        if (!poGRider.getDepartment().equals(System.getProperty("sys.dept.finance"))) { //BR: Authorized users from the Finance Department
             poJSON = setJSON("error", "User is not allowed to save record.");
             return poJSON;
         } else {
@@ -369,6 +457,11 @@ public class CashFund extends Parameter {
         return poModel;
     }
     
+    boolean pbIsCashFundUse = false;
+    public void setCashFundUse(boolean fbIsUsing){
+        pbIsCashFundUse = fbIsUsing;
+    }
+    
     /**
     * Searches a Cash Fund record using the given value.
     *
@@ -411,6 +504,12 @@ public class CashFund extends Parameter {
         if(!lsCondition.isEmpty()){
             lsSQL = lsSQL + " " + lsCondition;
         }
+        
+        //if searching is for cash fund use: Cash Advance / Cash Disbursement
+        if(pbIsCashFundUse){
+            lsSQL = lsSQL + " AND DATE(a.dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()));
+        }
+        
         System.out.println("MySQL : " + lsSQL);
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
@@ -728,6 +827,7 @@ public class CashFund extends Parameter {
                         + " FROM "+ poModel.getTable()+" a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sCashFIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sCashFIDx =  " + SQLUtil.toSQL(poModel.getCashFundId())) ;
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {

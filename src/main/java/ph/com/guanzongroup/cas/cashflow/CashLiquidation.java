@@ -69,6 +69,7 @@ public class CashLiquidation extends Transaction {
     public String psIndustry = "";
     public String psBranch = "";
     public String psPayee = "";
+    public String psApprover = "";
     
     public List<Model> paMaster;
     public List<TransactionAttachment> paAttachments;
@@ -92,7 +93,7 @@ public class CashLiquidation extends Transaction {
 
         paMaster = new ArrayList<Model>();
         paAttachments = new ArrayList<>();
-
+        psApprover = "";
         return initialize();
     }
 
@@ -173,6 +174,12 @@ public class CashLiquidation extends Transaction {
      *          If the record is locked, unavailable, or an error occurs during the update process.
      */
     public JSONObject UpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        if(!poGRider.getDepartment().equals(System.getProperty("sys.dept.finance"))){ //BR: Authorized users from the Finance
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not authorized to update transaction." );
+            return poJSON;
+        }
+        
         poJSON = updateTransaction();
         if (!isJSONSuccess(poJSON)) {
             poJSON = setJSON((String) poJSON.get("result"),"Unable to update cash advance.\n" + (String) poJSON.get("message"));
@@ -223,10 +230,57 @@ public class CashLiquidation extends Transaction {
                 return poJSON;
             }
             setApproving(lsUserIDxx);
+            psApprover = lsUserIDxx;
         }   
         
         poJSON = setJSON("success","success");
         return poJSON;
+    }
+    
+    /**
+    * Checks if a user has an allowed position for a specific transaction status.
+    *
+    * @param fsUserId user ID
+    * @return department name if authorized, otherwise empty string
+    * @throws SQLException if a database error occurs
+    * @throws GuanzonException if query execution fails
+    */
+    public String checkApprover(String fsUserId) throws SQLException, GuanzonException{
+        String lsDepartment = "";
+        String lsSQL = " SELECT   " +
+                    "  a.sUserIDxx, " +
+                    "  d.sCompnyNm, " +
+                    "  e.sDeptName, " +
+                    "  c.sPositnNm, " +
+                    "  b.dFiredxxx, " +
+                    "  b.sDeptIDxx, " +
+                    "  b.sPositnID " +
+                    "FROM xxxSysUser a " +
+                    "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
+                    "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
+                    "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
+                    "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
+        
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " a.sUserIDxx = " + SQLUtil.toSQL(fsUserId)
+//                + " AND b.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance")) 
+                 );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sDeptIDxx") != null && !"".equals(loRS.getString("sDeptIDxx"))){
+                        lsDepartment = loRS.getString("sDeptIDxx");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+            return lsDepartment;
+        }
+        return lsDepartment;
     }
     /**
      * Validates if the current transaction is eligible for updates based on its database status.
@@ -375,18 +429,29 @@ public class CashLiquidation extends Transaction {
             poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
             return poJSON;
         }
-        
-        if(!pbWthParent){
-            poJSON = callApproval();
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
-        }
 
         //validator
         poJSON = isEntryOkay(lsStatus);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
+        }
+        
+        if(!pbWthParent){
+            psApprover = poGRider.getUserID();
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+            
+            String lsDepartment = poGRider.getDepartment();
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                lsDepartment = checkApprover(psApprover);
+            }
+            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User or approving officer is not authorized to approve the transaction." );
+                return poJSON;
+            }
         }
         
         poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,pbWthParent);
@@ -1125,6 +1190,8 @@ public class CashLiquidation extends Transaction {
         resetMaster();
         Detail().clear();
         paAttachments = new ArrayList<>();
+        psApprover = "";
+        setApproving("");
     }
    
     /**
@@ -1763,6 +1830,7 @@ public class CashLiquidation extends Transaction {
                 + " FROM "+Master().getTable()+" a "
                 + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo()));
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {

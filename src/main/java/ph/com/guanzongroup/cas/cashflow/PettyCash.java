@@ -9,6 +9,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -69,8 +71,8 @@ public class PettyCash extends Parameter {
             throws SQLException,
             GuanzonException {
 
-        poModel.setIndustryId(poGRider.getIndustry());
-        poModel.setCompanyId(poGRider.getCompnyId());
+        poModel.setIndustryId(psIndustryId);
+        poModel.setCompanyId(psCompanyId);
         poModel.setBranchCode(poGRider.getBranchCode());
         poModel.setDepartment(poGRider.getDepartment());
         poModel.setBeginningDate(poGRider.getServerDate());
@@ -142,6 +144,20 @@ public class PettyCash extends Parameter {
         }
 
         poJSON = setJSON("success", "success");
+        return poJSON;
+    }
+    
+    public JSONObject SaveRecord() throws SQLException{
+        try {
+            poJSON = new JSONObject();
+            poJSON = saveRecord();
+        } catch (SQLException | GuanzonException | CloneNotSupportedException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poGRider.rollbackTrans();
+            poJSON = setJSON("error", MiscUtil.getException(ex));
+            return poJSON;
+        }
+        
         return poJSON;
     }
 
@@ -264,10 +280,11 @@ public class PettyCash extends Parameter {
     public JSONObject isEntryOkay() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
 
-        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
-            poJSON = setJSON("error", "User is not allowed to save record.");
-            return poJSON;
-        } else {
+//        if (poGRider.getUserLevel() < UserRight.SYSADMIN) {
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) { //BR : Authorized users from the Branch
+//            poJSON = setJSON("error", "User is not allowed to save record.");
+//            return poJSON;
+//        } else {
             poJSON = new JSONObject();
             if (poModel.getPettyId() == null || "".equals(poModel.getPettyId())) {
                 poJSON = setJSON("error", "Petty Cash ID must not be empty.");
@@ -322,7 +339,7 @@ public class PettyCash extends Parameter {
                     return poJSON;
                 }
             }
-        }
+//        }
 
         poJSON = checkExistingPettyCash();
         if (!isJSONSuccess(poJSON)) {
@@ -746,6 +763,7 @@ public class PettyCash extends Parameter {
                 + " FROM " + poModel.getTable() + " a "
                 + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sPettyIDx AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(poModel.getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sPettyIDx =  " + SQLUtil.toSQL(poModel.getPettyId()));
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {

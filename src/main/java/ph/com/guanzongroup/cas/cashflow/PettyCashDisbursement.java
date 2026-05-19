@@ -79,6 +79,7 @@ import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement;
 import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
+import ph.com.guanzongroup.cas.cashflow.model.Model_PettyCash;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.PettyCashDisbursementStatus;
@@ -702,7 +703,7 @@ public class PettyCashDisbursement extends Transaction {
     * @throws GuanzonException if application error occurs
     */
     private String setCashFund() throws SQLException, GuanzonException{
-        Model_Cash_Fund loObj = new CashflowModels(poGRider).CashFund();
+        Model_PettyCash loObj = new CashflowModels(poGRider).PettyCashMaster();
         int lnCountCashFund = 0;
         String lsPettyID = "";
         String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), 
@@ -711,6 +712,7 @@ public class PettyCashDisbursement extends Transaction {
                     + " AND sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                     + " AND sDeptIDxx = " + SQLUtil.toSQL(Master().getDepartmentRequest())
                     + " AND cTranStat = " + SQLUtil.toSQL(CashFundStatus.ACTIVE)
+                    + " AND DATE(dBegDatex) <= " + SQLUtil.toSQL(xsDateShort(poGRider.getServerDate()))
                     );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -718,7 +720,7 @@ public class PettyCashDisbursement extends Transaction {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
                     lnCountCashFund++;
-                    lsPettyID = loRS.getString("sCashFIDx") ;
+                    lsPettyID = loRS.getString("sPettyIDx") ;
                 }
             }
             MiscUtil.close(loRS);
@@ -731,9 +733,11 @@ public class PettyCashDisbursement extends Transaction {
             if(lsPettyID != null && !"".equals(lsPettyID)){
                 Master().setPettyId(lsPettyID);
             }
+        } else {
+            lsPettyID = "";
         }
         
-        return "";
+        return lsPettyID;
     }
     
     /*Search Master References*/
@@ -1103,6 +1107,12 @@ public class PettyCashDisbursement extends Transaction {
         poJSON = object.searchRecord(value, byCode);
         if (isJSONSuccess(poJSON)) {
             Master().setDepartmentRequest(object.getModel().getDepartmentId());
+            String lsPettyId = setCashFund();
+            if(lsPettyId != null && !"".equals(lsPettyId)){
+                Master().setPettyId(lsPettyId);
+            } else {
+                Master().setPettyId("");
+            }
         }
         return poJSON;
     }
@@ -2164,6 +2174,7 @@ public class PettyCashDisbursement extends Transaction {
                      + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
                      + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
@@ -2611,6 +2622,7 @@ public class PettyCashDisbursement extends Transaction {
                 + " FROM "+Master().getTable()+" a "
                 + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo()));
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {

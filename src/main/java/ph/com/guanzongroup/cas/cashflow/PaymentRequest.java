@@ -33,11 +33,13 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.base.WebFile;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.inv.InvTransCons;
+import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
@@ -934,6 +936,7 @@ public class PaymentRequest extends Transaction {
         SQL_BROWSE = "SELECT "
                 + " a.sTransNox,"
                 + " a.dTransact,"
+                + " a.sSeriesNo,"
                 + " b.sBranchNm,"
                 + " c.sDeptName,"
                 + " d.sPayeeNme,"
@@ -960,7 +963,7 @@ public class PaymentRequest extends Transaction {
         initSQL();
 //        String lsFilterCondition = String.join(" AND ", "a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()),
 //                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
             lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
@@ -980,9 +983,9 @@ public class PaymentRequest extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 fsValue,
-                "Transaction Date»Transaction No»Branch»Payee",
-                "a.dTransact»a.sTransNox»b.sBranchNm»d.sPayeeNme",
-                "a.dTransact»a.sTransNox»b.sBranchNm»d.sPayeeNme",
+                "Transaction Date»Transaction No»Series No»Branch»Payee",
+                "a.dTransact»a.sTransNox»a.sSeriesNo»b.sBranchNm»d.sPayeeNme",
+                "a.dTransact»a.sTransNox»a.sSeriesNo»b.sBranchNm»d.sPayeeNme",
                 1);
 
         if (poJSON != null) {
@@ -993,6 +996,53 @@ public class PaymentRequest extends Transaction {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    
+    
+    /** - Added by Arsiela 05-16-2026
+     * Searches for an active Branch record and updates the local branch state.
+     * 
+     * @param value The search criteria.
+     * @param byCode {@code true} to search by branch code.
+     * @return A {@link JSONObject} containing the search result.
+     * @throws ExceptionInInitializerError, SQLException, GuanzonException If search fails.
+     */
+    public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+//        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+//        object.setRecordStatus(RecordStatus.ACTIVE);
+//        poJSON = object.searchRecord(value, byCode);
+//        if ("success".equals((String) poJSON.get("result"))) {
+//            Master().setBranchCode(object.getModel().getBranchCode());
+//        }
+//
+//        return poJSON;
+        //Filter branch according to record status and company - request by ma'am she 05-18-2026 9:50AM
+        String lsSQL = MiscUtil.addCondition("SELECT sBranchCD, sBranchNm, sCompnyID FROM Branch ", 
+                                                " cRecdStat = " + SQLUtil.toSQL(RecordStatus.ACTIVE)
+                                                + " AND sCompnyID = " + SQLUtil.toSQL(psCompanyId)
+                                            );
+        System.out.println("SQL EXECUTED: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                value,
+                "Branch Code»Branch Name",
+                "sBranchCD»sBranchNm",
+                "sBranchCD»sBranchNm",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            Master().setBranchCode((String) poJSON.get("sBranchCD"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            Master().setBranchCode("");
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
 
     public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
@@ -1671,7 +1721,17 @@ public class PaymentRequest extends Transaction {
     
     public JSONObject loadPayables() throws SQLException, GuanzonException {
         poJSON = new JSONObject();
+        String lsCompanyId = poGRider.getCompnyId();
+        String lsIndustryId = poGRider.getIndustry();
         paPOMaster = new ArrayList<>();
+       
+        if (psIndustryId != null && !"".equals(psIndustryId)) {
+            lsIndustryId = psIndustryId;
+        }
+        if (psCompanyId != null && !"".equals(psCompanyId)) {
+            lsCompanyId = psCompanyId;
+        }
+        
         String lsSQL = " SELECT "
                         + "   a.sTransNox "
                         + " , a.dTransact "
@@ -1693,6 +1753,8 @@ public class PaymentRequest extends Transaction {
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.VOID)
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.CANCELLED)
                                     +   " AND a.cTranStat != " + SQLUtil.toSQL(PurchaseOrderStatus.POSTED)
+                                    +   " AND a.sCompnyID = " + SQLUtil.toSQL(lsCompanyId)
+                                    +   " AND a.sIndstCdx = " + SQLUtil.toSQL(lsIndustryId)
                                     +   " AND a.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode())
                                     +   " AND f.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()));
         lsSQL = lsSQL + " ORDER BY a.dTransact, e.sCompnyNm ASC ";
@@ -1779,6 +1841,7 @@ public class PaymentRequest extends Transaction {
             Detail().clear();
             AddDetail();
         }
+        Master().setBranchCode(loObject.getBranchCode());
         Master().setPayeeID(loPayee.getPayeeID());
         Master().setSourceNo(loObject.getTransactionNo());
         Master().setSourceCode(InvTransCons.PURCHASE_ORDER);
@@ -2005,9 +2068,9 @@ public class PaymentRequest extends Transaction {
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
                 fsValue,
-                "Transaction Date»Transaction No»Branch»Payee",
-                "a.dTransact»a.sTransNox»b.sBranchNm»d.sPayeeNme",
-                "a.dTransact»a.sTransNox»b.sBranchNm»d.sPayeeNme",
+                "Transaction Date»Transaction No»Series No»Branch»Payee",
+                "a.dTransact»a.sTransNox»a.sSeriesNo»b.sBranchNm»d.sPayeeNme",
+                "a.dTransact»a.sTransNox»a.sSeriesNo»b.sBranchNm»d.sPayeeNme",
                 1);
 
         if (poJSON != null) {
@@ -2036,10 +2099,9 @@ public class PaymentRequest extends Transaction {
         String lsFilterCondition = String.join(" AND ",
                 " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
-                " a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+                " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+                " a.cProcessd = "  + SQLUtil.toSQL(Logical.NO));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
-        lsSQL = MiscUtil.addCondition(lsSQL, lsFilterCondition);
-        
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
             lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);

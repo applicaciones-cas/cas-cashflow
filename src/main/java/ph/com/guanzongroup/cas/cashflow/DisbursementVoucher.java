@@ -3339,9 +3339,9 @@ public class DisbursementVoucher extends Transaction {
                 lsSourceNo = Detail(lnRow).getSourceNo();
                 lsSourceCode = Detail(lnRow).getSourceCode();
                 if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnRow).getSourceCode())){
-//                    lsSourceNo = Detail(lnRow).getDetailSource();
-//                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
-                    continue; //if source is from SOA / Account Payable no need to display the attachment based on ma'am she - 03-04-2026
+                    lsSourceNo = Detail(lnRow).getDetailSource();
+                    lsSourceCode = Detail(lnRow).SOADetail().getSourceCode();
+//                    continue; //if source is from SOA / Account Payable no need to display the attachment based on ma'am she - 03-04-2026 -Disabled Arsiela 05-18-2026 Suggestion to view attachements by testers
                 }
 
                 List loList = loAttachment.getAttachments(lsSourceCode, lsSourceNo);
@@ -4514,7 +4514,8 @@ public class DisbursementVoucher extends Transaction {
                                 GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
                                 loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
                                 for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-                                    if(Journal().Detail(lnCtr).getCreditAmount() > 0.0000 || Journal().Detail(lnCtr).getDebitAmount() > 0.0000){
+//                                    if(Journal().Detail(lnCtr).getCreditAmount() > 0.0000 || Journal().Detail(lnCtr).getDebitAmount() > 0.0000){
+                                    if(Journal().Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
                                         loGLTrans.addDetail(Journal().Master().getBranchCode(), 
                                                 Journal().Detail(lnCtr).getAccountCode(),
                                                 SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
@@ -4931,18 +4932,25 @@ public class DisbursementVoucher extends Transaction {
         double ldblCreditAmt = 0.0000;
         double ldblDebitAmt = 0.0000;
         boolean lbHasJournal = false;
+        boolean lbValidateJournal = false;
         for(int lnCtr = 0; lnCtr <= poJournal.getDetailCount()-1; lnCtr++){
-            ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
-            ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
-            
-            if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
-                if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
-                    if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
-                        return poJSON;
+            if(poJournal.Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
+                ldblDebitAmt += poJournal.Detail(lnCtr).getDebitAmount();
+                ldblCreditAmt += poJournal.Detail(lnCtr).getCreditAmount();
+
+                if(poJournal.Detail(lnCtr).getCreditAmount() > 0.0000 ||  poJournal.Detail(lnCtr).getDebitAmount() > 0.0000){
+                    if(poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode())){
+                        if(poJournal.Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(poJournal.Detail(lnCtr).getForMonthOf()))){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
+                            return poJSON;
+                        }
                     }
                 }
+                
+                if(!lbValidateJournal){
+                    lbValidateJournal = poJournal.Detail(lnCtr).getAccountCode() != null && !"".equals(poJournal.Detail(lnCtr).getAccountCode());
+                } 
             }
             
             if(!lbHasJournal){
@@ -4950,7 +4958,7 @@ public class DisbursementVoucher extends Transaction {
             }   
         }
         
-        if(lbHasJournal){
+        if(lbValidateJournal){
             if(ldblDebitAmt == 0.0000 ){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid journal entry debit amount.");
