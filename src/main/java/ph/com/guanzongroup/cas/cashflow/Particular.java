@@ -73,16 +73,17 @@ public class Particular extends Parameter{
     @Override
     public JSONObject searchRecord(String value, boolean byCode) throws SQLException, GuanzonException{
         String lsSQL = getSQ_Browse();
-        if(psIndustryId != null && !"".equals(psIndustryId)){
-            lsSQL = lsSQL + " AND b.sIndstCde = " + SQLUtil.toSQL(psIndustryId);
-        }
+        //No need to filted by industry code since left join for account chart was removed; - Arsiela 05-20-2026 02:16PM
+//        if(psIndustryId != null && !"".equals(psIndustryId)){
+//            lsSQL = lsSQL + " AND b.sIndstCde = " + SQLUtil.toSQL(psIndustryId);
+//        }
         System.out.println("PARTICULAR : " + lsSQL );
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
                 value,
-                "ID»Description»Account",
-                "sPrtclrID»sDescript»xAcctDesc",
-                "a.sPrtclrID»a.sDescript»IFNULL(b.sDescript, '')",
+                "ID»Description",
+                "sPrtclrID»sDescript",
+                "a.sPrtclrID»a.sDescript",
                 byCode ? 0 : 1);
 
         if (poJSON != null) {
@@ -116,10 +117,10 @@ public class Particular extends Parameter{
                             ", a.cRecdStat" +
                             ", a.sModified" +
                             ", a.dModified" +
-                            ", b.sIndstCde" +
-                            ", IFNULL(b.sDescript, '') xAcctDesc" +
-                        " FROM Particular a" +
-                            " LEFT JOIN Account_Chart b ON a.sAcctCode = b.sAcctCode";
+//                            ", b.sIndstCde" +
+//                            ", IFNULL(b.sDescript, '') xAcctDesc" +
+                        " FROM Particular a" ;
+//                            " LEFT JOIN Account_Chart b ON a.sAcctCode = b.sAcctCode"; //Removed left join for account chart - Arsiela 05-20-2026 01:14PM; Requested by ma'am she and approved by sir mac;
         
         return MiscUtil.addCondition(lsSQL, lsCondition);
     }
