@@ -963,7 +963,10 @@ public class PaymentRequest extends Transaction {
         initSQL();
 //        String lsFilterCondition = String.join(" AND ", "a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + Master().getPayeeID()),
 //                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " ( a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%")
+                                                    + " OR a.sSourceNo LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%") //add source no in condition requested by ma'am she - Arsiela 05-22-2026
+                                                    + " ) "
+                                                        );
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
             lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
@@ -2050,8 +2053,10 @@ public class PaymentRequest extends Transaction {
 //                " b.sBranchCd = " + SQLUtil.toSQL(Master().getBranchCode()));
 //        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
 //                                                        + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode())
-                                                        + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, " ( a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%")
+                                                    + " OR a.sSourceNo LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%") //add source no in condition requested by ma'am she - Arsiela 05-22-2026
+                                                    + " ) "
+                                                    + " AND a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayeeID));
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
             lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
@@ -2101,9 +2106,13 @@ public class PaymentRequest extends Transaction {
         String lsFilterCondition = String.join(" AND ",
                 " a.sPayeeIDx LIKE " + SQLUtil.toSQL("%" + fsPayee),
                 " a.sTransNox  LIKE " + SQLUtil.toSQL("%" + fsTransactionNo),
-                " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()),
+//              " SUBSTRING(a.sTransNox,1,4) = " + SQLUtil.toSQL(poGRider.getBranchCode()),
                 " a.cProcessd = "  + SQLUtil.toSQL(Logical.NO));
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition);
+        
+        lsSQL = lsSQL + " AND ( a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode()+ "%")
+                    + " OR a.sSourceNo LIKE " + SQLUtil.toSQL(poGRider.getBranchCode()+ "%") //add source no in condition requested by ma'am she - Arsiela 05-22-2026
+                    + " ) ";
         String lsFilterAll = "";
         if (psIndustryId != null && !"".equals(psIndustryId)) {
             lsFilterAll += " AND a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
