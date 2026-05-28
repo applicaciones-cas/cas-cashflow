@@ -79,6 +79,8 @@ import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
+import org.guanzon.cas.client.ClientInfo;
+import org.guanzon.cas.client.services.ClientControllers;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Industry;
@@ -2006,12 +2008,26 @@ public class DisbursementVoucher extends Transaction {
     public JSONObject SearchPayee(String value, boolean byCode, boolean isSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
         object.setRecordStatus(RecordStatus.ACTIVE);
+        if(value == null){
+            value = "";
+        }
         System.out.println(" value " + value);
-        poJSON = object.searchRecordbyClientID(value, byCode);
+        System.out.println(" getSupplierClientID " + Master().getSupplierClientID());
+        
+        if(Master().getSupplierClientID().equals(Master().Payee().getAPClientID())){
+            poJSON = object.searchRecordbyAPClientID(value, byCode);
+        } else {
+            poJSON = object.searchRecordbyClientID(value, byCode);
+        }
+        
+//        poJSON = object.searchRecordbyAPClientID(value, Master().getSupplierClientID(), false);
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
                 setSearchPayee(object.getModel().getPayeeName()); 
-                setSearchClient(object.getModel().Client().getCompanyName());
+                setSearchClient(object.getModel().APClient().getCompanyName());
+                if(object.getModel().APClient().getCompanyName() == null || "".equals(object.getModel().APClient().getCompanyName())){
+                    setSearchClient(object.getModel().Client().getCompanyName());
+                }
             } else {
                 Master().setPayeeID(object.getModel().getPayeeID());
                 System.out.println("Payee : " +  Master().Payee().getPayeeName());
@@ -2043,12 +2059,23 @@ public class DisbursementVoucher extends Transaction {
         if ("success".equals((String) poJSON.get("result"))) {
             if(isSearch){
                 setSearchPayee(object.getModel().getPayeeName());
-                setSearchClient(object.getModel().Client().getCompanyName());
+//                setSearchClient(object.getModel().Client().getCompanyName());
+                setSearchClient(object.getModel().APClient().getCompanyName());
+                if(object.getModel().APClient().getCompanyName() == null || "".equals(object.getModel().APClient().getCompanyName())){
+                    setSearchClient(object.getModel().Client().getCompanyName());
+                }
             } else {
                 setSearchPayee(object.getModel().getPayeeName());
-                setSearchClient(object.getModel().Client().getCompanyName());
+//                setSearchClient(object.getModel().Client().getCompanyName());
+                setSearchClient(object.getModel().APClient().getCompanyName());
+                if(object.getModel().APClient().getCompanyName() == null || "".equals(object.getModel().APClient().getCompanyName())){
+                    setSearchClient(object.getModel().Client().getCompanyName());
+                }
                 Master().setPayeeID(object.getModel().getPayeeID());
-                Master().setSupplierClientID(object.getModel().getClientID());
+                Master().setSupplierClientID(object.getModel().getAPClientID());
+                if(object.getModel().getAPClientID() == null || "".equals(object.getModel().getAPClientID())){
+                    Master().setSupplierClientID(object.getModel().getClientID());
+                }
                 if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
                     || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                     CheckPayments().getModel().setPayeeID(Master().getPayeeID());
@@ -3149,7 +3176,7 @@ public class DisbursementVoucher extends Transaction {
             
         }
 
-        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ";
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact, supplier ASC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -5138,8 +5165,13 @@ public class DisbursementVoucher extends Transaction {
         
         int lnRow = getDetailCount() - 1; //set default value 
         Double ldblBalance = loController.Master().getNetTotal() - loController.Master().getAmountPaid();
+        String lsClientId = loController.Master().Payee().getAPClientID(); //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+        if(lsClientId == null || "".equals(lsClientId)){
+            lsClientId = loController.Master().Payee().getClientID();
+        }
+        
         //Validate transaction to be add in DV Detail
-        poJSON = validateDetail(ldblBalance, loController.Master().getPayeeID(), loController.Master().Payee().getClientID(),loController.Master().getIndustryID());
+        poJSON = validateDetail(ldblBalance, loController.Master().getPayeeID(), lsClientId,loController.Master().getIndustryID());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
@@ -5170,6 +5202,27 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+    //Added by Arsiela - 05-27-2026 11:50 AM
+    //Load Payee check primary contact person of selected supplier
+    private String findPrimaryContactPerson(String fsClientId) throws CloneNotSupportedException, GuanzonException, SQLException{
+        ClientInfo loClient = new ClientControllers(poGRider, logwrapr).ClientInfo();
+        loClient.initialize();
+        loClient.setWithParentClass(true);
+        loClient.setWithUI(false);
+
+        poJSON = loClient.openClientRecord(fsClientId);
+        if ("success".equals((String) poJSON.get("result"))) {
+            for(int lnCheck = 0;lnCheck < loClient.getInstiContactCount(); lnCheck++){
+                if(Logical.YES.equals(loClient.InstiContact(lnCheck).getcPayeexxx())
+                    && loClient.InstiContact(lnCheck).isPrimaryContactPersion()){
+                    return loClient.InstiContact(lnCheck).getcCPrsonID();
+                }
+            }
+        } 
+    
+        return fsClientId;
+    }
+    
     /**
      * Populate DV Detail based on selected Transaction
      * @param transactionNo the transaction number
@@ -5193,11 +5246,41 @@ public class DisbursementVoucher extends Transaction {
         
         Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
         loPayee.initialize();
-        poJSON = loPayee.getModel().openRecordByReference(loController.Master().getClientId());
+        
+        //Check setted payee for AP Adjustment if cache payable source is from AP Adujstment - Arsiela 05-27-2026
+        String lsClientId = loController.Master().getClientId();
+        String lsIssuedTo = "";
+        
+        //Load Payee from AP Adjustment 
+        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode())){
+            Model_AP_Payment_Adjustment loObj = new CashflowModels(poGRider).APPaymentAdjustment();
+            loObj.initialize();
+            poJSON = loObj.openRecord(loController.Master().getSourceNo());
+            if ("error".equals((String) poJSON.get("result"))) {
+                poJSON.put("row", 0);
+                return poJSON;
+            }
+            
+            lsIssuedTo = loObj.getIssuedTo();
+            lsClientId = loObj.getClientId();
+        } 
+        
+        if(lsIssuedTo != null && !"".equals(lsIssuedTo)){
+            poJSON = loPayee.getModel().openRecord(lsIssuedTo); //Get the actual Payee setted for AP Payment Adjustment
+        } else {
+            poJSON = loPayee.getModel().openRecordByReference(findPrimaryContactPerson(lsClientId));
+        }
+        
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loController.Master().Client().getCompanyName() + "."));
             return poJSON;
+        }
+        
+        //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+        lsClientId = loPayee.getModel().getAPClientID(); 
+        if(lsClientId == null || "".equals(lsClientId)){
+            lsClientId = loPayee.getModel().getClientID();
         }
         
         //Validate linked of transaction per source code
@@ -5210,7 +5293,7 @@ public class DisbursementVoucher extends Transaction {
         int lnRow = getDetailCount() - 1; //set default value 
         Double ldblBalance = loController.Master().getNetTotal() - loController.Master().getAmountPaid();
 //        Validate transaction to be add in DV Detail
-        poJSON = validateDetail(ldblBalance, loPayee.getModel().getPayeeID(), loController.Master().getClientId(),loController.Master().getIndustryCode());
+        poJSON = validateDetail(ldblBalance, loPayee.getModel().getPayeeID(), lsClientId,loController.Master().getIndustryCode());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
@@ -5302,21 +5385,33 @@ public class DisbursementVoucher extends Transaction {
         }
         
         Double ldblBalance = loController.Master().getNetTotal().doubleValue() - loController.Master().getAmountPaid().doubleValue();
+        String lsClientId = findPrimaryContactPerson(loController.Master().getClientId());
         String lsPayeeId = loController.Master().getIssuedTo();
         if(lsPayeeId == null || "".equals(lsPayeeId)){
             Model_Payee loPayee = new CashflowModels(poGRider).Payee();
-            poJSON = loPayee.openRecordByReference(loController.Master().getClientId());
+            poJSON = loPayee.openRecordByReference(lsClientId);
             if ("error".equals((String) poJSON.get("result"))) {
                 poJSON.put("row", 0);
                 poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loController.Master().Supplier().getCompanyName() + "."));
                 return poJSON;
             } else {
                 lsPayeeId = loPayee.getPayeeID();
+                //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+                lsClientId = loPayee.getAPClientID();
+                if(lsClientId == null || "".equals(lsClientId)){
+                    lsClientId = loPayee.getClientID();
+                }
+            }
+        } else {
+            //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+            lsClientId = loController.Master().Payee().getAPClientID();
+            if(lsClientId == null || "".equals(lsClientId)){
+                lsClientId = loController.Master().Payee().getClientID();
             }
         }
         
         //Validate transaction to be add in DV Detail
-        poJSON = validateDetail(ldblBalance,  lsPayeeId, loController.Master().getClientId(),loController.Master().getIndustryId());
+        poJSON = validateDetail(ldblBalance,  lsPayeeId, lsClientId,loController.Master().getIndustryId());
         if ("error".equals((String) poJSON.get("result"))) {
             poJSON.put("row", 0);
             return poJSON;
@@ -5376,8 +5471,13 @@ public class DisbursementVoucher extends Transaction {
 
                     ldblSourceBalance = loPRF.Master().getNetTotal() - loPRF.Master().getAmountPaid();
                     ldblVatExempt = ldblSourceBalance;
+                    lsClientId = loPRF.Master().Payee().getAPClientID(); //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+                    if(lsClientId == null || "".equals(lsClientId)){
+                        lsClientId = loPRF.Master().Payee().getClientID();
+                    }
+                    
                     //Validate transaction to be add in DV Detail
-                    poJSON = validateDetail(ldblSourceBalance, loPRF.Master().getPayeeID(), loPRF.Master().Payee().getClientID(),loPRF.Master().getIndustryID());
+                    poJSON = validateDetail(ldblSourceBalance, loPRF.Master().getPayeeID(), lsClientId,loPRF.Master().getIndustryID());
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("row", 0);
                         return poJSON;
@@ -5398,16 +5498,46 @@ public class DisbursementVoucher extends Transaction {
         
                         Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
                         loPayee.initialize();
-                        poJSON = loPayee.getModel().openRecordByReference(loController.Master().getClientId());
+                        
+                        //Check setted payee for AP Adjustment if cache payable source is from AP Adujstment - Arsiela 05-27-2026
+                        lsClientId = loController.Master().getClientId();
+                        String lsIssuedTo = "";
+
+                        //Load Payee from AP Adjustment 
+                        if(DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loCachePayable.Master().getSourceCode())){
+                            Model_AP_Payment_Adjustment loObj = new CashflowModels(poGRider).APPaymentAdjustment();
+                            loObj.initialize();
+                            poJSON = loObj.openRecord(loCachePayable.Master().getSourceNo());
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                poJSON.put("row", 0);
+                                return poJSON;
+                            }
+
+                            lsIssuedTo = loObj.getIssuedTo();
+                            lsClientId = loObj.getClientId();
+                        } 
+
+                        if(lsIssuedTo != null && !"".equals(lsIssuedTo)){
+                            poJSON = loPayee.getModel().openRecord(lsIssuedTo); //Get the actual Payee setted for AP Payment Adjustment
+                        } else {
+                            poJSON = loPayee.getModel().openRecordByReference(findPrimaryContactPerson(lsClientId));
+                        }
+
                         if ("error".equals((String) poJSON.get("result"))) {
                             poJSON.put("row", 0);
                             poJSON.put("message", ((String) poJSON.get("message") + "\nPlease contact system administrator to check data of Payee for supplier " + loCachePayable.Master().Client().getCompanyName() + "."));
                             return poJSON;
                         }
+
+                        //mandatory get the AP client id for PRF if null then get the Client Id - Arsiela 05-27-2026
+                        lsClientId = loPayee.getModel().getAPClientID(); 
+                        if(lsClientId == null || "".equals(lsClientId)){
+                            lsClientId = loPayee.getModel().getClientID();
+                        }
                         
                         ldblSourceBalance = loCachePayable.Master().getNetTotal() - loCachePayable.Master().getAmountPaid();
                         //Validate transaction to be add in DV Detail
-                        poJSON = validateDetail(ldblSourceBalance, loPayee.getModel().getPayeeID(), loCachePayable.Master().getClientId(),loController.Master().getIndustryId());
+                        poJSON = validateDetail(ldblSourceBalance, loPayee.getModel().getPayeeID(), lsClientId,loController.Master().getIndustryId());
                         if ("error".equals((String) poJSON.get("result"))) {
                             poJSON.put("row", 0);
                             return poJSON;
@@ -5491,8 +5621,14 @@ public class DisbursementVoucher extends Transaction {
             Model_Cache_Payable_Master object = new CashflowModels(poGRider).Cache_Payable_Master();
             String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(object),
                     " sSourceNo = " + SQLUtil.toSQL(fsSourceNo)
-                   + " AND sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
-                   + " AND sClientID = " + SQLUtil.toSQL(Master().Payee().getClientID())); 
+                   + " AND sSourceCd = " + SQLUtil.toSQL(fsSourceCode));
+//                   + " AND sClientID = " + SQLUtil.toSQL(Master().Payee().getClientID()));  //Commented by Arsiela 05-27-2026; Replaced by script below
+
+            if(Master().Payee().getAPClientID() != null && !"".equals(Master().Payee().getAPClientID())){
+                lsSQL = lsSQL + " AND sClientID = " + SQLUtil.toSQL(Master().Payee().getAPClientID()); // If AP client ID is not null or not empty check to Payee AP Client ID
+            } else {
+                lsSQL = lsSQL + " AND sClientID = " + SQLUtil.toSQL(Master().Payee().getClientID()); //Check thru payee client ID
+            }
             
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -5500,7 +5636,7 @@ public class DisbursementVoucher extends Transaction {
                 lsTransactionNo = loRS.getString("sTransNox");
                 MiscUtil.close(loRS);
             } 
-        } catch (SQLException | GuanzonException ex) {
+        } catch (SQLException | GuanzonException ex) { 
             return lsTransactionNo;
         }
             
@@ -5715,26 +5851,40 @@ public class DisbursementVoucher extends Transaction {
                     Master().setPayeeID(fsPayeeId);
                 } else {
                     if (!Master().getPayeeID().equals(fsPayeeId)) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
-                        poJSON.put("row", 0);
-                        return poJSON;
+                        //Check if payee ap client is equal to the ap client linked to disbursement voucher - Arsiela 05-28-2026
+                        boolean lbSuccess = true;
+                        Model_Payee loObj = new CashflowModels(poGRider).Payee();
+                        loObj.initialize();
+                        loObj.openRecord(fsPayeeId);
+                        if(loObj.getEditMode() == EditMode.READY){
+                            if(Master().Payee().getAPClientID() != null && !"".equals(Master().Payee().getAPClientID())){
+                                lbSuccess = Master().Payee().getAPClientID().equals(loObj.getAPClientID());
+                            } else {
+                                lbSuccess = Master().Payee().getClientID().equals(loObj.getClientID());
+                            }
+                        } else {
+                            lbSuccess = false;
+                        }
+                        if(!lbSuccess){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+                            poJSON.put("row", 0);
+                            return poJSON;
+                        }
                     }
                 }
             }
 
             if(Master().getSupplierClientID() == null || "".equals(Master().getSupplierClientID())){
-                Master().setSupplierClientID(fsClientId);
-                setSearchClient(Master().Payee().Client().getCompanyName());
-                
                 if(Master().getPayeeID() == null || "".equals(Master().getPayeeID())){
                     Master().setPayeeID(Master().Payee().getPayeeID());
-                    setSearchPayee(Master().Payee().getPayeeName());
                     if(DisbursementStatic.DisbursementType.CHECK.equals(Master().getDisbursementType())
                         || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
                         CheckPayments().getModel().setPayeeID(Master().getPayeeID());
                     }
                 }
+                
+                Master().setSupplierClientID(fsClientId);
                 
             } else {
                 if ((Detail(getDetailCount() - 1).getSourceNo() == null || "".equals(Detail(getDetailCount() - 1).getSourceNo()))
@@ -5750,6 +5900,13 @@ public class DisbursementVoucher extends Transaction {
                         return poJSON;
                     }
                 }
+            }
+            
+            //Update filtering of transaction by setted payee and ap client / client
+            setSearchPayee(Master().Payee().getPayeeName());
+            setSearchClient(Master().Payee().APClient().getCompanyName());
+            if(Master().Payee().APClient().getCompanyName() == null || "".equals(Master().Payee().APClient().getCompanyName())){
+                setSearchClient(Master().Payee().Client().getCompanyName());
             }
         } catch (GuanzonException | SQLException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
@@ -6483,7 +6640,7 @@ public class DisbursementVoucher extends Transaction {
                 break;
             }
 
-            lsSQL = lsSQL + " ORDER BY dDueDatex ASC ";
+            lsSQL = lsSQL + " ORDER BY dDueDatex, Payee ASC ";
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (loRS == null) {
@@ -6518,11 +6675,14 @@ public class DisbursementVoucher extends Transaction {
                 record.put("Balance", loRS.getDouble("Balance"));
                 record.put("TransactionType", lsTransactionType);
                 record.put("PayableType", loRS.getString("PayableType"));
-                record.put("Payee", loRS.getString("Payee"));
                 record.put("Reference", loRS.getString("Reference"));
                 record.put("SourceNo", loRS.getString("sSourceNo"));
                 record.put("SourceCd", loRS.getString("TransactionType"));
                 record.put("Industry", loRS.getString("IndstryD"));
+                //Load actual payee 
+                record.put("Payee", loRS.getString("Payee"));
+                record.put("ClientId", loRS.getString("xClientID"));
+                
                 dataArray.add(record);
                 lnctr++;
             }
@@ -6551,7 +6711,7 @@ public class DisbursementVoucher extends Transaction {
         if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
             lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
         }
-        return  "SELECT a.sIndstCdx AS Industry, "
+        String lsSQL = "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
                 + "a.sTransNox, "
@@ -6566,8 +6726,10 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sSourceNo AS sSourceNo, "
                 + "IFNULL(a.dDueDatex,a.dTransact) AS dDueDatex"
                 + ", d.sDescript AS IndstryD "
+                + ", IFNULL(c.sAPClntID,IF(c.sAPClntID = '', a.sClientID, a.sClientID)) AS xClientID "
                 + " FROM Cache_Payable_Master a "
-                + " LEFT JOIN Payee c ON a.sClientID = c.sClientID LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
+                + " LEFT JOIN Payee c ON a.sClientID = c.sClientID " 
+                + " LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + " Branch b "
                 + " WHERE a.sBranchCd = b.sBranchCd "
                 + " AND a.cTranStat = " +  SQLUtil.toSQL(CachePayableStatus.CONFIRMED)
@@ -6576,12 +6738,27 @@ public class DisbursementVoucher extends Transaction {
                 +  lsIndustry
                 + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
                 + " AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
-                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
-                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
-                + " ) "
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%");
+        
+                if((psPayee == null || "".equals(psPayee)) || (psClient == null || "".equals(psClient))){
+                    if(psPayee != null && !"".equals(psPayee)){
+                        lsSQL = lsSQL + " AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%");
+                    }
+                    if(psClient != null && !"".equals(psClient)){
+                        lsSQL = lsSQL + " AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%");
+                    }
+                } else {
+                    lsSQL = lsSQL +  " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                                    + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+                                    + " ) ";
+                }
+        
+//                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+//                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+//                + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
-                + " GROUP BY a.sTransNox ";
+//                + " GROUP BY a.sTransNox ";
+                return lsSQL + " GROUP BY a.sTransNox ";
     }
     
     private String getPaymentRequest(){
@@ -6589,7 +6766,7 @@ public class DisbursementVoucher extends Transaction {
         if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
             lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
         }
-        return  "SELECT a.sIndstCdx AS Industry, "
+        String lsSQL =  "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
                 + "a.sTransNox, "
@@ -6603,8 +6780,11 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
                 + ", d.sDescript AS IndstryD "
+                + ", IFNULL(c.sAPClntID,IF(c.sAPClntID = '', c.sClientID, c.sClientID)) AS xClientID "
                 + " FROM Payment_Request_Master a "
-                + " LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
+                + " LEFT JOIN Payee c ON a.sPayeeIDx = c.sPayeeIDx  "
+                + " LEFT JOIN Client_Master cc ON cc.sClientID = c.sAPClntID  "
+                + " LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + " Branch b "
                 + " WHERE a.sBranchCd = b.sBranchCd "
                 + " AND a.cTranStat = " +  SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
@@ -6614,9 +6794,26 @@ public class DisbursementVoucher extends Transaction {
                 + lsIndustry
                 + " AND (a.cWithSOAx = '0' OR a.cWithSOAx = '' OR a.cWithSOAx IS NULL)" //Retrieve only transaction without SOA
                 + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + " AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
-                + " GROUP BY a.sTransNox ";
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%");
+//                + " AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+//                + " GROUP BY a.sTransNox ";
+        
+        if((psPayee == null || "".equals(psPayee)) || (psClient == null || "".equals(psClient))){
+            if(psPayee != null && !"".equals(psPayee)){
+                lsSQL = lsSQL + " AND c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%");
+            }
+            if(psClient != null && !"".equals(psClient)){
+                lsSQL = lsSQL + " AND IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%");
+            }
+        } else {
+            lsSQL = lsSQL +  " AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                            + " OR IFNULL(cc.sCompnyNm,c.sPayeeNme) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+                            + " ) ";
+        }
+        
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ";
+        
+        return lsSQL;
     }
     
     private String getSOA(){
@@ -6624,7 +6821,7 @@ public class DisbursementVoucher extends Transaction {
         if(Master().getIndustryID() != null && !"".equals(Master().getIndustryID())){
             lsIndustry =  " AND a.sIndstCdx =  " +  SQLUtil.toSQL(Master().getIndustryID()) ; 
         }
-        return  "SELECT a.sIndstCdx AS Industry, "
+        String lsSQL = "SELECT a.sIndstCdx AS Industry, "
                 + "a.sCompnyID AS Company, "
                 + "b.sBranchNm AS Branch, "
                 + "a.sTransNox, "
@@ -6638,6 +6835,7 @@ public class DisbursementVoucher extends Transaction {
                 + "a.sTransNox AS sSourceNo, "
                 + "a.dTransact AS dDueDatex "
                 + ", d.sDescript AS IndstryD "
+                + ", IFNULL(c.sAPClntID,IF(c.sAPClntID = '', a.sClientID, a.sClientID)) AS xClientID "
                 + " FROM AP_Payment_Master a "
                 + " LEFT JOIN Payee c ON a.sIssuedTo = c.sPayeeIDx LEFT JOIN Client_Master cc ON a.sClientID = cc.sClientID  LEFT JOIN Industry d ON d.sIndstCdx = a.sIndstCdx, "
                 + " Branch b "
@@ -6648,12 +6846,26 @@ public class DisbursementVoucher extends Transaction {
 //                + "AND a.sIndstCdx IN  ( " +  SQLUtil.toSQL(psIndustryId) + ", '' ) "
                 + lsIndustry
                 + " AND a.sCompnyID = " +  SQLUtil.toSQL(psCompanyId)
-                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%")
-                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
-                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
-                + " ) "
+                + " AND b.sBranchNm LIKE " +  SQLUtil.toSQL("%"+psBranch+"%");
+        
+                if((psPayee == null || "".equals(psPayee)) || (psClient == null || "".equals(psClient))){
+                    if(psPayee != null && !"".equals(psPayee)){
+                        lsSQL = lsSQL + " AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%");
+                    }
+                    if(psClient != null && !"".equals(psClient)){
+                        lsSQL = lsSQL + " AND IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%");
+                    }
+                } else {
+                    lsSQL = lsSQL +  " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+                                    + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+                                    + " ) ";
+                }
+//                + " AND ( IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psPayee+"%")
+//                + " OR IFNULL(c.sPayeeNme,cc.sCompnyNm) LIKE  " +  SQLUtil.toSQL("%"+psClient+"%")
+//                + " ) "
 //                + "AND ( c.sPayeeNme LIKE  " +  SQLUtil.toSQL("%"+psPayee) + " OR c.sPayeeNme IS NULL ) "
-                + " GROUP BY a.sTransNox ";
+//                + " GROUP BY a.sTransNox ";
+                return lsSQL + " GROUP BY a.sTransNox ";
     }
     
     private String getInvTypeCategorySQL(){
@@ -6686,7 +6898,7 @@ public class DisbursementVoucher extends Transaction {
                 + " LEFT JOIN Disbursement_Detail b ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Branch c ON a.sBranchCd = c.sBranchCd "
                 + " LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx "
-                + " LEFT JOIN Client_Master e ON d.sClientID = e.sClientID "
+                + " LEFT JOIN Client_Master e ON d.sAPClntID = e.sClientID "
                 + " LEFT JOIN Particular f ON b.sPrtclrID = f.sPrtclrID"
                 + " LEFT JOIN Check_Payments g ON a.sTransNox = g.sSourceNo"
                 + " LEFT JOIN Other_Payments h ON a.sTransNox = h.sSourceNo"

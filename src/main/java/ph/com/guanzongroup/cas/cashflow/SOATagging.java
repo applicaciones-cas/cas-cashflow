@@ -31,6 +31,7 @@ import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.Client;
+import org.guanzon.cas.client.ClientInfo;
 import org.guanzon.cas.client.services.ClientControllers;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Master;
@@ -50,6 +51,7 @@ import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Adjustment;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -1173,6 +1175,28 @@ public class SOATagging extends Transaction {
         return poJSON;
     }
     
+    
+    //Added by Arsiela - 05-27-2026 11:50 AM
+    //Load Payee check primary contact person of selected supplier
+    private String findPrimaryContactPerson(String fsClientId) throws CloneNotSupportedException, GuanzonException, SQLException{
+        ClientInfo loClient = new ClientControllers(poGRider, logwrapr).ClientInfo();
+        loClient.initialize();
+        loClient.setWithParentClass(true);
+        loClient.setWithUI(false);
+
+        poJSON = loClient.openClientRecord(fsClientId);
+        if ("success".equals((String) poJSON.get("result"))) {
+            for(int lnCheck = 0;lnCheck < loClient.getInstiContactCount(); lnCheck++){
+                if(Logical.YES.equals(loClient.InstiContact(lnCheck).getcPayeexxx())
+                    && loClient.InstiContact(lnCheck).isPrimaryContactPersion()){
+                    return loClient.InstiContact(lnCheck).getcCPrsonID();
+                }
+            }
+        } 
+    
+        return fsClientId;
+    }
+    
     public JSONObject addPayablesToSOADetail(String transactionNo, String payableType)
             throws CloneNotSupportedException,
             SQLException,
@@ -1224,7 +1248,10 @@ public class SOATagging extends Transaction {
                 lsSourceCd = loPaymentRequest.getSourceCode();
                 ldblTranTotal = loPaymentRequest.Master().getNetTotal();
                 ldblDebitAmt = loPaymentRequest.Master().getNetTotal();
-                lsClientId = loPaymentRequest.Master().Payee().getClientID();
+                lsClientId = loPaymentRequest.Master().Payee().getAPClientID();
+                if(lsClientId == null || "".equals(lsClientId)){
+                    lsClientId = loPaymentRequest.Master().Payee().getClientID();
+                }
                 ldblBalance = loPaymentRequest.Master().getNetTotal() - loPaymentRequest.Master().getAmountPaid();
                 
                 if ((lsCompanyId == null || lsCompanyId.isEmpty()) && (Master().getCompanyId() == null || "".equals(Master().getCompanyId()))){
@@ -1249,10 +1276,30 @@ public class SOATagging extends Transaction {
                     Master().setIssuedTo(lsIssuedTo);
                 } else {
                     if (!Master().getIssuedTo().equals(lsIssuedTo)) {
-                        poJSON.put("result", "error");
-                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
-                        poJSON.put("row", lnCtr);
-                        return poJSON;
+                        //Check if payee ap client is equal to the ap client linked to disbursement voucher - Arsiela 05-28-2026
+                        boolean lbSuccess = true;
+                        Model_Payee loObj = new CashflowModels(poGRider).Payee();
+                        loObj.initialize();
+                        loObj.openRecord(lsIssuedTo);
+                        if(loObj.getEditMode() == EditMode.READY){
+                            if(Master().Payee().getAPClientID() != null && !"".equals(Master().Payee().getAPClientID())){
+                                lbSuccess = Master().Payee().getAPClientID().equals(loObj.getAPClientID());
+                            } else {
+                                lbSuccess = Master().Payee().getClientID().equals(loObj.getClientID());
+                            }
+                        } else {
+                            lbSuccess = false;
+                        }
+                        if(!lbSuccess){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+                            poJSON.put("row", lnCtr);
+                            return poJSON;
+                        }
+//                        poJSON.put("result", "error");
+//                        poJSON.put("message", "Selected Payee of payables is not equal to transaction payee.");
+//                        poJSON.put("row", lnCtr);
+//                        return poJSON;
                     }
                 }
                 break;
@@ -1307,18 +1354,38 @@ public class SOATagging extends Transaction {
                 Payee loPayee = new CashflowControllers(poGRider, logwrapr).Payee();
                 loPayee.initialize();
                 poJSON = loPayee.getModel().openRecordByReference(lsClientId);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    poJSON = loPayee.getModel().openRecordByReference(findPrimaryContactPerson(lsClientId));
+                }
+                
                 if (!"error".equals((String) poJSON.get("result"))) {
                     if(Master().getIssuedTo() == null || "".equals(Master().getIssuedTo())){
                         Master().setIssuedTo(loPayee.getModel().getPayeeID());
                     } else {
                         if (!Master().getIssuedTo().equals(loPayee.getModel().getPayeeID())) {
-                            poJSON.put("result", "error");
-                            poJSON.put("message", "Selected Supplier payee of payables is not equal to transaction supplier.");
-                            poJSON.put("row", lnCtr);
-                            return poJSON;
+                            //Check if payee ap client is equal to the ap client linked to disbursement voucher - Arsiela 05-28-2026
+                            boolean lbSuccess = true;
+                            Model_Payee loObj = new CashflowModels(poGRider).Payee();
+                            loObj.initialize();
+                            loObj.openRecord(loPayee.getModel().getPayeeID());
+                            if(loObj.getEditMode() == EditMode.READY){
+                                if(Master().Payee().getAPClientID() != null && !"".equals(Master().Payee().getAPClientID())){
+                                    lbSuccess = Master().Payee().getAPClientID().equals(loObj.getAPClientID());
+                                } else {
+                                    lbSuccess = Master().Payee().getClientID().equals(loObj.getClientID());
+                                }
+                            } else {
+                                lbSuccess = false;
+                            }
+                            if(!lbSuccess){
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Selected Supplier payee of payables is not equal to transaction supplier.");
+                                poJSON.put("row", lnCtr);
+                                return poJSON;
+                            }
                         }
                     }
-                } 
+                }
 
                 break;
         }
@@ -2525,7 +2592,7 @@ public class SOATagging extends Transaction {
     }
 
     public String getPayableSQL(String supplier, String company, String payee, String referenceNo) {
-        return " SELECT        "
+        String lsSQL = " SELECT        "
                 + "   a.sTransNox "
                 + " , a.sSourceNo AS sPayblNox"
                 + " , a.dTransact "
@@ -2565,18 +2632,34 @@ public class SOATagging extends Transaction {
                 + " ,  " + SQLUtil.toSQL(SOATaggingStatic.PaymentRequest) + " AS sPayablTp  "
                 + " FROM Payment_Request_Master a "
                 + " LEFT JOIN Payee b ON b.sPayeeIDx = a.sPayeeIDx "
-                + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sClientID "
+                + " LEFT JOIN Client_Master bb ON bb.sClientID = b.sAPClntID "
                 + " LEFT JOIN Company c ON c.sCompnyID = a.sCompnyID "
                 + " WHERE "
                 + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
-                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
-                + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
+//                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+//                + " OR b.sClientID IS NULL OR b.sClientID = '' )" 
+//                + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
-                + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
                 + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
                 + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO);
+        
+                if((supplier == null || "".equals(supplier)) || (payee == null || "".equals(payee))){
+                    if(supplier != null && !"".equals(supplier)){
+                        lsSQL = lsSQL + " AND IFNULL(bb.sCompnyNm,b.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + supplier);
+//                                    + " OR b.sClientID IS NULL OR b.sClientID = '' " ;
+                    }
+                    if(payee != null && !"".equals(payee)){
+                        lsSQL = lsSQL + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee) ;
+                    }
+                } else {
+                    lsSQL = lsSQL + " AND ( IFNULL(bb.sCompnyNm,b.sPayeeNme) LIKE " + SQLUtil.toSQL("%" + supplier)
+                                + " OR b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
+                                + " ) ";
+                } 
+                
+        return lsSQL;
     }
     
     public String getCachePayableSQL(String supplier, String company, String payee, String referenceNo, String payableType) {
@@ -2608,7 +2691,7 @@ public class SOATagging extends Transaction {
     }
     
     public String getPRFSQL(String supplier, String company, String payee, String referenceNo) {
-        return " SELECT        "
+        String lsSQL = " SELECT        "
                 + "   a.sTransNox "
                 + " , a.sTransNox AS sPayblNox"
                 + " , a.dTransact "
@@ -2629,12 +2712,29 @@ public class SOATagging extends Transaction {
                 + " a.sIndstCdx = " + SQLUtil.toSQL(psIndustryId)
                 + " AND a.cTranStat = " + SQLUtil.toSQL(PaymentRequestStatus.CONFIRMED)
                 + " AND a.nAmtPaidx < a.nTranTotl "
-                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
-                + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
-                + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
+//                + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+//                + " OR b.sClientID IS NULL OR b.sClientID = '' ) " 
+//                + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
                 + " AND c.sCompnyNm LIKE " + SQLUtil.toSQL("%" + company)
                 + " AND a.sSeriesNo LIKE " + SQLUtil.toSQL("%" + referenceNo)
                 + " AND a.cProcessd = " + SQLUtil.toSQL(Logical.NO);
+                
+                if((supplier == null || "".equals(supplier)) || (payee == null || "".equals(payee))){
+                    if(supplier != null && !"".equals(supplier)){
+                        lsSQL = lsSQL + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+                                    + " OR b.sClientID IS NULL OR b.sClientID = '' ) " ;
+                    }
+                    if(payee != null && !"".equals(payee)){
+                        lsSQL = lsSQL + " AND b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee) ;
+                    }
+                } else {
+                    lsSQL = lsSQL + " AND ( bb.sCompnyNm LIKE " + SQLUtil.toSQL("%" + supplier)
+                                + " OR b.sPayeeNme LIKE " + SQLUtil.toSQL("%" + payee)
+                                + " ) ";
+                }
+                
+                        
+        return lsSQL;
     }
 
     @Override

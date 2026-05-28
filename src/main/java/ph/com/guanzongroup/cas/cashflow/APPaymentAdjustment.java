@@ -703,7 +703,7 @@ public class APPaymentAdjustment extends Parameter {
             if ( (object.getModel().getClientID() == null || "".equals(object.getModel().getClientID()))
                 && (object.getModel().getAPClientID() == null || "".equals(object.getModel().getAPClientID()))){
                 poJSON.put("result", "error");
-                poJSON.put("message", "AP Client information for the selected payee is not configured.\nPlease contact the system administrator for assistance.");
+                poJSON.put("message", "AP Client / Client information for the selected payee is not configured.\nPlease contact the system administrator for assistance.");
                 return poJSON;
             }
             
