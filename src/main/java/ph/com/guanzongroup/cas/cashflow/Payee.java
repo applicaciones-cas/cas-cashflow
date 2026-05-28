@@ -123,6 +123,27 @@ public class Payee extends Parameter {
             return poJSON;
         }
     }
+    
+    public JSONObject searchRecordbyAPClientID(String value, boolean byCode) throws SQLException, GuanzonException {
+        String lsSQL = getSQ_Browse();
+
+        poJSON = ShowDialogFX.Search(poGRider,
+                lsSQL,
+                value,
+                "ID»Name»Particular»AP Client",
+                "sAPClntID»sPayeeNme»xPrtclrNm»xClientNm",
+                "a.sAPClntID»a.sPayeeNme»IFNULL(b.sDescript, '')»IF(c.sCompnyNm = '', TRIM(CONCAT(c.sLastName, ', ', c.sFrstName, IF(c.sSuffixNm <> '', CONCAT(' ', c.sSuffixNm, ''), ''), ' ', c.sMiddName)), c.sCompnyNm)",
+                byCode ? 0 : 1);
+
+        if (poJSON != null) {
+            return poModel.openRecord((String) poJSON.get("sPayeeIDx"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
 
     @Override
     public String getSQ_Browse() {
