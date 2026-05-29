@@ -4986,6 +4986,10 @@ public class DisbursementVoucher extends Transaction {
         }
         
         if(lbValidateJournal){
+            //Convert debit and credit amount
+            ldblDebitAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblDebitAmt, true).replace(",", ""));
+            ldblCreditAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblCreditAmt, true).replace(",", ""));
+            
             if(ldblDebitAmt == 0.0000 ){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid journal entry debit amount.");
