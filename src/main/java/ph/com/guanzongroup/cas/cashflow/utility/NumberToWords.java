@@ -30,7 +30,8 @@ public class NumberToWords {
         int centavos = amount.remainder(BigDecimal.ONE).movePointRight(2).intValue();
 
         String pesoWord = convert(pesos) + (pesos == 1 ? " Peso" : " Pesos");
-        String centavoWord = centavos > 0 ? " and " + convert(centavos) + (centavos == 1 ? " Centavo" : " Centavos") : "";
+//        String centavoWord = centavos > 0 ? " and " + convert(centavos) + (centavos == 1 ? " Centavo" : " Centavos") : "";
+        String centavoWord = centavos > 0 ? " and " + String.valueOf(centavos) + "/100" : ""; //Removed conversion of number to word for cents requested by ma'am she- Arsiela 05-29-2026
 
         return pesoWord + centavoWord;
     }
