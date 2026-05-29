@@ -18,7 +18,9 @@ import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Department;
+import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Recurring_Expense_Schedule;
@@ -29,6 +31,7 @@ public class RecurringExpenseSchedule extends Parameter{
     
     private int pnEditMode = EditMode.UNKNOWN;
     public String psIndustryId = "";
+    public String psCompanyId = "";
     
     Model_Recurring_Expense poModel;
     Model_Recurring_Expense_Schedule poDetail;
@@ -255,7 +258,14 @@ public class RecurringExpenseSchedule extends Parameter{
         paDetail = new ArrayList<>();
         AddDetail();
         if(Master().isAllBranches()){
-            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript, sCompnyID FROM Branch WHERE sCompnyID IS NOT NULL AND sCompnyID <> ''  ORDER BY sBranchNm ASC";
+//            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript, sCompnyID FROM Branch WHERE sCompnyID IS NOT NULL AND sCompnyID <> ''  ORDER BY sBranchNm ASC";
+            
+            Model_Branch loObj = new ParamModels(poGRider).Branch();
+            loObj.initialize();
+            if(psCompanyId == null || "".equals(psCompanyId)){
+                psCompanyId = poGRider.getCompnyId();
+            }
+            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), " sCompnyID = "  + SQLUtil.toSQL(psCompanyId)); 
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -353,7 +363,11 @@ public class RecurringExpenseSchedule extends Parameter{
         
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
-
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
+        }
+       
+        object.setCompanyId(psCompanyId);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))){
             Detail(row).setBranchCode(object.getModel().getBranchCode());
@@ -461,6 +475,7 @@ public class RecurringExpenseSchedule extends Parameter{
     /*End - Search Master References*/
         
     public void setIndustryID(String industryId) { psIndustryId = industryId; }
+    public void setCompanyID(String companyId) { psCompanyId = companyId; }
     
     public Model_Recurring_Expense Master() {
         return (Model_Recurring_Expense) poModel;
