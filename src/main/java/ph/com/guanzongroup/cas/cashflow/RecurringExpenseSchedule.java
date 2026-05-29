@@ -752,11 +752,12 @@ public class RecurringExpenseSchedule extends Parameter{
                 poJSON.put("message", "Invalid due day at row "+(lnRow+1)+".");
                 return poJSON;
             }
-            if (Detail(fnRow).getBillDay() > Detail(fnRow).getDueDay()){
-                poJSON.put("result", "error");
-                poJSON.put("message", "Bill day cannot be greater than the due day at row "+(lnRow+1)+".");
-                return poJSON;
-            }
+            //Disable validation for bill day vs due day requested by ma'am she - Arsiela 05-29-2026 09:32AM
+//            if (Detail(fnRow).getBillDay() > Detail(fnRow).getDueDay()){
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Bill day cannot be greater than the due day at row "+(lnRow+1)+".");
+//                return poJSON;
+//            }
             if (Detail(fnRow).getAmount() <= 0.0000){
                 poJSON.put("result", "error");
                 poJSON.put("message", "Invalid amount at row "+(lnRow+1)+".");
