@@ -581,7 +581,7 @@ public class CheckDeposit extends Transaction {
     
     public void setCompanyId(String fsCompanyId){ psCompanyId = fsCompanyId; }
     public void isCheckDepositSupplier(boolean fbIsCheckDepSupplier){ pbSupplier = fbIsCheckDepSupplier; }
-    
+    public void setSearchBank(String bank) { psSearchBankId = bank; }
     public String getSearchBank(){
         try { 
             poJSON = new JSONObject();
@@ -821,7 +821,7 @@ public class CheckDeposit extends Transaction {
             BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
             object.setRecordStatus(RecordStatus.ACTIVE);
             object.setCompanyId(psCompanyId);
-            if(psSearchBankId == null || "".equals(psSearchBankId)){
+            if( Master().getBanks() == null || "".equals(Master().getBanks() )){
                 poJSON = object.searchRecord(value, byCode);
             } else {
                 poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
