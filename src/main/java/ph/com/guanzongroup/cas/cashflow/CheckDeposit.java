@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -35,6 +37,25 @@ import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.print.PageLayout;
+import javafx.print.PageOrientation;
+import javafx.print.Paper;
+import javafx.print.Printer;
+import javafx.print.PrinterJob;
+import javafx.scene.Group;
+import javafx.scene.Node;
+import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import javax.swing.JButton;
@@ -89,7 +110,9 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckDepositStatus;
+import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
+import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckDepositValidatorFactory;
 
 /**
@@ -795,9 +818,14 @@ public class CheckDeposit extends Transaction {
                 Master().setBankAccount(loObj.getModel().getAPClientBankID());   
             }
         } else {
-            BankAccountMaster object = new BankAccountMaster();
+            BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
             object.setRecordStatus(RecordStatus.ACTIVE);
-            poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
+            object.setCompanyId(psCompanyId);
+            if(psSearchBankId == null || "".equals(psSearchBankId)){
+                poJSON = object.searchRecord(value, byCode);
+            } else {
+                poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
+            }
             if ("success".equals((String) poJSON.get("result"))) {
                 Master().setBankAccount(object.getModel().getBankAccountId());   
             }
@@ -2007,230 +2035,765 @@ public class CheckDeposit extends Transaction {
     }
     
     //***********************PRINT TRANSACTION***************************
+//    
+//    public JSONObject getUpdateStatusBy(String fsStatus) throws SQLException, GuanzonException {
+//        String lsUpdateBy = "";
+//        String lsDate = "";
+//        String lsSQL = "SELECT b.sModified,b.dModified FROM "+Master().getTable()+" a "
+//                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
+//                     + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
+//        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+//        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
+//        System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//        try {
+//          if (MiscUtil.RecordCount(loRS) > 0L) {
+//            if (loRS.next()) {
+//                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+//                    if(loRS.getString("sModified").length() > 10){
+//                        lsUpdateBy = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+//                    } else {
+//                        lsUpdateBy = getSysUser(loRS.getString("sModified")); 
+//                    }
+//                    // Get the LocalDateTime from your result set
+//                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+//                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+//                    lsDate =  dModified.format(formatter);
+//                }
+//            } 
+//          }
+//          MiscUtil.close(loRS);
+//        } catch (SQLException e) {
+//          poJSON.put("result", "error");
+//          poJSON.put("message", e.getMessage());
+//          return poJSON;
+//        } 
+//        
+//        poJSON.put("result", "success");
+//        poJSON.put("sUpdateByx", lsUpdateBy);
+//        poJSON.put("sUpdateDte", lsDate);
+//        return poJSON;
+//    }
+//    
+//    public JSONObject printTransaction()
+//            throws CloneNotSupportedException, SQLException, GuanzonException {
+//        poJSON = new JSONObject();
+//        JasperReport jasperReport = null;      
+//        pbShowed = false; 
+//        pbIsPrinted = false;
+//        
+//        try {
+//            String watermarkPath; //set draft as default
+//            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CheckDeposit.jrxml";
+//            jasperReport = JasperCompileManager.compileReport(jrxmlPath);
+//
+//            watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
+//            poJSON = OpenTransaction(Master().getTransactionNo());
+//            if ("error".equals((String) poJSON.get("result"))){
+//                proceedAfterViewerClosed();
+//                return poJSON;
+//            }
+//            poJSON = UpdateTransaction();
+//            if ("error".equals((String) poJSON.get("result"))){
+//                proceedAfterViewerClosed();
+//                return poJSON;
+//            }
+//            
+//            Map<String, Object> params = new HashMap<>();
+//            params.put("sTransNox", Master().getTransactionNo());
+//            params.put("dTransact",  new java.sql.Date(Master().getTransactionDate().getTime()));
+//            params.put("sAccountNumber", Master().BankAccount().getAccountNo());
+//            params.put("sAccountName", Master().BankAccount().getAccountName());
+//            params.put("sRemarksx", Master().getRemarks());
+//
+//            //Set Default value to empty to prevent null in display
+//            params.put("sCompnyNm","");
+//            params.put("sConfirmer","");
+//            params.put("sPosted","");
+//
+//            //Get Encoder
+//            JSONObject loJSONEntry = getEntryBy();
+//            if(!isJSONSuccess(loJSONEntry)){
+//                return loJSONEntry;
+//            }
+//            if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
+//                params.put("sCompnyNm",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
+//            }
+//            //Get Confirmer
+//            JSONObject loJSONConfirm = getUpdateStatusBy(CheckDepositStatus.CONFIRMED);
+//            if(!isJSONSuccess(loJSONConfirm)){
+//                return loJSONConfirm;
+//            } else {
+//                if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
+//                    params.put("sConfirmed", (String) loJSONConfirm.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirm.get("sUpdateDte"))); 
+//                }
+//            }
+//            //Get Approver
+//            JSONObject loJSONApprover = getUpdateStatusBy(CheckDepositStatus.POSTED);
+//            if(!isJSONSuccess(loJSONApprover)){
+//                return loJSONApprover;
+//            } else {
+//                if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
+//                    params.put("sPosted", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
+//                }
+//            }
+//            
+//            switch(Master().getTransactionStatus()){
+//                case CheckDepositStatus.CONFIRMED:
+//                case CheckDepositStatus.POSTED:
+//                    if(Logical.YES.equals(Master().getPrintStatus())){
+//                        watermarkPath = watermarkPath + "reprint.png"; 
+//                    } else {
+//                        watermarkPath = watermarkPath + "approved.png" ; 
+//                    }
+//                    break;
+//                case CheckDepositStatus.OPEN:
+//                default:
+//                    watermarkPath = watermarkPath + "draft.png"; 
+//                    break;
+//            }
+//            
+//            params.put("watermarkImagePath", watermarkPath);
+//            List<TransactionDetail> Details = new ArrayList<>();
+//            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+//                if(!Detail(lnCtr).isReverse()){
+//                    continue;
+//                }
+//                Details.add(new TransactionDetail(
+//                        lnCtr+1,
+//                        Detail(lnCtr).getSourceNo(),
+//                        Detail(lnCtr).CheckPayment().getCheckNo(),
+//                        Detail(lnCtr).CheckPayment().Payee().getPayeeName(),
+//                        Detail(lnCtr).getRemarks(),
+//                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotalDeposit(), false).replace(",", ""))
+//                ));
+//
+//            }
+//            JasperPrint currentPrint = JasperFillManager.fillReport(
+//                    jasperReport,
+//                    params,
+//                    new JRBeanCollectionDataSource(Details)
+//            );
+//            if (currentPrint != null) {
+//                CustomJasperViewer viewer = new CustomJasperViewer(currentPrint);
+//                viewer.setVisible(true);
+//                viewer.addWindowListener(new WindowAdapter() {
+//                    @Override
+//                    public void windowClosed(WindowEvent e) {
+//                        proceedAfterViewerClosed();
+//                    }
+//
+//                });
+//            }
+//            
+//        } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
+//            poJSON.put("result", "error");
+//            poJSON.put("message", "Transaction print aborted!");
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+//        } 
+//
+//        return poJSON;
+//    }
+//    
+//    private boolean pbShowed = false;
+//    private void proceedAfterViewerClosed() {
+//        Platform.runLater(() -> {
+//            System.out.println("SHOWED!!!!!!!!!!!");
+//
+//            if (pbShowed) {
+//                return;
+//            } else {
+//                pbShowed = true;
+//            }
+//
+//            if ("error".equals((String) poJSON.get("result"))) {
+//                ShowMessageFX.Warning(null, "Computerized Accounting System",
+//                    (String) poJSON.get("message"));
+//            } else {
+//                if (pbIsPrinted) {
+//                    ShowMessageFX.Information(null, "Computerized Accounting System",
+//                        "Transaction Printed Successfully");
+//                } else {
+//                    ShowMessageFX.Warning(null, "Computerized Accounting System",
+//                        "Printing was canceled by the user.");
+//                }
+//            }
+//        });
+//    }
+//
+//    private void showViewerAndWait(JasperPrint print) {
+//        // create viewer on Swing thread
+//        final CustomJasperViewer viewer = new CustomJasperViewer(print);
+//        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+//
+//        final CountDownLatch latch = new CountDownLatch(1);
+//        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
+//            @Override
+//            public void windowClosed(java.awt.event.WindowEvent e) {
+//                latch.countDown();             // release when user closes
+//                proceedAfterViewerClosed();
+//            }
+//        });
+//
+//        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
+//
+//        try {
+//            latch.await();                     // 🔴 blocks here until viewer closes
+//        } catch (InterruptedException ex) {
+//            Thread.currentThread().interrupt(); // keep interruption status
+//        }
+//    }
+//
+//    public static class TransactionDetail {
+//
+//        private final Integer nRowNo;
+//        private final String sSourceNo;
+//        private final String sCheckNox;
+//        private final String sPayee;
+//        private final String sRemarks;
+//        private final Double nTotalAmount;
+//
+//        public TransactionDetail(Integer fnRowNo, String fsSourceNo, String fsCheckNox, String fsPayee, String fsRemarks, Double totalAmt) {
+//            this.nRowNo = fnRowNo;
+//            this.sSourceNo = fsSourceNo;
+//            this.sCheckNox = fsCheckNox;
+//            this.sPayee = fsPayee;
+//            this.sRemarks = fsRemarks;
+//            this.nTotalAmount = totalAmt;
+//        }
+//
+//        public Integer getnRowNo() {
+//            return nRowNo;
+//        }
+//
+//        public String getsSourceNo() {
+//            return sSourceNo;
+//        }
+//
+//        public String getsCheckNox() {
+//            return sCheckNox;
+//        }
+//
+//        public String getsPayee() {
+//            return sPayee;
+//        }
+//
+//        public String getsRemarks() {
+//            return sRemarks;
+//        }
+//
+//        public Double getnTotalAmount() {
+//            return nTotalAmount;
+//        }
+//    }
+//    
+//    private boolean pbIsPrinted = false;
+//    public class CustomJasperViewer extends JasperViewer {
+//
+//        public CustomJasperViewer(final JasperPrint jasperPrint) {
+//            super(jasperPrint, false);
+//            customizePrintButton(jasperPrint);
+//        }
+//
+//        /* ---- toolbar patch ------------------------------------------ */
+//        private JSONObject customizePrintButton(final JasperPrint jasperPrint) {
+//
+//            try {
+//                JRViewer viewer = findJRViewer(this);
+//                if (viewer == null) {
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", "JRViewer not found!");
+//                    return poJSON;
+//                }
+//                for (int i = 0; i < viewer.getComponentCount(); i++) {
+//                    if (viewer.getComponent(i) instanceof JRViewerToolbar) {
+//
+//                        JRViewerToolbar toolbar = (JRViewerToolbar) viewer.getComponent(i);
+//
+//                        for (int j = 0; j < toolbar.getComponentCount(); j++) {
+//                            if (toolbar.getComponent(j) instanceof JButton) {
+//
+//                                final JButton button = (JButton) toolbar.getComponent(j);
+//
+//                                if ("Print".equals(button.getToolTipText())) {
+//                                    /* remove existing handlers */
+//                                    ActionListener[] old = button.getActionListeners();
+//                                    for (int k = 0; k < old.length; k++) {
+//                                        button.removeActionListener(old[k]);
+//                                    }
+//
+//                                    /* add our own (anonymous inner‑class, not lambda) */
+//                                    button.addActionListener(new ActionListener() {
+//                                        @Override
+//                                        public void actionPerformed(ActionEvent e) {
+//                                            try {
+//                                                pbIsPrinted = JasperPrintManager.printReport(jasperPrint, true);
+//                                                if (pbIsPrinted) {
+//                                                    Master().setPrintStatus(Logical.YES);
+//                                                    Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+//                                                    Master().setModifiedDate(poGRider.getServerDate());
+//                                                    poJSON = SaveTransaction();
+//                                                    if(!"error".equals((String) poJSON.get("result"))){
+//                                                        poJSON.put("result", "success");
+//                                                        poJSON.put("message",  "Transaction Printed Successfully.");
+//                                                    }
+//                                                    CustomJasperViewer.this.dispose();
+//                                                } else {
+//                                                    poJSON.put("result", "error");
+//                                                    poJSON.put("message",  "Printing was canceled by the user.");
+//                                                }
+//                                            } catch (SQLException | GuanzonException | CloneNotSupportedException | JRException ex) {
+//                                                poJSON.put("result", "error");
+//                                                poJSON.put("message",  "Print Failed: " + ex.getMessage());
+//                                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//                                            }
+//                                        }
+//                                    });
+//                                } else {
+//                                    // Disable all other buttons
+//                                    button.setEnabled(false);
+//                                }
+//                            }
+//                        }
+//                        toolbar.revalidate();
+//                        toolbar.repaint();
+//                    }
+//                }
+//            } catch (Exception e) {
+//                System.out.println("Error customizing print button: " + e.getMessage());
+//                poJSON.put("result", "error");
+//                poJSON.put("message", "Error customizing print button: " + e.getMessage());
+//            }
+//            
+//            return poJSON;
+//        }
+//
+//        private void warnAndRefocus(final String m) {
+//            Platform.runLater(new Runnable() {
+//                @Override
+//                public void run() {
+////                    ShowMessageFX.Warning(m, "Print Disbursement", null);
+//                    poJSON.put("result", "error");
+//                    poJSON.put("message", m);
+//                    SwingUtilities.invokeLater(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            CustomJasperViewer.this.toFront();
+//                        }
+//                    });
+//                }
+//            });
+//        }
+//
+//        private JRViewer findJRViewer(Component parent) {
+//            if (parent instanceof JRViewer) {
+//                return (JRViewer) parent;
+//            }
+//            if (parent instanceof Container) {
+//                Component[] comps = ((Container) parent).getComponents();
+//                for (int i = 0; i < comps.length; i++) {
+//                    JRViewer v = findJRViewer(comps[i]);
+//                    if (v != null) {
+//                        return v;
+//                    }
+//                }
+//            }
+//            return null;
+//        }
+//    }
     
-    public JSONObject getUpdateStatusBy(String fsStatus) throws SQLException, GuanzonException {
-        String lsUpdateBy = "";
-        String lsDate = "";
-        String lsSQL = "SELECT b.sModified,b.dModified FROM "+Master().getTable()+" a "
-                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
-                     + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
-        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
-        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
-        System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-        try {
-          if (MiscUtil.RecordCount(loRS) > 0L) {
-            if (loRS.next()) {
-                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
-                    if(loRS.getString("sModified").length() > 10){
-                        lsUpdateBy = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
-                    } else {
-                        lsUpdateBy = getSysUser(loRS.getString("sModified")); 
-                    }
-                    // Get the LocalDateTime from your result set
-                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
-                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
-                    lsDate =  dModified.format(formatter);
+    //**************************PRINT DEPOSIT SLIP BASED ON DOCUMENT MAPPING**********************************
+    private boolean pbPrint = false;
+    public JSONObject PrintDepositSlip() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        pbPrint = true;
+
+        String bankCode = getDocumentCode(Master().getBankAccount()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
+        if(bankCode == null || "".equals(bankCode)){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Please configure the document code for bank account.");
+            return poJSON;
+        }
+
+//            bankCode = "MBTDSChk";
+        System.out.println("===============================================");
+        System.out.println("transactionNo No : " + Master().getTransactionNo());
+        System.out.println("account no : " + Master().BankAccount().getAccountNo());
+        System.out.println("account name : " + Master().BankAccount().getAccountName());
+        System.out.println("total deposit amount : " + Master().getTransactionTotalDeposit());
+        System.out.println("===============================================");
+
+        DocumentMapping poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
+        poDocumentMapping.InitTransaction();
+        poJSON = poDocumentMapping.OpenTransaction(bankCode);
+        if ("error".equals((String) poJSON.get("result"))){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Please configure the document mapping for "+bankCode+".\n"+ (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        // Store transaction for printing
+        Transaction transaction = new Transaction(Master().BankAccount().getAccountNo(), Master().BankAccount().getAccountName(), xsDateShort(Master().getTransactionDate()), new BigDecimal(Master().getTransactionTotalDeposit()));
+        List<TransactionDetail> transactiondetail = new ArrayList<>();
+        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+            if(!Detail(lnCtr).isReverse()){
+                continue;
+            }
+            transactiondetail.add(new TransactionDetail(
+                    lnCtr+1,
+                    Detail(lnCtr).CheckPayment().Banks().getBankName(),
+                    Detail(lnCtr).CheckPayment().getCheckNo(),
+                    Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Detail(lnCtr).CheckPayment().getAmount(), false).replace(",", ""))
+            ));
+        }
+        // Now print the voucher using PrinterJob
+        if (showPrintPreview(transaction, transactiondetail, poDocumentMapping)) {
+            poJSON = PrintCheck(transaction,transactiondetail,poDocumentMapping);
+            if ("error".equals((String) poJSON.get("result"))){
+                return poJSON;
+            }
+
+            if (Logical.NO.equals(Master().getPrintStatus())) {
+                Model_Check_Deposit_Master loObject = new CashflowModels(poGRider).CheckDepositMaster();
+                loObject.initialize();
+                poJSON = loObject.openRecord(Master().getTransactionNo());
+                if(!isJSONSuccess(poJSON)){
+                    return poJSON;
                 }
-            } 
-          }
-          MiscUtil.close(loRS);
-        } catch (SQLException e) {
-          poJSON.put("result", "error");
-          poJSON.put("message", e.getMessage());
-          return poJSON;
-        } 
+                poJSON = loObject.updateRecord();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+                loObject.setPrintStatus(Logical.YES);
+                poJSON = loObject.saveRecord();
+                if ("error".equals((String) poJSON.get("result"))){
+                    return poJSON;
+                }
+            }
+        } else {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Print check aborted.");
+            return poJSON;
+        }
         
         poJSON.put("result", "success");
-        poJSON.put("sUpdateByx", lsUpdateBy);
-        poJSON.put("sUpdateDte", lsDate);
+        poJSON.put("message", "Check printed successfully");
         return poJSON;
     }
     
-    public JSONObject printTransaction()
-            throws CloneNotSupportedException, SQLException, GuanzonException {
+    /*Removes comma character existing in a string containing number*/
+    public static String removeComma(String numberStr) {
+        if (numberStr == null || numberStr.isEmpty()) {
+            return "0";
+        }
+
+        // Remove commas
+        String clean = numberStr.replace(",", "");
+
+        // Check if it's exactly negative zero
+        if (clean.matches("-0+(\\.0+)?")) {
+            return "0";
+        }
+
+        return clean.isEmpty() ? "0" : clean;
+    }
+    
+    /**
+     * get Inventory Type Code value
+     * @param fsValue description
+     * @return 
+     */
+    private String getDocumentCode(String fsBankAccountId){
+        try {
+            //New query from ma'am she 04-11-2026 08:59 AM MBTChkDS
+            String lsSQL = " SELECT CONCAT(c.sBankCode,'Chk',b.sSlipType) AS sDocCodex " 
+                            + " FROM Bank_Account_Master a " 
+                            + "	LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx " 
+                            + ", Branch_Bank_Account b ";
+            lsSQL = MiscUtil.addCondition(lsSQL, " a.sBnkActID = b.sBnkActID "
+                                                    + " AND a.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
+                                                    + " AND b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            try {
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if(loRS.next()){
+                        return  loRS.getString("sDocCodex");
+                    }
+                }
+                MiscUtil.close(loRS);
+            } catch (SQLException e) {
+                System.out.println("No record loaded.");
+                return  "";
+            }
+        } catch (SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return  "";
+        }
+            
+        return  "";
+    }
+    
+    private JSONObject PrintCheck(Transaction tx, List<TransactionDetail> txd, DocumentMapping poDocumentMapping) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
-        JasperReport jasperReport = null;      
-        pbShowed = false; 
-        pbIsPrinted = false;
-        
-        try {
-            String watermarkPath; //set draft as default
-            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CheckDeposit.jrxml";
-            jasperReport = JasperCompileManager.compileReport(jrxmlPath);
-
-            watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
-            poJSON = OpenTransaction(Master().getTransactionNo());
-            if ("error".equals((String) poJSON.get("result"))){
-                proceedAfterViewerClosed();
-                return poJSON;
-            }
-            poJSON = UpdateTransaction();
-            if ("error".equals((String) poJSON.get("result"))){
-                proceedAfterViewerClosed();
-                return poJSON;
-            }
-            
-            Map<String, Object> params = new HashMap<>();
-            params.put("sTransNox", Master().getTransactionNo());
-            params.put("dTransact",  new java.sql.Date(Master().getTransactionDate().getTime()));
-            params.put("sAccountNumber", Master().BankAccount().getAccountNo());
-            params.put("sAccountName", Master().BankAccount().getAccountName());
-            params.put("sRemarksx", Master().getRemarks());
-
-            //Set Default value to empty to prevent null in display
-            params.put("sCompnyNm","");
-            params.put("sConfirmer","");
-            params.put("sPosted","");
-
-            //Get Encoder
-            JSONObject loJSONEntry = getEntryBy();
-            if(!isJSONSuccess(loJSONEntry)){
-                return loJSONEntry;
-            }
-            if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
-                params.put("sCompnyNm",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
-            }
-            //Get Confirmer
-            JSONObject loJSONConfirm = getUpdateStatusBy(CheckDepositStatus.CONFIRMED);
-            if(!isJSONSuccess(loJSONConfirm)){
-                return loJSONConfirm;
-            } else {
-                if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
-                    params.put("sConfirmed", (String) loJSONConfirm.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirm.get("sUpdateDte"))); 
-                }
-            }
-            //Get Approver
-            JSONObject loJSONApprover = getUpdateStatusBy(CheckDepositStatus.POSTED);
-            if(!isJSONSuccess(loJSONApprover)){
-                return loJSONApprover;
-            } else {
-                if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
-                    params.put("sPosted", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
-                }
-            }
-            
-            switch(Master().getTransactionStatus()){
-                case CheckDepositStatus.CONFIRMED:
-                case CheckDepositStatus.POSTED:
-                    if(Logical.YES.equals(Master().getPrintStatus())){
-                        watermarkPath = watermarkPath + "reprint.png"; 
-                    } else {
-                        watermarkPath = watermarkPath + "approved.png" ; 
-                    }
-                    break;
-                case CheckDepositStatus.OPEN:
-                default:
-                    watermarkPath = watermarkPath + "draft.png"; 
-                    break;
-            }
-            
-            params.put("watermarkImagePath", watermarkPath);
-            List<TransactionDetail> Details = new ArrayList<>();
-            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-                if(!Detail(lnCtr).isReverse()){
-                    continue;
-                }
-                Details.add(new TransactionDetail(
-                        lnCtr+1,
-                        Detail(lnCtr).getSourceNo(),
-                        Detail(lnCtr).CheckPayment().getCheckNo(),
-                        Detail(lnCtr).CheckPayment().Payee().getPayeeName(),
-                        Detail(lnCtr).getRemarks(),
-                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotalDeposit(), false).replace(",", ""))
-                ));
-
-            }
-            JasperPrint currentPrint = JasperFillManager.fillReport(
-                    jasperReport,
-                    params,
-                    new JRBeanCollectionDataSource(Details)
-            );
-            if (currentPrint != null) {
-                CustomJasperViewer viewer = new CustomJasperViewer(currentPrint);
-                viewer.setVisible(true);
-                viewer.addWindowListener(new WindowAdapter() {
-                    @Override
-                    public void windowClosed(WindowEvent e) {
-                        proceedAfterViewerClosed();
-                    }
-
-                });
-            }
-            
-        } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
+        Printer printer = Printer.getDefaultPrinter();
+        if (printer == null) {
+            System.err.println("No default printer.");
             poJSON.put("result", "error");
-            poJSON.put("message", "Transaction print aborted!");
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
-        } 
+            poJSON.put("message", "No default printer.");
+            return poJSON;
+        }
 
+        PrinterJob job = PrinterJob.createPrinterJob(printer);
+        if (job == null) {
+            System.err.println("Cannot create job.");
+            poJSON.put("result", "error");
+            poJSON.put("message", "Cannot create job.");
+            return poJSON;
+        }
+
+        PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                PageOrientation.PORTRAIT,
+                Printer.MarginType.HARDWARE_MINIMUM);
+
+        double pw = layout.getPrintableWidth();   // points
+        double ph = layout.getPrintableHeight();
+
+        Node voucherNode = buildVoucherNode(tx,txd, pw, ph,poDocumentMapping);
+
+        job.getJobSettings().setPageLayout(layout);
+        job.getJobSettings().setJobName("CheckDeposit-" + Master().getTransactionNo());
+
+        boolean okay = job.printPage(layout, voucherNode);
+        if (okay) {
+            job.endJob();
+
+            System.out.println("[SUCCESS] Printed transaction " + Master().getTransactionNo()
+                    + " for " + tx.accountName
+                    + " | Amount: ₱" + tx.nAmountxxValue);
+            poJSON.put("result", "success");
+        } else {
+            job.cancelJob();
+            System.err.println("[FAILED] Printing failed for transaction "+ Master().getTransactionNo());
+            poJSON.put("result", "error");
+            poJSON.put("message", "[FAILED] Printing failed for transaction " + Master().getTransactionNo());
+            return poJSON;
+        }
+        
         return poJSON;
     }
-    
-    private boolean pbShowed = false;
-    private void proceedAfterViewerClosed() {
-        Platform.runLater(() -> {
-            System.out.println("SHOWED!!!!!!!!!!!");
 
-            if (pbShowed) {
-                return;
-            } else {
-                pbShowed = true;
-            }
+    private boolean showPrintPreview(Transaction tx,List<TransactionDetail> txd, DocumentMapping poDocumentMapping) throws SQLException, GuanzonException, CloneNotSupportedException {
+        Printer printer = Printer.getDefaultPrinter();
+        PageLayout layout = printer.createPageLayout(Paper.NA_LETTER,
+                PageOrientation.PORTRAIT,
+                Printer.MarginType.HARDWARE_MINIMUM);
 
-            if ("error".equals((String) poJSON.get("result"))) {
-                ShowMessageFX.Warning(null, "Computerized Accounting System",
-                    (String) poJSON.get("message"));
-            } else {
-                if (pbIsPrinted) {
-                    ShowMessageFX.Information(null, "Computerized Accounting System",
-                        "Transaction Printed Successfully");
-                } else {
-                    ShowMessageFX.Warning(null, "Computerized Accounting System",
-                        "Printing was canceled by the user.");
-                }
-            }
+        double pw = layout.getPrintableWidth();
+        double ph = layout.getPrintableHeight();
+        
+        Node voucher = buildVoucherNode(tx,txd, pw, ph,poDocumentMapping);
+
+        // Wrap in a Group so zooming keeps proportions if the user resizes the window
+        Group zoomRoot = new Group(voucher);
+        ScrollPane scroll = new ScrollPane(zoomRoot);
+        scroll.setFitToWidth(true);
+        scroll.setFitToHeight(true);
+
+        Button btnPrint = new Button("Print");
+        Button btnCancel = new Button("Cancel");
+        btnPrint.setOnAction(e -> {
+            ((Stage) btnPrint.getScene().getWindow()).setUserData(Boolean.TRUE);
+            ((Stage) btnPrint.getScene().getWindow()).close();
         });
+        btnCancel.setOnAction(e -> {
+            ((Stage) btnPrint.getScene().getWindow()).setUserData(Boolean.FALSE);
+            ((Stage) btnPrint.getScene().getWindow()).close();
+        });
+//        btnCancel.setOnAction(e -> ((Stage) btnCancel.getScene().getWindow()).close());
+
+        HBox footer = new HBox(10, btnPrint, btnCancel);
+        footer.setAlignment(Pos.CENTER_RIGHT);
+        footer.setPadding(new Insets(10));
+
+        Stage stage = new Stage();
+        stage.initModality(Modality.APPLICATION_MODAL);
+        stage.setTitle("Print Preview " + tx.accountNo);
+        stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 660, 820));
+        stage.showAndWait();
+
+        return Boolean.TRUE.equals(stage.getUserData());
     }
 
-    private void showViewerAndWait(JasperPrint print) {
-        // create viewer on Swing thread
-        final CustomJasperViewer viewer = new CustomJasperViewer(print);
-        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
+    /**
+     * Builds a voucher as a vector node hierarchy – no Canvas, no signature
+     * box.
+     */
+    /**
+     * Builds the voucher layout. Each text node is placed by (row, col) where
+     * row = line number (0‑based) → Y = TOP + row * LINE_HEIGHT col = character
+     * column (0‑based) → X = col * CHAR_WIDTH
+     */
+    private Node buildVoucherNode(Transaction tx, List<TransactionDetail> txd,
+            double widthPts,
+            double heightPts,
+    DocumentMapping poDocumentMapping)
+            throws SQLException, GuanzonException, CloneNotSupportedException {
 
-        final CountDownLatch latch = new CountDownLatch(1);
-        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosed(java.awt.event.WindowEvent e) {
-                latch.countDown();             // release when user closes
-                proceedAfterViewerClosed();
+        // Root container for all voucher text nodes
+        Pane root = new Pane();
+        root.setPrefSize(widthPts, heightPts);
+
+        final double TOP_MARGIN = 21;   // distance from top edge to “row 0”
+        final double LINE_HEIGHT = 18;   // row‑to‑row spacing
+        final double CHAR_WIDTH = 7;    // col‑to‑col spacing
+        
+        //Transaction
+        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+            String fontName = poDocumentMapping.Detail(i).getFontName();
+            double fontSize = poDocumentMapping.Detail(i).getFontSize();
+            double topRow = poDocumentMapping.Detail(i).getTopRow();
+            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
+            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
+
+            // Determine font per field
+            Font fieldFont = Font.font(fontName, fontSize);
+            String textValue;
+            switch (fieldName) {
+                case "sActNumbr":
+                    int spaceCount = (int) Math.round(colSpace);
+                    if (spaceCount < 0) {
+                        throw new IllegalArgumentException("spaceCount must be non-negative");
+                    }
+                    String gap = String.join("", Collections.nCopies(spaceCount, " "));
+                    String rawDate = tx.accountNo == null ? "" : tx.accountNo; //123-1-12345678-1 : sample account no format
+                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(3,10),spaceCount) //12345678
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
+                    break;
+                case "sActNamex":
+                    textValue = tx.accountName == null ? "" : tx.accountName;
+                    break;
+                case "dReferDte":
+                    textValue = tx.transactionDate == null ? "" : tx.transactionDate;
+                    break;
+                case "nTotalDep":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                    break;
+                //Transaction Detail
+                case "sBankIDxx":
+                    textValue = tx.accountName == null ? "" : tx.accountName;
+                    break;
+                case "sCheckNox":
+                    textValue = tx.transactionDate == null ? "" : tx.transactionDate;
+                    break;
+                case "nAmountxx":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                    break;
+                default:
+                    throw new AssertionError("Unhandled field: " + fieldName);
             }
-        });
 
-        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
+            double x = leftCol * CHAR_WIDTH;
+            double y = TOP_MARGIN + topRow * LINE_HEIGHT;
+            
+            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+            textNode.setFont(fieldFont);
+            root.getChildren().add(textNode);
+        }
+        
+        //Transaction Detail
+        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+            String fontName = poDocumentMapping.Detail(i).getFontName();
+            double fontSize = poDocumentMapping.Detail(i).getFontSize();
+            double topRow = poDocumentMapping.Detail(i).getTopRow();
+            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
+            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
 
-        try {
-            latch.await();                     // 🔴 blocks here until viewer closes
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt(); // keep interruption status
+            // Determine font per field
+            Font fieldFont = Font.font(fontName, fontSize);
+            String textValue = "";
+            for (TransactionDetail txd1 : txd) {
+                switch (fieldName) {
+                    //Transaction Detail
+                    case "sBankIDxx":
+                        textValue = txd1.sBank == null ? "" : txd1.sBank;
+                        break;
+                    case "sCheckNox":
+                        textValue = txd1.sCheckNox == null ? "" : txd1.sCheckNox;
+                        break;
+                    case "nAmountxx":
+                        textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(txd1.nTotalAmount, false);
+                        break;
+                    default:
+                        throw new AssertionError("Unhandled field: " + fieldName);
+                }
+            }
+
+            double x = leftCol * CHAR_WIDTH;
+            double y = TOP_MARGIN + topRow * LINE_HEIGHT;
+            
+            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+            textNode.setFont(fieldFont);
+            root.getChildren().add(textNode);
+        }
+
+        return root;
+    }
+    
+    private static String addSpaceBetweenChars(String input, int spaceCount) {
+        if (input == null || input.isEmpty()) {
+            return "";
+        }
+        String space = repeatSpace(spaceCount);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < input.length(); i++) {
+            sb.append(input.charAt(i));
+            if (i < input.length() - 1) {
+                sb.append(space);
+            }
+        }
+        return sb.toString();
+    }
+
+    private static String repeatSpace(int count) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < count; i++) {
+            sb.append(' ');
+        }
+        return sb.toString();
+    }
+    
+    
+    private static class Transaction {
+        final String accountNo, accountName, transactionDate;
+        final BigDecimal nAmountxxValue;
+
+        Transaction(String accountNo, String accountName, String transactionDate, BigDecimal nAmountxxValue) {
+            this.accountNo = accountNo;
+            this.accountName = accountName;
+            this.transactionDate = transactionDate;
+            this.nAmountxxValue = nAmountxxValue;
         }
     }
-
+   
     public static class TransactionDetail {
 
         private final Integer nRowNo;
-        private final String sSourceNo;
+        private final String sBank;
         private final String sCheckNox;
-        private final String sPayee;
-        private final String sRemarks;
         private final Double nTotalAmount;
 
-        public TransactionDetail(Integer fnRowNo, String fsSourceNo, String fsCheckNox, String fsPayee, String fsRemarks, Double totalAmt) {
+        public TransactionDetail(Integer fnRowNo, String fsBank, String fsCheckNox, Double totalAmt) {
             this.nRowNo = fnRowNo;
-            this.sSourceNo = fsSourceNo;
+            this.sBank = fsBank;
             this.sCheckNox = fsCheckNox;
-            this.sPayee = fsPayee;
-            this.sRemarks = fsRemarks;
             this.nTotalAmount = totalAmt;
         }
 
@@ -2238,139 +2801,16 @@ public class CheckDeposit extends Transaction {
             return nRowNo;
         }
 
-        public String getsSourceNo() {
-            return sSourceNo;
+        public String getsBank() {
+            return sBank;
         }
 
         public String getsCheckNox() {
             return sCheckNox;
         }
 
-        public String getsPayee() {
-            return sPayee;
-        }
-
-        public String getsRemarks() {
-            return sRemarks;
-        }
-
         public Double getnTotalAmount() {
             return nTotalAmount;
-        }
-    }
-    
-    private boolean pbIsPrinted = false;
-    public class CustomJasperViewer extends JasperViewer {
-
-        public CustomJasperViewer(final JasperPrint jasperPrint) {
-            super(jasperPrint, false);
-            customizePrintButton(jasperPrint);
-        }
-
-        /* ---- toolbar patch ------------------------------------------ */
-        private JSONObject customizePrintButton(final JasperPrint jasperPrint) {
-
-            try {
-                JRViewer viewer = findJRViewer(this);
-                if (viewer == null) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "JRViewer not found!");
-                    return poJSON;
-                }
-                for (int i = 0; i < viewer.getComponentCount(); i++) {
-                    if (viewer.getComponent(i) instanceof JRViewerToolbar) {
-
-                        JRViewerToolbar toolbar = (JRViewerToolbar) viewer.getComponent(i);
-
-                        for (int j = 0; j < toolbar.getComponentCount(); j++) {
-                            if (toolbar.getComponent(j) instanceof JButton) {
-
-                                final JButton button = (JButton) toolbar.getComponent(j);
-
-                                if ("Print".equals(button.getToolTipText())) {
-                                    /* remove existing handlers */
-                                    ActionListener[] old = button.getActionListeners();
-                                    for (int k = 0; k < old.length; k++) {
-                                        button.removeActionListener(old[k]);
-                                    }
-
-                                    /* add our own (anonymous inner‑class, not lambda) */
-                                    button.addActionListener(new ActionListener() {
-                                        @Override
-                                        public void actionPerformed(ActionEvent e) {
-                                            try {
-                                                pbIsPrinted = JasperPrintManager.printReport(jasperPrint, true);
-                                                if (pbIsPrinted) {
-                                                    Master().setPrintStatus(Logical.YES);
-                                                    Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-                                                    Master().setModifiedDate(poGRider.getServerDate());
-                                                    poJSON = SaveTransaction();
-                                                    if(!"error".equals((String) poJSON.get("result"))){
-                                                        poJSON.put("result", "success");
-                                                        poJSON.put("message",  "Transaction Printed Successfully.");
-                                                    }
-                                                    CustomJasperViewer.this.dispose();
-                                                } else {
-                                                    poJSON.put("result", "error");
-                                                    poJSON.put("message",  "Printing was canceled by the user.");
-                                                }
-                                            } catch (SQLException | GuanzonException | CloneNotSupportedException | JRException ex) {
-                                                poJSON.put("result", "error");
-                                                poJSON.put("message",  "Print Failed: " + ex.getMessage());
-                                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                                            }
-                                        }
-                                    });
-                                } else {
-                                    // Disable all other buttons
-                                    button.setEnabled(false);
-                                }
-                            }
-                        }
-                        toolbar.revalidate();
-                        toolbar.repaint();
-                    }
-                }
-            } catch (Exception e) {
-                System.out.println("Error customizing print button: " + e.getMessage());
-                poJSON.put("result", "error");
-                poJSON.put("message", "Error customizing print button: " + e.getMessage());
-            }
-            
-            return poJSON;
-        }
-
-        private void warnAndRefocus(final String m) {
-            Platform.runLater(new Runnable() {
-                @Override
-                public void run() {
-//                    ShowMessageFX.Warning(m, "Print Disbursement", null);
-                    poJSON.put("result", "error");
-                    poJSON.put("message", m);
-                    SwingUtilities.invokeLater(new Runnable() {
-                        @Override
-                        public void run() {
-                            CustomJasperViewer.this.toFront();
-                        }
-                    });
-                }
-            });
-        }
-
-        private JRViewer findJRViewer(Component parent) {
-            if (parent instanceof JRViewer) {
-                return (JRViewer) parent;
-            }
-            if (parent instanceof Container) {
-                Component[] comps = ((Container) parent).getComponents();
-                for (int i = 0; i < comps.length; i++) {
-                    JRViewer v = findJRViewer(comps[i]);
-                    if (v != null) {
-                        return v;
-                    }
-                }
-            }
-            return null;
         }
     }
     
