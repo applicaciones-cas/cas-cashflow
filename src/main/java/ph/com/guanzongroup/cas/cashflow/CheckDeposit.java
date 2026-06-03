@@ -37,6 +37,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javafx.application.Platform;
+import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.print.PageLayout;
@@ -1009,22 +1010,7 @@ public class CheckDeposit extends Transaction {
     public JSONObject loadCheckPayment(String fsBankName, String fsDateFrom, String fsDateThru) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         paChecks = new ArrayList<>();
-        String lsSQL = "SELECT DISTINCT "
-                + "  a.sTransNox, "
-                + "  a.sBranchCd, "
-                + "  a.sBankIDxx, "
-                + "  a.sPayeeIDx, "
-                + "  a.dCheckDte, "
-                + "  a.sCheckNox, "
-                + "  a.nAmountxx, "
-                + "  b.sBankName AS bankname, "
-                + "  d.sPayeeNme AS payeename, "
-                + "  a.cReleased, "
-                + "  a.cTranStat "
-                + "  FROM Check_Payments a "
-                + "  LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
-                + "  INNER JOIN Disbursement_Master c ON c.sTransNox = a.sSourceNo "
-                + "  LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx";
+        String lsSQL = getSQ_CheckPayment();
 
         // Build filter conditions dynamically
         List<String> lsFilter = new ArrayList<>();
@@ -1059,6 +1045,7 @@ public class CheckDeposit extends Transaction {
             paChecks = new ArrayList<>();
             while (loRS.next()) {
                 // Print the result set
+                System.out.println("sVouchrNo: " + loRS.getString("sVouchrNo"));
                 System.out.println("sTransNox: " + loRS.getString("sTransNox"));
                 System.out.println("sPayeeIDx: " + loRS.getString("sPayeeIDx"));
                 System.out.println("sCheckNox: " + loRS.getString("sCheckNox"));
@@ -1079,6 +1066,48 @@ public class CheckDeposit extends Transaction {
             poJSON.put("message", "No record found .");
         }
         MiscUtil.close(loRS);
+        return poJSON;
+    }
+    
+    public JSONObject searchCheckPayment(String fsDVNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        paChecks = new ArrayList<>();
+        String lsSQL = getSQ_CheckPayment();
+
+        // Build filter conditions dynamically
+        List<String> lsFilter = new ArrayList<>();
+        if (fsDVNo != null && !"".equals(fsDVNo)) {
+            lsFilter.add("c.sVouchrNo LIKE " + SQLUtil.toSQL(fsDVNo + "%"));
+        }
+
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
+        }
+        lsFilter.add(" c.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
+        lsFilter.add("a.cReleased = '0' AND a.cTranStat <> 3 AND a.cPrintxxx = '1'");
+
+        // Append WHERE clause if any filter exists
+        if (lsSQL != null && !lsSQL.trim().isEmpty() && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+        lsSQL = lsSQL + " ORDER BY a.dCheckDte ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        System.out.println("SQL EXECUTED: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "", 
+                "Transaction Date»DV No»Account No»Account Name",
+                "a.dTransact»c.sVouchrNo»c.sActNumbr»c.sActNamex",
+                "a.dTransact»c.sVouchrNo»c.sActNumbr»c.sActNamex",
+                1);
+
+        if (poJSON != null) {
+            poJSON = populateDetail((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON = setJSON("error","No record loaded.");
+            return poJSON;
+        }
         return poJSON;
     }
     
@@ -1108,6 +1137,12 @@ public class CheckDeposit extends Transaction {
                 poJSON = setJSON("error",(String) poJSON.get("message"));
                 return poJSON;
             }
+            
+            poJSON = checkExistingCheckDeposit(fsTrasactionNo, loObject.getSourceCode()) ;
+            if(!isJSONSuccess(poJSON)){
+                return poJSON;
+            }
+            
             // Make sure you're writing to an empty row
             Detail(getDetailCount() - 1).setSourceNo(loObject.getTransactionNo());
             Detail(getDetailCount() - 1).setSourceCode(loObject.getSourceCode()); //enable this when setting the source code
@@ -1532,6 +1567,33 @@ public class CheckDeposit extends Transaction {
         return poJSON;
     }
     
+    public JSONObject checkExistingCheckDeposit(String fsTransactionNo, String fsSourceCode) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                                                " a.sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
+                                               + " AND a.sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
+                                               + " AND a.sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
+                                               + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.VOID)
+                                               + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.CANCELLED)
+                                                );
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        poJSON = setJSON("error", "Check payment <"+fsTransactionNo+"> is already linked thru check deposit <"+loRS.getString("sTransNox")+">.\n"
+                                                        + "Contact system admin for assistance.");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return poJSON;
+    }
     
     @Override
     public JSONObject willSave() throws CloneNotSupportedException, SQLException, GuanzonException {
@@ -1552,15 +1614,39 @@ public class CheckDeposit extends Transaction {
         Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
         Master().setModifiedDate(poGRider.getServerDate());
         
-//        String lsCashDisbursement = existCashDisbursement(Master().getSourceNo(), Master().getSourceCode());
-//        if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
-//            poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement.\nKindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
-//            return poJSON;
-//        }
-        
         poJSON = isEntryOkay(Master().getTransactionStatus());
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
+        }
+        
+        String bankCode = getDocumentCode(Master().getBankAccount()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
+        if(bankCode == null || "".equals(bankCode)){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Please configure the document code for bank account.");
+            return poJSON;
+        }
+
+        DocumentMapping poDocumentMapping = new CashflowControllers(poGRider, logwrapr).DocumentMapping();
+        poDocumentMapping.InitTransaction();
+        poJSON = poDocumentMapping.OpenTransaction(bankCode);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+         for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+            int rowspace = poDocumentMapping.Detail(i).getMaxRow();
+            switch (fieldName) {
+                //Transaction Detail
+                case "sBankIDxx":
+                case "sCheckNox":
+                case "nAmountxx":
+                    if(rowspace < getDetailCount()){
+                        poJSON = setJSON("error", "Transaction detail cannot be greater than the maximum row for asign bank account document mapping.");
+                        return poJSON;
+                    }
+                break;
+            }
+
         }
         
         //remove items with no stockid or quantity order
@@ -1584,6 +1670,13 @@ public class CheckDeposit extends Transaction {
             Detail(lnCtr).setTransactionNo(Master().getTransactionNo());
             Detail(lnCtr).setEntryNo(lnCtr + 1);
             Detail(lnCtr).setModifiedDate(poGRider.getServerDate());
+            
+            if(Detail(lnCtr).isReverse()){
+                poJSON = checkExistingCheckDeposit(Detail(lnCtr).getSourceNo(), Detail(lnCtr).getSourceCode()) ;
+                if(!isJSONSuccess(poJSON)){
+                    return poJSON;
+                }
+            }
             
             if (Detail(lnCtr).isReverse()) {
                 lbHasActiveDetail = true; // at least one is reversed
@@ -1837,6 +1930,25 @@ public class CheckDeposit extends Transaction {
         + " INNER JOIN Disbursement_Master e ON e.sTransNox = d.sSourceNo ";
     }
     
+    public String getSQ_CheckPayment() {
+        return "SELECT DISTINCT "
+                + "  a.sTransNox, "
+                + "  a.sBranchCd, "
+                + "  a.sBankIDxx, "
+                + "  a.sPayeeIDx, "
+                + "  a.dCheckDte, "
+                + "  a.sCheckNox, "
+                + "  a.nAmountxx, "
+                + "  b.sBankName AS bankname, "
+                + "  d.sPayeeNme AS payeename, "
+                + "  a.cReleased, "
+                + "  a.cTranStat "
+                + "  FROM Check_Payments a "
+                + "  LEFT JOIN Banks b ON a.sBankIDxx = b.sBankIDxx "
+                + "  INNER JOIN Disbursement_Master c ON c.sTransNox = a.sSourceNo "
+                + "  LEFT JOIN Payee d ON a.sPayeeIDx = d.sPayeeIDx";
+    }
+    
     /**
     * Creates a JSONObject with "result" and "message" fields.
     *
@@ -2069,379 +2181,18 @@ public class CheckDeposit extends Transaction {
         }
     }
     
-    //***********************PRINT TRANSACTION***************************
-//    
-//    public JSONObject getUpdateStatusBy(String fsStatus) throws SQLException, GuanzonException {
-//        String lsUpdateBy = "";
-//        String lsDate = "";
-//        String lsSQL = "SELECT b.sModified,b.dModified FROM "+Master().getTable()+" a "
-//                     + " LEFT JOIN Transaction_Status_History b ON b.sSourceNo = a.sTransNox AND b.sTableNme = "+ SQLUtil.toSQL(Master().getTable())
-//                     + " AND b.cRefrStat = "+ SQLUtil.toSQL(fsStatus) ;
-//        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox = " + SQLUtil.toSQL(Master().getTransactionNo())) ;
-//        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
-//        System.out.println("Execute SQL STATUS : "+fsStatus+" : " + lsSQL);
-//        ResultSet loRS = poGRider.executeQuery(lsSQL);
-//        try {
-//          if (MiscUtil.RecordCount(loRS) > 0L) {
-//            if (loRS.next()) {
-//                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
-//                    if(loRS.getString("sModified").length() > 10){
-//                        lsUpdateBy = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
-//                    } else {
-//                        lsUpdateBy = getSysUser(loRS.getString("sModified")); 
-//                    }
-//                    // Get the LocalDateTime from your result set
-//                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
-//                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
-//                    lsDate =  dModified.format(formatter);
-//                }
-//            } 
-//          }
-//          MiscUtil.close(loRS);
-//        } catch (SQLException e) {
-//          poJSON.put("result", "error");
-//          poJSON.put("message", e.getMessage());
-//          return poJSON;
-//        } 
-//        
-//        poJSON.put("result", "success");
-//        poJSON.put("sUpdateByx", lsUpdateBy);
-//        poJSON.put("sUpdateDte", lsDate);
-//        return poJSON;
-//    }
-//    
-//    public JSONObject printTransaction()
-//            throws CloneNotSupportedException, SQLException, GuanzonException {
-//        poJSON = new JSONObject();
-//        JasperReport jasperReport = null;      
-//        pbShowed = false; 
-//        pbIsPrinted = false;
-//        
-//        try {
-//            String watermarkPath; //set draft as default
-//            String jrxmlPath = System.getProperty("sys.default.path.config") + "/Reports/CheckDeposit.jrxml";
-//            jasperReport = JasperCompileManager.compileReport(jrxmlPath);
-//
-//            watermarkPath = System.getProperty("sys.default.path.config") + "/Reports/images/"; 
-//            poJSON = OpenTransaction(Master().getTransactionNo());
-//            if ("error".equals((String) poJSON.get("result"))){
-//                proceedAfterViewerClosed();
-//                return poJSON;
-//            }
-//            poJSON = UpdateTransaction();
-//            if ("error".equals((String) poJSON.get("result"))){
-//                proceedAfterViewerClosed();
-//                return poJSON;
-//            }
-//            
-//            Map<String, Object> params = new HashMap<>();
-//            params.put("sTransNox", Master().getTransactionNo());
-//            params.put("dTransact",  new java.sql.Date(Master().getTransactionDate().getTime()));
-//            params.put("sAccountNumber", Master().BankAccount().getAccountNo());
-//            params.put("sAccountName", Master().BankAccount().getAccountName());
-//            params.put("sRemarksx", Master().getRemarks());
-//
-//            //Set Default value to empty to prevent null in display
-//            params.put("sCompnyNm","");
-//            params.put("sConfirmer","");
-//            params.put("sPosted","");
-//
-//            //Get Encoder
-//            JSONObject loJSONEntry = getEntryBy();
-//            if(!isJSONSuccess(loJSONEntry)){
-//                return loJSONEntry;
-//            }
-//            if((String) loJSONEntry.get("sCompnyNm") != null && !"".equals((String) loJSONEntry.get("sCompnyNm"))){
-//                params.put("sCompnyNm",(String) loJSONEntry.get("sCompnyNm") + " " + String.valueOf((String) loJSONEntry.get("sEntryDte"))); 
-//            }
-//            //Get Confirmer
-//            JSONObject loJSONConfirm = getUpdateStatusBy(CheckDepositStatus.CONFIRMED);
-//            if(!isJSONSuccess(loJSONConfirm)){
-//                return loJSONConfirm;
-//            } else {
-//                if((String) loJSONConfirm.get("sUpdateByx") != null && !"".equals((String) loJSONConfirm.get("sUpdateByx"))){
-//                    params.put("sConfirmed", (String) loJSONConfirm.get("sUpdateByx") + " " + String.valueOf((String) loJSONConfirm.get("sUpdateDte"))); 
-//                }
-//            }
-//            //Get Approver
-//            JSONObject loJSONApprover = getUpdateStatusBy(CheckDepositStatus.POSTED);
-//            if(!isJSONSuccess(loJSONApprover)){
-//                return loJSONApprover;
-//            } else {
-//                if((String) loJSONApprover.get("sUpdateByx") != null && !"".equals((String) loJSONApprover.get("sUpdateByx"))){
-//                    params.put("sPosted", (String) loJSONApprover.get("sUpdateByx") + " " + String.valueOf((String) loJSONApprover.get("sUpdateDte"))); 
-//                }
-//            }
-//            
-//            switch(Master().getTransactionStatus()){
-//                case CheckDepositStatus.CONFIRMED:
-//                case CheckDepositStatus.POSTED:
-//                    if(Logical.YES.equals(Master().getPrintStatus())){
-//                        watermarkPath = watermarkPath + "reprint.png"; 
-//                    } else {
-//                        watermarkPath = watermarkPath + "approved.png" ; 
-//                    }
-//                    break;
-//                case CheckDepositStatus.OPEN:
-//                default:
-//                    watermarkPath = watermarkPath + "draft.png"; 
-//                    break;
-//            }
-//            
-//            params.put("watermarkImagePath", watermarkPath);
-//            List<TransactionDetail> Details = new ArrayList<>();
-//            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-//                if(!Detail(lnCtr).isReverse()){
-//                    continue;
-//                }
-//                Details.add(new TransactionDetail(
-//                        lnCtr+1,
-//                        Detail(lnCtr).getSourceNo(),
-//                        Detail(lnCtr).CheckPayment().getCheckNo(),
-//                        Detail(lnCtr).CheckPayment().Payee().getPayeeName(),
-//                        Detail(lnCtr).getRemarks(),
-//                        Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().getTransactionTotalDeposit(), false).replace(",", ""))
-//                ));
-//
-//            }
-//            JasperPrint currentPrint = JasperFillManager.fillReport(
-//                    jasperReport,
-//                    params,
-//                    new JRBeanCollectionDataSource(Details)
-//            );
-//            if (currentPrint != null) {
-//                CustomJasperViewer viewer = new CustomJasperViewer(currentPrint);
-//                viewer.setVisible(true);
-//                viewer.addWindowListener(new WindowAdapter() {
-//                    @Override
-//                    public void windowClosed(WindowEvent e) {
-//                        proceedAfterViewerClosed();
-//                    }
-//
-//                });
-//            }
-//            
-//        } catch (JRException | SQLException | GuanzonException | ScriptException ex) {
-//            poJSON.put("result", "error");
-//            poJSON.put("message", "Transaction print aborted!");
-//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
-//        } 
-//
-//        return poJSON;
-//    }
-//    
-//    private boolean pbShowed = false;
-//    private void proceedAfterViewerClosed() {
-//        Platform.runLater(() -> {
-//            System.out.println("SHOWED!!!!!!!!!!!");
-//
-//            if (pbShowed) {
-//                return;
-//            } else {
-//                pbShowed = true;
-//            }
-//
-//            if ("error".equals((String) poJSON.get("result"))) {
-//                ShowMessageFX.Warning(null, "Computerized Accounting System",
-//                    (String) poJSON.get("message"));
-//            } else {
-//                if (pbIsPrinted) {
-//                    ShowMessageFX.Information(null, "Computerized Accounting System",
-//                        "Transaction Printed Successfully");
-//                } else {
-//                    ShowMessageFX.Warning(null, "Computerized Accounting System",
-//                        "Printing was canceled by the user.");
-//                }
-//            }
-//        });
-//    }
-//
-//    private void showViewerAndWait(JasperPrint print) {
-//        // create viewer on Swing thread
-//        final CustomJasperViewer viewer = new CustomJasperViewer(print);
-//        viewer.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
-//
-//        final CountDownLatch latch = new CountDownLatch(1);
-//        viewer.addWindowListener(new java.awt.event.WindowAdapter() {
-//            @Override
-//            public void windowClosed(java.awt.event.WindowEvent e) {
-//                latch.countDown();             // release when user closes
-//                proceedAfterViewerClosed();
-//            }
-//        });
-//
-//        javax.swing.SwingUtilities.invokeLater(() -> viewer.setVisible(true));
-//
-//        try {
-//            latch.await();                     // 🔴 blocks here until viewer closes
-//        } catch (InterruptedException ex) {
-//            Thread.currentThread().interrupt(); // keep interruption status
-//        }
-//    }
-//
-//    public static class TransactionDetail {
-//
-//        private final Integer nRowNo;
-//        private final String sSourceNo;
-//        private final String sCheckNox;
-//        private final String sPayee;
-//        private final String sRemarks;
-//        private final Double nTotalAmount;
-//
-//        public TransactionDetail(Integer fnRowNo, String fsSourceNo, String fsCheckNox, String fsPayee, String fsRemarks, Double totalAmt) {
-//            this.nRowNo = fnRowNo;
-//            this.sSourceNo = fsSourceNo;
-//            this.sCheckNox = fsCheckNox;
-//            this.sPayee = fsPayee;
-//            this.sRemarks = fsRemarks;
-//            this.nTotalAmount = totalAmt;
-//        }
-//
-//        public Integer getnRowNo() {
-//            return nRowNo;
-//        }
-//
-//        public String getsSourceNo() {
-//            return sSourceNo;
-//        }
-//
-//        public String getsCheckNox() {
-//            return sCheckNox;
-//        }
-//
-//        public String getsPayee() {
-//            return sPayee;
-//        }
-//
-//        public String getsRemarks() {
-//            return sRemarks;
-//        }
-//
-//        public Double getnTotalAmount() {
-//            return nTotalAmount;
-//        }
-//    }
-//    
-//    private boolean pbIsPrinted = false;
-//    public class CustomJasperViewer extends JasperViewer {
-//
-//        public CustomJasperViewer(final JasperPrint jasperPrint) {
-//            super(jasperPrint, false);
-//            customizePrintButton(jasperPrint);
-//        }
-//
-//        /* ---- toolbar patch ------------------------------------------ */
-//        private JSONObject customizePrintButton(final JasperPrint jasperPrint) {
-//
-//            try {
-//                JRViewer viewer = findJRViewer(this);
-//                if (viewer == null) {
-//                    poJSON.put("result", "error");
-//                    poJSON.put("message", "JRViewer not found!");
-//                    return poJSON;
-//                }
-//                for (int i = 0; i < viewer.getComponentCount(); i++) {
-//                    if (viewer.getComponent(i) instanceof JRViewerToolbar) {
-//
-//                        JRViewerToolbar toolbar = (JRViewerToolbar) viewer.getComponent(i);
-//
-//                        for (int j = 0; j < toolbar.getComponentCount(); j++) {
-//                            if (toolbar.getComponent(j) instanceof JButton) {
-//
-//                                final JButton button = (JButton) toolbar.getComponent(j);
-//
-//                                if ("Print".equals(button.getToolTipText())) {
-//                                    /* remove existing handlers */
-//                                    ActionListener[] old = button.getActionListeners();
-//                                    for (int k = 0; k < old.length; k++) {
-//                                        button.removeActionListener(old[k]);
-//                                    }
-//
-//                                    /* add our own (anonymous inner‑class, not lambda) */
-//                                    button.addActionListener(new ActionListener() {
-//                                        @Override
-//                                        public void actionPerformed(ActionEvent e) {
-//                                            try {
-//                                                pbIsPrinted = JasperPrintManager.printReport(jasperPrint, true);
-//                                                if (pbIsPrinted) {
-//                                                    Master().setPrintStatus(Logical.YES);
-//                                                    Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
-//                                                    Master().setModifiedDate(poGRider.getServerDate());
-//                                                    poJSON = SaveTransaction();
-//                                                    if(!"error".equals((String) poJSON.get("result"))){
-//                                                        poJSON.put("result", "success");
-//                                                        poJSON.put("message",  "Transaction Printed Successfully.");
-//                                                    }
-//                                                    CustomJasperViewer.this.dispose();
-//                                                } else {
-//                                                    poJSON.put("result", "error");
-//                                                    poJSON.put("message",  "Printing was canceled by the user.");
-//                                                }
-//                                            } catch (SQLException | GuanzonException | CloneNotSupportedException | JRException ex) {
-//                                                poJSON.put("result", "error");
-//                                                poJSON.put("message",  "Print Failed: " + ex.getMessage());
-//                                                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-//                                            }
-//                                        }
-//                                    });
-//                                } else {
-//                                    // Disable all other buttons
-//                                    button.setEnabled(false);
-//                                }
-//                            }
-//                        }
-//                        toolbar.revalidate();
-//                        toolbar.repaint();
-//                    }
-//                }
-//            } catch (Exception e) {
-//                System.out.println("Error customizing print button: " + e.getMessage());
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "Error customizing print button: " + e.getMessage());
-//            }
-//            
-//            return poJSON;
-//        }
-//
-//        private void warnAndRefocus(final String m) {
-//            Platform.runLater(new Runnable() {
-//                @Override
-//                public void run() {
-////                    ShowMessageFX.Warning(m, "Print Disbursement", null);
-//                    poJSON.put("result", "error");
-//                    poJSON.put("message", m);
-//                    SwingUtilities.invokeLater(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            CustomJasperViewer.this.toFront();
-//                        }
-//                    });
-//                }
-//            });
-//        }
-//
-//        private JRViewer findJRViewer(Component parent) {
-//            if (parent instanceof JRViewer) {
-//                return (JRViewer) parent;
-//            }
-//            if (parent instanceof Container) {
-//                Component[] comps = ((Container) parent).getComponents();
-//                for (int i = 0; i < comps.length; i++) {
-//                    JRViewer v = findJRViewer(comps[i]);
-//                    if (v != null) {
-//                        return v;
-//                    }
-//                }
-//            }
-//            return null;
-//        }
-//    }
-    
     //**************************PRINT DEPOSIT SLIP BASED ON DOCUMENT MAPPING**********************************
     private boolean pbPrint = false;
     public JSONObject PrintDepositSlip() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
         pbPrint = true;
+        
+        if(Logical.YES.equals(Master().getPrintStatus())){
+            poJSON = callApproval();
+            if(!isJSONSuccess(poJSON)){
+                return poJSON;
+            }
+        }
 
         String bankCode = getDocumentCode(Master().getBankAccount()); //CheckPayments().getModel().Banks().getBankCode()+"Chk"+;
         if(bankCode == null || "".equals(bankCode)){
@@ -2489,18 +2240,20 @@ public class CheckDeposit extends Transaction {
             }
 
             if (Logical.NO.equals(Master().getPrintStatus())) {
-                Model_Check_Deposit_Master loObject = new CashflowModels(poGRider).CheckDepositMaster();
-                loObject.initialize();
-                poJSON = loObject.openRecord(Master().getTransactionNo());
+                CheckDeposit loObject = new CashflowControllers(poGRider,logwrapr).CheckDeposit();
+                loObject.InitTransaction();
+                poJSON = loObject.OpenTransaction(Master().getTransactionNo());
                 if(!isJSONSuccess(poJSON)){
                     return poJSON;
                 }
-                poJSON = loObject.updateRecord();
+                poJSON = loObject.UpdateTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
-                loObject.setPrintStatus(Logical.YES);
-                poJSON = loObject.saveRecord();
+                loObject.Master().setPrintStatus(Logical.YES);
+                loObject.Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
+                loObject.Master().setModifiedDate(poGRider.getServerDate());
+                poJSON = loObject.SaveTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
                 }
@@ -2595,6 +2348,25 @@ public class CheckDeposit extends Transaction {
         double ph = layout.getPrintableHeight();
 
         Node voucherNode = buildVoucherNode(tx,txd, pw, ph,poDocumentMapping);
+        
+        // Get printable area
+        double printableWidth = layout.getPrintableWidth();
+        double printableHeight = layout.getPrintableHeight();
+
+        // Get your content size
+        Bounds contentBounds = voucherNode.getBoundsInParent();
+
+        // Compute scale
+        double scaleX = printableWidth / contentBounds.getWidth();
+        double scaleY = printableHeight / contentBounds.getHeight();
+        double scale = Math.min(scaleX, scaleY);
+        // ✅ KEEP YOUR EXACT POSITIONING
+        voucherNode.setScaleX(1);
+        voucherNode.setScaleY(1);
+
+        // ✅ APPLY PRINTER OFFSET
+        voucherNode.setTranslateX(layout.getLeftMargin());
+        voucherNode.setTranslateY(layout.getTopMargin());
 
         job.getJobSettings().setPageLayout(layout);
         job.getJobSettings().setJobName("CheckDeposit-" + Master().getTransactionNo());
@@ -2697,13 +2469,15 @@ public class CheckDeposit extends Transaction {
                 double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
                 double rowspace = poDocumentMapping.Detail(i).getRowSpace();
                 
+                
                 if(lnCtr == 0){ //First loop for transaction detail
                     ldblTopRowSpace = topRow;
-                } else {
+                } else { //Add row space to the next transaction detail
                     topRow = topRow + (rowspace*lnCtr);
                 }
-
+                //Set value for top row of total deposit amount
                 ldblTopRowSpace = topRow + rowspace;
+                
                 // Determine font per field
                 Font fieldFont = Font.font(fontName, fontSize);
                 String textValue = "";
@@ -2718,14 +2492,48 @@ public class CheckDeposit extends Transaction {
                     case "nAmountxx":
                         textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(txd1.nTotalAmount, false);
                         break;
+                    case "nTotalDep":
+                        if(lnCtr == txd.size()-1){
+                        textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                        topRow = ldblTopRowSpace + rowspace;
+                        } else {
+                            continue;
+                        }
+                        break;
                 }
+
+                //Alignment
+                Text textNode = new Text(textValue == null ? "" : textValue);
+                textNode.setFont(fieldFont);
 
                 double x = leftCol * CHAR_WIDTH;
                 double y = TOP_MARGIN + topRow * LINE_HEIGHT;
+                double SAFE_RIGHT_MARGIN = 20; // tweak (10–30)
+                double SAFE_BOTTOM_MARGIN = 20;
 
-                Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+                double safeWidth = widthPts - SAFE_RIGHT_MARGIN;
+                double safeHeight = heightPts - SAFE_BOTTOM_MARGIN;
+
+                if ("nAmountxx".equals(fieldName) || "nTotalDep".equals(fieldName)) {
+                    // RIGHT ALIGN
+                    Bounds bounds = textNode.getLayoutBounds();
+//                    textNode.setX((x+colSpace) - bounds.getWidth());
+                    double rightEdge = (leftCol * CHAR_WIDTH) + colSpace;
+
+                    // enforce safe boundary
+                    rightEdge = Math.min(rightEdge, safeWidth);
+
+                    textNode.setX(rightEdge - bounds.getWidth());
+                    textNode.setY(y);
+                } else {
+                    // LEFT ALIGN (default)
+                    textNode.setX(x+colSpace);
+                    textNode.setY(y);
+                }
+                
                 textNode.setFont(fieldFont);
                 root.getChildren().add(textNode);
+                
             }
             lnCtr++;
         }
@@ -2749,24 +2557,21 @@ public class CheckDeposit extends Transaction {
                     if (spaceCount < 0) {
                         throw new IllegalArgumentException("spaceCount must be non-negative");
                     }
-                    String gap = String.join("", Collections.nCopies(spaceCount, " "));
-                    String rawDate = tx.accountNo == null ? "" : tx.accountNo; //123-1-12345678-1 : sample account no format
-//                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
-//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-//                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
-//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-//                            + addSpaceBetweenChars(rawDate.substring(3,10),spaceCount) //12345678
-//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-//                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
-                    
-                    
-                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
-                            + repeatSpace(spaceCount) //Add extra 1 space for gap
-                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
-                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-                            + addSpaceBetweenChars(rawDate.substring(3,4),spaceCount); //12
-//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-//                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
+                    if (spaceCount == 0) {
+                        textValue = tx.accountNo == null ? "" : tx.accountNo.toUpperCase();
+                    } else {
+                        String rawDate = tx.accountNo == null ? "" : tx.accountNo;
+
+                        textValue =
+                                addSpaceBetweenChars(safeSubstring(rawDate, 0, 3), spaceCount)
+                                + repeatSpace(spaceCount)
+                                + addSpaceBetweenChars(safeSubstring(rawDate, 3, 4), spaceCount)
+                                + repeatSpace(spaceCount + 1)
+                                + addSpaceBetweenChars(safeSubstring(rawDate, 4, 12), spaceCount)
+                                + repeatSpace(spaceCount + 1)
+                                + addSpaceBetweenChars(safeSubstring(rawDate, 12, 13), spaceCount);
+                        System.out.println("textValue : " + textValue);
+                    }
                     break;
                 case "sActNamex":
                     textValue = tx.accountName == null ? "" : tx.accountName.toUpperCase();
@@ -2774,22 +2579,41 @@ public class CheckDeposit extends Transaction {
                 case "dReferDte":
                     textValue = tx.transactionDate == null ? "" : tx.transactionDate;
                     break;
-                case "nTotalDep":
-                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
-                    topRow = ldblTopRowSpace + rowspace;
-                    break;
+//                case "nTotalDep":
+//                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+//                    topRow = ldblTopRowSpace + rowspace;
+//                    break;
             }
-
+            
+            Text textNode =  new Text(textValue == null ? "" : textValue);
             double x = leftCol * CHAR_WIDTH;
             double y = TOP_MARGIN + topRow * LINE_HEIGHT;
             
-            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+//            if ("nTotalDep".equals(fieldName)) {
+//                // RIGHT ALIGN
+//                Bounds bounds = textNode.getLayoutBounds();
+//                textNode.setX(x - bounds.getWidth());
+//                textNode.setY(y);
+//            } else {
+//                // LEFT ALIGN (default)
+//                textNode.setX(x);
+//                textNode.setY(y);
+//            }
+            
+            textNode = new Text(x, y, textValue == null ? "" : textValue);
             textNode.setFont(fieldFont);
             root.getChildren().add(textNode);
         }
 
         return root;
     }
+    
+    private String safeSubstring(String str, int start, int end) {
+        if (str == null || str.length() <= start) {
+            return "";
+        }
+    return str.substring(start, Math.min(end, str.length()));
+}
     
     private static String addSpaceBetweenChars(String input, int spaceCount) {
         if (input == null || input.isEmpty()) {

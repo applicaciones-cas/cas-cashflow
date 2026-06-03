@@ -261,7 +261,7 @@ public class Model_Check_Deposit_Master extends Model {
     }
     
     public Model_Banks Banks() throws GuanzonException, SQLException {
-        if (!"".equals((String) getValue(bankid))) {
+        if (!"".equals(bankid)) {
             if (poBanks.getEditMode() == EditMode.READY
                     && poBanks.getBankID().equals(bankid)) {
                 return poBanks;
