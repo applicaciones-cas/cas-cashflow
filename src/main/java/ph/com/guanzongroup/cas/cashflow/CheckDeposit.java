@@ -2577,11 +2577,11 @@ public class CheckDeposit extends Transaction {
 
                         textValue =
                                 addSpaceBetweenChars(safeSubstring(rawDate, 0, 3), spaceCount)
-                                + repeatSpace(spaceCount)
+                                + repeatSpace(spaceCount+2)
                                 + addSpaceBetweenChars(safeSubstring(rawDate, 3, 4), spaceCount)
-                                + repeatSpace(spaceCount + 1)
+                                + repeatSpace(spaceCount + 2)
                                 + addSpaceBetweenChars(safeSubstring(rawDate, 4, 12), spaceCount)
-                                + repeatSpace(spaceCount + 1)
+                                + repeatSpace(spaceCount + 2)
                                 + addSpaceBetweenChars(safeSubstring(rawDate, 12, 13), spaceCount);
                         System.out.println("textValue : " + textValue);
                     }
