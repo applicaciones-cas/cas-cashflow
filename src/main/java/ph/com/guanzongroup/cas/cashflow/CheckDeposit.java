@@ -585,6 +585,7 @@ public class CheckDeposit extends Transaction {
     public void isCheckDepositSupplier(boolean fbIsCheckDepSupplier){ pbSupplier = fbIsCheckDepSupplier; }
     public void setSearchBank(String bank) { psSearchBankId = bank; }
     public String getSearchBankAccountNo() { return psSearchBankAcctNo; }
+    public void setSearchBankAccountNo(String fsAccountNo) { psSearchBankAcctNo = fsAccountNo; }
     public String getSearchBank(){
         try { 
             poJSON = new JSONObject();
