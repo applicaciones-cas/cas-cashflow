@@ -1571,8 +1571,8 @@ public class CheckDeposit extends Transaction {
         poJSON = new JSONObject();
         initSQL();
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
-                                                " a.sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
-                                               + " AND a.sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
+                                                " b.sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
+                                               + " AND b.sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
                                                + " AND a.sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
                                                + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.VOID)
                                                + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.CANCELLED)
