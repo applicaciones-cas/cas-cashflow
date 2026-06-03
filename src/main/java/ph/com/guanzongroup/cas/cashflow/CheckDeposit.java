@@ -93,6 +93,7 @@ import org.guanzon.appdriver.token.RequestAccess;
 import org.guanzon.cas.client.AP_Client_Bank_Account;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.parameter.model.Model_Banks;
+import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.guanzon.cas.tbjhandler.TBJEntry;
@@ -594,7 +595,26 @@ public class CheckDeposit extends Transaction {
                 }
             }
         } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(CheckDeposit.class.getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            return "";
+        }
+        return "";
+    }
+    public String getCompanyName(){
+        try { 
+            poJSON = new JSONObject();
+            String lsCompanyId = poGRider.getCompnyId();
+            if(psCompanyId != null && !"".equals(psCompanyId)){
+                lsCompanyId = psCompanyId;
+            }
+            Model_Company loObj = new ParamModels(poGRider).Company();
+            loObj.initialize();
+            poJSON = loObj.openRecord(lsCompanyId);
+            if(isJSONSuccess(poJSON)){
+                return loObj.getCompanyName();
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             return "";
         }
         return "";
