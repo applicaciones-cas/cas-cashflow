@@ -123,6 +123,7 @@ import ph.com.guanzongroup.cas.cashflow.validator.CheckDepositValidatorFactory;
 public class CheckDeposit extends Transaction {
     private String psCompanyId = "";
     private String psSearchBankId = "";
+    private String psSearchBankAcctNo = "";
     private String psApprover = "";
     private boolean pbSupplier = false;
     
@@ -583,6 +584,7 @@ public class CheckDeposit extends Transaction {
     public void setCompanyId(String fsCompanyId){ psCompanyId = fsCompanyId; }
     public void isCheckDepositSupplier(boolean fbIsCheckDepSupplier){ pbSupplier = fbIsCheckDepSupplier; }
     public void setSearchBank(String bank) { psSearchBankId = bank; }
+    public String getSearchBankAccountNo() { return psSearchBankAcctNo; }
     public String getSearchBank(){
         try { 
             poJSON = new JSONObject();
@@ -829,13 +831,21 @@ public class CheckDeposit extends Transaction {
         return poJSON;
     }
     
-    public JSONObject SearchBankAccount(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchBankAccount(String value, boolean byCode, boolean fbSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         if(pbSupplier){
             AP_Client_Bank_Account loObj = new AP_Client_Bank_Account();
             loObj.setRecordStatus(RecordStatus.ACTIVE);
-            poJSON = loObj.searchRecordbyBanks(value,Master().getBanks(),byCode);
+            if( Master().getBanks() == null || "".equals(Master().getBanks() )){
+                poJSON = loObj.searchRecord(value, byCode);
+            } else {
+                poJSON = loObj.searchRecordbyBanks(value,Master().getBanks(),byCode);
+            }
             if ("success".equals((String) poJSON.get("result"))) {
-                Master().setBankAccount(loObj.getModel().getAPClientBankID());   
+                if(fbSearch){
+                    psSearchBankAcctNo = loObj.getModel().getAccountNumber();
+                } else {
+                    Master().setBankAccount(loObj.getModel().getAPClientBankID());   
+                }
             }
         } else {
             BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
@@ -847,7 +857,11 @@ public class CheckDeposit extends Transaction {
                 poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
             }
             if ("success".equals((String) poJSON.get("result"))) {
-                Master().setBankAccount(object.getModel().getBankAccountId());   
+                if(fbSearch){
+                    psSearchBankAcctNo = object.getModel().getAccountNo();
+                } else {
+                    Master().setBankAccount(object.getModel().getBankAccountId());   
+                }
             }
         }
         return poJSON;
@@ -2639,7 +2653,7 @@ public class CheckDeposit extends Transaction {
         Stage stage = new Stage();
         stage.initModality(Modality.APPLICATION_MODAL);
         stage.setTitle("Print Preview " + tx.accountNo);
-        stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 660, 820));
+        stage.setScene(new Scene(new BorderPane(scroll, null, null, footer, null), 820, 820));
         stage.showAndWait();
 
         return Boolean.TRUE.equals(stage.getUserData());
@@ -2668,78 +2682,30 @@ public class CheckDeposit extends Transaction {
         final double LINE_HEIGHT = 18;   // row‑to‑row spacing
         final double CHAR_WIDTH = 7;    // col‑to‑col spacing
         
-        //Transaction
-        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
-            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
-            String fontName = poDocumentMapping.Detail(i).getFontName();
-            double fontSize = poDocumentMapping.Detail(i).getFontSize();
-            double topRow = poDocumentMapping.Detail(i).getTopRow();
-            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
-            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
-
-            // Determine font per field
-            Font fieldFont = Font.font(fontName, fontSize);
-            String textValue;
-            switch (fieldName) {
-                case "sActNumbr":
-                    int spaceCount = (int) Math.round(colSpace);
-                    if (spaceCount < 0) {
-                        throw new IllegalArgumentException("spaceCount must be non-negative");
-                    }
-                    String gap = String.join("", Collections.nCopies(spaceCount, " "));
-                    String rawDate = tx.accountNo == null ? "" : tx.accountNo; //123-1-12345678-1 : sample account no format
-                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
-                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
-                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-                            + addSpaceBetweenChars(rawDate.substring(3,10),spaceCount) //12345678
-                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
-                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
-                    break;
-                case "sActNamex":
-                    textValue = tx.accountName == null ? "" : tx.accountName;
-                    break;
-                case "dReferDte":
-                    textValue = tx.transactionDate == null ? "" : tx.transactionDate;
-                    break;
-                case "nTotalDep":
-                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
-                    break;
-                //Transaction Detail
-                case "sBankIDxx":
-                    textValue = tx.accountName == null ? "" : tx.accountName;
-                    break;
-                case "sCheckNox":
-                    textValue = tx.transactionDate == null ? "" : tx.transactionDate;
-                    break;
-                case "nAmountxx":
-                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
-                    break;
-                default:
-                    throw new AssertionError("Unhandled field: " + fieldName);
-            }
-
-            double x = leftCol * CHAR_WIDTH;
-            double y = TOP_MARGIN + topRow * LINE_HEIGHT;
-            
-            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
-            textNode.setFont(fieldFont);
-            root.getChildren().add(textNode);
-        }
-        
         //Transaction Detail
-        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
-            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
-            String fontName = poDocumentMapping.Detail(i).getFontName();
-            double fontSize = poDocumentMapping.Detail(i).getFontSize();
-            double topRow = poDocumentMapping.Detail(i).getTopRow();
-            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
-            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
+        int lnCtr= 0;
+        int lnDocRow = 0;
+        double ldblTopRowSpace = 0.00;
+        for (TransactionDetail txd1 : txd) {
+            for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+                String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+                String fontName = poDocumentMapping.Detail(i).getFontName();
+                double fontSize = poDocumentMapping.Detail(i).getFontSize();
+                double topRow = poDocumentMapping.Detail(i).getTopRow();
+                double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
+                double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
+                double rowspace = poDocumentMapping.Detail(i).getRowSpace();
+                
+                if(lnCtr == 0){ //First loop for transaction detail
+                    ldblTopRowSpace = topRow;
+                } else {
+                    topRow = topRow + (rowspace*lnCtr);
+                }
 
-            // Determine font per field
-            Font fieldFont = Font.font(fontName, fontSize);
-            String textValue = "";
-            for (TransactionDetail txd1 : txd) {
+                ldblTopRowSpace = topRow + rowspace;
+                // Determine font per field
+                Font fieldFont = Font.font(fontName, fontSize);
+                String textValue = "";
                 switch (fieldName) {
                     //Transaction Detail
                     case "sBankIDxx":
@@ -2751,9 +2717,66 @@ public class CheckDeposit extends Transaction {
                     case "nAmountxx":
                         textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(txd1.nTotalAmount, false);
                         break;
-                    default:
-                        throw new AssertionError("Unhandled field: " + fieldName);
                 }
+
+                double x = leftCol * CHAR_WIDTH;
+                double y = TOP_MARGIN + topRow * LINE_HEIGHT;
+
+                Text textNode = new Text(x, y, textValue == null ? "" : textValue);
+                textNode.setFont(fieldFont);
+                root.getChildren().add(textNode);
+            }
+            lnCtr++;
+        }
+        
+        //Transaction
+        for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
+            String fieldName = poDocumentMapping.Detail(i).getFieldCode();
+            String fontName = poDocumentMapping.Detail(i).getFontName();
+            double fontSize = poDocumentMapping.Detail(i).getFontSize();
+            double topRow = poDocumentMapping.Detail(i).getTopRow();
+            double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
+            double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
+            double rowspace = poDocumentMapping.Detail(i).getRowSpace();
+
+            // Determine font per field
+            Font fieldFont = Font.font(fontName, fontSize);
+            String textValue = "";
+            switch (fieldName) {
+                case "sActNumbr":
+                    int spaceCount = (int) Math.round(colSpace);
+                    if (spaceCount < 0) {
+                        throw new IllegalArgumentException("spaceCount must be non-negative");
+                    }
+                    String gap = String.join("", Collections.nCopies(spaceCount, " "));
+                    String rawDate = tx.accountNo == null ? "" : tx.accountNo; //123-1-12345678-1 : sample account no format
+//                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
+//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+//                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
+//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+//                            + addSpaceBetweenChars(rawDate.substring(3,10),spaceCount) //12345678
+//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+//                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
+                    
+                    
+                    textValue = addSpaceBetweenChars(rawDate.substring(0,3),spaceCount) //123
+                            + repeatSpace(spaceCount) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(3,3),spaceCount) //1
+                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+                            + addSpaceBetweenChars(rawDate.substring(3,4),spaceCount); //12
+//                            + repeatSpace(spaceCount+1) //Add extra 1 space for gap
+//                            + addSpaceBetweenChars(rawDate.substring(10,11),spaceCount) ; //1
+                    break;
+                case "sActNamex":
+                    textValue = tx.accountName == null ? "" : tx.accountName.toUpperCase();
+                    break;
+                case "dReferDte":
+                    textValue = tx.transactionDate == null ? "" : tx.transactionDate;
+                    break;
+                case "nTotalDep":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                    topRow = ldblTopRowSpace + rowspace;
+                    break;
             }
 
             double x = leftCol * CHAR_WIDTH;
