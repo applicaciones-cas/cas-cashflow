@@ -2344,15 +2344,12 @@ public class CheckDeposit extends Transaction {
                 PageOrientation.PORTRAIT,
                 Printer.MarginType.HARDWARE_MINIMUM);
 
-        double pw = layout.getPrintableWidth();   // points
-        double ph = layout.getPrintableHeight();
-
-        Node voucherNode = buildVoucherNode(tx,txd, pw, ph,poDocumentMapping);
-        
         // Get printable area
-        double printableWidth = layout.getPrintableWidth();
+        double printableWidth = layout.getPrintableWidth();   // points
         double printableHeight = layout.getPrintableHeight();
 
+        Node voucherNode = buildVoucherNode(tx,txd, printableWidth, printableHeight,poDocumentMapping);
+        
         // Get your content size
         Bounds contentBounds = voucherNode.getBoundsInParent();
 
@@ -2360,11 +2357,11 @@ public class CheckDeposit extends Transaction {
         double scaleX = printableWidth / contentBounds.getWidth();
         double scaleY = printableHeight / contentBounds.getHeight();
         double scale = Math.min(scaleX, scaleY);
-        // ✅ KEEP YOUR EXACT POSITIONING
+        //KEEP EXACT POSITIONING
         voucherNode.setScaleX(1);
         voucherNode.setScaleY(1);
 
-        // ✅ APPLY PRINTER OFFSET
+        //APPLY PRINTER OFFSET
         voucherNode.setTranslateX(layout.getLeftMargin());
         voucherNode.setTranslateY(layout.getTopMargin());
 
@@ -2396,10 +2393,26 @@ public class CheckDeposit extends Transaction {
                 PageOrientation.PORTRAIT,
                 Printer.MarginType.HARDWARE_MINIMUM);
 
-        double pw = layout.getPrintableWidth();
-        double ph = layout.getPrintableHeight();
+         // Get printable area
+        double printableWidth = layout.getPrintableWidth();
+        double printableHeight = layout.getPrintableHeight();
         
-        Node voucher = buildVoucherNode(tx,txd, pw, ph,poDocumentMapping);
+        Node voucher = buildVoucherNode(tx,txd, printableWidth, printableHeight,poDocumentMapping);
+        
+        // Get your content size
+        Bounds contentBounds = voucher.getBoundsInParent();
+
+        // Compute scale
+        double scaleX = printableWidth / contentBounds.getWidth();
+        double scaleY = printableHeight / contentBounds.getHeight();
+        double scale = Math.min(scaleX, scaleY);
+        //KEEP EXACT POSITIONING
+        voucher.setScaleX(1);
+        voucher.setScaleY(1);
+
+        //APPLY PRINTER OFFSET
+        voucher.setTranslateX(layout.getLeftMargin());
+        voucher.setTranslateY(layout.getTopMargin());
 
         // Wrap in a Group so zooming keeps proportions if the user resizes the window
         Group zoomRoot = new Group(voucher);
