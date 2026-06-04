@@ -1058,10 +1058,10 @@ public class CheckDeposit extends Transaction {
         lsFilter.add(" c.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
         lsFilter.add("a.cReleased = '0' AND a.cTranStat <> 3 AND a.cPrintxxx = '1' AND c.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT) );
         if(pbSupplier){
-            lsFilter.add("e.sCompnyNm NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%")); 
-        } else {
+            lsFilter.add("( d.sPayeeNme NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " AND IFNULL(e.sCompnyNm,d.sPayeeNme) NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " ) ");
+        } else { 
             // BR: table connection: Payee.sClientID(get the sCompnyNm) = Company Name selected during system log in; Client_Master.sCompnyNm = System Log in.sCompnyNm
-            lsFilter.add("e.sCompnyNm LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%"));
+            lsFilter.add("( d.sPayeeNme LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " OR IFNULL(e.sCompnyNm,d.sPayeeNme) LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " ) ");
         }
 
         // Append WHERE clause if any filter exists
@@ -1121,10 +1121,10 @@ public class CheckDeposit extends Transaction {
         lsFilter.add(" c.sCompnyID = " + SQLUtil.toSQL(psCompanyId));
         lsFilter.add("a.cReleased = '0' AND a.cTranStat <> 3 AND a.cPrintxxx = '1' AND c.cDisbrsTp = " + SQLUtil.toSQL(DisbursementStatic.DisbursementType.CHECK_DEPOSIT));
         if(pbSupplier){
-            lsFilter.add("e.sCompnyNm NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%")); 
-        } else {
+            lsFilter.add("( d.sPayeeNme NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " AND IFNULL(e.sCompnyNm,d.sPayeeNme) NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " ) ");
+        } else { 
             // BR: table connection: Payee.sClientID(get the sCompnyNm) = Company Name selected during system log in; Client_Master.sCompnyNm = System Log in.sCompnyNm
-            lsFilter.add("e.sCompnyNm LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%"));
+            lsFilter.add("( d.sPayeeNme LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " OR IFNULL(e.sCompnyNm,d.sPayeeNme) LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%") + " ) ");
         }
         
         // Append WHERE clause if any filter exists
@@ -1197,7 +1197,7 @@ public class CheckDeposit extends Transaction {
             } else {
                 poJSON.put("result", "error");
                 poJSON.put("message", "Checkpayment: " + Detail(lnRow).getSourceNo() + " already exists in table at row " + (lnRow + 1) + ".");
-                poJSON.put("tableRow", lnRow);
+                poJSON.put("row", lnRow);
                 poJSON.put("warning", "false");
                 return poJSON;
             }
