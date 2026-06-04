@@ -82,6 +82,7 @@ import org.rmj.cas.core.GLTransaction;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Deposit_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -102,7 +103,7 @@ public class CheckDeposit extends Transaction {
     private String psApprover = "";
     private boolean pbSupplier = false;
     
-    List<Model_Check_Payments> paChecks;
+    List<Model_Disbursement_Master> paChecks;
     List<Model_Check_Deposit_Master> paMaster;
     public List<TransactionAttachment> paAttachments;
     public Journal poJournal;
@@ -763,12 +764,12 @@ public class CheckDeposit extends Transaction {
         return (Model_Check_Deposit_Master) paMaster.get(row);
     }
     
-    private Model_Check_Payments ChecksPaymentList() {
-        return new CashflowModels(poGRider).CheckPayments();
+    private Model_Disbursement_Master ChecksPaymentList() {
+        return new CashflowModels(poGRider).DisbursementMaster();
     }
     
-    public Model_Check_Payments ChecksPaymentList(int row) {
-        return (Model_Check_Payments) paChecks.get(row);
+    public Model_Disbursement_Master ChecksPaymentList(int row) {
+        return (Model_Disbursement_Master) paChecks.get(row);
     }
 
     public int getCheckPaymentCount() {
@@ -1084,7 +1085,7 @@ public class CheckDeposit extends Transaction {
                 System.out.println("------------------------------------------------------------------------------");
 
                 paChecks.add(ChecksPaymentList());
-                paChecks.get(paChecks.size() - 1).openRecord(loRS.getString("sTransNox"));
+                paChecks.get(paChecks.size() - 1).openRecord(loRS.getString("sSourceNo"));
                 lnCtr++;
             }
             
@@ -1985,6 +1986,7 @@ public class CheckDeposit extends Transaction {
                 + "  a.dCheckDte, "
                 + "  a.sCheckNox, "
                 + "  a.nAmountxx, "
+                + "  a.sSourceNo, "
                 + "  b.sBankName AS bankname, "
                 + "  d.sPayeeNme AS payeename, "
                 + "  a.cReleased, "
