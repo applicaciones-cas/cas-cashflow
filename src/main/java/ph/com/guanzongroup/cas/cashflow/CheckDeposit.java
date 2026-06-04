@@ -5,12 +5,6 @@
  */
 package ph.com.guanzongroup.cas.cashflow;
 
-import java.awt.Component;
-import java.awt.Container;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileReader;
@@ -27,16 +21,11 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import javafx.application.Platform;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -59,22 +48,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
-import javax.swing.JButton;
-import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JasperCompileManager;
-import net.sf.jasperreports.engine.JasperFillManager;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperPrintManager;
-import net.sf.jasperreports.engine.JasperReport;
-import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
-import net.sf.jasperreports.swing.JRViewer;
-import net.sf.jasperreports.swing.JRViewerToolbar;
-import net.sf.jasperreports.view.JasperViewer;
 import org.apache.commons.codec.binary.Base64;
 import org.guanzon.appdriver.agent.ShowDialogFX;
-import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.agent.systables.SysTableContollers;
@@ -112,9 +87,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckDepositStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
-import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckDepositValidatorFactory;
 
 /**
@@ -233,6 +206,34 @@ public class CheckDeposit extends Transaction {
         poJSON = isEntryOkay(lsStatus);
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
+        }
+        
+        //check JE
+        if(!pbSupplier){ //Check Deposit from Inter Branch
+            if(poJournal == null){
+                poJSON = setJSON("error","Please review journal entry before posting.");
+                return poJSON;
+            } else {
+                switch(poJournal.getEditMode()){
+                    case EditMode.ADDNEW:
+                    case EditMode.UPDATE:
+                    break;
+                    case EditMode.READY:
+                        if(poJournal.Master().getTransactionNo() == null || "".equals(poJournal.Master().getTransactionNo())){
+                            poJSON = setJSON("error","Please review journal entry before posting.");
+                            return poJSON; 
+                        }
+                    break;
+                    default:
+                        poJSON = setJSON("error","Please review journal entry before posting.");
+                        return poJSON;
+                }
+            }
+
+            poJSON = validateJournal();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
         }
         
         poJSON = callApproval();
@@ -395,29 +396,31 @@ public class CheckDeposit extends Transaction {
         }
         
         //check JE
-        if(poJournal == null){
-            poJSON = setJSON("error","Please review journal entry before posting.");
-            return poJSON;
-        } else {
-            switch(poJournal.getEditMode()){
-                case EditMode.ADDNEW:
-                case EditMode.UPDATE:
-                break;
-                case EditMode.READY:
-                    if(poJournal.Master().getTransactionNo() == null || "".equals(poJournal.Master().getTransactionNo())){
+        if(!pbSupplier){ //Check Deposit from Inter Branch
+            if(poJournal == null){
+                poJSON = setJSON("error","Please review journal entry before posting.");
+                return poJSON;
+            } else {
+                switch(poJournal.getEditMode()){
+                    case EditMode.ADDNEW:
+                    case EditMode.UPDATE:
+                    break;
+                    case EditMode.READY:
+                        if(poJournal.Master().getTransactionNo() == null || "".equals(poJournal.Master().getTransactionNo())){
+                            poJSON = setJSON("error","Please review journal entry before posting.");
+                            return poJSON; 
+                        }
+                    break;
+                    default:
                         poJSON = setJSON("error","Please review journal entry before posting.");
-                        return poJSON; 
-                    }
-                break;
-                default:
-                    poJSON = setJSON("error","Please review journal entry before posting.");
-                    return poJSON;
+                        return poJSON;
+                }
             }
-        }
-        
-        poJSON = validateJournal();
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
+
+            poJSON = validateJournal();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
         }
         
         poJSON = callApproval();
@@ -1573,6 +1576,7 @@ public class CheckDeposit extends Transaction {
         String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
                                                 " b.sSourceNo = " + SQLUtil.toSQL(fsTransactionNo)
                                                + " AND b.sSourceCd = " + SQLUtil.toSQL(fsSourceCode)
+                                               + " AND b.cReversex = " + SQLUtil.toSQL("+") //Included
                                                + " AND a.sTransNox != " + SQLUtil.toSQL(Master().getTransactionNo())
                                                + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.VOID)
                                                + " AND a.cTranStat != " + SQLUtil.toSQL(CheckDepositStatus.CANCELLED)
@@ -1917,17 +1921,17 @@ public class CheckDeposit extends Transaction {
     @Override
     public void initSQL() {
         SQL_BROWSE = "SELECT "
-        + " a.sTransNox, "
-        + " a.dTransact, "
-        + " c.sActNumbr, "
-        + " c.sActNamex, "
-        + " a.cTranStat, "
-        + " e.sCompnyID "
-        + " FROM Check_Deposit_Master a "
-        + " INNER JOIN Check_Deposit_Detail b ON a.sTransNox = b.sTransNox "
-        + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
-        + " INNER JOIN Check_Payments d ON d.sTransNox = b.sSourceNo " 
-        + " INNER JOIN Disbursement_Master e ON e.sTransNox = d.sSourceNo ";
+                + " a.sTransNox, "
+                + " a.dTransact, "
+                + " c.sActNumbr, "
+                + " c.sActNamex, "
+                + " a.cTranStat, "
+                + " e.sCompnyID "
+                + " FROM Check_Deposit_Master a "
+                + " INNER JOIN Check_Deposit_Detail b ON a.sTransNox = b.sTransNox "
+                + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
+                + " INNER JOIN Check_Payments d ON d.sTransNox = b.sSourceNo " 
+                + " INNER JOIN Disbursement_Master e ON e.sTransNox = d.sSourceNo ";
     }
     
     public String getSQ_CheckPayment() {
@@ -2219,7 +2223,7 @@ public class CheckDeposit extends Transaction {
         }
 
         // Store transaction for printing
-        Transaction transaction = new Transaction(Master().BankAccount().getAccountNo(), Master().BankAccount().getAccountName(), xsDateShort(Master().getTransactionDate()), new BigDecimal(Master().getTransactionTotalDeposit()));
+        Transaction transaction = new Transaction(Master().BankAccount().getAccountNo(), Master().BankAccount().getAccountName(), xsDateShort(Master().getTransactionReferDate()), new BigDecimal(Master().getTransactionTotalDeposit()));
         List<TransactionDetail> transactiondetail = new ArrayList<>();
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             if(!Detail(lnCtr).isReverse()){
@@ -2350,20 +2354,20 @@ public class CheckDeposit extends Transaction {
 
         Node voucherNode = buildVoucherNode(tx,txd, printableWidth, printableHeight,poDocumentMapping);
         
-        // Get your content size
-        Bounds contentBounds = voucherNode.getBoundsInParent();
-
-        // Compute scale
-        double scaleX = printableWidth / contentBounds.getWidth();
-        double scaleY = printableHeight / contentBounds.getHeight();
-        double scale = Math.min(scaleX, scaleY);
-        //KEEP EXACT POSITIONING
-        voucherNode.setScaleX(1);
-        voucherNode.setScaleY(1);
-
-        //APPLY PRINTER OFFSET
-        voucherNode.setTranslateX(layout.getLeftMargin());
-        voucherNode.setTranslateY(layout.getTopMargin());
+//        // Get your content size
+//        Bounds contentBounds = voucherNode.getBoundsInParent();
+//
+//        // Compute scale
+//        double scaleX = printableWidth / contentBounds.getWidth();
+//        double scaleY = printableHeight / contentBounds.getHeight();
+//        double scale = Math.min(scaleX, scaleY);
+//        //KEEP EXACT POSITIONING
+//        voucherNode.setScaleX(1);
+//        voucherNode.setScaleY(1);
+//
+//        //APPLY PRINTER OFFSET
+//        voucherNode.setTranslateX(layout.getLeftMargin());
+//        voucherNode.setTranslateY(layout.getTopMargin());
 
         job.getJobSettings().setPageLayout(layout);
         job.getJobSettings().setJobName("CheckDeposit-" + Master().getTransactionNo());
@@ -2470,8 +2474,6 @@ public class CheckDeposit extends Transaction {
         
         //Transaction Detail
         int lnCtr= 0;
-        int lnDocRow = 0;
-        double ldblTopRowSpace = 0.00;
         for (TransactionDetail txd1 : txd) {
             for (int i = 0; i < poDocumentMapping.Detail().size(); i++) {
                 String fieldName = poDocumentMapping.Detail(i).getFieldCode();
@@ -2481,15 +2483,11 @@ public class CheckDeposit extends Transaction {
                 double leftCol = poDocumentMapping.Detail(i).getLeftColumn();
                 double colSpace = poDocumentMapping.Detail(i).getColumnSpace();
                 double rowspace = poDocumentMapping.Detail(i).getRowSpace();
+                double maxrow = poDocumentMapping.Detail(i).getMaxRow();
                 
-                
-                if(lnCtr == 0){ //First loop for transaction detail
-                    ldblTopRowSpace = topRow;
-                } else { //Add row space to the next transaction detail
+                if(lnCtr > 0){ //First loop for transaction detail
                     topRow = topRow + (rowspace*lnCtr);
                 }
-                //Set value for top row of total deposit amount
-                ldblTopRowSpace = topRow + rowspace;
                 
                 // Determine font per field
                 Font fieldFont = Font.font(fontName, fontSize);
@@ -2505,14 +2503,6 @@ public class CheckDeposit extends Transaction {
                     case "nAmountxx":
                         textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(txd1.nTotalAmount, false);
                         break;
-                    case "nTotalDep":
-                        if(lnCtr == txd.size()-1){
-                        textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
-                        topRow = ldblTopRowSpace + rowspace;
-                        } else {
-                            continue;
-                        }
-                        break;
                 }
 
                 //Alignment
@@ -2527,7 +2517,7 @@ public class CheckDeposit extends Transaction {
                 double safeWidth = widthPts - SAFE_RIGHT_MARGIN;
                 double safeHeight = heightPts - SAFE_BOTTOM_MARGIN;
 
-                if ("nAmountxx".equals(fieldName) || "nTotalDep".equals(fieldName)) {
+                if ("nAmountxx".equals(fieldName)) {
                     // RIGHT ALIGN
                     Bounds bounds = textNode.getLayoutBounds();
 //                    textNode.setX((x+colSpace) - bounds.getWidth());
@@ -2577,7 +2567,7 @@ public class CheckDeposit extends Transaction {
 
                         textValue =
                                 addSpaceBetweenChars(safeSubstring(rawDate, 0, 3), spaceCount)
-                                + repeatSpace(spaceCount+2)
+                                + repeatSpace(spaceCount + 2)
                                 + addSpaceBetweenChars(safeSubstring(rawDate, 3, 4), spaceCount)
                                 + repeatSpace(spaceCount + 2)
                                 + addSpaceBetweenChars(safeSubstring(rawDate, 4, 12), spaceCount)
@@ -2592,28 +2582,17 @@ public class CheckDeposit extends Transaction {
                 case "dReferDte":
                     textValue = tx.transactionDate == null ? "" : tx.transactionDate;
                     break;
-//                case "nTotalDep":
-//                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
-//                    topRow = ldblTopRowSpace + rowspace;
-//                    break;
+                case "nTtlChDep":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                    break;
+                case "nTotalDep":
+                    textValue = CustomCommonUtil.setIntegerValueToDecimalFormat(tx.nAmountxxValue, false);
+                    break;
             }
             
-            Text textNode =  new Text(textValue == null ? "" : textValue);
             double x = leftCol * CHAR_WIDTH;
             double y = TOP_MARGIN + topRow * LINE_HEIGHT;
-            
-//            if ("nTotalDep".equals(fieldName)) {
-//                // RIGHT ALIGN
-//                Bounds bounds = textNode.getLayoutBounds();
-//                textNode.setX(x - bounds.getWidth());
-//                textNode.setY(y);
-//            } else {
-//                // LEFT ALIGN (default)
-//                textNode.setX(x);
-//                textNode.setY(y);
-//            }
-            
-            textNode = new Text(x, y, textValue == null ? "" : textValue);
+            Text textNode = new Text(x, y, textValue == null ? "" : textValue);
             textNode.setFont(fieldFont);
             root.getChildren().add(textNode);
         }
