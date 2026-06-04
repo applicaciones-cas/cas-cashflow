@@ -1624,9 +1624,9 @@ public class CheckDeposit extends Transaction {
         try {
             if (MiscUtil.RecordCount(loRS) > 0) {
                 if(loRS.next()){
-                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
-                        poJSON = setJSON("error", "Check payment <"+fsTransactionNo+"> is already linked thru check deposit <"+loRS.getString("sTransNox")+">.\n"
-                                                        + "Contact system admin for assistance.");
+                    if(loRS.getString("sCheckNox") != null && !"".equals(loRS.getString("sCheckNox"))){
+                        poJSON = setJSON("error", "Check no "+loRS.getString("sCheckNox")+" is already linked thru check deposit <"+loRS.getString("sTransNox")+">.\n"
+                                                        + "Contact system administrator for assistance.");
                     }
                 }
             }
@@ -1967,6 +1967,7 @@ public class CheckDeposit extends Transaction {
                 + " a.cTranStat, "
                 + " e.sCompnyID, "
                 + " g.sCompnyNm,  "
+                + " d.sCheckNox,  "
                 + " e.sVouchrNo  "
                 + " FROM Check_Deposit_Master a "
                 + " INNER JOIN Check_Deposit_Detail b ON a.sTransNox = b.sTransNox "
