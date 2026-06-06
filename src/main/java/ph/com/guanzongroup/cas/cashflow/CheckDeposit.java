@@ -50,6 +50,7 @@ import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
 import org.apache.commons.codec.binary.Base64;
 import org.guanzon.appdriver.agent.ShowDialogFX;
+import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.agent.systables.SysTableContollers;
@@ -102,6 +103,7 @@ public class CheckDeposit extends Transaction {
     private String psSearchBankAcctNo = "";
     private String psApprover = "";
     private boolean pbSupplier = false;
+    private boolean pbPrint = false;
     
     List<Model_Disbursement_Master> paChecks;
     List<Model_Check_Deposit_Master> paMaster;
@@ -596,6 +598,7 @@ public class CheckDeposit extends Transaction {
     //******************************GETTERS AND DETAILS***************************************
     
     public void setCompanyId(String fsCompanyId){ psCompanyId = fsCompanyId; }
+    public void setPrint(boolean isPrint) { pbPrint = isPrint; }
     public void isCheckDepositSupplier(boolean fbIsCheckDepSupplier){ pbSupplier = fbIsCheckDepSupplier; }
     public void setSearchBank(String bank) { psSearchBankId = bank; }
     public String getSearchBankAccountNo() { return psSearchBankAcctNo; }
@@ -828,6 +831,7 @@ public class CheckDeposit extends Transaction {
         paAttachments = new ArrayList<>();
         psApprover = "";
         setApproving("");
+        pbPrint = false;
     }
     
     /*Search References*/
@@ -1730,7 +1734,7 @@ public class CheckDeposit extends Transaction {
             return poJSON;
         }
         
-        if (CheckDepositStatus.CONFIRMED.equals(Master().getTransactionStatus())) {
+        if (CheckDepositStatus.CONFIRMED.equals(Master().getTransactionStatus()) && !pbPrint) {
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
@@ -1904,6 +1908,14 @@ public class CheckDeposit extends Transaction {
                 System.out.println("-----------------------------------------------------------------------");
             }
         
+            System.out.println("--------------------------UPDATE CHECK PAYMENTS---------------------------------------------");
+                poJSON = updateCheckPayments(Master().getTransactionStatus());
+                if (!isJSONSuccess(poJSON)) {
+                    poGRider.rollbackTrans();
+                    return poJSON;
+                }
+            System.out.println("-----------------------------------------------------------------------");
+            
         } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON = setJSON("error", MiscUtil.getException(ex));
@@ -2236,12 +2248,18 @@ public class CheckDeposit extends Transaction {
     }
     
     //**************************PRINT DEPOSIT SLIP BASED ON DOCUMENT MAPPING**********************************
-    private boolean pbPrint = false;
     public JSONObject PrintDepositSlip() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
         poJSON = new JSONObject();
-        pbPrint = true;
+        
+        poJSON = OpenTransaction(Master().getTransactionNo());
+        if(!isJSONSuccess(poJSON)){
+            return poJSON;
+        }
         
         if(Logical.YES.equals(Master().getPrintStatus())){
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                ShowMessageFX.Warning(null, "Deposit Slip Already Printed", "This deposit slip has already been printed. User approval is required to continue.");
+            }
             poJSON = callApproval();
             if(!isJSONSuccess(poJSON)){
                 return poJSON;
@@ -2307,6 +2325,7 @@ public class CheckDeposit extends Transaction {
                 loObject.Master().setPrintStatus(Logical.YES);
                 loObject.Master().setModifyingId(poGRider.Encrypt(poGRider.getUserID()));
                 loObject.Master().setModifiedDate(poGRider.getServerDate());
+                loObject.setPrint(true);
                 poJSON = loObject.SaveTransaction();
                 if ("error".equals((String) poJSON.get("result"))){
                     return poJSON;
@@ -2319,7 +2338,7 @@ public class CheckDeposit extends Transaction {
         }
         
         poJSON.put("result", "success");
-        poJSON.put("message", "Check printed successfully");
+        poJSON.put("message", "Check deposit slip printed successfully");
         return poJSON;
     }
     
