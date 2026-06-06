@@ -437,27 +437,30 @@ public class CheckDeposit extends Transaction {
         
         try {
             System.out.println("----------SAVE BANK ACCOUNT TRANSACTION FOR CHECK DEPOSIT----------");
-            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-                if(Detail(lnCtr).isReverse()){
-                    BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
-                    poJSON = poBankAccountTrans.InitTransaction();
-                    if (!isJSONSuccess(poJSON)) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
+//            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+//                if(Detail(lnCtr).isReverse()){
+//                    
+//                }
+//            }
 
-                    poJSON = poBankAccountTrans.CheckDeposit(
-                        Master().getBankAccount(),
-                            Detail(lnCtr).getSourceNo(),
-                       SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
-                             Detail(lnCtr).CheckPayment().getAmount(),
-                             false);
-                    if ("error".equals(poJSON.get("result"))) {
-                        poGRider.rollbackTrans();
-                        return poJSON;
-                    }
-                }
+            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+            poJSON = poBankAccountTrans.InitTransaction();
+            if (!isJSONSuccess(poJSON)) {
+                poGRider.rollbackTrans();
+                return poJSON;
             }
+
+            poJSON = poBankAccountTrans.CheckDeposit(
+                Master().getBankAccount(),
+                    Master().getTransactionNo(),
+               SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
+                     Master().getTransactionTotalDeposit(),
+                     false);
+            if ("error".equals(poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+
             System.out.println("--------------------------------------------");
 
             if(!pbSupplier){
@@ -466,11 +469,13 @@ public class CheckDeposit extends Transaction {
                     GLTransaction loGLTrans = new GLTransaction(poGRider, poGRider.getBranchCode()); //Get the branch code of the posting branch since check payments is on the detail and possible for multiple branch
                     loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
                     for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
-                        loGLTrans.addDetail(Journal().Master().getBranchCode(),
-                                Journal().Detail(lnCtr).getAccountCode(),
-                                SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE),
-                                Journal().Detail(lnCtr).getDebitAmount(),
-                                Journal().Detail(lnCtr).getCreditAmount());
+                        if(Detail(lnCtr).isReverse()){
+                            loGLTrans.addDetail(Journal().Master().getBranchCode(),
+                                    Journal().Detail(lnCtr).getAccountCode(),
+                                    SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE),
+                                    Journal().Detail(lnCtr).getDebitAmount(),
+                                    Journal().Detail(lnCtr).getCreditAmount());
+                        }
                     }
                     loGLTrans.saveTransaction();
                 System.out.println("------------------------------------------------------");
