@@ -888,18 +888,6 @@ public class CheckDeposit extends Transaction {
         }
         return poJSON;
     }
-    ///TODO
-    public JSONObject SearchChecks(String fsCheckTransNo, String fsCheckNo, int fnRow, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
-        CheckPayments object = new CashflowControllers(poGRider, logwrapr).CheckPayments();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = object.searchRecordwithFilter(fsCheckTransNo, fsCheckNo, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            Detail(fnRow).setSourceNo(object.getModel().getTransactionNo());
-//            computeMasterFields();
-        }
-
-        return poJSON;
-    }
     
     //*********************TRANSACTION RETRIEVAL**************************
     
@@ -1210,7 +1198,7 @@ public class CheckDeposit extends Transaction {
                 return poJSON;
             }
         }
-
+        computeFields();
         // Return success
         poJSON.put("result", "success");
         return poJSON;
@@ -1649,6 +1637,8 @@ public class CheckDeposit extends Transaction {
         /*Put system validations and other assignments here*/
         poJSON = new JSONObject();
         boolean lbHasActiveDetail = false;
+        //Recompute fields
+        computeFields(); 
         
         /*Put system validations and other assignments here*/
         System.out.println("Class Edit Mode : " + getEditMode());
