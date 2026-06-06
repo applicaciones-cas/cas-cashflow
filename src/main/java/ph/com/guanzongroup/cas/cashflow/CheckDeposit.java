@@ -293,11 +293,6 @@ public class CheckDeposit extends Transaction {
             return poJSON;
         }
         
-        poJSON = callApproval();
-        if (!isJSONSuccess(poJSON)) {
-            return poJSON;
-        }
-        
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         poJSON = updateCheckPayments(lsStatus);
@@ -440,48 +435,51 @@ public class CheckDeposit extends Transaction {
             return poJSON;
         }
         
-        System.out.println("----------SAVE BANK ACCOUNT TRANSACTION FOR CHECK DEPOSIT----------");
-        for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
-            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
-            poJSON = poBankAccountTrans.InitTransaction();
-            if (!isJSONSuccess(poJSON)) {
-                poGRider.rollbackTrans();
-                return poJSON;
-            }
+        try {
+            System.out.println("----------SAVE BANK ACCOUNT TRANSACTION FOR CHECK DEPOSIT----------");
+            for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
+                if(Detail(lnCtr).isReverse()){
+                    BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+                    poJSON = poBankAccountTrans.InitTransaction();
+                    if (!isJSONSuccess(poJSON)) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
 
-            poJSON = poBankAccountTrans.CheckDeposit(
-                Master().getBankAccount(),
-                    Master().getTransactionNo(),
-               SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
-                     Detail(lnCtr).CheckPayment().getAmount(),
-                     false);
-            if ("error".equals(poJSON.get("result"))) {
-                poGRider.rollbackTrans();
-                return poJSON;
-            }
-        }
-        System.out.println("--------------------------------------------");
-        
-        if(!pbSupplier){
-            System.out.println("----------ACCOUNT MASTER / LEDGER----------");
-            try {
-                //GL Transaction Account Ledger
-                GLTransaction loGLTrans = new GLTransaction(poGRider, poGRider.getBranchCode()); //Get the branch code of the posting branch since check payments is on the detail and possible for multiple branch
-                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
-                for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
-                    loGLTrans.addDetail(Journal().Master().getBranchCode(),
-                            Journal().Detail(lnCtr).getAccountCode(),
-                            SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE),
-                            Journal().Detail(lnCtr).getDebitAmount(),
-                            Journal().Detail(lnCtr).getCreditAmount());
+                    poJSON = poBankAccountTrans.CheckDeposit(
+                        Master().getBankAccount(),
+                            Detail(lnCtr).getSourceNo(),
+                       SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
+                             Detail(lnCtr).CheckPayment().getAmount(),
+                             false);
+                    if ("error".equals(poJSON.get("result"))) {
+                        poGRider.rollbackTrans();
+                        return poJSON;
+                    }
                 }
-                loGLTrans.saveTransaction();
-            } catch (GuanzonException | SQLException ex) {
-                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-                poJSON = setJSON("error",MiscUtil.getException(ex));
-                return poJSON;
             }
-            System.out.println("------------------------------------------------------");
+            System.out.println("--------------------------------------------");
+
+            if(!pbSupplier){
+                System.out.println("----------ACCOUNT MASTER / LEDGER----------");
+                    //GL Transaction Account Ledger
+                    GLTransaction loGLTrans = new GLTransaction(poGRider, poGRider.getBranchCode()); //Get the branch code of the posting branch since check payments is on the detail and possible for multiple branch
+                    loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                    for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
+                        loGLTrans.addDetail(Journal().Master().getBranchCode(),
+                                Journal().Detail(lnCtr).getAccountCode(),
+                                SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE),
+                                Journal().Detail(lnCtr).getDebitAmount(),
+                                Journal().Detail(lnCtr).getCreditAmount());
+                    }
+                    loGLTrans.saveTransaction();
+                System.out.println("------------------------------------------------------");
+            }
+        } catch (GuanzonException | SQLException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+            poGRider.rollbackTrans();
+            poJSON = setJSON("error",MiscUtil.getException(ex));
+            return poJSON;
         }
         
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), "", lsStatus, false, true);
