@@ -922,9 +922,7 @@ public class CheckDeposit extends Transaction {
         if (fsDate != null && !"".equals(fsDate)) {
             lsFilter.add(" a.dTransact = " + SQLUtil.toSQL(fsDate));
         }
-        String lsColName = "a.dTransact»a.sTransNox»c.sActNumbr»c.sActNamex";
         if(pbSupplier){
-            lsColName = "a.dTransact»a.sTransNox»cc.sActNumbr»cc.sActNamex";
             lsFilter.add("g.sCompnyNm NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%")); 
         } else {
             // BR: table connection: Payee.sClientID(get the sCompnyNm) = Company Name selected during system log in; Client_Master.sCompnyNm = System Log in.sCompnyNm
@@ -947,7 +945,7 @@ public class CheckDeposit extends Transaction {
                 "", 
                 "Transaction Date»Transaction No»Account No»Account Name",
                 "a.dTransact»a.sTransNox»sActNumbr»sActNamex",
-                lsColName,
+                "a.dTransact»a.sTransNox»IFNULL(c.sActNumbr,cc.sActNumbr)»IFNULL(c.sActNamex,cc.sActNamex)",
                 1);
 
         if (poJSON != null) {
@@ -2386,7 +2384,7 @@ public class CheckDeposit extends Transaction {
             String lsSQL = "";
             //New query from ma'am she 04-11-2026 08:59 AM MBTChkDS
             if(pbSupplier){
-                lsSQL = " SELECT CONCAT(c.sBankCode,'Chk','DS') AS sDocCodex " 
+                lsSQL = " SELECT CONCAT(c.sBankCode,'Chk','DS') AS sDocCodex " //TODO
                             + " FROM AP_Client_Bank_Account a " 
                             + "	LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx " ;
                 lsSQL = MiscUtil.addCondition(lsSQL,  " a.sAPBnkIDx = " + SQLUtil.toSQL(fsBankAccountId));
