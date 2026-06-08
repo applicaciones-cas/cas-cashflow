@@ -11,6 +11,7 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
+import org.guanzon.cas.client.model.Model_AP_Client_Bank_Account;
 import org.guanzon.cas.parameter.model.Model_Banks;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.model.Model_Company;
@@ -32,6 +33,7 @@ public class Model_Check_Deposit_Master extends Model {
     Model_Industry poIndustry;
     Model_Company poCompany;
     Model_Bank_Account_Master poBankAccount;
+    Model_AP_Client_Bank_Account poAPCBankAccount;
     Model_Branch poBranch;
     Model_Banks poBanks;
     private String bankid = "";
@@ -59,6 +61,7 @@ public class Model_Check_Deposit_Master extends Model {
 
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
             this.poBankAccount = (new CashflowModels(this.poGRider)).Bank_Account_Master();
+            this.poAPCBankAccount = (new Model_AP_Client_Bank_Account());
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
             this.poBanks = (new ParamModels(this.poGRider)).Banks();
             this.poCompany =(new ParamModels(this.poGRider)).Company();
@@ -258,6 +261,23 @@ public class Model_Check_Deposit_Master extends Model {
         }
         this.poBankAccount.initialize();
         return this.poBankAccount;
+    }
+
+    public Model_AP_Client_Bank_Account APClientBankAccount() throws SQLException, GuanzonException {
+        if (!"".equals(getValue("sBnkActID"))) {
+            if (this.poAPCBankAccount.getEditMode() == 1 && this.poAPCBankAccount
+                    .getAPClientBankID().equals(getValue("sBnkActID"))) {
+                return this.poAPCBankAccount;
+            }
+            this.poJSON = this.poAPCBankAccount.openRecord((String) getValue("sBnkActID"));
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poAPCBankAccount;
+            }
+            this.poAPCBankAccount.initialize();
+            return this.poAPCBankAccount;
+        }
+        this.poAPCBankAccount.initialize();
+        return this.poAPCBankAccount;
     }
     
     public Model_Banks Banks() throws GuanzonException, SQLException {
