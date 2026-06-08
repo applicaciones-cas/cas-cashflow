@@ -975,7 +975,11 @@ public class CheckDeposit extends Transaction {
             lsFilter.add(" a.sTransNox LIKE " + SQLUtil.toSQL("%"+ fsTransactionNo));
         }
         if (fsAccountNo != null && !"".equals(fsAccountNo)) {
-            lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            if(pbSupplier){
+                lsFilter.add(" cc.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            } else {
+                lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            }
         }
         if (fsDate != null && !"".equals(fsDate)) {
             lsFilter.add(" a.dTransact = " + SQLUtil.toSQL(fsDate));
@@ -1969,8 +1973,9 @@ public class CheckDeposit extends Transaction {
         SQL_BROWSE = "SELECT "
                 + " a.sTransNox, "
                 + " a.dTransact, "
-                + " c.sActNumbr, "
-                + " c.sActNamex, "
+                + " IFNULL(c.sActNumbr,cc.sActNumbr) as sActNumbr , "
+                + " IFNULL(c.sActNamex,cc.sActNamex) as sActNamex, "
+//                + " c.sActNamex, "
                 + " a.cTranStat, "
                 + " e.sCompnyID, "
                 + " g.sCompnyNm,  "
@@ -1979,6 +1984,7 @@ public class CheckDeposit extends Transaction {
                 + " FROM Check_Deposit_Master a "
                 + " INNER JOIN Check_Deposit_Detail b ON a.sTransNox = b.sTransNox "
                 + " LEFT JOIN Bank_Account_Master c ON a.sBnkActID = c.sBnkActID "
+                + " LEFT JOIN AP_Client_Bank_Account cc ON cc.sAPBnkIDx = a.sBnkActID "
                 + " INNER JOIN Check_Payments d ON d.sTransNox = b.sSourceNo " 
                 + " INNER JOIN Disbursement_Master e ON e.sTransNox = d.sSourceNo "
                 + " INNER JOIN Payee f ON f.sPayeeIDx = d.sPayeeIDx "
@@ -2361,14 +2367,25 @@ public class CheckDeposit extends Transaction {
      */
     private String getDocumentCode(String fsBankAccountId){
         try {
+            String lsSQL = "";
             //New query from ma'am she 04-11-2026 08:59 AM MBTChkDS
-            String lsSQL = " SELECT CONCAT(c.sBankCode,'Chk',b.sSlipType) AS sDocCodex " 
+            if(pbSupplier){
+                lsSQL = " SELECT CONCAT(c.sBankCode,'Chk','DS') AS sDocCodex " 
+                            + " FROM AP_Client_Bank_Account a " 
+                            + "	LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx " ;
+                lsSQL = MiscUtil.addCondition(lsSQL,  " a.sAPBnkIDx = " + SQLUtil.toSQL(fsBankAccountId));
+            } else {
+                 lsSQL = " SELECT CONCAT(c.sBankCode,'Chk',b.sSlipType) AS sDocCodex " 
                             + " FROM Bank_Account_Master a " 
                             + "	LEFT JOIN Banks c ON a.sBankIDxx = c.sBankIDxx " 
                             + ", Branch_Bank_Account b ";
-            lsSQL = MiscUtil.addCondition(lsSQL, " a.sBnkActID = b.sBnkActID "
-                                                    + " AND a.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
-                                                    + " AND b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+                lsSQL = MiscUtil.addCondition(lsSQL, " a.sBnkActID = b.sBnkActID "
+                                                        + " AND a.sBnkActID = " + SQLUtil.toSQL(fsBankAccountId)
+                                                        + " AND b.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode()));
+            }
+            
+            
+            
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             try {
