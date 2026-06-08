@@ -443,27 +443,27 @@ public class CheckDeposit extends Transaction {
 //                }
 //            }
 
-            BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
-            poJSON = poBankAccountTrans.InitTransaction();
-            if (!isJSONSuccess(poJSON)) {
-                poGRider.rollbackTrans();
-                return poJSON;
-            }
-
-            poJSON = poBankAccountTrans.CheckDeposit(
-                Master().getBankAccount(),
-                    Master().getTransactionNo(),
-               SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
-                     Master().getTransactionTotalDeposit(),
-                     false);
-            if ("error".equals(poJSON.get("result"))) {
-                poGRider.rollbackTrans();
-                return poJSON;
-            }
-
-            System.out.println("--------------------------------------------");
-
             if(!pbSupplier){
+                BankAccountTrans poBankAccountTrans = new BankAccountTrans(poGRider);
+                poJSON = poBankAccountTrans.InitTransaction();
+                if (!isJSONSuccess(poJSON)) {
+                    poGRider.rollbackTrans();
+                    return poJSON;
+                }
+
+                poJSON = poBankAccountTrans.CheckDeposit(
+                    Master().getBankAccount(),
+                        Master().getTransactionNo(),
+                   SQLUtil.toDate(xsDateShort(Master().getTransactionDate()), SQLUtil.FORMAT_SHORT_DATE),
+                         Master().getTransactionTotalDeposit(),
+                         false);
+                if ("error".equals(poJSON.get("result"))) {
+                    poGRider.rollbackTrans();
+                    return poJSON;
+                }
+
+                System.out.println("--------------------------------------------");
+
                 System.out.println("----------ACCOUNT MASTER / LEDGER----------");
                     //GL Transaction Account Ledger
                     GLTransaction loGLTrans = new GLTransaction(poGRider, poGRider.getBranchCode()); //Get the branch code of the posting branch since check payments is on the detail and possible for multiple branch
@@ -2296,7 +2296,13 @@ public class CheckDeposit extends Transaction {
         }
 
         // Store transaction for printing
-        Transaction transaction = new Transaction(Master().BankAccount().getAccountNo(), Master().BankAccount().getAccountName(), xsDateShort(Master().getTransactionReferDate()), new BigDecimal(Master().getTransactionTotalDeposit()));
+        String lsBankAccountNo = Master().BankAccount().getAccountNo();
+        String lsBankAccountName = Master().BankAccount().getAccountName();
+        if(pbSupplier){
+            lsBankAccountNo = Master().APClientBankAccount().getAccountNumber();
+            lsBankAccountName = Master().APClientBankAccount().getAccountName();
+        }
+        Transaction transaction = new Transaction(lsBankAccountNo, lsBankAccountName, xsDateShort(Master().getTransactionReferDate()), new BigDecimal(Master().getTransactionTotalDeposit()));
         List<TransactionDetail> transactiondetail = new ArrayList<>();
         for (int lnCtr = 0; lnCtr < getDetailCount(); lnCtr++) {
             if(!Detail(lnCtr).isReverse()){
@@ -2319,6 +2325,7 @@ public class CheckDeposit extends Transaction {
             if (Logical.NO.equals(Master().getPrintStatus())) {
                 CheckDeposit loObject = new CashflowControllers(poGRider,logwrapr).CheckDeposit();
                 loObject.InitTransaction();
+                loObject.isCheckDepositSupplier(pbSupplier);
                 poJSON = loObject.OpenTransaction(Master().getTransactionNo());
                 if(!isJSONSuccess(poJSON)){
                     return poJSON;
