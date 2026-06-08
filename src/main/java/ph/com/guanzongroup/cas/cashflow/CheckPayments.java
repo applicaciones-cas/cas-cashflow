@@ -857,7 +857,7 @@ public class CheckPayments extends Parameter {
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
                         + " FROM Check_Payments a "
-                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTrransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(getModel().getTable());
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(getModel().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(getModel().getTransactionNo())) ;
         System.out.println("Execute SQL : " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
