@@ -1177,11 +1177,13 @@ public class CheckDeposit extends Transaction {
             poJSON = loObject.openRecord(fsTrasactionNo);
             if ("error".equals(poJSON.get("result"))) {
                 poJSON = setJSON("error",(String) poJSON.get("message"));
+                poJSON.put("row", getDetailCount()-1);
                 return poJSON;
             }
             
             poJSON = checkExistingCheckDeposit(fsTrasactionNo, loObject.getSourceCode()) ;
             if(!isJSONSuccess(poJSON)){
+                poJSON.put("row", getDetailCount()-1);
                 return poJSON;
             }
             
@@ -1195,6 +1197,7 @@ public class CheckDeposit extends Transaction {
             if (!Detail(lnRow).isReverse()) {
                 Detail(lnRow).isReverse(true);
                 poJSON.put("result", "success");
+                poJSON.put("row", lnRow);
                 return poJSON;
             } else {
                 poJSON.put("result", "error");
@@ -1206,6 +1209,7 @@ public class CheckDeposit extends Transaction {
         }
         computeFields();
         // Return success
+        poJSON.put("row", getDetailCount()-1);
         poJSON.put("result", "success");
         return poJSON;
     }
