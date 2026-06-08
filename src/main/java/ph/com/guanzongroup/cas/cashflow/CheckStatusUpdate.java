@@ -960,33 +960,7 @@ public class CheckStatusUpdate extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-//        Model_Payment_Request_Master PRFTrans;
-//        PRFTrans = new CashflowModels(poGRider).PaymentRequestMaster();
-//
-//        poJSON = PRFTrans.openRecord(Detail(Row).getSourceNo());
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = PRFTrans.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        Double AmountPaid = Detail(Row).getAmountApplied();
-//        AmountPaid = PRFTrans.getAmountPaid() - AmountPaid;
-//
-//        poJSON = PRFTrans.setAmountPaid(AmountPaid);
-//        poJSON = PRFTrans.setProcess(DisbursementStatic.OPEN);
-//
-//        poJSON = PRFTrans.setTransactionStatus(PaymentRequestStatus.CONFIRMED);
-//        poJSON = PRFTrans.setModifiedDate(poGRider.getServerDate());
-//        poJSON = PRFTrans.setModifyingId(poGRider.getUserID());
-//
-//        poJSON = PRFTrans.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -1058,30 +1032,6 @@ public class CheckStatusUpdate extends Transaction {
             return poJSON;
         }
         
-//        Model_POR_Master POTrans;
-//        POTrans = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingMaster();
-//
-//        poJSON = POTrans.openRecord(Detail(Row).getSourceNo());
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = POTrans.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        Double AmountPaid = Detail(Row).getAmountApplied() + Detail(Row).POReceiving().getDiscount().doubleValue();
-//        AmountPaid = POTrans.getAmountPaid().doubleValue() - AmountPaid;
-//
-//        poJSON = POTrans.setAmountPaid(AmountPaid);
-//        poJSON = POTrans.setModifiedDate(poGRider.getServerDate());
-//        poJSON = POTrans.setModifyingId(poGRider.getUserID());
-//
-//        poJSON = POTrans.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -1089,9 +1039,10 @@ public class CheckStatusUpdate extends Transaction {
 
     public JSONObject updateCachePayable(int Row) throws SQLException, GuanzonException, CloneNotSupportedException {
         poJSON = new JSONObject();
+        String cachePayableTrans = getCachePayable(Row);
         
         CPTrans.InitTransaction();
-        poJSON = CPTrans.OpenTransaction(Detail(Row).getSourceNo());
+        poJSON = CPTrans.OpenTransaction(cachePayableTrans);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -1123,34 +1074,6 @@ public class CheckStatusUpdate extends Transaction {
             return poJSON;
         }
         
-//        
-//        Model_Cache_Payable_Master poCachePayable;
-//        poCachePayable = new CashflowModels(poGRider).Cache_Payable_Master();
-//
-//        String cachePayableTrans = getCachePayable(Row);
-//
-//        poJSON = poCachePayable.openRecord(cachePayableTrans);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = poCachePayable.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        Double AmountPaid = Detail(Row).getAmountApplied();
-//        AmountPaid = poCachePayable.getAmountPaid() - AmountPaid;
-//
-//        poJSON = poCachePayable.setAmountPaid(AmountPaid);
-//        poJSON = poCachePayable.setTransactionStatus(CachePayableStatus.CONFIRMED);
-//        poJSON = poCachePayable.setModifiedDate(poGRider.getServerDate());
-//        poJSON = poCachePayable.setModifyingId(poGRider.getUserID());
-//
-//        poJSON = poCachePayable.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -1187,36 +1110,11 @@ public class CheckStatusUpdate extends Transaction {
             return poJSON;
         }
         
-        poJSON = APPaymAdjustTrans.saveRecord();
+        poJSON = APPaymAdjustTrans.SaveTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
-//        
-//        Model_AP_Payment_Adjustment APPaymentAdj;
-//        APPaymentAdj = new CashflowModels(poGRider).APPaymentAdjustment();
-//
-//        poJSON = APPaymentAdj.openRecord(Detail(Row).getSourceNo());
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = APPaymentAdj.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        Double AmountPaid = Detail(Row).getAmountApplied() + Detail(Row).APAdjustment().getDiscountAmount().doubleValue();
-//        AmountPaid = APPaymentAdj.getAppliedAmount().doubleValue() - AmountPaid;
-//
-//        poJSON = APPaymentAdj.setAppliedAmount(AmountPaid);
-//        poJSON = APPaymentAdj.setModifiedDate(poGRider.getServerDate());
-//        poJSON = APPaymentAdj.setModifyingBy(poGRider.getUserID());
-//
-//        poJSON = APPaymentAdj.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -1333,37 +1231,6 @@ public class CheckStatusUpdate extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
-//        Double AmountPaid = 0.0000;
-//        Model_AP_Payment_Master APPaymentMaster;
-//        APPaymentMaster = new CashflowModels(poGRider).SOATaggingMaster();
-//
-//        poJSON = APPaymentMaster.openRecord(fsTransactioNo);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        poJSON = APPaymentMaster.updateRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
-//
-//        for (int lnCtr = 0; lnCtr <= getDetailCount() - 1; lnCtr++) {
-//            if (APPaymentMaster.getTransactionNo().equals(Detail(lnCtr).getSourceNo())
-//                    && DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals(Detail(lnCtr).getSourceCode())) {
-//                AmountPaid += Detail(lnCtr).getAmountApplied();
-//            }
-//        }
-//
-//        poJSON = APPaymentMaster.setAmountPaid(AmountPaid);
-//        poJSON = APPaymentMaster.setTransactionStatus(SOATaggingStatus.CONFIRMED);
-//        poJSON = APPaymentMaster.setModifiedDate(poGRider.getServerDate());
-//        poJSON = APPaymentMaster.setModifyingId(poGRider.getUserID());
-//
-//        poJSON = APPaymentMaster.saveRecord();
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            return poJSON;
-//        }
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
