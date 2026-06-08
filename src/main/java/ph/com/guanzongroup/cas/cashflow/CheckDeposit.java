@@ -856,6 +856,8 @@ public class CheckDeposit extends Transaction {
     public JSONObject SearchBankAccount(String value, boolean byCode, boolean fbSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         if(pbSupplier){
             AP_Client_Bank_Account loObj = new AP_Client_Bank_Account();
+            loObj.setApplicationDriver(poGRider);
+            loObj.initialize();
             loObj.setRecordStatus(RecordStatus.ACTIVE);
             if( Master().getBanks() == null || "".equals(Master().getBanks() )){
                 poJSON = loObj.searchRecord(value, byCode);
