@@ -913,13 +913,18 @@ public class CheckDeposit extends Transaction {
             lsFilter.add(" a.sTransNox LIKE " + SQLUtil.toSQL("%"+ fsTransactionNo));
         }
         if (fsAccountNo != null && !"".equals(fsAccountNo)) {
-            lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            if(pbSupplier){
+                lsFilter.add(" cc.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            } else {
+                lsFilter.add(" c.sActNumbr  LIKE " + SQLUtil.toSQL("%" + fsAccountNo));
+            }
         }
         if (fsDate != null && !"".equals(fsDate)) {
             lsFilter.add(" a.dTransact = " + SQLUtil.toSQL(fsDate));
         }
-        
+        String lsColName = "a.dTransact»a.sTransNox»c.sActNumbr»c.sActNamex";
         if(pbSupplier){
+            lsColName = "a.dTransact»a.sTransNox»cc.sActNumbr»cc.sActNamex";
             lsFilter.add("g.sCompnyNm NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%")); 
         } else {
             // BR: table connection: Payee.sClientID(get the sCompnyNm) = Company Name selected during system log in; Client_Master.sCompnyNm = System Log in.sCompnyNm
@@ -941,8 +946,8 @@ public class CheckDeposit extends Transaction {
                 lsSQL,
                 "", 
                 "Transaction Date»Transaction No»Account No»Account Name",
-                "a.dTransact»a.sTransNox»c.sActNumbr»c.sActNamex",
-                "a.dTransact»a.sTransNox»c.sActNumbr»c.sActNamex",
+                "a.dTransact»a.sTransNox»sActNumbr»sActNamex",
+                lsColName,
                 1);
 
         if (poJSON != null) {
@@ -1977,7 +1982,7 @@ public class CheckDeposit extends Transaction {
         SQL_BROWSE = "SELECT "
                 + " a.sTransNox, "
                 + " a.dTransact, "
-                + " IFNULL(c.sActNumbr,cc.sActNumbr) as sActNumbr , "
+                + " IFNULL(c.sActNumbr,cc.sActNumbr) as sActNumbr, "
                 + " IFNULL(c.sActNamex,cc.sActNamex) as sActNamex, "
 //                + " c.sActNamex, "
                 + " a.cTranStat, "
