@@ -399,7 +399,8 @@ public class CheckStatusUpdate extends Transaction {
                 + " c.sBankName, "
                 + " d.sBnkActID, "
                 + " d.sActNumbr, "
-                + " d.sActNamex "
+                + " d.sActNamex, "
+                + " b.nAmountxx "
                 + " FROM Disbursement_Master a "
                 + " LEFT JOIN Check_Payments b "
                 + "     ON a.sTransNox = b.sSourceNo "
@@ -458,6 +459,7 @@ public class CheckStatusUpdate extends Transaction {
                 loData.put("sBnkActID", loRS.getString("sBnkActID"));
                 loData.put("sActNumbr", loRS.getString("sActNumbr"));
                 loData.put("sActNamex", loRS.getString("sActNamex"));
+                loData.put("nAmountxx", loRS.getString("nAmountxx"));
                 loArray.add(loData);
             }
         } finally {
