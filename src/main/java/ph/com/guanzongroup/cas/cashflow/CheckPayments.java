@@ -2,7 +2,11 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -25,14 +29,17 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.validator.CheckPaymentValidator;
+import java.util.Iterator;
+import javax.sql.rowset.CachedRowSet;
 
 public class CheckPayments extends Parameter {
-
+    
     Model_Check_Payments poModel;
 
     @Override
     public void initialize() {
         try {
+            
             psRecdStat = Logical.YES;
             super.initialize();
 
@@ -329,14 +336,12 @@ public class CheckPayments extends Parameter {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
         //change status
         poJSON = statusChange(poModel.getTable(), (String) poModel.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
         }
-
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         poJSON.put("message", "Transaction cancelled successfully.");
@@ -655,5 +660,254 @@ public class CheckPayments extends Parameter {
             poJSON.put("message", "No record loaded.");
             return poJSON;
         }
+    }
+    public JSONObject OpenTransaction(String fsTransNo, boolean byCode)
+            throws SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+
+       String lsSQL = "SELECT "
+        + " sTransNox"
+        + ", sBranchCd"
+        + ", sIndstCdx"
+        + ", dTransact"
+        + ", sBankIDxx"
+        + ", sBnkActID"
+        + ", sCheckNox"
+        + ", dCheckDte"
+        + ", sPayorIdx"
+        + ", sPayeeIDx"
+        + ", nAmountxx"
+        + ", sRemarksx"
+        + ", sSourceCd"
+        + ", sSourceNo"
+        + ", cLocation"
+        + ", cIsReplcd"
+        + ", cReleased"
+        + ", cPayeeTyp"
+        + ", cDisbMode"
+        + ", cClaimant"
+        + ", sAuthorze"
+        + ", cIsCrossx"
+        + ", cIsPayeex"
+        + ", cTranStat"
+        + ", cProcessd"
+        + ", cPrintxxx"
+        + ", dPrintxxx"
+        + ", sModified"
+        + ", dModified"
+        + " FROM Check_Payments";
+
+        List<String> lsFilter = new ArrayList<>();
+
+        // Filter by Transaction No
+        if (fsTransNo != null && !fsTransNo.trim().isEmpty()) {
+            lsFilter.add("sTransNox = " + SQLUtil.toSQL(fsTransNo));
+        }
+
+        // Append filters
+       if (lsSQL != null && !lsSQL.trim().isEmpty() && lsFilter != null && !lsFilter.isEmpty()) {
+            lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+        }
+
+        // Grouping
+        lsSQL += " GROUP BY sTransNox";
+
+        System.out.println("SQL EXECUTED: " + lsSQL);
+
+        poJSON = ShowDialogFX.Browse(
+                poGRider,
+                lsSQL,
+                fsTransNo,
+                "Transaction No»Check No»Check Date",
+                "sTransNox»sCheckNox»dCheckDte",
+                "sTransNox»sCheckNox»dCheckDte",
+                byCode ? 0 : 1
+        );
+
+        if (poJSON != null) {
+
+            JSONObject loBrowse = new JSONObject();
+            loBrowse.putAll(poJSON);
+
+            poJSON = openRecord((String) poJSON.get("sTransNox"));
+
+            poJSON.put("data", loBrowse);
+
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "error");
+        poJSON.put("message", "No record loaded.");
+
+        return poJSON;
+    }
+
+    
+    
+    public  JSONObject checkStatusChange(String tableName, 
+            String sourceNo, 
+            String remarks,
+            String statusRequest, 
+            boolean needConfirmation, 
+            boolean withParent) 
+            throws SQLException, GuanzonException, CloneNotSupportedException{
+        poJSON = new JSONObject();
+        
+//        poGRider.beginTrans((String) poEvent.get("event"),
+//                    getModel().getTable(),
+//                    SOURCE_CODE,
+//                    sourceNo);
+        
+        poJSON = statusChange(tableName, sourceNo, remarks, statusRequest, needConfirmation, withParent);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+        CachedRowSet crs = getStatusHistory();
+        
+        crs.beforeFirst();
+        while(crs.next()){
+            switch (crs.getString("cRefrStat")){
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case CheckStatus.FLOAT:
+                    crs.updateString("cRefrStat", "FLOAT");
+                    break;
+                case CheckStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case CheckStatus.POSTED:
+                    crs.updateString("cRefrStat", "POSTED");
+                    break;
+                case CheckStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
+                    break;
+                case CheckStatus.STALED:
+                    crs.updateString("cRefrStat", "STALED");
+                    break;
+                case CheckStatus.STOP_PAYMENT:
+                    crs.updateString("cRefrStat", "HOLD");
+                    break;
+                case CheckStatus.BOUNCED:
+                    crs.updateString("cRefrStat", "BOUNCED/DISHONORED");
+                    break;
+                case CheckStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                    
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+                    
+                    switch (stat){
+                        case CheckStatus.FLOAT:
+                            crs.updateString("cRefrStat", "FLOAT");
+                            break;
+                        case CheckStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case CheckStatus.POSTED:
+                            crs.updateString("cRefrStat", "POSTED");
+                            break;
+                        case CheckStatus.CANCELLED:
+                            crs.updateString("cRefrStat", "CANCELLED");
+                            break;
+                        case CheckStatus.STALED:
+                            crs.updateString("cRefrStat", "STALED");
+                            break;
+                        case CheckStatus.STOP_PAYMENT:
+                            crs.updateString("cRefrStat", "HOLD");
+                            break;
+                        case CheckStatus.BOUNCED:
+                            crs.updateString("cRefrStat", "BOUNCED/DISHONORED");
+                            break;
+                        case CheckStatus.VOID:
+                            crs.updateString("cRefrStat", "VOID");
+                            break;
+                        
+                    }
+            }
+            crs.updateRow(); 
+        }
+        
+        JSONObject loJSON  = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+        
+        if ("success".equals((String) loJSON.get("result"))){
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        
+        showStatusHistoryUI("Check Payments", (String) getModel().getValue("sTransNox"), entryBy, entryDate, crs);
+    }
+    public JSONObject getEntryBy() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL =  " SELECT b.sModified, b.dModified " 
+                        + " FROM Check_Payments a "
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(getModel().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(getModel().getTransactionNo())) ;
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+                    if(loRS.getString("sModified").length() > 10){
+                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+                    } else {
+                        lsEntry = getSysUser(loRS.getString("sModified")); 
+                    }
+                    // Get the LocalDateTime from your result set
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsEntryDate =  dModified.format(formatter);
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return poJSON;
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+    
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
+                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                lsEntry = loRS.getString("sCompnyNm");
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+        } 
+        return lsEntry;
     }
 }

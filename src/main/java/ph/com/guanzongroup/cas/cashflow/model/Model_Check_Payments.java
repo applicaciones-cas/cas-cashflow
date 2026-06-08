@@ -56,7 +56,7 @@ public class Model_Check_Payments extends Model {
             MiscUtil.initRowSet(poEntity);
 
             poEntity.updateObject("dTransact", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
-//            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
+            poEntity.updateObject("dCheckDte", SQLUtil.toDate(xsDateShort(poGRider.getServerDate()), SQLUtil.FORMAT_SHORT_DATE));
             poEntity.updateNull("dCheckDte");
             poEntity.updateObject("nAmountxx", DisbursementStatic.DefaultValues.default_value_double_0000);
             poEntity.updateString("cTranStat", DisbursementStatic.OPEN);
@@ -519,7 +519,7 @@ public class Model_Check_Payments extends Model {
                                                 + " AND cTranStat != " + SQLUtil.toSQL(CheckStatus.CANCELLED)
                                                 + " AND cTranStat != " + SQLUtil.toSQL(CheckStatus.VOID));
 
-        System.out.println("Executing SQL: " + lsSQL);
+//        System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         try {
             if (loRS.next()) {
@@ -543,4 +543,62 @@ public class Model_Check_Payments extends Model {
         }
         return poJSON;
     }
+    
+    public JSONObject openRecordbyTranaction(String checkTrans)
+            throws SQLException, GuanzonException {
+
+        JSONObject json = new JSONObject();
+
+        String lsSQL = MiscUtil.makeSelect(this);
+        lsSQL = MiscUtil.addCondition(
+                lsSQL,
+                " sTransNox = " + SQLUtil.toSQL(checkTrans)
+        );
+
+        ResultSet loRS = null;
+
+        try {
+            loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS.next()) {
+
+                JSONObject data = new JSONObject();
+
+                for (int lnCtr = 1;
+                        lnCtr <= loRS.getMetaData().getColumnCount();
+                        lnCtr++) {
+
+                    String column = loRS.getMetaData().getColumnLabel(lnCtr);
+                    Object value = loRS.getObject(lnCtr);
+
+                    data.put(column, value);
+
+                    // still load model if needed
+                    setValue(lnCtr, value);
+                }
+
+                pnEditMode = EditMode.READY;
+
+                json.put("result", "success");
+                json.put("message", "Record loaded successfully.");
+                json.put("data", data);
+
+            } else {
+
+                json.put("result", "error");
+                json.put("message", "No record to load.");
+            }
+
+        } catch (SQLException e) {
+
+            json.put("result", "error");
+            json.put("message", e.getMessage());
+
+        } finally {
+            MiscUtil.close(loRS);
+        }
+
+        return json;
+    }
+    
 }
