@@ -859,10 +859,15 @@ public class CheckDeposit extends Transaction {
             loObj.setApplicationDriver(poGRider);
             loObj.initialize();
             loObj.setRecordStatus(RecordStatus.ACTIVE);
-            if( Master().getBanks() == null || "".equals(Master().getBanks() )){
+            
+            if(fbSearch){
                 poJSON = loObj.searchRecord(value, byCode);
             } else {
-                poJSON = loObj.searchRecordbyBanks(value,Master().getBanks(),byCode);
+                if( Master().getBanks() == null || "".equals(Master().getBanks() )){
+                    poJSON = loObj.searchRecord(value, byCode);
+                } else {
+                    poJSON = loObj.searchRecordbyBanks(value,Master().getBanks(),byCode);
+                }
             }
             if ("success".equals((String) poJSON.get("result"))) {
                 if(fbSearch){
@@ -875,10 +880,15 @@ public class CheckDeposit extends Transaction {
             BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
             object.setRecordStatus(RecordStatus.ACTIVE);
             object.setCompanyId(psCompanyId);
-            if( Master().getBanks() == null || "".equals(Master().getBanks() )){
+            
+            if(fbSearch){
                 poJSON = object.searchRecord(value, byCode);
             } else {
-                poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
+                if( Master().getBanks() == null || "".equals(Master().getBanks() )){
+                    poJSON = object.searchRecord(value, byCode);
+                } else {
+                    poJSON = object.searchRecordbyBanks(value,Master().getBanks(),byCode);
+                }
             }
             if ("success".equals((String) poJSON.get("result"))) {
                 if(fbSearch){
