@@ -446,6 +446,8 @@ public class Model_Cache_Payable_Master extends Model {
         }
     }
     
+    
+    
     @Override
     public String getNextCode(){
         return MiscUtil.getNextCode(getTable(), "sTransNox", true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode()); 
