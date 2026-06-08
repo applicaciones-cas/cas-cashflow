@@ -61,10 +61,16 @@ public class Model_Check_Deposit_Master extends Model {
 
             this.poBranch = (new ParamModels(this.poGRider)).Branch();
             this.poBankAccount = (new CashflowModels(this.poGRider)).Bank_Account_Master();
-            this.poAPCBankAccount = (new Model_AP_Client_Bank_Account());
             this.poIndustry = (new ParamModels(this.poGRider)).Industry();
             this.poBanks = (new ParamModels(this.poGRider)).Banks();
             this.poCompany =(new ParamModels(this.poGRider)).Company();
+            
+            poAPCBankAccount = new Model_AP_Client_Bank_Account();
+            poAPCBankAccount.setApplicationDriver(poGRider);
+            poAPCBankAccount.setXML("Model_AP_Client_Bank_Account");
+            poAPCBankAccount.setTableName("AP_Client_Bank_Account");
+            poAPCBankAccount.initialize();
+            
             poEntity.insertRow();
             poEntity.moveToCurrentRow();
 
