@@ -932,7 +932,10 @@ public class CheckDeposit extends Transaction {
         if (fsDate != null && !"".equals(fsDate)) {
             lsFilter.add(" a.dTransact = " + SQLUtil.toSQL(fsDate));
         }
+        String lsColCriteria = "a.dTransact»a.sTransNox»c.sActNumbr»c.sActNamex";
         if(pbSupplier){
+            //lsColCriteria = "a.dTransact»a.sTransNox»IFNULL(c.sActNumbr,cc.sActNumbr)»IFNULL(c.sActNamex,cc.sActNamex)";
+            lsColCriteria = "a.dTransact»a.sTransNox»cc.sActNumbr»cc.sActNamex";
             lsFilter.add("g.sCompnyNm NOT LIKE " + SQLUtil.toSQL("%"+getCompanyName()+"%")); 
         } else {
             // BR: table connection: Payee.sClientID(get the sCompnyNm) = Company Name selected during system log in; Client_Master.sCompnyNm = System Log in.sCompnyNm
@@ -955,7 +958,7 @@ public class CheckDeposit extends Transaction {
                 "", 
                 "Transaction Date»Transaction No»Account No»Account Name",
                 "a.dTransact»a.sTransNox»sActNumbr»sActNamex",
-                "a.dTransact»a.sTransNox»IFNULL(c.sActNumbr,cc.sActNumbr)»IFNULL(c.sActNamex,cc.sActNamex)",
+                lsColCriteria,
                 1);
 
         if (poJSON != null) {
