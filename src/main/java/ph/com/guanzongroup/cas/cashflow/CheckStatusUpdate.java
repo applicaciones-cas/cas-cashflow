@@ -33,25 +33,17 @@ import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Banks;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
-import org.guanzon.cas.purchasing.model.Model_POR_Master;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
-import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
 import org.rmj.cas.core.APTransaction;
-import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Adjustment;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Master;
-import ph.com.guanzongroup.cas.cashflow.model.SelectedITems;
 import ph.com.guanzongroup.cas.cashflow.status.APPaymentAdjustmentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
-import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 
 public class CheckStatusUpdate extends Transaction {
@@ -1447,23 +1439,24 @@ public class CheckStatusUpdate extends Transaction {
         return poJSON;
     }
 
-    public JSONObject ClearTransaction(String Remarks, Date dateCleared) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
+    public JSONObject ClearTransaction(String Remarks, Date dateCleared, boolean isNeedApproval) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
         poJSON = new JSONObject();
-
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        if (isNeedApproval) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+                setApproving((String) poJSON.get("sUserIDxx"));
+                psApprover = (String) poJSON.get("sUserIDxx");
             }
-            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer..");
-                return poJSON;
-            }
-            setApproving((String) poJSON.get("sUserIDxx"));
-            psApprover = (String) poJSON.get("sUserIDxx");
         }
-        poGRider.beginTrans("UPDATE STATUS", "Cancel Check", SOURCE_CODE, Master().CheckPayments().getTransactionNo());
+        poGRider.beginTrans("UPDATE STATUS", "Cleared Check", SOURCE_CODE, Master().CheckPayments().getTransactionNo());
 
         poJSON = ClearCheck(Remarks, dateCleared);
         if (!"success".equals((String) poJSON.get("result"))) {
