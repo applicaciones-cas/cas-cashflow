@@ -20,6 +20,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 public class Model_Check_Deposit_Detail extends Model {
 
     private Model_Check_Payments poCheckPayment;
+    private Model_Disbursement_Master poDisbursement;
 //    private Model_Check_Receive poCheckReceive;
 
     @Override
@@ -44,6 +45,7 @@ public class Model_Check_Deposit_Detail extends Model {
             ID2 = poEntity.getMetaData().getColumnLabel(2);
 
             poCheckPayment = new CashflowModels(poGRider).CheckPayments();
+            poDisbursement = new CashflowModels(poGRider).DisbursementMaster();
 //            poCheckReceive =  new CashflowModels(poGRider).CheckReceive();
 
             pnEditMode = EditMode.UNKNOWN;
@@ -138,6 +140,23 @@ public class Model_Check_Deposit_Detail extends Model {
         }
         poCheckPayment.initialize();
         return this.poCheckPayment;
+    }
+    
+    
+    public Model_Disbursement_Master Disbursement() throws SQLException, GuanzonException {
+        if (!"".equals(CheckPayment().getSourceNo())) {
+            if (this.poDisbursement.getEditMode() == 1 && this.poDisbursement.getTransactionNo().equals(CheckPayment().getSourceNo())) {
+                return this.poDisbursement;
+            }
+            this.poJSON = this.poDisbursement.openRecord(CheckPayment().getSourceNo());
+            if ("success".equals(this.poJSON.get("result"))) {
+                return this.poDisbursement;
+            }
+            this.poDisbursement.initialize();
+            return this.poDisbursement;
+        }
+        poDisbursement.initialize();
+        return this.poDisbursement;
     }
 
 //    public Model_Check_Receive CheckPayment() throws SQLException, GuanzonException {
