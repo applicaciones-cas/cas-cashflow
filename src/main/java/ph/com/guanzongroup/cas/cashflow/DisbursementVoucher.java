@@ -104,6 +104,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payment_Request_Detail;
@@ -114,6 +115,7 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
@@ -145,6 +147,7 @@ public class DisbursementVoucher extends Transaction {
     public BankAccountMaster poBankAccount;
     public Journal poJournal;
     public List<WithholdingTaxDeductions> paWTaxDeductions;
+    public List<JournalProposal> paJournalProposal;
     
     public List<Model> paMaster;
     public List<TransactionAttachment> paAttachments;
@@ -169,6 +172,8 @@ public class DisbursementVoucher extends Transaction {
         paMaster = new ArrayList<Model>();
         paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
         paAttachments = new ArrayList<>();
+        
+        paJournalProposal = new ArrayList<JournalProposal>(); //Arsiela - 06092026
         
         return initialize();
     }
@@ -2334,6 +2339,31 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
+     /**
+    * Checks if an account code already exists in the journal proposal details.
+    *
+    * @param fnJEProposalRow      current row index of JE Proposal
+    * @param fnRow      current row index
+    * @param fsAcctCode account code to validate
+    * @return JSONObject indicating if duplicate exists or not
+    */
+    public JSONObject checkJEProposalExistAcctCode(int fnJEProposalRow, int fnRow, String fsAcctCode){
+        poJSON = new JSONObject();
+
+        for(int lnCtr = 0;lnCtr <= paJournalProposal.get(fnJEProposalRow).getDetailCount()-1; lnCtr++){
+            if(fsAcctCode.equals(paJournalProposal.get(fnJEProposalRow).Detail(lnCtr).getAccountCode()) && fnRow != lnCtr){
+                poJSON.put("row", lnCtr);
+                poJSON.put("result", "error");
+                poJSON.put("message", "Account code " + fsAcctCode + " already exists at row " + (lnCtr+1) + ".");
+                paJournalProposal.get(fnJEProposalRow).Detail(fnRow).setAccountCode("");
+                return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
     /**
      * Check Existing tax rate per selected period date
      * @param fnRow
@@ -3572,6 +3602,59 @@ public class DisbursementVoucher extends Transaction {
     }
     
     /**
+    * Gets or initializes the Journal controller.
+    *
+    * @return Journal instance
+    */
+    public JournalProposal JournalProposal(int fnRow){
+        try{
+            if(paJournalProposal == null){
+                paJournalProposal = new ArrayList<JournalProposal>();
+            }
+            
+            if (paJournalProposal.get(fnRow) == null) {
+                paJournalProposal.add(fnRow, new CashflowControllers(poGRider, logwrapr).JournalProposal());
+                paJournalProposal.get(fnRow).InitTransaction();
+            }
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        }
+        return paJournalProposal.get(fnRow);
+    }
+    
+    
+    /**
+    * Adds a new journal detail record after validating the last entry.
+    *
+    * @return JSONObject indicating success or error status
+    * @throws CloneNotSupportedException if cloning fails
+    */
+    public JSONObject AddJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if (getJournalProposalList().size() > 0) {
+            if (JournalProposal(getJournalProposalList().size() - 1).Master().getBranchCode().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has empty item.");
+                return poJSON;
+            }
+        }
+        paJournalProposal.add( new CashflowControllers(poGRider, logwrapr).JournalProposal());
+        paJournalProposal.get(getJournalProposalList().size() - 1).InitTransaction();
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
+    /**
+    * Gets the full list of Journal Proposal records.
+    *
+    * @return list of Journal Proposal models
+    */
+    public List<JournalProposal> getJournalProposalList() {
+        return (List<JournalProposal>) (List<?>) paJournalProposal;
+    }
+    
+    /**
     * Gets the number of withholding tax deductions.
     *
     * @return deduction count
@@ -3712,6 +3795,19 @@ public class DisbursementVoucher extends Transaction {
         try {
             poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
             poJournal.InitTransaction();
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
+    
+    /**
+     * Resets journal transaction.
+     */
+    public void resetJournalProposal() {
+        try {
+            paJournalProposal = new ArrayList<JournalProposal>();
+            paJournalProposal.set(paJournalProposal.size()-1, new CashflowControllers(poGRider, logwrapr).JournalProposal());
         } catch (SQLException | GuanzonException ex) {
             Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
         }
@@ -3858,6 +3954,81 @@ public class DisbursementVoucher extends Transaction {
         if ((Journal().getDetailCount() - 1) < 0) {
             Journal().AddDetail();
             Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        }
+    
+    }
+    
+    /** TODOOOOOOOOOOOOOO
+    * Cleans journal details by removing invalid or empty entries,
+    * ensures at least one valid row exists, and adds a new detail row
+    * when the last entry is valid and contains amounts.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    */
+    public void ReloadJournalProposal() throws CloneNotSupportedException, SQLException{
+//        int lnCtr = Journal().getDetailCount() - 1;
+//        while (lnCtr >= 0) {
+//            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+//                Journal().Detail().remove(lnCtr);
+//            } else {
+//                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
+//                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
+//                        Journal().Detail().remove(lnCtr);
+//                    }
+//                }
+//            }
+//            lnCtr--;
+//        }
+//        if ((Journal().getDetailCount() - 1) >= 0) {
+//            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
+//                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+//                Journal().AddDetail();
+//                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//            }
+//        }
+//        if ((Journal().getDetailCount() - 1) < 0) {
+//            Journal().AddDetail();
+//            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//        }
+    
+    }
+    
+    
+    /** 
+    * Cleans journal details by removing invalid or empty entries,
+    * ensures at least one valid row exists, and adds a new detail row
+    * when the last entry is valid and contains amounts.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    */
+    public void ReloadJournalProposalDetail(int fnRow) throws CloneNotSupportedException, SQLException{
+        int lnCtr = JournalProposal(fnRow).getDetailCount() - 1;
+        while (lnCtr >= 0) {
+            if (JournalProposal(fnRow).Detail(lnCtr).getAccountCode() == null || "".equals(JournalProposal(fnRow).Detail(lnCtr).getAccountCode())) {
+                JournalProposal(fnRow).Detail().remove(lnCtr);
+            } else {
+                if(JournalProposal(fnRow).Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(JournalProposal(fnRow).Detail(lnCtr).getDebitAmount() <= 0.0000
+                        && JournalProposal(fnRow).Detail(lnCtr).getCreditAmount() <= 0.0000){
+                        JournalProposal(fnRow).Detail().remove(lnCtr);
+                    }
+                }
+            }
+            lnCtr--;
+        }
+        if ((JournalProposal(fnRow).getDetailCount() - 1) >= 0) {
+            if (JournalProposal(fnRow).Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(JournalProposal(fnRow).Detail(getDetailCount() - 1).getAccountCode())
+                && (JournalProposal(fnRow).Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || JournalProposal(fnRow).Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+                JournalProposal(fnRow).AddDetail();
+                JournalProposal(fnRow).Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
+        }
+        if ((JournalProposal(fnRow).getDetailCount() - 1) < 0) {
+            JournalProposal(fnRow).AddDetail();
+            JournalProposal(fnRow).Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
         }
     
     }
@@ -6141,6 +6312,70 @@ public class DisbursementVoucher extends Transaction {
 
         return "";
     }
+    
+    /**
+     * Check existing Journal Proposal
+     * @return
+     * @throws SQLException 
+     */
+    public JSONObject loadJournalProposal() throws SQLException, CloneNotSupportedException, GuanzonException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE){ //Load saved journal proposal
+            paJournalProposal = new ArrayList<JournalProposal>();
+
+            Model_Journal_Master_Proposal loMaster = new CashflowModels(poGRider).Journal_Master_Proposal();
+            String lsSQL = MiscUtil.makeSelect(loMaster);
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+                    + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.VOID)
+                    + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.CANCELLED)
+
+            );
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            boolean lbExist = false;
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------JOURNAL ENTRY PROPOSAL--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        lbExist = false;
+                        int lnCtr = 0;
+                        for(lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                            if(JournalProposal(lnCtr).Master().getTransactionNo().equals(loRS.getString("sTransNox"))){
+                                lbExist = true;
+                                break;
+                            }
+                        }
+
+                        if(!lbExist){
+                            AddJournalProposal();
+                            poJSON = JournalProposal(getJournalProposalList().size() - 1).OpenTransaction(loRS.getString("sTransNox"));
+                            if("error".equals((String) poJSON.get("result"))){
+                                return poJSON;
+                            }
+                        } else {
+                            if(getEditMode() == EditMode.UPDATE && JournalProposal(lnCtr).getEditMode() == EditMode.READY){
+                                poJSON = JournalProposal(getJournalProposalList().size() - 1).UpdateTransaction();
+                                if("error".equals((String) poJSON.get("result"))){
+                                    return poJSON;
+                                }
+                            }
+                        }
+                    }  
+                }
+            }
+            MiscUtil.close(loRS);
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "No record to load");
+        return poJSON;
+    }
+    
     
     /**
      * Populate Check
