@@ -100,17 +100,6 @@ public class JournalProposal extends Transaction {
             return poJSON;
         }
 
-//        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
-//
-//        //change status
-//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        poGRider.commitTrans();
-
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         if (lbConfirm) {
@@ -157,17 +146,6 @@ public class JournalProposal extends Transaction {
             return poJSON;
         }
 
-//        poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
-//
-//        //change status
-//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        poGRider.commitTrans();
-
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         if (lbConfirm) {
@@ -211,15 +189,7 @@ public class JournalProposal extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-//        poGRider.beginTrans("UPDATE STATUS", "CancelledTransaction", SOURCE_CODE, Master().getTransactionNo());
-//        //change status
-//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        poGRider.commitTrans();
+        
         poJSON = new JSONObject();
         poJSON.put("result", "success");
         if (lbConfirm) {
@@ -263,17 +233,6 @@ public class JournalProposal extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
-//        poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
-//
-//        //change status
-//        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-//        if (!"success".equals((String) poJSON.get("result"))) {
-//            poGRider.rollbackTrans();
-//            return poJSON;
-//        }
-//
-//        poGRider.commitTrans();
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
@@ -367,29 +326,7 @@ public class JournalProposal extends Transaction {
                 }
                 if (lnCtr != fnRow) {
                     if(Detail(lnCtr).getAccountCode().equals(fsAcctCode)){
-//                        if(Detail(lnCtr).getCreditAmount() <= 0.0000 && Detail(lnCtr).getDebitAmount() <= 0.0000){ 
                         if(!Detail(lnCtr).isReverse()){
-//                            Model_Journal_Detail loObject = new CashflowModels(poGRider).Journal_Detail();
-//                            loObject.initialize();
-//                            poJSON = loObject.openRecord(Master().getTransactionNo(), lnCtr + 1);
-//                            if ("error".equals((String) poJSON.get("result"))) {
-//                                poJSON.put("row", fnRow);
-//                                return poJSON;
-//                            }
-//                            
-//                            if(loObject.getCreditAmount() <= 0.0000 && loObject.getDebitAmount() <= 0.0000){
-//                                JSONObject loJSON = getOriginalValue(fsAcctCode);
-//                                if (!"error".equals((String) loJSON.get("result"))) {
-//                                    Detail(lnCtr).setCreditAmount((Double) loJSON.get("credit"));
-//                                    Detail(lnCtr).setDebitAmount((Double) loJSON.get("debit"));
-//                                }
-//                            } else {
-//                                Detail(lnCtr).setCreditAmount(loObject.getCreditAmount());
-//                                Detail(lnCtr).setDebitAmount(loObject.getDebitAmount());
-//                            }
-//                            
-//                            Detail(lnCtr).setForMonthOf(poGRider.getServerDate());
-                            
                             Detail(lnCtr).isReverse(true);
                             Detail(lnCtr).setCreditAmount(0.0000);
                             Detail(lnCtr).setDebitAmount(0.0000);
@@ -597,12 +534,6 @@ public class JournalProposal extends Transaction {
             if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
                 Detail().remove(lnCtr);
             } else {
-//                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-//                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
-//                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
-//                        Detail().remove(lnCtr);
-//                    }
-//                }
             }
             lnCtr--;
         }
@@ -735,6 +666,11 @@ public class JournalProposal extends Transaction {
         if (Master().getBranchCode().isEmpty()) {
             poJSON.put("result", "error");
             poJSON.put("message", "Branch must not be empty.");
+            return poJSON;
+        }
+        if (Master().getDepartmentId().isEmpty()) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Department must not be empty.");
             return poJSON;
         }
 
