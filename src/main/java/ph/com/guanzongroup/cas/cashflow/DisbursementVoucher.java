@@ -103,6 +103,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Cache_Payable_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Check_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
@@ -3958,7 +3959,7 @@ public class DisbursementVoucher extends Transaction {
     
     }
     
-    /** TODOOOOOOOOOOOOOO
+    /**
     * Cleans journal details by removing invalid or empty entries,
     * ensures at least one valid row exists, and adds a new detail row
     * when the last entry is valid and contains amounts.
@@ -3966,72 +3967,57 @@ public class DisbursementVoucher extends Transaction {
     * @throws CloneNotSupportedException if cloning fails
     * @throws SQLException if a database error occurs
     */
-    public void ReloadJournalProposal() throws CloneNotSupportedException, SQLException{
-//        int lnCtr = Journal().getDetailCount() - 1;
-//        while (lnCtr >= 0) {
-//            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
-//                Journal().Detail().remove(lnCtr);
-//            } else {
-//                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-//                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
-//                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
-//                        Journal().Detail().remove(lnCtr);
-//                    }
-//                }
-//            }
-//            lnCtr--;
-//        }
-//        if ((Journal().getDetailCount() - 1) >= 0) {
-//            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
-//                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-//                Journal().AddDetail();
-//                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-//            }
-//        }
-//        if ((Journal().getDetailCount() - 1) < 0) {
-//            Journal().AddDetail();
-//            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-//        }
-    
-    }
-    
-    
-    /** 
-    * Cleans journal details by removing invalid or empty entries,
-    * ensures at least one valid row exists, and adds a new detail row
-    * when the last entry is valid and contains amounts.
-    *
-    * @throws CloneNotSupportedException if cloning fails
-    * @throws SQLException if a database error occurs
-    */
-    public void ReloadJournalProposalDetail(int fnRow) throws CloneNotSupportedException, SQLException{
-        int lnCtr = JournalProposal(fnRow).getDetailCount() - 1;
+    public void ReloadJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException, GuanzonException{
+        int lnCtr = getJournalProposalList().size() - 1;
+        Model_Journal_Detail_Proposal loJEPDetail;
         while (lnCtr >= 0) {
-            if (JournalProposal(fnRow).Detail(lnCtr).getAccountCode() == null || "".equals(JournalProposal(fnRow).Detail(lnCtr).getAccountCode())) {
-                JournalProposal(fnRow).Detail().remove(lnCtr);
+            if (JournalProposal(lnCtr) == null ) {
+               getJournalProposalList().remove(lnCtr);
             } else {
-                if(JournalProposal(fnRow).Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(JournalProposal(fnRow).Detail(lnCtr).getDebitAmount() <= 0.0000
-                        && JournalProposal(fnRow).Detail(lnCtr).getCreditAmount() <= 0.0000){
-                        JournalProposal(fnRow).Detail().remove(lnCtr);
+                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
+                    
+                    if(loJEPDetail.getDebitAmount() <= 0.0000 && loJEPDetail.getCreditAmount() <= 0.0000){
+                        getJournalProposalList().remove(lnCtr);
                     }
                 }
             }
             lnCtr--;
         }
-        if ((JournalProposal(fnRow).getDetailCount() - 1) >= 0) {
-            if (JournalProposal(fnRow).Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(JournalProposal(fnRow).Detail(getDetailCount() - 1).getAccountCode())
-                && (JournalProposal(fnRow).Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || JournalProposal(fnRow).Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-                JournalProposal(fnRow).AddDetail();
-                JournalProposal(fnRow).Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+        
+        if(getJournalProposalList() == null){
+            if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                createNewJournalProposal();
+            }
+        } else {
+            if ((getJournalProposalList().size() - 1) >= 0) {
+                lnCtr = getJournalProposalList().size() - 1;
+                if(JournalProposal(lnCtr).getEditMode() != EditMode.ADDNEW){
+                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
+                    if (loJEPDetail.getAccountCode() != null && !"".equals(loJEPDetail.getAccountCode())
+                        && (loJEPDetail.getDebitAmount() > 0.0000 || loJEPDetail.getCreditAmount() > 0.0000)) {
+                        createNewJournalProposal();
+                    }
+                } else {
+                    if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                        createNewJournalProposal();
+                    }
+                }
+            }
+            if ((getJournalProposalList().size() - 1) < 0) {
+                createNewJournalProposal();
             }
         }
-        if ((JournalProposal(fnRow).getDetailCount() - 1) < 0) {
-            JournalProposal(fnRow).AddDetail();
-            JournalProposal(fnRow).Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-        }
-    
     }
+    
+    
+private void createNewJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException {
+    AddJournalProposal();
+
+    JournalProposal proposal = JournalProposal(getJournalProposalList().size() - 1);
+    proposal.NewTransaction();
+    proposal.ReloadDetail();
+}
     
     public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
         int lnCtr = getWTaxDeductionsCount() - 1;

@@ -21,7 +21,9 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
@@ -354,107 +356,6 @@ public class JournalProposal extends Transaction {
         return poJSON;
     }
     
-    private JSONObject getOriginalValue(String fsAcctCode){
-        poJSON = new JSONObject();
-        double ldblDebit = 0.0000;
-        double ldblCredit = 0.0000;
-
-        try {
-            String lsSQL = "SELECT sPayLoadx FROM xxxauditlogdetail ";
-            lsSQL = MiscUtil.addCondition(lsSQL,
-                    " sPayLoadx LIKE " + SQLUtil.toSQL(
-                            "%sAcctCode%" + Master().getTransactionNo() + "%" + fsAcctCode + "%")
-                    + " AND sQryTypex = 'INSERT' "
-                    + " AND sTableNme = 'Journal_Detail' "
-            );
-
-            System.out.println("Executing SQL: " + lsSQL);
-            ResultSet loRS = poGRider.executeQuery(lsSQL);
-            String lsPayload = "";
-
-            if (loRS.next()) {
-                lsPayload = loRS.getString("sPayLoadx");
-            }
-
-            MiscUtil.close(loRS);
-
-            if (!lsPayload.isEmpty()) {
-                // ==============================
-                // STEP 1: Parse JSON
-                // ==============================
-                JSONParser parser = new JSONParser();
-                JSONObject loJson = (JSONObject) parser.parse(lsPayload);
-                String sql = (String) loJson.get("data");
-                // ==============================
-                // STEP 2: Extract column list
-                // ==============================
-                String columnPart = sql.substring(
-                        sql.indexOf("Journal_Detail(") + "Journal_Detail(".length(),
-                        sql.indexOf("VALUES")
-                ).replace("(", "").replace(")", "").trim();
-
-                String valuePart = sql.substring(
-                        sql.indexOf("VALUES (") + 8,
-                        sql.lastIndexOf(")")
-                );
-
-                // ==============================
-                // STEP 3: Split into arrays
-                // ==============================
-                String[] columns = columnPart.split(",");
-                String[] values = valuePart.split(",");
-
-                // ==============================
-                // STEP 4: Find indexes dynamically
-                // ==============================
-                int lnDebitIndex = -1;
-                int lbCreditIndex = -1;
-
-                for (int i = 0; i < columns.length; i++) {
-                    String col = columns[i].trim();
-
-                    if (col.equalsIgnoreCase("nDebitAmt")) {
-                        lnDebitIndex = i;
-                    }
-
-                    if (col.equalsIgnoreCase("nCredtAmt")) {
-                        lbCreditIndex = i;
-                    }
-                }
-
-                // ==============================
-                // STEP 5: Extract values safely
-                // ==============================
-                if (lnDebitIndex >= 0 && lnDebitIndex < values.length) {
-                    ldblDebit = Double.parseDouble(
-                            values[lnDebitIndex].replaceAll("[^0-9.\\-]", "").trim()
-                    );
-                }
-
-                if (lbCreditIndex >= 0 && lbCreditIndex < values.length) {
-                    ldblCredit = Double.parseDouble(
-                            values[lbCreditIndex].replaceAll("[^0-9.\\-]", "").trim()
-                    );
-                }
-            }
-
-            // ==============================
-            // RESULT
-            // ==============================
-            poJSON.put("result", "success");
-            poJSON.put("message", "success");
-        } catch (Exception ex) {
-            Logger.getLogger(getClass().getName())
-                    .log(Level.SEVERE, MiscUtil.getException(ex), ex);
-            poJSON.put("result", "error");
-            poJSON.put("message", MiscUtil.getException(ex));
-        }
-
-        poJSON.put("debit", ldblDebit);
-        poJSON.put("credit", ldblCredit);
-        return poJSON;
-    }
-
     /*Search Master References*/
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
@@ -510,13 +411,13 @@ public class JournalProposal extends Transaction {
     }
 
     @Override
-    public Model_Journal_Master Master() {
-        return (Model_Journal_Master) poMaster;
+    public Model_Journal_Master_Proposal Master() {
+        return (Model_Journal_Master_Proposal) poMaster;
     }
 
     @Override
-    public Model_Journal_Detail Detail(int row) {
-        return (Model_Journal_Detail) paDetail.get(row);
+    public Model_Journal_Detail_Proposal Detail(int row) {
+        return (Model_Journal_Detail_Proposal) paDetail.get(row);
     }
 
     @Override
@@ -528,30 +429,67 @@ public class JournalProposal extends Transaction {
         return paDetail.size();
     }
     
+//    public void ReloadDetail() throws CloneNotSupportedException, SQLException{
+//        int lnCtr = getDetailCount() - 1;
+//        while (lnCtr >= 0) {
+//            if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
+//                Detail().remove(lnCtr);
+//            } else {
+//            }
+//            lnCtr--;
+//        }
+//        if ((getDetailCount() - 1) >= 0) {
+//            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())){
+//                if(((Detail(getDetailCount() - 1).getDebitAmount() <= 0.0000 && Detail(getDetailCount() - 1).getCreditAmount() <= 0.0000)
+//                    && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+//                    || 
+//                    ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
+//                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+//                    AddDetail();
+//                    Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
+//                } 
+//            }  
+//        }
+//        if ((getDetailCount() - 1) < 0) {
+//            AddDetail();
+//            Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
+//        }
+//    
+//    }
+    
+    /** 
+    * Cleans journal details by removing invalid or empty entries,
+    * ensures at least one valid row exists, and adds a new detail row
+    * when the last entry is valid and contains amounts.
+    *
+    * @throws CloneNotSupportedException if cloning fails
+    * @throws SQLException if a database error occurs
+    */
     public void ReloadDetail() throws CloneNotSupportedException, SQLException{
         int lnCtr = getDetailCount() - 1;
         while (lnCtr >= 0) {
             if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
                 Detail().remove(lnCtr);
             } else {
+                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
+                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
+                        Detail().remove(lnCtr);
+                    }
+                }
             }
             lnCtr--;
         }
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())){
-                if(((Detail(getDetailCount() - 1).getDebitAmount() <= 0.0000 && Detail(getDetailCount() - 1).getCreditAmount() <= 0.0000)
-                    && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
-                    || 
-                    ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
-                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
-                    AddDetail();
-                    Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
-                } 
-            }  
+            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())
+                && (Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+                AddDetail();
+                Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            }
         }
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
-            Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
+            Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
         }
     
     }
