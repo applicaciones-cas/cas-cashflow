@@ -129,7 +129,7 @@ public class BankAccountMaster extends Parameter{
                 "ID»Branch Name»Bank»Account No.»Account Name",
                 "sBnkActID»sBranchNm»xBankName»sActNumbr»sActNamex",
                 "a.sBnkActID»c.sBranchNm»IFNULL(b.sBankName, '')»a.sActNumbr»a.sActNamex",
-                byCode ? 0 : 1);
+                byCode ? 3 : 4);
 
         if (poJSON != null) {
             return poModel.openRecord((String) poJSON.get("sBnkActID"));

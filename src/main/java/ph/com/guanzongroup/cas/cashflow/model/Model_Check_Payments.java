@@ -25,6 +25,7 @@ import org.guanzon.cas.parameter.model.Model_Company;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.CheckPayments;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
@@ -514,7 +515,9 @@ public class Model_Check_Payments extends Model {
     public JSONObject openRecordbySourceNo(String ssourceNo) throws SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsSQL = MiscUtil.makeSelect(this);
-        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo));
+        lsSQL = MiscUtil.addCondition(lsSQL, " sSourceNo = " + SQLUtil.toSQL(ssourceNo)
+                                                + " AND cTranStat != " + SQLUtil.toSQL(CheckStatus.CANCELLED)
+                                                + " AND cTranStat != " + SQLUtil.toSQL(CheckStatus.VOID));
 
 //        System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);

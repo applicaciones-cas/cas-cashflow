@@ -14,6 +14,7 @@ import ph.com.guanzongroup.cas.cashflow.CashAdvance;
 import ph.com.guanzongroup.cas.cashflow.CashDisbursement;
 import ph.com.guanzongroup.cas.cashflow.CashFund;
 import ph.com.guanzongroup.cas.cashflow.CashLiquidation;
+import ph.com.guanzongroup.cas.cashflow.CheckDeposit;
 import ph.com.guanzongroup.cas.cashflow.CheckDeposits;
 import ph.com.guanzongroup.cas.cashflow.CheckImporting;
 import ph.com.guanzongroup.cas.cashflow.CheckPaymentImporting;
@@ -535,11 +536,30 @@ public class CashflowControllers {
             return null;
         }
 
+        if (poCheckDeposits != null) {
+            return poCheckDeposits;
+        }
+
+        poCheckDeposits = new CheckDeposits();
+        poCheckDeposits.setApplicationDriver(poGRider);
+        poCheckDeposits.setBranchCode(poGRider.getBranchCode());
+        poCheckDeposits.setLogWrapper(poLogWrapper);
+        poCheckDeposits.setVerifyEntryNo(true);
+        poCheckDeposits.setWithParent(false);
+        return poCheckDeposits;
+    }
+    
+        public CheckDeposit CheckDeposit() {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashFlowcontrollers.CheckDeposit: Application driver is not set.");
+            return null;
+        }
+
         if (poCheckDeposit != null) {
             return poCheckDeposit;
         }
 
-        poCheckDeposit = new CheckDeposits();
+        poCheckDeposit = new CheckDeposit();
         poCheckDeposit.setApplicationDriver(poGRider);
         poCheckDeposit.setBranchCode(poGRider.getBranchCode());
         poCheckDeposit.setLogWrapper(poLogWrapper);
@@ -728,6 +748,7 @@ public class CashflowControllers {
             poBankAccountMaster = null;
             poRecurringIssuance = null;
             poCheckTransfer = null;
+            poCheckDeposits = null;
             poCheckDeposit = null;
             poCheckRelease = null;
             poParticular = null;
@@ -798,7 +819,8 @@ public class CashflowControllers {
     private WithholdingTaxDeductions poWithholdingTaxDeductions;
     private CashAdvance poCashAdvance;
     private CheckTransfers poCheckTransfer;
-    private CheckDeposits poCheckDeposit;
+    private CheckDeposits poCheckDeposits;
+    private CheckDeposit poCheckDeposit;
     private CheckReleases poCheckRelease;
     private RecurringExpense poRecurringExpense;
     private RecurringExpenseSchedule poRecurringExpenseSchedule;

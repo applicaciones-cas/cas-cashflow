@@ -74,17 +74,20 @@ public class CheckDepositValidatorFactory implements GValidator {
       
             poJSON = new JSONObject();
 
-            if (poMaster.getIndustryId() == null || poMaster.getIndustryId().isEmpty()) {
+            if (poMaster.getIndustryId() == null || "".equals(poMaster.getIndustryId())) {
+                poJSON.put("result", "error");
                 poJSON.put("message", "Industry is not set");
                 return poJSON;
             }
             
-            if (poMaster.getBankAccount()== null || poMaster.getBankAccount().isEmpty()) {
+            if (poMaster.getBankAccount()== null || "".equals(poMaster.getBankAccount())) {
+                poJSON.put("result", "error");
                 poJSON.put("message", "Bank Acount is not set");
                 return poJSON;
             }
             
             if (poMaster.getTransactionReferDate() == null) {
+                poJSON.put("result", "error");
                 poJSON.put("message", "Transaction reference date is not set.");
                 return poJSON;
             }
