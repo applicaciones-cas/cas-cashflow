@@ -2,7 +2,9 @@ package ph.com.guanzongroup.cas.cashflow;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -12,9 +14,11 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
+import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.TransactionStatus;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Company;
+import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
@@ -27,6 +31,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
+import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class JournalProposal extends Transaction {
 
@@ -383,6 +388,17 @@ public class JournalProposal extends Transaction {
         return poJSON;
     }
 
+    public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Department object = new ParamControllers(poGRider, logwrapr).Department();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Master().setDepartmentId(object.getModel().getDepartmentId());
+        }
+
+        return poJSON;
+    }
+
     public JSONObject SearchCompany(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Company object = new ParamControllers(poGRider, logwrapr).Company();
         object.setRecordStatus("1");
@@ -635,5 +651,98 @@ public class JournalProposal extends Transaction {
         poJSON.put("result", "success");
 
         return poJSON;
+    }
+    
+    /**
+    * Validates journal entries including debit/credit balance,
+    * account code presence, and valid reporting dates.
+    *
+    * @return JSON validation result with continue flag
+    */
+    public JSONObject validateJournalProposal(){
+        poJSON = new JSONObject();
+        poJSON.put("continue", false);
+        
+        double ldblCreditAmt = 0.0000;
+        double ldblDebitAmt = 0.0000;
+        boolean lbHasJournal = false;
+        boolean lbValidateJournal = false;
+        for(int lnCtr = 0; lnCtr <= getDetailCount()-1; lnCtr++){
+            if(Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
+                ldblDebitAmt += Detail(lnCtr).getDebitAmount();
+                ldblCreditAmt += Detail(lnCtr).getCreditAmount();
+
+                if(Detail(lnCtr).getCreditAmount() > 0.0000 ||  Detail(lnCtr).getDebitAmount() > 0.0000){
+                    if(Detail(lnCtr).getAccountCode() != null && !"".equals(Detail(lnCtr).getAccountCode())){
+                        if(Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(Detail(lnCtr).getForMonthOf()))){
+                            poJSON.put("result", "error");
+                            poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
+                            return poJSON;
+                        }
+                    }
+                }
+                
+                if(!lbValidateJournal){
+                    lbValidateJournal = Detail(lnCtr).getAccountCode() != null && !"".equals(Detail(lnCtr).getAccountCode());
+                } 
+            }
+            
+            if(!lbHasJournal){
+                lbHasJournal = Detail(lnCtr).getAccountCode() != null && !"".equals(Detail(lnCtr).getAccountCode());
+            }   
+        }
+        
+        if(lbValidateJournal){
+            //Convert debit and credit amount
+            ldblDebitAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblDebitAmt, true).replace(",", ""));
+            ldblCreditAmt = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(ldblCreditAmt, true).replace(",", ""));
+            
+            if(ldblDebitAmt == 0.0000 ){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry debit amount.");
+                return poJSON;
+            }
+
+            if(ldblCreditAmt == 0.0000){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Invalid journal entry credit amount.");
+                return poJSON;
+            }
+
+            if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Debit should be equal to credit amount.");
+                return poJSON;
+            }
+
+    //        if(ldblDebitAmt < Master().getTransactionTotal().doubleValue() || ldblDebitAmt > Master().getTransactionTotal().doubleValue()){
+    //            poJSON.put("result", "error");
+    //            poJSON.put("message", "Debit and credit amount should be equal to transaction total.");
+    //            return poJSON;
+    //        }
+        }
+        
+        
+        poJSON.put("result", "sucess");
+        poJSON.put("message", "sucess");
+        poJSON.put("continue", lbHasJournal);
+        return poJSON;
+    }
+    
+    /*Convert Date to String*/
+    /**
+    * Converts a Date to a short string format (yyyy-MM-dd).
+    * Returns default value if input is null.
+    *
+    * @param fdValue date value
+    * @return formatted date string
+    */
+    private static String xsDateShort(Date fdValue) {
+        if(fdValue == null){
+            return "1900-01-01";
+        }
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        String date = sdf.format(fdValue);
+        return date;
     }
 }

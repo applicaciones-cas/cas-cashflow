@@ -293,6 +293,12 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        poJSON = loadJournalProposal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load journal proposal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "Unable to load withholding tax deduction.\n" + (String) poJSON.get("message"));
@@ -354,6 +360,12 @@ public class DisbursementVoucher extends Transaction {
         poJSON = populateJournal();
         if (!"success".equals((String) poJSON.get("result"))) {
             poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+        
+        poJSON = loadJournalProposal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load journal proposal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
         
@@ -1000,6 +1012,16 @@ public class DisbursementVoucher extends Transaction {
         poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
+        }
+                 
+        //Update Journal Proposal
+        for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+            JournalProposal loObj = JournalProposal(lnCtr);
+            if(JournalProposalStatus.OPEN.equals(loObj.Master().getTransactionStatus())){
+                poJSON.put("result", "error");
+                poJSON.put("message", "Journal proposal <"+loObj.Master().getTransactionNo()+"> at row "+(lnCtr+1)+" must be confirmed before approving the disbursement voucher.");
+                return poJSON;
+            }
         }
         
 //        //1. Check the position of the current user
@@ -4284,6 +4306,9 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     poJSON.put("message", "Journal cannot be empty." );
                     return poJSON;
                 }
+                 
+                //Check Journal Proposal  
+                 
                 break;
         }
         
@@ -4852,6 +4877,42 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             }
             System.out.println("-----------------------------------------------------------------------");
             
+            System.out.println("--------------------------SAVE JOURNAL PROPOSAL---------------------------------------------");
+            if(getJournalProposalList() != null){
+                for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
+                        poJSON = JournalProposal(lnCtr).validateJournalProposal();
+                        boolean lbContinue = (boolean) poJSON.get("continue");
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            poJSON.put("result", "error");
+                            poJSON.put("message", poJSON.get("message").toString());
+                            return poJSON;
+                        } 
+                        if(lbContinue){
+                            JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
+                            JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
+                            JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                            JournalProposal(lnCtr).setWithParent(true);
+                            poJSON = JournalProposal(lnCtr).SaveTransaction();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                return poJSON;
+                            }
+                        }
+                    } else {
+    //                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
+    //                        poJSON.put("result", "error");
+    //                        poJSON.put("message", "Invalid Update mode for Journal.");
+    //                        return poJSON;
+    //                    }
+                    }
+                
+                
+                }
+            } 
+            System.out.println("-----------------------------------------------------------------------");
+            
+            
             poJSON = updatePaymentsStatus();
             if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
@@ -4998,7 +5059,21 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
-
+                    
+                    //Update Journal Proposal
+                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+                        JournalProposal loObj = JournalProposal(lnCtr);
+                        loObj.setWithParent(true);
+                        loObj.setWithUI(false);
+                        if(psApprover != null && !"".equals(psApprover)){
+                            loObj.setApproving(psApprover);
+                        }
+                        poJSON = loObj.VoidTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    }
+                    
                     break;
                 case DisbursementStatic.CANCELLED:
                 case DisbursementStatic.DISAPPROVED:
@@ -5012,6 +5087,21 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
+                    
+                    //Update Journal Proposal
+                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+                        JournalProposal loObj = JournalProposal(lnCtr);
+                        loObj.setWithParent(true);
+                        loObj.setWithUI(false);
+                        if(psApprover != null && !"".equals(psApprover)){
+                            loObj.setApproving(psApprover);
+                        }
+                        poJSON = loObj.CancelTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
+                    }
+                    
                     break;
                 case DisbursementStatic.RETURNED:
                 case DisbursementStatic.RETURNED_I:
@@ -5024,6 +5114,20 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     poJSON = poJournal.ReturnTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
+                    }
+                    
+                    //Update Journal Proposal
+                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+                        JournalProposal loObj = JournalProposal(lnCtr);
+                        loObj.setWithParent(true);
+                        loObj.setWithUI(false);
+                        if(psApprover != null && !"".equals(psApprover)){
+                            loObj.setApproving(psApprover);
+                        }
+                        poJSON = loObj.ReturnTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                     break;
             }
