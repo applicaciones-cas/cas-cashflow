@@ -32,7 +32,7 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
-import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
+import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class JournalProposal extends Transaction {
@@ -95,8 +95,7 @@ public class JournalProposal extends Transaction {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = JournalStatus.CONFIRMED;
-        boolean lbConfirm = true;
+        String lsStatus = JournalProposalStatus.CONFIRMED;
 
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
@@ -111,25 +110,59 @@ public class JournalProposal extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(JournalStatus.CONFIRMED);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction confirmed successfully.");
-        } else {
-            poJSON.put("message", "Transaction confirmation request submitted successfully.");
+        poJSON.put("message", "Transaction confirmed successfully.");
+        return poJSON;
+    }
+    
+    public JSONObject PostTransaction(String remarks)
+            throws ParseException,
+            SQLException,
+            GuanzonException,
+            CloneNotSupportedException {
+        poJSON = new JSONObject();
+
+        String lsStatus = JournalProposalStatus.POSTED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No transacton was loaded.");
+            return poJSON;
         }
 
+        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction was already posted.");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //change status
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON = new JSONObject();
+        poJSON.put("result", "success");
+        poJSON.put("message", "Transaction posted successfully.");
         return poJSON;
     }
 
@@ -140,9 +173,7 @@ public class JournalProposal extends Transaction {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = JournalStatus.RETURNED;
-        boolean lbConfirm = true;
-
+        String lsStatus = JournalProposalStatus.RETURNED;
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
@@ -163,19 +194,14 @@ public class JournalProposal extends Transaction {
         }
         
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction returned successfully.");
-        } else {
-            poJSON.put("message", "Transaction returning request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction returned successfully.");
         return poJSON;
     }
     
@@ -186,9 +212,7 @@ public class JournalProposal extends Transaction {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = JournalStatus.CANCELLED;
-        boolean lbConfirm = true;
-
+        String lsStatus = JournalProposalStatus.CANCELLED;
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
@@ -201,24 +225,20 @@ public class JournalProposal extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(JournalStatus.CANCELLED);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction cancelled successfully.");
-        } else {
-            poJSON.put("message", "Transaction cancellation request submitted successfully.");
-        }
+        poJSON.put("message", "Transaction cancelled successfully.");
         return poJSON;
     }
 
@@ -229,9 +249,7 @@ public class JournalProposal extends Transaction {
             CloneNotSupportedException {
         poJSON = new JSONObject();
 
-        String lsStatus = JournalStatus.VOID;
-        boolean lbConfirm = true;
-
+        String lsStatus = JournalProposalStatus.VOID;
         if (getEditMode() != EditMode.READY) {
             poJSON.put("result", "error");
             poJSON.put("message", "No transacton was loaded.");
@@ -245,78 +263,23 @@ public class JournalProposal extends Transaction {
         }
 
         //validator
-        poJSON = isEntryOkay(JournalStatus.VOID);
+        poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
 
         poJSON = new JSONObject();
         poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction voided successfully.");
-        } else {
-            poJSON.put("message", "Transaction voiding request submitted successfully.");
-        }
-
+        poJSON.put("message", "Transaction voided successfully.");
         return poJSON;
     }
-
-    public JSONObject ReopenTransaction(String remarks)
-            throws ParseException,
-            SQLException,
-            GuanzonException,
-            CloneNotSupportedException {
-        poJSON = new JSONObject();
-
-        String lsStatus = JournalStatus.OPEN;
-        boolean lbConfirm = true;
-
-        if (getEditMode() != EditMode.READY) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "No transacton was loaded.");
-            return poJSON;
-        }
-
-        if (lsStatus.equals((String) poMaster.getValue("cTranStat"))) {
-            poJSON.put("result", "error");
-            poJSON.put("message", "Transaction was already reopened.");
-            return poJSON;
-        }
-
-        //validator
-        poJSON = isEntryOkay(JournalStatus.OPEN);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            return poJSON;
-        }
-
-        poGRider.beginTrans("UPDATE STATUS", "ReopenTransaction", SOURCE_CODE, Master().getTransactionNo());
-
-        //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbConfirm, true);
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
-        }
-
-        poGRider.commitTrans();
-
-        poJSON = new JSONObject();
-        poJSON.put("result", "success");
-        if (lbConfirm) {
-            poJSON.put("message", "Transaction reopened successfully.");
-        } else {
-            poJSON.put("message", "Transaction reopening request submitted successfully.");
-        }
-
-        return poJSON;
-    }
-
+    
     /*Seach Detail References*/
     public JSONObject SearchAccountCode(int row, String value, boolean byCode, String industryCode, String glCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         AccountChart object = new CashflowControllers(poGRider, logwrapr).AccountChart();
