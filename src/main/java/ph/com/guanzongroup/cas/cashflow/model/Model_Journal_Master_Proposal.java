@@ -13,6 +13,8 @@ import org.guanzon.cas.parameter.model.Model_Department;
 import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Model_Journal_Master_Proposal extends Model {
@@ -20,6 +22,7 @@ public class Model_Journal_Master_Proposal extends Model {
     Model_Company poCompany;
     Model_Branch poBranch;
     Model_Department poDepartment;
+    Model_Disbursement_Master poDisbursement;
     
     @Override
     public void initialize() {
@@ -46,7 +49,10 @@ public class Model_Journal_Master_Proposal extends Model {
             
             ParamModels model = new ParamModels(poGRider);
             poBranch = model.Branch();
-            poDepartment = model.Department();            
+            poDepartment = model.Department();   
+            
+            CashflowModels cashmodel = new CashflowModels(poGRider);
+            poDisbursement = cashmodel.DisbursementMaster();
 
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -253,6 +259,29 @@ public class Model_Journal_Master_Proposal extends Model {
         } else {
             poDepartment.initialize();
             return poDepartment;
+        }
+    }
+    
+    public Model_Disbursement_Master Disbursement() throws SQLException, GuanzonException{
+        if (!"".equals((String) getValue("sSourceNo"))){
+            if (poDisbursement.getEditMode() == EditMode.READY && 
+                poDisbursement.getTransactionNo().equals((String) getValue("sSourceNo")) 
+//                    && DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER.equals((String) getValue("sSourceCD"))
+                    )
+                return poDisbursement;
+            else{
+                poJSON = poDisbursement.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result")))
+                    return poDisbursement;
+                else {
+                    poDisbursement.initialize();
+                    return poDisbursement;
+                }
+            }
+        } else {
+            poDisbursement.initialize();
+            return poDisbursement;
         }
     }
 }

@@ -3,11 +3,15 @@ package ph.com.guanzongroup.cas.cashflow;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.sql.rowset.CachedRowSet;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -22,27 +26,38 @@ import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail_Proposal;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 
 public class JournalProposal extends Transaction {
-
+    public List<Model> paMaster;
+    private String psIndustryId = "";
+    private String psCompanyId = "";
+    private String psDepartmentName = "";
     public JSONObject InitTransaction() {
         SOURCE_CODE = "JREp";
 
         poMaster = new CashflowModels(poGRider).Journal_Master_Proposal();
         poDetail = new CashflowModels(poGRider).Journal_Detail_Proposal();
 
+        paMaster = new ArrayList<Model>();
         return super.initialize();
     }
+    public void setIndustryId(String fsValue){ psIndustryId = fsValue; }
+    public void setCompanyId(String fsValue){ psCompanyId = fsValue; }
+    public void setSearchDepartmentName(String fsValue){
+        psDepartmentName = fsValue;
+    }
+    public String getSearchDepartmentName(){
+        return psDepartmentName;
+    }
+    
 
     public JSONObject NewTransaction() throws CloneNotSupportedException {
         return super.newTransaction();
@@ -361,6 +376,68 @@ public class JournalProposal extends Transaction {
         return poJSON;
     }
     
+    public JSONObject loadTransactionList(String fsDepartmentName, String fsTransactionNo) throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        paMaster = new ArrayList<>();
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                    "  a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                    + " AND a.sCompnyCd = " + SQLUtil.toSQL(psCompanyId)
+                    + " AND e.sDeptName LIKE " + SQLUtil.toSQL("%"+fsDepartmentName)
+                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo));
+        String lsCondition = "";
+        if (psTranStat != null) {
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= this.psTranStat.length() - 1; lnCtr++) {
+                    lsCondition = lsCondition + ", " + SQLUtil.toSQL(Character.toString(this.psTranStat.charAt(lnCtr)));
+                }
+                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+            } else {
+                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
+            }
+             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+        }
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact, a.sTransNox, e.sDeptName ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        if (MiscUtil.RecordCount(loRS) <= 0) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record found.");
+            return poJSON;
+        }
+
+        while (loRS.next()) {
+            Model_Journal_Master_Proposal loObject = new CashflowModels(poGRider).Journal_Master_Proposal();
+            poJSON = loObject.openRecord(loRS.getString("sTransNox"));
+            if ("success".equals((String) poJSON.get("result"))) {
+                paMaster.add((Model) loObject);
+            } else {
+                return poJSON;
+            }
+        }
+        MiscUtil.close(loRS);
+        return poJSON;
+    }
+    
+    /**
+    * Gets the full list of Journal_Master_Proposal records.
+    *
+    * @return list of Disbursement Master models
+    */
+    public List<Model_Journal_Master_Proposal> getTransactionList() {
+        return (List<Model_Journal_Master_Proposal>) (List<?>) paMaster;
+    }
+
+    /**
+    * Gets a specific Journal_Master_Proposal record by index.
+    *
+    * @param masterRow index of the master record
+    * @return Journal_Master_Proposal model
+    */
+    public Model_Journal_Master_Proposal TransactionList(int masterRow) {
+        return (Model_Journal_Master_Proposal) paMaster.get(masterRow);
+    }
+    
     /*Search Master References*/
     public JSONObject SearchIndustry(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Industry object = new ParamControllers(poGRider, logwrapr).Industry();
@@ -388,12 +465,16 @@ public class JournalProposal extends Transaction {
         return poJSON;
     }
 
-    public JSONObject SearchDepartment(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+    public JSONObject SearchDepartment(String value, boolean byCode, boolean fbSearch) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Department object = new ParamControllers(poGRider, logwrapr).Department();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
-            Master().setDepartmentId(object.getModel().getDepartmentId());
+            if(fbSearch){
+                psDepartmentName = object.getModel().getDescription();
+            } else {
+                Master().setDepartmentId(object.getModel().getDepartmentId());
+            }
         }
 
         return poJSON;
@@ -614,7 +695,28 @@ public class JournalProposal extends Transaction {
 
     @Override
     public void initSQL() {
-        SQL_BROWSE = "";
+        SQL_BROWSE = " SELECT 	" +
+                    "  a.sTransNox,  " +
+                    "	a.sIndstCdx,  " +
+                    "	a.sCompnyCd,  " +
+                    "	a.dTransact,  " +
+                    "	a.sRemarksx,  " +
+                    "	a.sActPerID,  " +
+                    "	a.sBranchCd,  " +
+                    "	a.sDeptIDxx,  " +
+                    "	a.sSourceCD,  " +
+                    "	a.sSourceNo,  " +
+                    "	a.nEntryNox,  " +
+                    "	a.cTranStat, " +
+                    "	b.sDescript AS sIndustry, " +
+                    "	c.sCompnyNm AS sCompnyNm, " +
+                    "	d.sBranchNm AS sBranchNm, " +
+                    "	e.sDeptName AS sDeptName " +
+                    "	FROM Journal_Master_Proposal a " +
+                    "	LEFT JOIN Industry b ON b.sIndstCdx = a.sIndstCdx	 " +
+                    "	LEFT JOIN Company c ON c.sCompnyID = a.sCompnyCd	 " +
+                    "	LEFT JOIN Branch d ON d.sBranchCd = a.sBranchCd	 " +
+                    "	LEFT JOIN Department e ON e.sDeptIDxx = a.sDeptIDxx	 " ;
     }
 
     @Override
@@ -745,4 +847,128 @@ public class JournalProposal extends Transaction {
         String date = sdf.format(fdValue);
         return date;
     }
+    
+    public void ShowStatusHistory() throws SQLException, GuanzonException, Exception{
+        CachedRowSet crs = getStatusHistory();
+        
+        crs.beforeFirst();
+        
+        while(crs.next()){
+            switch (crs.getString("cRefrStat")){
+                case "":
+                    crs.updateString("cRefrStat", "-");
+                    break;
+                case JournalProposalStatus.OPEN:
+                    crs.updateString("cRefrStat", "OPEN");
+                    break;
+                case JournalProposalStatus.CONFIRMED:
+                    crs.updateString("cRefrStat", "CONFIRMED");
+                    break;
+                case JournalProposalStatus.CANCELLED:
+                    crs.updateString("cRefrStat", "CANCELLED");
+                    break;
+                case JournalProposalStatus.VOID:
+                    crs.updateString("cRefrStat", "VOID");
+                    break;
+                case JournalProposalStatus.RETURNED:
+                    crs.updateString("cRefrStat", "RETURNED");
+                    break;
+                default:
+                    char ch = crs.getString("cRefrStat").charAt(0);
+                    String stat = String.valueOf((int) ch - 64);
+                    
+                    switch (stat){
+                        case JournalProposalStatus.OPEN:
+                            crs.updateString("cRefrStat", "OPEN");
+                            break;
+                        case JournalProposalStatus.CONFIRMED:
+                            crs.updateString("cRefrStat", "CONFIRMED");
+                            break;
+                        case JournalProposalStatus.CANCELLED:
+                            crs.updateString("cRefrStat", "CANCELLED");
+                            break;
+                        case JournalProposalStatus.VOID:
+                            crs.updateString("cRefrStat", "VOID");
+                            break;
+                        case JournalProposalStatus.RETURNED:
+                            crs.updateString("cRefrStat", "RETURNED");
+                            break;
+                    }
+            }
+            crs.updateRow(); 
+        }
+        
+        JSONObject loJSON  = getEntryBy();
+        String entryBy = "";
+        String entryDate = "";
+        
+        if ("success".equals((String) loJSON.get("result"))){
+            entryBy = (String) loJSON.get("sCompnyNm");
+            entryDate = (String) loJSON.get("sEntryDte");
+        }
+        
+        showStatusHistoryUI("Journal Proposal", (String) poMaster.getValue("sTransNox"), entryBy, entryDate, crs);
+    }
+    
+    public JSONObject getEntryBy() throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsEntry = "";
+        String lsEntryDate = "";
+        String lsSQL =  " SELECT b.sModified, b.dModified " 
+                        + " FROM Disbursement_Master a "
+                        + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
+        lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
+        System.out.println("Execute SQL : " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                if(loRS.getString("sModified") != null && !"".equals(loRS.getString("sModified"))){
+                    if(loRS.getString("sModified").length() > 10){
+                        lsEntry = getSysUser(poGRider.Decrypt(loRS.getString("sModified"))); 
+                    } else {
+                        lsEntry = getSysUser(loRS.getString("sModified")); 
+                    }
+                    // Get the LocalDateTime from your result set
+                    LocalDateTime dModified = loRS.getObject("dModified", LocalDateTime.class);
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MM-dd-yyyy HH:mm:ss");
+                    lsEntryDate =  dModified.format(formatter);
+                }
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+          return poJSON;
+        } 
+        
+        poJSON.put("result", "success");
+        poJSON.put("sCompnyNm", lsEntry);
+        poJSON.put("sEntryDte", lsEntryDate);
+        return poJSON;
+    }
+    
+    public String getSysUser(String fsId) throws SQLException, GuanzonException {
+        String lsEntry = "";
+        String lsSQL =   " SELECT b.sCompnyNm from xxxSysUser a " 
+                       + " LEFT JOIN Client_Master b ON b.sClientID = a.sEmployNo ";
+        lsSQL = MiscUtil.addCondition(lsSQL, " a.sUserIDxx =  " + SQLUtil.toSQL(fsId)) ;
+        System.out.println("SQL " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+          if (MiscUtil.RecordCount(loRS) > 0L) {
+            if (loRS.next()) {
+                lsEntry = loRS.getString("sCompnyNm");
+            } 
+          }
+          MiscUtil.close(loRS);
+        } catch (SQLException e) {
+          poJSON.put("result", "error");
+          poJSON.put("message", e.getMessage());
+        } 
+        return lsEntry;
+    }
+    
 }
