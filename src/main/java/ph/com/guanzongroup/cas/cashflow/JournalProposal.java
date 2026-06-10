@@ -429,6 +429,26 @@ public class JournalProposal extends Transaction {
         return paDetail.size();
     }
     
+    public Double getTotalDebitAmount(){
+        double ldblDebitAmt = 0.0000;
+        for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
+            if(Detail(lnCtr).isReverse()){
+                ldblDebitAmt = Detail(lnCtr).getDebitAmount();
+            }
+        }
+        return ldblDebitAmt;
+    }
+    
+    public Double getTotalCreditAmount(){
+        double ldblCreditAmt = 0.0000;
+        for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
+            if(Detail(lnCtr).isReverse()){
+                ldblCreditAmt = Detail(lnCtr).getCreditAmount();
+            }
+        }
+        return ldblCreditAmt;
+    }
+    
 //    public void ReloadDetail() throws CloneNotSupportedException, SQLException{
 //        int lnCtr = getDetailCount() - 1;
 //        while (lnCtr >= 0) {
