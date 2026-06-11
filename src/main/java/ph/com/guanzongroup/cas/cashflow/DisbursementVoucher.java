@@ -4049,6 +4049,9 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
 
     JournalProposal proposal = JournalProposal(getJournalProposalList().size() - 1);
     proposal.NewTransaction();
+    proposal.Master().setTransactionDate(poGRider.getServerDate());
+    proposal.Master().setCompanyId(Master().getCompanyID());
+    proposal.Master().setIndustryCode(Master().getIndustryID());
     proposal.ReloadDetail();
 }
     
@@ -4850,6 +4853,35 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             }
             System.out.println("-----------------------------------------------------------------------");
             
+            System.out.println("--------------------------SAVE JOURNAL PROPOSAL---------------------------------------------");
+            if(getJournalProposalList() != null){
+                for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
+                        if(JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 || JournalProposal(lnCtr).getTotalCreditAmount() > 0.0000){
+                            poJSON = JournalProposal(lnCtr).validateJournalProposal();
+                            boolean lbContinue = (boolean) poJSON.get("continue");
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", poJSON.get("message").toString());
+                                return poJSON;
+                            } 
+                            if(lbContinue){
+                                JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
+                                JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
+                                JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                                JournalProposal(lnCtr).setWithParent(true);
+                                poJSON = JournalProposal(lnCtr).SaveTransaction();
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                    return poJSON;
+                                }
+                            }
+                        }
+                    } 
+                }
+            } 
+            System.out.println("-----------------------------------------------------------------------");
+            
             //Save Journal
             System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
             if(poJournal != null){
@@ -4887,42 +4919,6 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
 //                }
             }
             System.out.println("-----------------------------------------------------------------------");
-            
-            System.out.println("--------------------------SAVE JOURNAL PROPOSAL---------------------------------------------");
-            if(getJournalProposalList() != null){
-                for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
-                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
-                        poJSON = JournalProposal(lnCtr).validateJournalProposal();
-                        boolean lbContinue = (boolean) poJSON.get("continue");
-                        if ("error".equals((String) poJSON.get("result"))) {
-                            poJSON.put("result", "error");
-                            poJSON.put("message", poJSON.get("message").toString());
-                            return poJSON;
-                        } 
-                        if(lbContinue){
-                            JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
-                            JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
-                            JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
-                            JournalProposal(lnCtr).setWithParent(true);
-                            poJSON = JournalProposal(lnCtr).SaveTransaction();
-                            if ("error".equals((String) poJSON.get("result"))) {
-                                System.out.println("Save Journal Proposal : " + poJSON.get("message"));
-                                return poJSON;
-                            }
-                        }
-                    } else {
-    //                    if (poGRider.getUserLevel() > UserRight.ENCODER) {
-    //                        poJSON.put("result", "error");
-    //                        poJSON.put("message", "Invalid Update mode for Journal.");
-    //                        return poJSON;
-    //                    }
-                    }
-                
-                
-                }
-            } 
-            System.out.println("-----------------------------------------------------------------------");
-            
             
             poJSON = updatePaymentsStatus();
             if ("error".equals((String) poJSON.get("result"))) {
