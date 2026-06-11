@@ -64,6 +64,7 @@ import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.swing.JRViewer;
 import net.sf.jasperreports.swing.JRViewerToolbar;
 import net.sf.jasperreports.view.JasperViewer;
+import org.apache.commons.lang3.StringUtils;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -2362,24 +2363,43 @@ public class DisbursementVoucher extends Transaction {
         return poJSON;
     }
     
-     /**
+    /**
     * Checks if an account code already exists in the journal proposal details.
     *
     * @param fnJEProposalRow      current row index of JE Proposal
-    * @param fnRow      current row index
-    * @param fsAcctCode account code to validate
+     * @param fsBranch
+     * @param fsDept
     * @return JSONObject indicating if duplicate exists or not
     */
-    public JSONObject checkJEProposalExistAcctCode(int fnJEProposalRow, int fnRow, String fsAcctCode){
+    public JSONObject checkJEPExistBranchDept(int fnJEProposalRow, String fsOrigBranchCode, String fsOrigDeptId) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
+        String lbBranch = "";
+        String lbDepartment = "";
+        int lnRow = 0;
 
-        for(int lnCtr = 0;lnCtr <= paJournalProposal.get(fnJEProposalRow).getDetailCount()-1; lnCtr++){
-            if(fsAcctCode.equals(paJournalProposal.get(fnJEProposalRow).Detail(lnCtr).getAccountCode()) && fnRow != lnCtr){
-                poJSON.put("row", lnCtr);
-                poJSON.put("result", "error");
-                poJSON.put("message", "Account code " + fsAcctCode + " already exists at row " + (lnCtr+1) + ".");
-                paJournalProposal.get(fnJEProposalRow).Detail(fnRow).setAccountCode("");
-                return poJSON;
+        for(int lnCtr = 0;lnCtr < getJournalProposalList().size() ; lnCtr++){
+            lnRow++;
+            if((fnJEProposalRow == lnCtr || JournalProposalStatus.VOID.equals(JournalProposal(lnCtr).Master()))
+                || JournalProposalStatus.CANCELLED.equals(JournalProposal(lnCtr).Master())    
+                ){
+            } else {
+                lbBranch = JournalProposal(lnCtr).Master().getBranchCode();
+                lbDepartment = JournalProposal(lnCtr).Master().getDepartmentId();
+                
+                if(lbBranch != null && !"".equals(lbBranch)){
+                    if(lbBranch.equals(JournalProposal(fnJEProposalRow).Master().getBranchCode())){
+                        if(lbDepartment != null && !"".equals(lbDepartment)){
+                            if(lbDepartment.equals(JournalProposal(fnJEProposalRow).Master().getDepartmentId())){
+                                poJSON.put("row", lnCtr);
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Branch " + JournalProposal(fnJEProposalRow).Master().Branch().getBranchName() + " and Deparment " + JournalProposal(fnJEProposalRow).Master().Department().getDescription() + " already exist at row " + lnRow);
+                                paJournalProposal.get(fnJEProposalRow).Master().setBranchCode(fsOrigBranchCode);
+                                paJournalProposal.get(fnJEProposalRow).Master().setDepartmentId(fsOrigDeptId);
+                                return poJSON;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -3868,6 +3888,7 @@ public class DisbursementVoucher extends Transaction {
         resetOtherPayment();
         Detail().clear();
         WTaxDeduction().clear();
+        getJournalProposalList().clear();
         paAttachments = new ArrayList<>();
         
         setSearchIndustry("");
@@ -3996,14 +4017,15 @@ public class DisbursementVoucher extends Transaction {
             if (JournalProposal(lnCtr) == null ) {
                getJournalProposalList().remove(lnCtr);
             } else {
-                if((JournalProposal(lnCtr).Master().getBranchCode() == null || "".equals(JournalProposal(lnCtr).Master().getBranchCode()))
-                   && (JournalProposal(lnCtr).Master().getDepartmentId() == null || "".equals(JournalProposal(lnCtr).Master().getDepartmentId())  )
-                   && JournalProposal(lnCtr).getTotalDebitAmount() == 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount() == 0.0000         
-                        ){
-                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
-                        getJournalProposalList().remove(lnCtr);
-                    } 
-                }
+//                if((JournalProposal(lnCtr).Master().getBranchCode() == null || "".equals(JournalProposal(lnCtr).Master().getBranchCode()))
+//                   && (JournalProposal(lnCtr).Master().getDepartmentId() == null || "".equals(JournalProposal(lnCtr).Master().getDepartmentId())  )
+//                   && JournalProposal(lnCtr).getTotalDebitAmount() == 0.0000 
+//                    && JournalProposal(lnCtr).getTotalCreditAmount() == 0.0000         
+//                        ){
+//                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                        getJournalProposalList().remove(lnCtr);
+//                    } 
+//                }
 //                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
 //                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
 //                    
@@ -4022,10 +4044,17 @@ public class DisbursementVoucher extends Transaction {
         } else {
             if ((getJournalProposalList().size() - 1) >= 0) {
                 lnCtr = getJournalProposalList().size() - 1;
+                
+                boolean hasEmptyBranchOrDepartment = getJournalProposalList().stream()
+                .anyMatch(jp ->
+                    StringUtils.isBlank(jp.Master().getBranchCode()) ||
+                    StringUtils.isBlank(jp.Master().getDepartmentId())
+                );
+                
                 if(JournalProposal(lnCtr).Master().getBranchCode() != null && !"".equals(JournalProposal(lnCtr).Master().getBranchCode())
                    && JournalProposal(lnCtr).Master().getDepartmentId() != null && !"".equals(JournalProposal(lnCtr).Master().getDepartmentId())  
                    && JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount()> 0.0000         
-                        ){
+                   && !hasEmptyBranchOrDepartment ){
                     if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
                         createNewJournalProposal();
                     }
@@ -4060,6 +4089,8 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     proposal.Master().setTransactionDate(poGRider.getServerDate());
     proposal.Master().setCompanyId(Master().getCompanyID());
     proposal.Master().setIndustryCode(Master().getIndustryID());
+    proposal.Master().setSourceNo(Master().getTransactionNo());
+    proposal.Master().setSourceCode(getSourceCode());
     proposal.ReloadDetail();
 }
     
