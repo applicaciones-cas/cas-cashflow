@@ -6511,10 +6511,14 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                     + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                    + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.VOID)
-                    + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.CANCELLED)
-
             );
+                  
+            if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+                && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+                lsSQL = lsSQL + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.VOID)
+                              + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.CANCELLED);
+            }
+            
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             boolean lbExist = false;
