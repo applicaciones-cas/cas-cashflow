@@ -493,7 +493,7 @@ public class JournalProposal extends Transaction {
         double ldblDebitAmt = 0.0000;
         for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
             if(Detail(lnCtr).isReverse()){
-                ldblDebitAmt = Detail(lnCtr).getDebitAmount();
+                ldblDebitAmt += Detail(lnCtr).getDebitAmount();
             }
         }
         return ldblDebitAmt;
@@ -503,7 +503,7 @@ public class JournalProposal extends Transaction {
         double ldblCreditAmt = 0.0000;
         for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
             if(Detail(lnCtr).isReverse()){
-                ldblCreditAmt = Detail(lnCtr).getCreditAmount();
+                ldblCreditAmt += Detail(lnCtr).getCreditAmount();
             }
         }
         return ldblCreditAmt;

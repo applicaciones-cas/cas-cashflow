@@ -3996,6 +3996,12 @@ public class DisbursementVoucher extends Transaction {
             if (JournalProposal(lnCtr) == null ) {
                getJournalProposalList().remove(lnCtr);
             } else {
+                if((JournalProposal(lnCtr).Master().getBranchCode() == null || "".equals(JournalProposal(lnCtr).Master().getBranchCode()))
+                   && (JournalProposal(lnCtr).Master().getDepartmentId() == null || "".equals(JournalProposal(lnCtr).Master().getDepartmentId())  )
+                   && JournalProposal(lnCtr).getTotalDebitAmount() == 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount() == 0.0000         
+                        ){
+                    getJournalProposalList().remove(lnCtr);
+                }
 //                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
 //                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
 //                    
