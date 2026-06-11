@@ -155,7 +155,7 @@ public class JournalProposal extends Transaction {
         }
         
         //change status
-        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false, true);
+        poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false,pbWthParent);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }

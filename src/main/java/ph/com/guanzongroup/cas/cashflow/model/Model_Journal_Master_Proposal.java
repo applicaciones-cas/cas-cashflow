@@ -14,7 +14,6 @@ import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Model_Journal_Master_Proposal extends Model {
@@ -48,6 +47,8 @@ public class Model_Journal_Master_Proposal extends Model {
             ID = poEntity.getMetaData().getColumnLabel(1);
             
             ParamModels model = new ParamModels(poGRider);
+            poIndustry = model.Industry();
+            poCompany = model.Company();
             poBranch = model.Branch();
             poDepartment = model.Department();   
             
@@ -200,12 +201,12 @@ public class Model_Journal_Master_Proposal extends Model {
     }
     
     public Model_Company Company() throws SQLException, GuanzonException{
-        if (!"".equals((String) getValue("sCompnyID"))){
+        if (!"".equals((String) getValue("sCompnyCd"))){
             if (poCompany.getEditMode() == EditMode.READY && 
-                poCompany.getCompanyId().equals((String) getValue("sCompnyID")))
+                poCompany.getCompanyId().equals((String) getValue("sCompnyCd")))
                 return poCompany;
             else{
-                poJSON = poCompany.openRecord((String) getValue("sCompnyID"));
+                poJSON = poCompany.openRecord((String) getValue("sCompnyCd"));
 
                 if ("success".equals((String) poJSON.get("result")))
                     return poCompany;
