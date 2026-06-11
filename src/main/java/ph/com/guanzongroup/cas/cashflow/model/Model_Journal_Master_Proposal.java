@@ -23,7 +23,7 @@ public class Model_Journal_Master_Proposal extends Model {
     Model_Department poDepartment;
     Model_Disbursement_Master poDisbursement;
     
-    boolean pbReverse = false;
+    boolean pbReverse = true;
     
     @Override
     public void initialize() {
