@@ -23,6 +23,8 @@ public class Model_Journal_Master_Proposal extends Model {
     Model_Department poDepartment;
     Model_Disbursement_Master poDisbursement;
     
+    boolean pbReverse = false;
+    
     @Override
     public void initialize() {
         try {
@@ -172,6 +174,14 @@ public class Model_Journal_Master_Proposal extends Model {
 
     public Date getModifiedDate() {
         return (Date) getValue("dModified");
+    }
+    
+    public void isReverse(boolean isReverse) {
+        pbReverse = isReverse;
+    }
+
+    public boolean isReverse() {
+        return pbReverse;
     }
     
     @Override
