@@ -551,25 +551,29 @@ public class JournalProposal extends Transaction {
             if (Detail(lnCtr).getAccountCode() == null || "".equals(Detail(lnCtr).getAccountCode())) {
                 Detail().remove(lnCtr);
             } else {
-                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Detail(lnCtr).getDebitAmount() <= 0.0000
-                        && Detail(lnCtr).getCreditAmount() <= 0.0000){
-                        Detail().remove(lnCtr);
-                    }
-                }
+//                if(Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    if(Detail(lnCtr).getDebitAmount() <= 0.0000 && Detail(lnCtr).getCreditAmount() <= 0.0000){
+//                        Detail().remove(lnCtr);
+//                    }
+//                }
             }
             lnCtr--;
         }
         if ((getDetailCount() - 1) >= 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())
-                && (Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-                AddDetail();
-                Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-            }
+            if (Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Detail(getDetailCount() - 1).getAccountCode())){
+                if(((Detail(getDetailCount() - 1).getDebitAmount() <= 0.0000 && Detail(getDetailCount() - 1).getCreditAmount() <= 0.0000)
+                    && Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE)
+                    || 
+                    ((Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)
+                    && (Detail(getDetailCount() - 1).getEditMode() == EditMode.ADDNEW || Detail(getDetailCount() - 1).getEditMode() == EditMode.UPDATE))){
+                    AddDetail();
+                    Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
+                } 
+            }  
         }
         if ((getDetailCount() - 1) < 0) {
             AddDetail();
-            Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+            Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
         }
     
     }
