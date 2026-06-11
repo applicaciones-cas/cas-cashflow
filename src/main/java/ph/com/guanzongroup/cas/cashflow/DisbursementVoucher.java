@@ -3630,18 +3630,18 @@ public class DisbursementVoucher extends Transaction {
     * @return Journal instance
     */
     public JournalProposal JournalProposal(int fnRow){
-        try{
+//        try{
             if(paJournalProposal == null){
                 paJournalProposal = new ArrayList<JournalProposal>();
             }
-            
-            if (paJournalProposal.get(fnRow) == null) {
-                paJournalProposal.add(fnRow, new CashflowControllers(poGRider, logwrapr).JournalProposal());
-                paJournalProposal.get(fnRow).InitTransaction();
-            }
-        } catch (SQLException | GuanzonException ex) {
-            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
-        }
+//            System.out.println("Array : " + paJournalProposal);
+//            if (paJournalProposal.get(fnRow) == null) {
+//                paJournalProposal.add(fnRow, new CashflowControllers(poGRider, logwrapr).JournalProposal());
+//                paJournalProposal.get(fnRow).InitTransaction();
+//            }
+//        } catch (SQLException | GuanzonException ex) {
+//            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+//        }
         return paJournalProposal.get(fnRow);
     }
     
@@ -4000,7 +4000,9 @@ public class DisbursementVoucher extends Transaction {
                    && (JournalProposal(lnCtr).Master().getDepartmentId() == null || "".equals(JournalProposal(lnCtr).Master().getDepartmentId())  )
                    && JournalProposal(lnCtr).getTotalDebitAmount() == 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount() == 0.0000         
                         ){
-                    getJournalProposalList().remove(lnCtr);
+                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+                        getJournalProposalList().remove(lnCtr);
+                    } 
                 }
 //                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
 //                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
@@ -6484,10 +6486,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         }
                     }  
                 }
-            }
+            } 
             MiscUtil.close(loRS);
         }
-
+        
         poJSON.put("result", "success");
         poJSON.put("message", "No record to load");
         return poJSON;
