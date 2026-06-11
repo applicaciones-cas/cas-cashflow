@@ -4896,24 +4896,57 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             if(getJournalProposalList() != null){
                 for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
                     if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
-                        if(JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 || JournalProposal(lnCtr).getTotalCreditAmount() > 0.0000){
-                            poJSON = JournalProposal(lnCtr).validateJournalProposal();
-                            boolean lbContinue = (boolean) poJSON.get("continue");
-                            if ("error".equals((String) poJSON.get("result"))) {
-                                poJSON.put("result", "error");
-                                poJSON.put("message", poJSON.get("message").toString());
-                                return poJSON;
-                            } 
-                            if(lbContinue){
-                                JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
-                                JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
-                                JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
-                                JournalProposal(lnCtr).setWithParent(true);
-                                poJSON = JournalProposal(lnCtr).SaveTransaction();
+                        if(JournalProposal(lnCtr).Master().isReverse()){
+                            if(JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 || JournalProposal(lnCtr).getTotalCreditAmount() > 0.0000){
+                                poJSON = JournalProposal(lnCtr).validateJournalProposal();
+                                boolean lbContinue = (boolean) poJSON.get("continue");
                                 if ("error".equals((String) poJSON.get("result"))) {
-                                    System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                    poJSON.put("result", "error");
+                                    poJSON.put("message", poJSON.get("message").toString());
                                     return poJSON;
+                                } 
+                                if(lbContinue){
+                                    JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
+                                    JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
+                                    JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                                    JournalProposal(lnCtr).setWithParent(true);
+                                    poJSON = JournalProposal(lnCtr).SaveTransaction();
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                        return poJSON;
+                                    }
                                 }
+                            }
+                        } else {
+                            JournalProposal loObj = new CashflowControllers(poGRider, logwrapr).JournalProposal();
+                            poJSON = loObj.InitTransaction();
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                return poJSON;
+                            }
+                            poJSON = loObj.OpenTransaction(JournalProposal(lnCtr).Master().getTransactionNo());
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                return poJSON;
+                            }
+                            loObj.setWithParent(true);
+                            loObj.setWithUI(false);
+                            switch(loObj.Master().getTransactionStatus()){
+                                case JournalProposalStatus.OPEN:
+                                    poJSON = loObj.VoidTransaction("");
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        System.out.println("Void Journal Proposal : " + poJSON.get("message"));
+                                        return poJSON;
+                                    }
+                                break;
+                                case JournalProposalStatus.CONFIRMED:
+                                default:
+                                    poJSON = loObj.CancelTransaction("");
+                                    if ("error".equals((String) poJSON.get("result"))) {
+                                        System.out.println("Cancel Journal Proposal : " + poJSON.get("message"));
+                                        return poJSON;
+                                    }
+                                break;
                             }
                         }
                     } 
@@ -6503,16 +6536,17 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
 
                         if(!lbExist){
                             AddJournalProposal();
-                            poJSON = JournalProposal(getJournalProposalList().size() - 1).OpenTransaction(loRS.getString("sTransNox"));
+                            lnCtr = getJournalProposalList().size() - 1;
+                            poJSON = JournalProposal(lnCtr).OpenTransaction(loRS.getString("sTransNox"));
                             if("error".equals((String) poJSON.get("result"))){
                                 return poJSON;
                             }
-                        } else {
-                            if(getEditMode() == EditMode.UPDATE && JournalProposal(lnCtr).getEditMode() == EditMode.READY){
-                                poJSON = JournalProposal(getJournalProposalList().size() - 1).UpdateTransaction();
-                                if("error".equals((String) poJSON.get("result"))){
-                                    return poJSON;
-                                }
+                        }
+                        
+                        if(getEditMode() == EditMode.UPDATE && JournalProposal(lnCtr).getEditMode() == EditMode.READY){
+                            poJSON = JournalProposal(getJournalProposalList().size() - 1).UpdateTransaction();
+                            if("error".equals((String) poJSON.get("result"))){
+                                return poJSON;
                             }
                         }
                     }  

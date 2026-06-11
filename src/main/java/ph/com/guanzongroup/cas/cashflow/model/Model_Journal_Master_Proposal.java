@@ -2,6 +2,8 @@ package ph.com.guanzongroup.cas.cashflow.model;
 
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.MiscUtil;
@@ -14,6 +16,7 @@ import org.guanzon.cas.parameter.model.Model_Industry;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
+import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
 import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 
 public class Model_Journal_Master_Proposal extends Model {
@@ -178,6 +181,27 @@ public class Model_Journal_Master_Proposal extends Model {
     
     public void isReverse(boolean isReverse) {
         pbReverse = isReverse;
+        if(!isReverse){
+            switch(getTransactionStatus()){
+                case JournalProposalStatus.OPEN:
+                    setTransactionStatus(JournalProposalStatus.VOID);
+                break;
+                case JournalProposalStatus.CONFIRMED:
+                default:
+                    setTransactionStatus(JournalProposalStatus.CANCELLED);
+                break;
+            }
+        } else {
+            try {
+                //get the original journal proposal status
+                Model_Journal_Master_Proposal lobj = new CashflowModels(poGRider).Journal_Master_Proposal();
+                lobj.initialize();
+                lobj.openRecord(getTransactionNo());
+                setTransactionStatus(lobj.getTransactionStatus());
+            } catch (SQLException | GuanzonException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+            }
+        }
     }
 
     public boolean isReverse() {
