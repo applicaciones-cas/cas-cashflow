@@ -3952,34 +3952,34 @@ public class DisbursementVoucher extends Transaction {
     * @throws CloneNotSupportedException if cloning fails
     * @throws SQLException if a database error occurs
     */
-    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
-        int lnCtr = Journal().getDetailCount() - 1;
-        while (lnCtr >= 0) {
-            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
-                Journal().Detail().remove(lnCtr);
-            } else {
-                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
-                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
-                        Journal().Detail().remove(lnCtr);
-                    }
-                }
-            }
-            lnCtr--;
-        }
-        if ((Journal().getDetailCount() - 1) >= 0) {
-            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
-                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
-                Journal().AddDetail();
-                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-            }
-        }
-        if ((Journal().getDetailCount() - 1) < 0) {
-            Journal().AddDetail();
-            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
-        }
-    
-    }
+//    public void ReloadJournal() throws CloneNotSupportedException, SQLException{
+//        int lnCtr = Journal().getDetailCount() - 1;
+//        while (lnCtr >= 0) {
+//            if (Journal().Detail(lnCtr).getAccountCode() == null || "".equals(Journal().Detail(lnCtr).getAccountCode())) {
+//                Journal().Detail().remove(lnCtr);
+//            } else {
+//                if(Journal().Detail(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    if(Journal().Detail(lnCtr).getDebitAmount() <= 0.0000
+//                        && Journal().Detail(lnCtr).getCreditAmount() <= 0.0000){
+//                        Journal().Detail().remove(lnCtr);
+//                    }
+//                }
+//            }
+//            lnCtr--;
+//        }
+//        if ((Journal().getDetailCount() - 1) >= 0) {
+//            if (Journal().Detail(getDetailCount() - 1).getAccountCode() != null && !"".equals(Journal().Detail(getDetailCount() - 1).getAccountCode())
+//                && (Journal().Detail(getDetailCount() - 1).getDebitAmount() > 0.0000 || Journal().Detail(getDetailCount() - 1).getCreditAmount() > 0.0000)) {
+//                Journal().AddDetail();
+//                Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//            }
+//        }
+//        if ((Journal().getDetailCount() - 1) < 0) {
+//            Journal().AddDetail();
+//            Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
+//        }
+//    
+//    }
     
     /**
     * Cleans journal details by removing invalid or empty entries,
@@ -3996,13 +3996,13 @@ public class DisbursementVoucher extends Transaction {
             if (JournalProposal(lnCtr) == null ) {
                getJournalProposalList().remove(lnCtr);
             } else {
-                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
-                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
-                    
-                    if(loJEPDetail.getDebitAmount() <= 0.0000 && loJEPDetail.getCreditAmount() <= 0.0000){
-                        getJournalProposalList().remove(lnCtr);
-                    }
-                }
+//                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+//                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
+//                    
+//                    if(loJEPDetail.getDebitAmount() <= 0.0000 && loJEPDetail.getCreditAmount() <= 0.0000){
+//                        getJournalProposalList().remove(lnCtr);
+//                    }
+//                }
             }
             lnCtr--;
         }
@@ -4014,20 +4014,31 @@ public class DisbursementVoucher extends Transaction {
         } else {
             if ((getJournalProposalList().size() - 1) >= 0) {
                 lnCtr = getJournalProposalList().size() - 1;
-                if(JournalProposal(lnCtr).getEditMode() != EditMode.ADDNEW){
-                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
-                    if (loJEPDetail.getAccountCode() != null && !"".equals(loJEPDetail.getAccountCode())
-                        && (loJEPDetail.getDebitAmount() > 0.0000 || loJEPDetail.getCreditAmount() > 0.0000)) {
-                        createNewJournalProposal();
-                    }
-                } else {
+                if(JournalProposal(lnCtr).Master().getBranchCode() != null && !"".equals(JournalProposal(lnCtr).Master().getBranchCode())
+                   && JournalProposal(lnCtr).Master().getDepartmentId() != null && !"".equals(JournalProposal(lnCtr).Master().getDepartmentId())  
+                   && JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount()> 0.0000         
+                        ){
                     if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
                         createNewJournalProposal();
                     }
                 }
+                
+//                if(JournalProposal(lnCtr).getEditMode() != EditMode.ADDNEW){
+//                    loJEPDetail = JournalProposal(lnCtr).Detail(JournalProposal(lnCtr).getDetailCount() - 1);
+//                    if (loJEPDetail.getAccountCode() != null && !"".equals(loJEPDetail.getAccountCode())
+//                        && (loJEPDetail.getDebitAmount() > 0.0000 || loJEPDetail.getCreditAmount() > 0.0000)) {
+//                        createNewJournalProposal();
+//                    }
+//                } else {
+//                    if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+//                        createNewJournalProposal();
+//                    }
+//                }
             }
             if ((getJournalProposalList().size() - 1) < 0) {
-                createNewJournalProposal();
+                if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                    createNewJournalProposal();
+                }
             }
         }
     }
