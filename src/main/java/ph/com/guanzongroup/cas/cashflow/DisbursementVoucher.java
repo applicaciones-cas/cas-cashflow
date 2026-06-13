@@ -118,6 +118,7 @@ import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
+import ph.com.guanzongroup.cas.cashflow.status.JournalStatus;
 import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
@@ -951,6 +952,11 @@ public class DisbursementVoucher extends Transaction {
             return poJSON;
         }
         
+        poJSON = verifyJournals(lsStatus,false);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         //Check Department Section
         String lsUserId = poGRider.getUserID();
 //        poJSON = callApproval();
@@ -1012,6 +1018,11 @@ public class DisbursementVoucher extends Transaction {
         //validator
         poJSON = isEntryOkay(lsStatus);
         if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        poJSON = verifyJournals(lsStatus,false);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
                  
@@ -1139,6 +1150,11 @@ public class DisbursementVoucher extends Transaction {
             if (!"success".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
+        
+            poJSON = verifyJournals(lsStatus,false);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
 
             poGRider.beginTrans("UPDATE STATUS", "CertifyTransaction", SOURCE_CODE, Master().getTransactionNo());
 
@@ -1229,6 +1245,11 @@ public class DisbursementVoucher extends Transaction {
             //validator
             poJSON = isEntryOkay(lsStatus);
             if (!"success".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+        
+            poJSON = verifyJournals(lsStatus,false);
+            if ("error".equals((String) poJSON.get("result"))) {
                 return poJSON;
             }
 
@@ -4316,6 +4337,66 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         return poJSON;
     }
     
+    private JSONObject verifyJournals(String fsStatus, boolean fbIsWillSave){
+        boolean lbCheckJEP = false;
+        switch(fsStatus){
+            case DisbursementStatic.VERIFIED:
+            case DisbursementStatic.APPROVED:
+            case DisbursementStatic.CERTIFIED:
+            case DisbursementStatic.AUTHORIZED:
+                if(poJournal != null){
+                    if(fbIsWillSave){
+                        if(poJournal.getEditMode() != EditMode.ADDNEW && poJournal.getEditMode() != EditMode.UPDATE){
+                            lbCheckJEP = true;
+                        } else {
+                            
+                        }
+                    } else {
+                        if(poJournal.getEditMode() != EditMode.READY){
+                            lbCheckJEP = true;
+                        }
+                    }
+                } else {
+                    lbCheckJEP = true;
+                }
+                 
+                //Check Journal Proposal  
+                if(lbCheckJEP){
+                    //Check Journal Proposal
+                    if(getJournalProposalList() != null){
+                        if(getJournalProposalList().isEmpty()){
+                            poJSON.put("result", "error" );
+                            poJSON.put("message", "Journal cannot be empty." );
+                            return poJSON;
+                        }
+                        JournalProposal loObj = JournalProposal(getJournalProposalList().size()-1);
+                        if(fbIsWillSave){
+                            if(loObj.getEditMode() != EditMode.ADDNEW && loObj.getEditMode() != EditMode.UPDATE){
+                                poJSON.put("result", "error" );
+                                poJSON.put("message", "Invalid update mode for journal." );
+                                return poJSON;
+                            }
+                        } else {
+                            if(loObj.getEditMode() != EditMode.READY){
+                                poJSON.put("result", "error" );
+                                poJSON.put("message", "Invalid update mode for journal." );
+                                return poJSON;
+                            }
+                        }
+                    } else {
+                        poJSON.put("result", "error" );
+                        poJSON.put("message", "Journal cannot be empty." );
+                        return poJSON;
+                    }
+                }
+                 
+                break;
+        }
+        
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+    
     /**
     * Validates and prepares disbursement data before saving.
     * Performs field validation, recomputation, and change detection
@@ -4343,26 +4424,9 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             Master().setVoucherNo(getVoucherNo());
         }
         
-        switch(Master().getTransactionStatus()){
-            case DisbursementStatic.VERIFIED:
-            case DisbursementStatic.APPROVED:
-            case DisbursementStatic.CERTIFIED:
-            case DisbursementStatic.AUTHORIZED:
-                 if(poJournal != null){
-                    if(poJournal.getEditMode() != EditMode.ADDNEW && poJournal.getEditMode() != EditMode.UPDATE){
-                        poJSON.put("result", "error" );
-                        poJSON.put("message", "Invalid update mode for journal." );
-                        return poJSON;
-                    }
-                } else {
-                    poJSON.put("result", "error" );
-                    poJSON.put("message", "Journal cannot be empty." );
-                    return poJSON;
-                }
-                 
-                //Check Journal Proposal  
-                 
-                break;
+        poJSON = verifyJournals(Master().getTransactionStatus(),true);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
         }
         
         poJSON = isEntryOkay(Master().getTransactionStatus());
@@ -4569,6 +4633,34 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         }
                     }
                 }
+                
+                //Check Journal Proposal
+                lbUpdated = loRecord.getJournalProposalList().size() == (getJournalProposalList().size() - 1);
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr < loRecord.getJournalProposalList().size() ; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalDebitAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalCreditAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                        
+                        for (int lnRow = 0; lnRow < loRecord.JournalProposal(lnCtr).getDetailCount(); lnRow++) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnCtr).getDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnCtr).getDebitAmount())));
+                            if (lbUpdated) {
+                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnCtr).getCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnCtr).getCreditAmount())));
+                            }
+                            if (lbUpdated) {
+                                lbUpdated = (Objects.equals(loRecord.JournalProposal(lnCtr).Detail(lnCtr).getAccountCode(), JournalProposal(lnCtr).Detail(lnCtr).getAccountCode()));
+                            }
+                            if (!lbUpdated) {
+                                break;
+                            }
+                        }
+                        
+                    }
+                }
                 //Check Witholding Tax
                 if (lbUpdated) {
                     for (int lnCtr = 0; lnCtr <= loRecord.getWTaxDeductionsCount() - 1; lnCtr++) {
@@ -4770,29 +4862,57 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                             }
                             System.out.println("-----------------------------------");
                             
-                            System.out.println("----------ACCOUNT MASTER / LEDGER----------");
                             try {
-                                //GL Transaction Account Ledger
                                 GLTransaction loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
-                                loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
-                                for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
-//                                    if(Journal().Detail(lnCtr).getCreditAmount() > 0.0000 || Journal().Detail(lnCtr).getDebitAmount() > 0.0000){
-                                    if(Journal().Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
-                                        loGLTrans.addDetail(Journal().Master().getBranchCode(), 
-                                                Journal().Detail(lnCtr).getAccountCode(),
-                                                SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
-                                                Journal().Detail(lnCtr).getDebitAmount(), 
-                                                Journal().Detail(lnCtr).getCreditAmount());
+                                System.out.println("----------JOURNAL PROPOSAL ACCOUNT MASTER / LEDGER----------");
+                                if(getJournalProposalList() != null){
+                                    for(int lnJEP = 0; lnJEP < getJournalProposalList().size(); lnJEP++){
+                                        if(JournalProposal(lnJEP).getEditMode() == EditMode.UPDATE){
+                                            //GL Transaction Account Ledger
+                                            loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                                            loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                                            for(int lnCtr = 0; lnCtr <= JournalProposal(lnJEP).getDetailCount() - 1; lnCtr++){
+            //                                    if(Journal().Detail(lnCtr).getCreditAmount() > 0.0000 || Journal().Detail(lnCtr).getDebitAmount() > 0.0000){
+                                                if(JournalProposal(lnJEP).Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
+                                                    loGLTrans.addDetail(JournalProposal(lnJEP).Master().getBranchCode(), 
+                                                            JournalProposal(lnJEP).Detail(lnCtr).getAccountCode(),
+                                                            SQLUtil.toDate(xsDateShort(JournalProposal(lnJEP).Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                                            JournalProposal(lnJEP).Detail(lnCtr).getDebitAmount(), 
+                                                            JournalProposal(lnJEP).Detail(lnCtr).getCreditAmount());
+                                                }
+                                            }
+                                            loGLTrans.saveTransaction();
+                                        }
                                     }
                                 }
-                                loGLTrans.saveTransaction();
+                                System.out.println("-----------------------------------");
+                                
+                                System.out.println("----------JOURNAL ACCOUNT MASTER / LEDGER----------");
+                                if(poJournal != null){
+                                    if(poJournal.getEditMode() == EditMode.UPDATE){
+                                        //GL Transaction Account Ledger
+                                        loGLTrans = new GLTransaction(poGRider,Master().getBranchCode());
+                                        loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
+                                        for(int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++){
+        //                                    if(Journal().Detail(lnCtr).getCreditAmount() > 0.0000 || Journal().Detail(lnCtr).getDebitAmount() > 0.0000){
+                                            if(Journal().Detail(lnCtr).isReverse()){ //Added by Arsiela 05-16-2026 04:24PM
+                                                loGLTrans.addDetail(Journal().Master().getBranchCode(), 
+                                                        Journal().Detail(lnCtr).getAccountCode(),
+                                                        SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE) , 
+                                                        Journal().Detail(lnCtr).getDebitAmount(), 
+                                                        Journal().Detail(lnCtr).getCreditAmount());
+                                            }
+                                        }
+                                        loGLTrans.saveTransaction();
+                                    }
+                                }
+                                System.out.println("-----------------------------------");
                             } catch (GuanzonException | SQLException | NullPointerException ex) {
                                 Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
                                 poJSON.put("result", "error");
                                 poJSON.put("message", MiscUtil.getException(ex));
                                 return poJSON;
                             }
-                            System.out.println("-----------------------------------");
                         }
                         
                     } else {
@@ -5113,114 +5233,81 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         
         String lsJournal = existJournal();
         if(lsJournal != null && !"".equals(lsJournal)){
+            poJournal.setWithParent(true);
+            poJournal.setWithUI(false);
+            if(psApprover != null && !"".equals(psApprover)){
+                poJournal.setApproving(psApprover);
+            }
             //Update Journal
             switch(fsStatus){
                 case DisbursementStatic.APPROVED:
                     //Confirm Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    if(psApprover != null && !"".equals(psApprover)){
-                        poJournal.setApproving(psApprover);
-                    }
                     poJSON = poJournal.ConfirmTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
-                    
-                    //Update Journal Proposal
-                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
-                        JournalProposal loObj = JournalProposal(lnCtr);
-                        loObj.setWithParent(true);
-                        loObj.setWithUI(false);
-                        if(psApprover != null && !"".equals(psApprover)){
-                            loObj.setApproving(psApprover);
-                        }
-                        poJSON = loObj.ConfirmTransaction("");
-                        if (!"success".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
-                    }
                     break;
                 case DisbursementStatic.VOID:
                     //Void Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    if(psApprover != null && !"".equals(psApprover)){
-                        poJournal.setApproving(psApprover);
-                    }
                     poJSON = poJournal.VoidTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
-                    }
-                    
-                    //Update Journal Proposal
-                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
-                        JournalProposal loObj = JournalProposal(lnCtr);
-                        loObj.setWithParent(true);
-                        loObj.setWithUI(false);
-                        if(psApprover != null && !"".equals(psApprover)){
-                            loObj.setApproving(psApprover);
-                        }
-                        poJSON = loObj.VoidTransaction("");
-                        if (!"success".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
                     }
                     
                     break;
                 case DisbursementStatic.CANCELLED:
                 case DisbursementStatic.DISAPPROVED:
                     //Cancel Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    if(psApprover != null && !"".equals(psApprover)){
-                        poJournal.setApproving(psApprover);
-                    }
                     poJSON = poJournal.CancelTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
-                    }
-                    
-                    //Update Journal Proposal
-                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
-                        JournalProposal loObj = JournalProposal(lnCtr);
-                        loObj.setWithParent(true);
-                        loObj.setWithUI(false);
-                        if(psApprover != null && !"".equals(psApprover)){
-                            loObj.setApproving(psApprover);
-                        }
-                        poJSON = loObj.CancelTransaction("");
-                        if (!"success".equals((String) poJSON.get("result"))) {
-                            return poJSON;
-                        }
                     }
                     
                     break;
                 case DisbursementStatic.RETURNED:
                 case DisbursementStatic.RETURNED_I:
                     //Return Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
-                    if(psApprover != null && !"".equals(psApprover)){
-                        poJournal.setApproving(psApprover);
-                    }
                     poJSON = poJournal.ReturnTransaction("");
                     if (!"success".equals((String) poJSON.get("result"))) {
                         return poJSON;
                     }
-                    
-                    //Update Journal Proposal
-                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
-                        JournalProposal loObj = JournalProposal(lnCtr);
-                        loObj.setWithParent(true);
-                        loObj.setWithUI(false);
-                        if(psApprover != null && !"".equals(psApprover)){
-                            loObj.setApproving(psApprover);
-                        }
-                        poJSON = loObj.ReturnTransaction("");
+                    break;
+            }
+        }
+        
+        //Update Journal Proposal
+        for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+            JournalProposal loObj = JournalProposal(lnCtr);
+            loObj.setWithParent(true);
+            loObj.setWithUI(false);
+            if(psApprover != null && !"".equals(psApprover)){
+                loObj.setApproving(psApprover);
+            }
+            switch(fsStatus){
+                case DisbursementStatic.APPROVED:
+                        poJSON = loObj.ConfirmTransaction("");
                         if (!"success".equals((String) poJSON.get("result"))) {
                             return poJSON;
                         }
+                    break;
+                case DisbursementStatic.VOID:
+                    poJSON = loObj.VoidTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.CANCELLED:
+                case DisbursementStatic.DISAPPROVED:
+                    poJSON = loObj.CancelTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.RETURNED:
+                case DisbursementStatic.RETURNED_I:
+                    poJSON = loObj.ReturnTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
                     }
                     break;
             }
@@ -6477,6 +6564,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
                 + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
         );
+        
+        if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+            && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+            lsSQL = lsSQL + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.VOID)
+                          + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.CANCELLED);
+        }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();
@@ -6650,21 +6743,28 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             || DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                    + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
-                    + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
-                    + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.POSTED)
-                    + " ) "
-            );
+                    + " AND sSourceCd = " + SQLUtil.toSQL(getSourceCode()));
+            
+                    if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+                        && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+                        lsSQL = lsSQL + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                         + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
+                         + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.POSTED)
+                         + " ) ";
+                    }
         } else {
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                    + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
+                    + " AND sSourceCd = " + SQLUtil.toSQL(getSourceCode()));
+            
+                if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+                    && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+                    lsSQL = lsSQL + " AND ( cTranStat = " + SQLUtil.toSQL(CheckStatus.FLOAT)
                     + " OR cTranStat = " + SQLUtil.toSQL(CheckStatus.OPEN)
-                    + " ) "
-            );
+                    + " ) ";
+                }
         }
+        lsSQL = lsSQL + " ORDER BY dTransact DESC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();

@@ -306,6 +306,48 @@ public class JournalProposal extends Transaction {
         return poJSON;
     }
     
+    public JSONObject SearchTransaction(String fsDepartmentName, String fsTransactionNo) throws SQLException, GuanzonException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        paMaster = new ArrayList<>();
+        initSQL();
+        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, 
+                    "  a.sBranchCd = " + SQLUtil.toSQL(poGRider.getBranchCode())
+                    + " AND a.sCompnyCd = " + SQLUtil.toSQL(psCompanyId)
+                    + " AND e.sDeptName LIKE " + SQLUtil.toSQL("%"+fsDepartmentName)
+                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL("%" + fsTransactionNo));
+        String lsCondition = "";
+        if (psTranStat != null) {
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= this.psTranStat.length() - 1; lnCtr++) {
+                    lsCondition = lsCondition + ", " + SQLUtil.toSQL(Character.toString(this.psTranStat.charAt(lnCtr)));
+                }
+                lsCondition = "a.cTranStat IN (" + lsCondition.substring(2) + ")";
+            } else {
+                lsCondition = "a.cTranStat = " + SQLUtil.toSQL(this.psTranStat);
+            }
+             lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
+        }
+        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact, a.sTransNox, e.sDeptName ASC ";
+        System.out.println("Executing SQL: " + lsSQL);
+        poJSON = ShowDialogFX.Browse(poGRider,
+                lsSQL,
+                "",
+                "Transaction No»Transaction Date»Source No»Deparment",
+                "a.sTransNox»a.dTransact»a.sSourceNo»sDeptName",
+                "a.sTransNox»a.dTransact»a.sSourceNo»e.sDeptName",
+                0);
+
+        if (poJSON != null) {
+            return OpenTransaction((String) poJSON.get("sTransNox"));
+        } else {
+            poJSON = new JSONObject();
+            poJSON.put("result", "error");
+            poJSON.put("message", "No record loaded.");
+            return poJSON;
+        }
+    }
+    
+    
     public JSONObject checkExistingAcctCode(int fnRow, String fsAcctCode){
         poJSON = new JSONObject();
         poJSON.put("row", fnRow);
@@ -789,7 +831,7 @@ public class JournalProposal extends Transaction {
                     if(Detail(lnCtr).getAccountCode() != null && !"".equals(Detail(lnCtr).getAccountCode())){
                         if(Detail(lnCtr).getForMonthOf() == null || "1900-01-01".equals(xsDateShort(Detail(lnCtr).getForMonthOf()))){
                             poJSON.put("result", "error");
-                            poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" .");
+                            poJSON.put("message", "Invalid reporting date of journal at row "+(lnCtr+1)+" for Journal Proposal <"+ Master().getTransactionNo()+">.");
                             return poJSON;
                         }
                     }
@@ -812,19 +854,19 @@ public class JournalProposal extends Transaction {
             
             if(ldblDebitAmt == 0.0000 ){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Invalid journal entry debit amount.");
+                poJSON.put("message", "Invalid journal entry debit amount for Journal Proposal <"+ Master().getTransactionNo()+">.");
                 return poJSON;
             }
 
             if(ldblCreditAmt == 0.0000){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Invalid journal entry credit amount.");
+                poJSON.put("message", "Invalid journal entry credit amount for Journal Proposal <"+ Master().getTransactionNo()+">.");
                 return poJSON;
             }
 
             if(ldblDebitAmt < ldblCreditAmt || ldblDebitAmt > ldblCreditAmt){
                 poJSON.put("result", "error");
-                poJSON.put("message", "Debit should be equal to credit amount.");
+                poJSON.put("message", "Debit should be equal to credit amount for Journal Proposal <"+ Master().getTransactionNo()+">.");
                 return poJSON;
             }
 
