@@ -6764,7 +6764,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     + " ) ";
                 }
         }
-        lsSQL = lsSQL + " ORDER BY dTransact DESC ";
+        lsSQL = lsSQL + " ORDER BY dTransact, sTransNox DESC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();
