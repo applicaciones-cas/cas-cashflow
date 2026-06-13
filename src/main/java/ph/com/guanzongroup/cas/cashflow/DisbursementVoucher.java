@@ -6980,21 +6980,35 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             && !DisbursementStatic.DisbursementType.CHECK_DEPOSIT.equals(Master().getDisbursementType())){
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
-                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
-                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
-                    + " ) "
-            );
+                    + " AND sSourceCd = " + SQLUtil.toSQL(getSourceCode()));
+//                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+//                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+//                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
+//                    + " ) "
+//            );
+            if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+                && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+                lsSQL = lsSQL + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+                 + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+                 + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.POSTED)
+                 + " ) ";
+            }
         } else {
             lsSQL = MiscUtil.addCondition(lsSQL,
                     " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
-                    + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
-                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
-                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
-                    + " ) "
-            );
+                    + " AND sSourceCd = " + SQLUtil.toSQL(getSourceCode()));
+//                    + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+//                    + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+//                    + " ) "
+//            );
+            if(!DisbursementStatic.VOID.equals(Master().getTransactionStatus())
+                && !DisbursementStatic.CANCELLED.equals(Master().getTransactionStatus())){
+                lsSQL = lsSQL + " AND ( cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.FLOAT)
+                + " OR cTranStat = " + SQLUtil.toSQL(OtherPaymentStatus.OPEN)
+                + " ) ";
+            }
         }
+        lsSQL = lsSQL + " ORDER BY dTransact, sTransNox DESC ";
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
         poJSON = new JSONObject();

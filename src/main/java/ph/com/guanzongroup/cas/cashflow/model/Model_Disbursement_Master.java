@@ -494,7 +494,7 @@ public class Model_Disbursement_Master extends Model {
                         + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER)
                 );
 
-                lsSQL = lsSQL + " ORDER BY dTransact DESC ";
+                lsSQL = lsSQL + " ORDER BY dTransact,sTransNox DESC ";
                 System.out.println("Executing SQL: " + lsSQL);
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
                 poJSON = new JSONObject();
@@ -541,7 +541,7 @@ public class Model_Disbursement_Master extends Model {
                         + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER)
                 );
 
-                lsSQL = lsSQL + " ORDER BY dTransact DESC ";
+                lsSQL = lsSQL + " ORDER BY dTransact,sTransNox DESC ";
                 System.out.println("Executing SQL: " + lsSQL);
                 ResultSet loRS = poGRider.executeQuery(lsSQL);
                 poJSON = new JSONObject();
