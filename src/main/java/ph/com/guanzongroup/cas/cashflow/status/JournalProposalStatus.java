@@ -16,4 +16,11 @@ public class JournalProposalStatus {
     public static final  String CANCELLED = "3";
     public static final  String VOID = "4";
     public static final  String RETURNED = "9";
+    
+    
+     public static class SourceCode  {
+        public static final String DISBURSEMENT_VOUCHER = "DISb"; 
+        public static final  String CASH_DISBURSEMENT = "CFDv"; 
+    }
+    
 }

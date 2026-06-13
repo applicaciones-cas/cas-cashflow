@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.sql.rowset.CachedRowSet;
+import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.services.Model;
 import org.guanzon.appdriver.agent.services.Transaction;
 import org.guanzon.appdriver.base.GuanzonException;
@@ -20,6 +21,7 @@ import org.guanzon.appdriver.base.SQLUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.appdriver.constant.TransactionStatus;
+import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.cas.parameter.Branch;
 import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.Department;
@@ -153,6 +155,11 @@ public class JournalProposal extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
+        
+        poJSON = callApproval();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        } 
         
         //change status
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, false,pbWthParent);
@@ -469,6 +476,16 @@ public class JournalProposal extends Transaction {
     public String getSourceCode() {
         return SOURCE_CODE;
     }
+    
+    public String getSourceDesc(){
+        switch(Master().getSourceCode()){
+            case JournalProposalStatus.SourceCode.DISBURSEMENT_VOUCHER:
+                return "Dibursement Voucher";
+            case JournalProposalStatus.SourceCode.CASH_DISBURSEMENT:
+                return "Cash Dibursement";
+        }
+        return "";
+    }
 
     @Override
     public Model_Journal_Master_Proposal Master() {
@@ -576,6 +593,33 @@ public class JournalProposal extends Transaction {
             Detail(getDetailCount() - 1).setForMonthOf(Master().getTransactionDate());
         }
     
+    }
+    
+    /**
+     * Requests approval if the current user lacks sufficient rights and
+     * validates the approving officer.
+     *
+     * @return result as a {@link JSONObject}
+     */
+    public JSONObject callApproval(){
+        poJSON = new JSONObject();
+        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+            poJSON = ShowDialogFX.getUserApproval(poGRider);
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "User is not an authorized approving officer.");
+                return poJSON;
+            }
+            setApproving((String) poJSON.get("sUserIDxx"));
+//            psApprover = (String) poJSON.get("sUserIDxx");
+        }   
+        
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
     }
 
     @Override
@@ -831,6 +875,9 @@ public class JournalProposal extends Transaction {
                 case JournalProposalStatus.CONFIRMED:
                     crs.updateString("cRefrStat", "CONFIRMED");
                     break;
+                case JournalProposalStatus.POSTED:
+                    crs.updateString("cRefrStat", "POSTED");
+                    break;
                 case JournalProposalStatus.CANCELLED:
                     crs.updateString("cRefrStat", "CANCELLED");
                     break;
@@ -850,6 +897,9 @@ public class JournalProposal extends Transaction {
                             break;
                         case JournalProposalStatus.CONFIRMED:
                             crs.updateString("cRefrStat", "CONFIRMED");
+                            break;
+                        case JournalProposalStatus.POSTED:
+                            crs.updateString("cRefrStat", "POSTED");
                             break;
                         case JournalProposalStatus.CANCELLED:
                             crs.updateString("cRefrStat", "CANCELLED");
@@ -882,7 +932,7 @@ public class JournalProposal extends Transaction {
         String lsEntry = "";
         String lsEntryDate = "";
         String lsSQL =  " SELECT b.sModified, b.dModified " 
-                        + " FROM Disbursement_Master a "
+                        + " FROM "+Master().getTable()+" a "
                         + " LEFT JOIN xxxAuditLogMaster b ON b.sSourceNo = a.sTransNox AND b.sEventNme LIKE 'ADD%NEW' AND b.sRemarksx = " + SQLUtil.toSQL(Master().getTable());
         lsSQL = MiscUtil.addCondition(lsSQL, " a.sTransNox =  " + SQLUtil.toSQL(Master().getTransactionNo())) ;
         lsSQL = lsSQL + " ORDER BY b.dModified DESC ";
