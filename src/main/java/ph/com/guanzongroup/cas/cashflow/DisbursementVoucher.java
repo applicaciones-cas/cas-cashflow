@@ -4638,7 +4638,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 lbUpdated = loRecord.getJournalProposalList().size() == (getJournalProposalList().size() - 1);
                 if (lbUpdated) {
                     for (int lnCtr = 0; lnCtr < loRecord.getJournalProposalList().size() ; lnCtr++) {
-                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalDebitAmount())));
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Master().getTransactionStatus()), String.format("%.4f", JournalProposal(lnCtr).Master().getTransactionStatus())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalDebitAmount())));
+                        }
                         if (lbUpdated) {
                             lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalCreditAmount())));
                         }
@@ -5354,10 +5357,13 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     break;
                 case DisbursementStatic.RETURNED:
                 case DisbursementStatic.RETURNED_I:
-                    //Return Journal
-                    poJSON = poJournal.ReturnTransaction("");
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        return poJSON;
+                    if(JournalProposalStatus.OPEN.equals(poJournal.Master().getTransactionStatus())){
+                    } else {
+                        //Return Journal
+                        poJSON = poJournal.ReturnTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                     break;
             }
@@ -5393,9 +5399,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     break;
                 case DisbursementStatic.RETURNED:
                 case DisbursementStatic.RETURNED_I:
-                    poJSON = loObj.ReturnTransaction("");
-                    if (!"success".equals((String) poJSON.get("result"))) {
-                        return poJSON;
+                    if(JournalProposalStatus.OPEN.equals(loObj.Master().getTransactionStatus())){
+                    } else {
+                        poJSON = loObj.ReturnTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                     break;
             }
@@ -6497,6 +6506,18 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 break;
             }
         } else {
+            
+            if(DisbursementStatic.OPEN.equals(Master().getTransactionStatus()) 
+                && DisbursementStatic.CONFIRMED.equals(Master().getTransactionStatus()) 
+                && DisbursementStatic.VERIFIED.equals(Master().getTransactionStatus()) 
+            ){
+                //Continue
+            } else {
+                //skip creation of journal
+                poJSON.put("result", "success");
+                return poJSON;
+            }
+            
             if((getEditMode() == EditMode.UPDATE || getEditMode() == EditMode.ADDNEW) && poJournal.getEditMode() != EditMode.ADDNEW){
                 poJSON = poJournal.NewTransaction();
                 if ("error".equals((String) poJSON.get("result"))){

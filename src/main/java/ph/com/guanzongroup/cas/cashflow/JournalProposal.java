@@ -466,14 +466,17 @@ public class JournalProposal extends Transaction {
 
     public JSONObject SearchBranch(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
-        object.setRecordStatus("1");
-
-        poJSON = object.searchRecord(value, byCode);
-
-        if ("success".equals((String) poJSON.get("result"))) {
-            Master().setBranchCode(object.getModel().getBranchCode());
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
         }
-
+       
+        object.setCompanyId(psCompanyId);
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))){
+             Master().setBranchCode(object.getModel().getBranchCode());
+        }    
+       
         return poJSON;
     }
 
