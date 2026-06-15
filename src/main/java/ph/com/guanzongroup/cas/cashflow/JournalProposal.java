@@ -79,7 +79,7 @@ public class JournalProposal extends Transaction {
 
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode().isEmpty()
+            if ((Detail(getDetailCount() - 1).getAccountCode() == null || "".equals(Detail(getDetailCount() - 1).getAccountCode()))
                     && (Detail(getDetailCount() - 1).getDebitAmount() == 0.00 && Detail(getDetailCount() - 1).getCreditAmount() == 0.00)) {
                 poJSON = new JSONObject();
                 poJSON.put("result", "error");

@@ -4778,6 +4778,74 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         return isEntryOkay(DisbursementStatic.OPEN);
 
     }
+    
+    public List<JournalProposal> paOrigJEP;
+    private JSONObject populateOriginalValue(){
+        poJSON = new JSONObject();
+        paOrigJEP = new ArrayList<JournalProposal>();
+        try {
+            for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                    paOrigJEP.add( new CashflowControllers(poGRider, logwrapr).JournalProposal());
+                    paOrigJEP.get(paOrigJEP.size() - 1).InitTransaction();
+                    JournalProposal loObj = paOrigJEP.get(paOrigJEP.size() - 1);
+                    if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+                        poJSON = loObj.NewTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                    } else if(JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
+                        poJSON = loObj.OpenTransaction(JournalProposal(lnCtr).Master().getTransactionNo());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                        poJSON = loObj.UpdateTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                    }
+                    
+                    System.out.println("---------SET ORIGINAL VALUE FOR JOURNAL PROPOSAL---------------");
+                    
+                    System.out.println("---------MASTER JOURNAL PROPOSAL---------------");
+                    for (int lnCol = 1; lnCol <= loObj.Master().getColumnCount(); lnCol++) {
+                        System.out.println(loObj.Master().getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Master().getValue(lnCol));
+                        loObj.Master().setValue(loObj.Master().getColumn(lnCol), JournalProposal(lnCtr).Master().getValue(lnCol));
+                    }
+                    System.out.println("---------------------------------------------------------------");
+                    System.out.println("---------DETAIL JOURNAL PROPOSAL---------------");
+                    for (int lnRow = 0; lnRow < JournalProposal(lnCtr).getDetailCount(); lnRow++){
+                        int lnDet = -1;
+                        if(JournalProposal(lnCtr).Detail(lnRow).getEditMode() == EditMode.ADDNEW){
+                            loObj.ReloadDetail();
+                            lnDet = loObj.getDetailCount()-1;
+                        } else {
+                            lnDet = loObj.Detail().indexOf(JournalProposal(lnCtr).Detail(lnRow));
+                        }
+                        if(lnDet >= 0){
+                            for (int lnCol = 1; lnCol <= loObj.Detail(lnDet).getColumnCount(); lnCol++) {
+                                System.out.println(loObj.Detail(lnDet).getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Detail(lnRow).getValue(lnCol));
+                                loObj.Detail(lnDet).setValue(loObj.Detail(lnDet).getColumn(lnCol), JournalProposal(lnCtr).Detail(lnRow).getValue(lnCol));
+                            }
+                        }
+                    }
+                    System.out.println("---------------------------------------------------------------");
+                    
+                    System.out.println("---------------------------------------------------------------");
+
+            }
+        
+        } catch (GuanzonException | SQLException | CloneNotSupportedException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+            poJSON.put("result", "error");
+            return poJSON;
+        } 
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
 
     /**
     * Saves all related disbursement transactions including check/other payments,
@@ -5013,8 +5081,26 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             System.out.println("-----------------------------------------------------------------------");
             
             System.out.println("--------------------------SAVE JOURNAL PROPOSAL---------------------------------------------");
+            if(paOrigJEP != null){
+                if(!paOrigJEP.isEmpty()){
+                    for(int lnCtr = 0;lnCtr < paOrigJEP.size();lnCtr++){
+                        System.out.println("Original JEP ROW : " + lnCtr );
+                        System.out.println("Original JEP Edit Mode : " + paOrigJEP.get(lnCtr).getEditMode());
+                        System.out.println("Original Transnox : " + paOrigJEP.get(lnCtr).Master().getTransactionNo());
+                    }
+                    paJournalProposal = null;
+                    paJournalProposal = new ArrayList<JournalProposal>();
+                    paJournalProposal.addAll(paOrigJEP);
+                }
+            }
             if(getJournalProposalList() != null){
+                poJSON = populateOriginalValue();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
                 for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                    System.out.println("JEP ROW : " + lnCtr );
+                    System.out.println("JEP Edit Mode : " + JournalProposal(lnCtr).getEditMode() );
                     if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
                         if(JournalProposal(lnCtr).Master().isReverse()){
                             if(JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 || JournalProposal(lnCtr).getTotalCreditAmount() > 0.0000){
@@ -5123,7 +5209,9 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             poJSON.put("message", MiscUtil.getException(ex));
             return poJSON;
         }
-            
+        
+        //Clear value 
+        paOrigJEP = null;
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;

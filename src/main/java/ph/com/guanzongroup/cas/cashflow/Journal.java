@@ -57,7 +57,7 @@ public class Journal extends Transaction {
 
     public JSONObject AddDetail() throws CloneNotSupportedException {
         if (getDetailCount() > 0) {
-            if (Detail(getDetailCount() - 1).getAccountCode().isEmpty()
+             if ((Detail(getDetailCount() - 1).getAccountCode() == null || "".equals(Detail(getDetailCount() - 1).getAccountCode()))
                     && (Detail(getDetailCount() - 1).getDebitAmount() == 0.00 && Detail(getDetailCount() - 1).getCreditAmount() == 0.00)) {
                 poJSON = new JSONObject();
                 poJSON.put("result", "error");
@@ -66,6 +66,26 @@ public class Journal extends Transaction {
             }
         }
         return addDetail();
+    }
+    
+    public Double getTotalDebitAmount(){
+        double ldblDebitAmt = 0.0000;
+        for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
+            if(Detail(lnCtr).isReverse()){
+                ldblDebitAmt += Detail(lnCtr).getDebitAmount();
+            }
+        }
+        return ldblDebitAmt;
+    }
+    
+    public Double getTotalCreditAmount(){
+        double ldblCreditAmt = 0.0000;
+        for(int lnCtr = 0;lnCtr < getDetailCount();lnCtr++){
+            if(Detail(lnCtr).isReverse()){
+                ldblCreditAmt += Detail(lnCtr).getCreditAmount();
+            }
+        }
+        return ldblCreditAmt;
     }
 
     public JSONObject ConfirmTransaction(String remarks)
