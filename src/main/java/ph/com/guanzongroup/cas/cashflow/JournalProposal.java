@@ -327,7 +327,7 @@ public class JournalProposal extends Transaction {
             }
              lsSQL = MiscUtil.addCondition(lsSQL, lsCondition);
         }
-        lsSQL = lsSQL + " GROUP BY a.sTransNox ORDER BY a.dTransact, a.sTransNox, e.sDeptName ASC ";
+        lsSQL = lsSQL + " GROUP BY a.sTransNox "; // ORDER BY a.dTransact, a.sTransNox, e.sDeptName ASC
         System.out.println("Executing SQL: " + lsSQL);
         poJSON = ShowDialogFX.Browse(poGRider,
                 lsSQL,
@@ -749,7 +749,7 @@ public class JournalProposal extends Transaction {
     @Override
     public void initSQL() {
         SQL_BROWSE = " SELECT 	" +
-                    "  a.sTransNox,  " +
+                    "   a.sTransNox,  " +
                     "	a.sIndstCdx,  " +
                     "	a.sCompnyCd,  " +
                     "	a.dTransact,  " +
