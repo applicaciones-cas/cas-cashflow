@@ -6522,8 +6522,8 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         } else {
             
             if(DisbursementStatic.OPEN.equals(Master().getTransactionStatus()) 
-                && DisbursementStatic.CONFIRMED.equals(Master().getTransactionStatus()) 
-                && DisbursementStatic.VERIFIED.equals(Master().getTransactionStatus()) 
+                || DisbursementStatic.CONFIRMED.equals(Master().getTransactionStatus()) 
+                || DisbursementStatic.VERIFIED.equals(Master().getTransactionStatus()) 
             ){
                 //Continue
             } else {
