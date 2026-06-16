@@ -4814,28 +4814,29 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     
                     System.out.println("---------MASTER JOURNAL PROPOSAL---------------");
                     for (int lnCol = 1; lnCol <= loObj.Master().getColumnCount(); lnCol++) {
-                        System.out.println(loObj.Master().getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Master().getValue(lnCol));
-                        loObj.Master().setValue(loObj.Master().getColumn(lnCol), JournalProposal(lnCtr).Master().getValue(lnCol));
+                        System.out.println(loObj.Master().getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Master().getValue(loObj.Master().getColumn(lnCol)));
+                        loObj.Master().setValue(loObj.Master().getColumn(lnCol), JournalProposal(lnCtr).Master().getValue(loObj.Master().getColumn(lnCol)));
                     }
                     System.out.println("---------------------------------------------------------------");
-                    System.out.println("---------DETAIL JOURNAL PROPOSAL---------------");
                     for (int lnRow = 0; lnRow < JournalProposal(lnCtr).getDetailCount(); lnRow++){
+                        System.out.println("---------DETAIL JOURNAL PROPOSAL---------------");
                         int lnDet = -1;
                         if(JournalProposal(lnCtr).Detail(lnRow).getEditMode() == EditMode.ADDNEW){
                             loObj.ReloadDetail();
                             lnDet = loObj.getDetailCount()-1;
                         } else {
-                            lnDet = loObj.Detail().indexOf(JournalProposal(lnCtr).Detail(lnRow));
+//                            lnDet = loObj.Detail().indexOf(JournalProposal(lnCtr).Detail(lnRow));
+                            lnDet = lnRow;
                         }
+                        System.out.println("Detail : " + lnDet);
                         if(lnDet >= 0){
                             for (int lnCol = 1; lnCol <= loObj.Detail(lnDet).getColumnCount(); lnCol++) {
-                                System.out.println(loObj.Detail(lnDet).getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Detail(lnRow).getValue(lnCol));
-                                loObj.Detail(lnDet).setValue(loObj.Detail(lnDet).getColumn(lnCol), JournalProposal(lnCtr).Detail(lnRow).getValue(lnCol));
+                                System.out.println(loObj.Detail(lnDet).getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Detail(lnRow).getValue(loObj.Detail(lnDet).getColumn(lnCol)));
+                                loObj.Detail(lnDet).setValue(loObj.Detail(lnDet).getColumn(lnCol), JournalProposal(lnCtr).Detail(lnRow).getValue(loObj.Detail(lnDet).getColumn(lnCol)));
                             }
                         }
+                        System.out.println("---------------------------------------------------------------");
                     }
-                    System.out.println("---------------------------------------------------------------");
-                    
                     System.out.println("---------------------------------------------------------------");
 
             }
@@ -6538,115 +6539,8 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     return poJSON;
                 }
                 
-                //get detail per category
-                List<String> laPerCategory = new ArrayList();
-                for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
-                    switch(Detail(lnCtr).getSourceCode()){
-                        case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                            switch(Detail(lnCtr).SOADetail().getSourceCode()){
-                                case SOATaggingStatic.APPaymentAdjustment:
-                                case SOATaggingStatic.PaymentRequest:
-                                    //TODO
-                                    if(!laPerCategory.contains(psNoCategory)){
-                                        laPerCategory.add(psNoCategory);
-                                    }
-                                break;
-                                case SOATaggingStatic.POReceiving:
-                                    if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
-                                        laPerCategory.add(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode());
-                                    }
-                                break;
-                            }
-                        break;
-                        case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                        case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                            //TODO
-                            if(!laPerCategory.contains(psNoCategory)){
-                                laPerCategory.add(psNoCategory);
-                            }
-                        break;
-                        case DisbursementStatic.SourceCode.PO_RECEIVING:
-                            if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
-                                laPerCategory.add(Detail(lnCtr).POReceiving().getCategoryCode());
-                            }
-                        break;
-                    }
-                }
-                
-                for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
-                    //retreiving using column index
-                    JSONObject jsonmaster = new JSONObject();
-                    for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
-                        System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
-                        jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
-                    }
-                    
-                    String lsCategory = "";
-                    JSONArray jsondetails = new JSONArray();
-                    JSONObject jsondetail = new JSONObject();
-                    for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
-                        switch(Detail(lnCtr).getSourceCode()){
-                            case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
-                                switch(Detail(lnCtr).SOADetail().getSourceCode()){
-                                    case SOATaggingStatic.APPaymentAdjustment:
-                                    case SOATaggingStatic.PaymentRequest:
-                                        //TODO
-                                        lsCategory = psNoCategory;
-                                    break;
-                                    case SOATaggingStatic.POReceiving:
-                                        lsCategory = Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode();
-                                    break;
-                                }
-                            break;
-                            case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
-                            case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
-                                //TODO
-                                lsCategory = psNoCategory;
-                            break;
-                            case DisbursementStatic.SourceCode.PO_RECEIVING:
-                               lsCategory = Detail(lnCtr).POReceiving().getCategoryCode();
-                            break;
-                        }
-
-                        if(laPerCategory.get(lnCategory).equals(lsCategory)){
-                            //store detail values per row that equal to category
-                            jsondetail = new JSONObject();
-                            for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
-                                System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
-                                jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
-                            }
-                            jsondetails.add(jsondetail);
-                        }
-                    }
-
-                    jsondetail = new JSONObject();
-                    jsondetail.put("Disbursement_Master", jsonmaster);
-                    jsondetail.put("Disbursement_Detail", jsondetails);
-                    lsCategory = laPerCategory.get(lnCategory);
-                    if(psNoCategory.equals(lsCategory)){
-                        lsCategory = "";
-                    }
-                    TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryID(), lsCategory); //Master().getIndustryID()
-                    tbj.setGRiderCAS(poGRider);
-                    tbj.setData(jsondetail);
-                    jsonmaster = tbj.processRequest();
-
-                    if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
-                        List<TBJEntry> xlist = tbj.getJournalEntries();
-                        for (TBJEntry xlist1 : xlist) {
-                            System.out.println("Account:" + xlist1.getAccount() );
-                            System.out.println("Debit:" + xlist1.getDebit());
-                            System.out.println("Credit:" + xlist1.getCredit());
-                            poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
-                            poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
-                            poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
-                            poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
-                            poJournal.AddDetail();
-                        }
-                    } else {
-                        System.out.println(jsonmaster.toJSONString());
-                    }
-                }
+                //Moved loading of TBJ on a function
+                loadTBJ();
 
                 //Journa Entry Master
                 poJournal.Master().setAccountPerId("");
@@ -6673,6 +6567,123 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         
         poJSON.put("result", "success");
         return poJSON;
+    }
+    
+    public void loadTBJ() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+        if((Journal().getTotalCreditAmount() > 0.0000 || Journal().getTotalDebitAmount() > 0.0000)
+            && Journal().getEditMode() != EditMode.ADDNEW){
+            return;
+        }
+        
+        //get detail per category
+        List<String> laPerCategory = new ArrayList();
+        for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+            switch(Detail(lnCtr).getSourceCode()){
+                case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                    switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                        case SOATaggingStatic.APPaymentAdjustment:
+                        case SOATaggingStatic.PaymentRequest:
+                            //TODO
+                            if(!laPerCategory.contains(psNoCategory)){
+                                laPerCategory.add(psNoCategory);
+                            }
+                        break;
+                        case SOATaggingStatic.POReceiving:
+                            if(!laPerCategory.contains(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode())){
+                                laPerCategory.add(Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode());
+                            }
+                        break;
+                    }
+                break;
+                case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                    //TODO
+                    if(!laPerCategory.contains(psNoCategory)){
+                        laPerCategory.add(psNoCategory);
+                    }
+                break;
+                case DisbursementStatic.SourceCode.PO_RECEIVING:
+                    if(!laPerCategory.contains(Detail(lnCtr).POReceiving().getCategoryCode())){
+                        laPerCategory.add(Detail(lnCtr).POReceiving().getCategoryCode());
+                    }
+                break;
+            }
+        }
+
+        for (int lnCategory = 0; lnCategory <= laPerCategory.size() - 1; lnCategory++){    
+            //retreiving using column index
+            JSONObject jsonmaster = new JSONObject();
+            for (int lnCtr = 1; lnCtr <= Master().getColumnCount(); lnCtr++){
+                System.out.println(Master().getColumn(lnCtr) + " ->> " + Master().getValue(lnCtr));
+                jsonmaster.put(Master().getColumn(lnCtr),  Master().getValue(lnCtr));
+            }
+
+            String lsCategory = "";
+            JSONArray jsondetails = new JSONArray();
+            JSONObject jsondetail = new JSONObject();
+            for (int lnCtr = 0; lnCtr <= Detail().size() - 1; lnCtr++){
+                switch(Detail(lnCtr).getSourceCode()){
+                    case DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE:
+                        switch(Detail(lnCtr).SOADetail().getSourceCode()){
+                            case SOATaggingStatic.APPaymentAdjustment:
+                            case SOATaggingStatic.PaymentRequest:
+                                //TODO
+                                lsCategory = psNoCategory;
+                            break;
+                            case SOATaggingStatic.POReceiving:
+                                lsCategory = Detail(lnCtr).SOADetail().PurchasOrderReceivingMaster().getCategoryCode();
+                            break;
+                        }
+                    break;
+                    case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
+                    case DisbursementStatic.SourceCode.PAYMENT_REQUEST:
+                        //TODO
+                        lsCategory = psNoCategory;
+                    break;
+                    case DisbursementStatic.SourceCode.PO_RECEIVING:
+                       lsCategory = Detail(lnCtr).POReceiving().getCategoryCode();
+                    break;
+                }
+
+                if(laPerCategory.get(lnCategory).equals(lsCategory)){
+                    //store detail values per row that equal to category
+                    jsondetail = new JSONObject();
+                    for (int lnCol = 1; lnCol <= Detail(lnCtr).getColumnCount(); lnCol++){
+                        System.out.println(Detail(lnCtr).getColumn(lnCol) + " ->> " + Detail(lnCtr).getValue(lnCol));
+                        jsondetail.put(Detail(lnCtr).getColumn(lnCol),  Detail(lnCtr).getValue(lnCol));
+                    }
+                    jsondetails.add(jsondetail);
+                }
+            }
+
+            jsondetail = new JSONObject();
+            jsondetail.put("Disbursement_Master", jsonmaster);
+            jsondetail.put("Disbursement_Detail", jsondetails);
+            lsCategory = laPerCategory.get(lnCategory);
+            if(psNoCategory.equals(lsCategory)){
+                lsCategory = "";
+            }
+            TBJTransaction tbj = new TBJTransaction(SOURCE_CODE,Master().getIndustryID(), lsCategory); //Master().getIndustryID()
+            tbj.setGRiderCAS(poGRider);
+            tbj.setData(jsondetail);
+            jsonmaster = tbj.processRequest();
+
+            if(jsonmaster.get("result").toString().equalsIgnoreCase("success")){
+                List<TBJEntry> xlist = tbj.getJournalEntries();
+                for (TBJEntry xlist1 : xlist) {
+                    System.out.println("Account:" + xlist1.getAccount() );
+                    System.out.println("Debit:" + xlist1.getDebit());
+                    System.out.println("Credit:" + xlist1.getCredit());
+                    poJournal.Detail(poJournal.getDetailCount()-1).setForMonthOf(poGRider.getServerDate());
+                    poJournal.Detail(poJournal.getDetailCount()-1).setAccountCode(xlist1.getAccount());
+                    poJournal.Detail(poJournal.getDetailCount()-1).setCreditAmount(xlist1.getCredit());
+                    poJournal.Detail(poJournal.getDetailCount()-1).setDebitAmount(xlist1.getDebit());
+                    poJournal.AddDetail();
+                }
+            } else {
+                System.out.println(jsonmaster.toJSONString());
+            }
+        }
     }
     
     /**
