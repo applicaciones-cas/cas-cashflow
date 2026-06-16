@@ -1063,7 +1063,7 @@ public class DisbursementVoucher extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         //Update Related transaction to DV ex. JE
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,lsUserId);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1262,7 +1262,7 @@ public class DisbursementVoucher extends Transaction {
             }
 
             //Update Related transaction to DV
-            poJSON = updateRelatedTransactions(lsStatus);
+            poJSON = updateRelatedTransactions(lsStatus,lsUserId);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -1360,7 +1360,7 @@ public class DisbursementVoucher extends Transaction {
             }
 
             //Update Related transaction to DV
-            poJSON = updateRelatedTransactions(lsStatus);
+            poJSON = updateRelatedTransactions(lsStatus,lsUserId);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -1451,7 +1451,7 @@ public class DisbursementVoucher extends Transaction {
         }
 
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,lsUserId);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1531,7 +1531,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,poGRider.getUserID());
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1633,7 +1633,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,lsUserId);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1741,7 +1741,7 @@ public class DisbursementVoucher extends Transaction {
         }
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,lsUserId);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1839,7 +1839,7 @@ public class DisbursementVoucher extends Transaction {
             }
 
             //Update Related transaction to DV
-            poJSON = updateRelatedTransactions(lsStatus);
+            poJSON = updateRelatedTransactions(lsStatus,lsUserId);
             if (!"success".equals((String) poJSON.get("result"))) {
                 poGRider.rollbackTrans();
                 return poJSON;
@@ -5208,6 +5208,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                             }
                             loObj.setWithParent(true);
                             loObj.setWithUI(false);
+                            if(psApprover == null || "".equals(psApprover)){
+                                psApprover = poGRider.getUserID();
+                            }
+                            loObj.setApproving(psApprover);
                             switch(loObj.Master().getTransactionStatus()){
                                 case JournalProposalStatus.OPEN:
                                     poJSON = loObj.VoidTransaction("");
@@ -5217,7 +5221,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                                     }
                                 break;
                                 case JournalProposalStatus.CONFIRMED:
-                                default:
+                                case JournalProposalStatus.RETURNED:
                                     poJSON = loObj.CancelTransaction("");
                                     if ("error".equals((String) poJSON.get("result"))) {
                                         System.out.println("Cancel Journal Proposal : " + poJSON.get("message"));
@@ -5334,16 +5338,17 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     * @throws CloneNotSupportedException cloning error
     * @throws ScriptException scripting error during processing
     */
-    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+    public JSONObject updateRelatedTransactions(String fsStatus, String fsApprovalId) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         
         String lsJournal = existJournal();
         if(lsJournal != null && !"".equals(lsJournal)){
             poJournal.setWithParent(true);
             poJournal.setWithUI(false);
-            if(psApprover != null && !"".equals(psApprover)){
-                poJournal.setApproving(psApprover);
+            if(fsApprovalId == null || "".equals(fsApprovalId)){
+                fsApprovalId = poGRider.getUserID();
             }
+            poJournal.setApproving(fsApprovalId);
             //Update Journal
             switch(fsStatus){
                 case DisbursementStatic.APPROVED:
@@ -5389,9 +5394,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             JournalProposal loObj = JournalProposal(lnCtr);
             loObj.setWithParent(true);
             loObj.setWithUI(false);
-            if(psApprover != null && !"".equals(psApprover)){
-                loObj.setApproving(psApprover);
+            if(fsApprovalId == null || "".equals(fsApprovalId)){
+                fsApprovalId = poGRider.getUserID();
             }
+            loObj.setApproving(fsApprovalId);
             switch(fsStatus){
                 case DisbursementStatic.APPROVED:
                         poJSON = loObj.ConfirmTransaction("");
@@ -5452,7 +5458,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         if(poOtherPayments != null){
                             poOtherPayments.setWithParentClass(true);
                             poOtherPayments.setWithUI(false);
-                            if(psApprover != null && !"".equals(psApprover)){
+                            if(fsApprovalId != null && !"".equals(fsApprovalId)){
 //                                poOtherPayments.setApproving(psApprover);
                             }
                             poJSON = poOtherPayments.VoidTransaction("");
@@ -6525,6 +6531,8 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             if(DisbursementStatic.OPEN.equals(Master().getTransactionStatus()) 
                 || DisbursementStatic.CONFIRMED.equals(Master().getTransactionStatus()) 
                 || DisbursementStatic.VERIFIED.equals(Master().getTransactionStatus()) 
+                || DisbursementStatic.RETURNED.equals(Master().getTransactionStatus()) 
+                || DisbursementStatic.RETURNED_I.equals(Master().getTransactionStatus()) 
             ){
                 //Continue
             } else {
@@ -6570,7 +6578,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     }
     
     public void loadTBJ() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
-        if(Journal().getEditMode() != EditMode.ADDNEW && Journal().getEditMode() != EditMode.UPDATE){
+        if(Journal().getEditMode() != EditMode.ADDNEW){
             return;
         }
         
