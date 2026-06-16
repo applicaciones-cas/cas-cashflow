@@ -30,7 +30,9 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Disbursement_Master;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Document_Mapping_Detail;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Detail_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
+import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master_Proposal;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Other_Payments;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Particular;
 import ph.com.guanzongroup.cas.cashflow.model.Model_Payee;
@@ -834,6 +836,42 @@ public class CashflowModels {
 
         return poPettyCashFundLedger;
     }
+    
+    public Model_Journal_Master_Proposal Journal_Master_Proposal(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Journal_Master_Proposal: Application driver is not set.");
+            return null;
+        }
+        
+        if (poJournalMasterProposal == null){
+            poJournalMasterProposal = new Model_Journal_Master_Proposal();
+            poJournalMasterProposal.setApplicationDriver(poGRider);
+            poJournalMasterProposal.setXML("Model_Journal_Master_Proposal");
+            poJournalMasterProposal.setTableName("Journal_Master_Proposal");
+            poJournalMasterProposal.initialize();
+        }
+
+        return poJournalMasterProposal;
+    }
+    
+    public Model_Journal_Detail_Proposal Journal_Detail_Proposal(){
+        if (poGRider == null){
+            System.err.println("CashflowModels.Journal_Detail_Proposal: Application driver is not set.");
+            return null;
+        }
+        
+        if (poJournalDetailProposal == null){
+            poJournalDetailProposal = new Model_Journal_Detail_Proposal();
+            poJournalDetailProposal.setApplicationDriver(poGRider);
+            poJournalDetailProposal.setXML("Model_Journal_Detail_Proposal");
+            poJournalDetailProposal.setTableName("Journal_Detail_Proposal");
+            poJournalDetailProposal.initialize();
+        }
+
+        return poJournalDetailProposal;
+    }
+    
+    
     @Override
     protected void finalize() throws Throwable {
         try {                    
@@ -873,6 +911,8 @@ public class CashflowModels {
             poPettyCashFundLedger = null;
             poPettyCashDisbursement = null;
             poPettyCashDisbursementDetail = null;
+            poJournalMasterProposal = null;
+            poJournalDetailProposal = null;
 
             poGRider = null;
         } finally {
@@ -891,6 +931,8 @@ public class CashflowModels {
     private Model_Transaction_Account_Chart poGeneralLedger;
     private Model_Journal_Master poJournalMaster;
     private Model_Journal_Detail poJournalDetail;
+    private Model_Journal_Master_Proposal poJournalMasterProposal;
+    private Model_Journal_Detail_Proposal poJournalDetailProposal;
     private Model_Recurring_Issuance poRecurringIssuance;
     private Model_Particular poParticular;
     private Model_Payee poPayee;
