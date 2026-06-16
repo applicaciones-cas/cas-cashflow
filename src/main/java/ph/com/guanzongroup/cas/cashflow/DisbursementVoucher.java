@@ -6570,7 +6570,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     }
     
     public void loadTBJ() throws SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
-        if(Journal().getEditMode() != EditMode.ADDNEW){
+        if(Journal().getEditMode() != EditMode.ADDNEW && Journal().getEditMode() != EditMode.UPDATE){
             return;
         }
         
