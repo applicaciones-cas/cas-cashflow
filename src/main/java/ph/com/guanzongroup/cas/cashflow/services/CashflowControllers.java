@@ -27,6 +27,7 @@ import ph.com.guanzongroup.cas.cashflow.Disbursement;
 import ph.com.guanzongroup.cas.cashflow.DisbursementVoucher;
 import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
 import ph.com.guanzongroup.cas.cashflow.Journal;
+import ph.com.guanzongroup.cas.cashflow.JournalProposal;
 import ph.com.guanzongroup.cas.cashflow.OtherPaymentStatusUpdate;
 import ph.com.guanzongroup.cas.cashflow.OtherPayments;
 import ph.com.guanzongroup.cas.cashflow.Payee;
@@ -365,6 +366,24 @@ public class CashflowControllers {
         poJournal.setLogWrapper(poLogWrapper);
         poJournal.setWithParent(true);
         return poJournal;
+    }
+
+    public JournalProposal JournalProposal() throws SQLException, GuanzonException {
+        if (poGRider == null) {
+            poLogWrapper.severe("CashflowControllers.JournalProposal: Application driver is not set.");
+            return null;
+        }
+
+        if (poJournalProposal != null) {
+            return poJournalProposal;
+        }
+
+        poJournalProposal = new JournalProposal();
+        poJournalProposal.setApplicationDriver(poGRider);
+        poJournalProposal.setBranchCode(poGRider.getBranchCode());
+        poJournalProposal.setLogWrapper(poLogWrapper);
+        poJournalProposal.setWithParent(true);
+        return poJournalProposal;
     }
 
     public DocumentMapping DocumentMapping() throws SQLException, GuanzonException {
@@ -757,6 +776,7 @@ public class CashflowControllers {
             poCachePayable = null;
             poBankAccountMaster = null;
             poDisbursementVoucher = null;
+            poJournalProposal = null;
             poDisbursement = null;
             poDisbursementBase = null;
             poDisbursement_PRF = null;
@@ -808,6 +828,7 @@ public class CashflowControllers {
     private AccountChart poAccountChart;
     private TransactionAccountChart poTransactionAccountChart;
     private Journal poJournal;
+    private JournalProposal poJournalProposal;
     private DocumentMapping poDocummentMapping;
     private CheckStatusUpdate poCheckStatusUpdate;
     private CheckImporting poCheckImporting;

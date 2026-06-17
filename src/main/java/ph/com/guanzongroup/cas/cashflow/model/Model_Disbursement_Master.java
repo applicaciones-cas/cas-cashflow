@@ -20,6 +20,7 @@ import org.guanzon.cas.parameter.services.ParamModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
+import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
 
 /**
  *
@@ -482,12 +483,37 @@ public class Model_Disbursement_Master extends Model {
 
     public Model_Check_Payments CheckPayments() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sTransNox"))) {
-            if (poOtherPayments.getEditMode() == EditMode.READY
-                    && poCheckPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
+            if (poOtherPayments.getEditMode() == EditMode.READY && poCheckPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
                 return poCheckPayments;
             } else {
-                poJSON = poCheckPayments.openRecordbySourceNo((String) getValue("sTransNox"));
+                //find the recent check payment to open
+                Model_Check_Payments loMaster = new CashflowModels(poGRider).CheckPayments();
+                String lsSQL = MiscUtil.makeSelect(loMaster);
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " sSourceNo = " + SQLUtil.toSQL(getTransactionNo())
+                        + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER)
+                );
 
+                lsSQL = lsSQL + " ORDER BY dTransact,sTransNox DESC ";
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                String lsCheckTransNo = "";
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------CHECK PAYMENT--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            lsCheckTransNo = loRS.getString("sTransNox");
+                        }  
+                    }
+                }
+                MiscUtil.close(loRS);
+                
+                poJSON = poCheckPayments.openRecord(lsCheckTransNo);
+//                poJSON = poCheckPayments.openRecordbySourceNo((String) getValue("sTransNox"));
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poCheckPayments;
                 } else {
@@ -507,7 +533,34 @@ public class Model_Disbursement_Master extends Model {
                     && poOtherPayments.getSourceNo().equals((String) getValue("sTransNox"))) {
                 return poOtherPayments;
             } else {
-                poJSON = poOtherPayments.openRecordbySourceNo((String) getValue("sTransNox"));
+                //find the recent other payment to open
+                Model_Other_Payments loMaster = new CashflowModels(poGRider).OtherPayments();
+                String lsSQL = MiscUtil.makeSelect(loMaster);
+                lsSQL = MiscUtil.addCondition(lsSQL,
+                        " sSourceNo = " + SQLUtil.toSQL(getTransactionNo())
+                        + " AND sSourceCd = " + SQLUtil.toSQL(DisbursementStatic.SourceCode.DISBURSEMENT_VOUCHER)
+                );
+
+                lsSQL = lsSQL + " ORDER BY dTransact,sTransNox DESC ";
+                System.out.println("Executing SQL: " + lsSQL);
+                ResultSet loRS = poGRider.executeQuery(lsSQL);
+                poJSON = new JSONObject();
+                String lsOthTransNo = "";
+                if (MiscUtil.RecordCount(loRS) > 0) {
+                    if (loRS.next()) {
+                        // Print the result set
+                        System.out.println("--------------------------OTHER PAYMENT--------------------------");
+                        System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                        System.out.println("------------------------------------------------------------------------------");
+                        if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                            lsOthTransNo = loRS.getString("sTransNox");
+                        }  
+                    }
+                }
+                MiscUtil.close(loRS);
+                
+                poJSON = poOtherPayments.openRecord(lsOthTransNo);
+//                poJSON = poOtherPayments.openRecordbySourceNo((String) getValue("sTransNox"));
 
                 if ("success".equals((String) poJSON.get("result"))) {
                     return poOtherPayments;
