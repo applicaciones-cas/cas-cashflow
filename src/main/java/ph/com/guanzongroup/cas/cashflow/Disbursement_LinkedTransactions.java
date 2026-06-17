@@ -18,12 +18,12 @@ import org.guanzon.appdriver.base.GuanzonException;
 import org.guanzon.appdriver.base.LogWrapper;
 import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.base.SQLUtil;
-import org.guanzon.cas.purchasing.controller.PurchaseOrder;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
+import org.guanzon.cas.purchasing.controller.PurchaseOrderReturn;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
-import org.guanzon.cas.purchasing.services.PurchaseOrderControllers;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReturnControllers;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
 import ph.com.guanzongroup.cas.cashflow.model.Model_AP_Payment_Detail;
@@ -138,6 +138,14 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     poJSON = savePOReceivingMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("message", "System error while updating PO Receiving.\n\n" + (String) poJSON.get("message"));
+                        return poJSON;
+                    }
+                    break;
+                case DisbursementStatic.SourceCode.PO_RETURN: 
+                    //Save PO Receiving and update connected cache payable
+                    poJSON = savePOReceivingMaster(lnCtr, lbAdd);
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        poJSON.put("message", "System error while updating PO Return.\n\n" + (String) poJSON.get("message"));
                         return poJSON;
                     }
                     break;
@@ -460,6 +468,9 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 case DisbursementStatic.SourceCode.PO_RECEIVING:
                     lsSourceRefNo = Detail(row).POReceiving().getReferenceNo();
                     break;
+                case DisbursementStatic.SourceCode.PO_RETURN:
+                    lsSourceRefNo = Detail(row).POReturn().PurchaseOrderReceivingMaster().getReferenceNo();
+                    break;
                 case DisbursementStatic.SourceCode.AP_ADJUSTMENT:
                     lsSourceRefNo = Detail(row).APAdjustment().getReferenceNo();
                     break;
@@ -525,6 +536,85 @@ public class Disbursement_LinkedTransactions extends Transaction {
             }
         }
     
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+    
+    /**
+     * SAVE PO Return Transaction 
+     * @param loMaster
+     * @param isAdd
+     * @return
+     * @throws SQLException
+     * @throws GuanzonException
+     * @throws CloneNotSupportedException
+     * @throws ParseException 
+     */
+    private JSONObject savePOReturnMaster(int row, boolean isAdd) throws SQLException, GuanzonException, CloneNotSupportedException, ParseException{
+        String lsSourceNo = Detail(row).getSourceNo();
+        String lsSourceCode = Detail(row).getSourceCode();
+        Double ldblAppliedAmount = Detail(row).getAmountApplied();
+        Double ldblAmountPaid = 0.0000;
+        Double ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, "");
+        if(lsSourceCode.equals(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE)){
+            lsSourceNo = Detail(row).getDetailSource();
+            lsSourceCode = Detail(row).SOADetail().getSourceCode();
+            ldblOtherPayment = getOtherPayment(lsSourceNo, lsSourceCode, "");
+        } 
+        
+        if(Detail(row).getAmountApplied() < 0.0000){
+            ldblAppliedAmount = ldblAppliedAmount * -1;
+        }
+        
+        if(isAdd){ //Add applied amount in DV with the other payment from other DV transaction
+            ldblAmountPaid = ldblOtherPayment + ldblAppliedAmount; 
+        } else { //Get only the other paid amount from OTHER DV
+            ldblAmountPaid = ldblOtherPayment; 
+        }
+        //Validate Amount paid do not allow when payment is greater than the transaction net total
+        if(ldblAmountPaid > Detail(row).POReturn().getNetTotal()){
+            poJSON.put("result", "error");
+            if(psDVNo != null && !"".equals(psDVNo)){
+                poJSON.put("message", "PO Return is already linked to DV No. "+ psDVNo +".\nAmount paid must not exceed the PO Return Net Total with reference no "+Detail(row).POReturn().PurchaseOrderReceivingMaster().getReferenceNo()+".");
+            } else {
+                poJSON.put("message", "Amount paid must not exceed the PO Return Net Total with reference no "+Detail(row).POReturn().PurchaseOrderReceivingMaster().getReferenceNo()+".");
+            }
+            return poJSON;
+        }
+        
+        //Save PRF Master
+        Detail(row).POReturn().updateRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        if(pbIsUpdateAmountPaid){
+            ldblAmountPaid = ldblAmountPaid + Detail(row).POReturn().getAmountPaid().doubleValue();
+            Detail(row).POReturn().setAmountPaid(ldblAmountPaid);
+        }
+        poJSON = Detail(row).POReturn().saveRecord();
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+        //Update cache payable
+        poJSON = saveCachePayableMaster(row, isAdd);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        
+            
+        //Tag Source Transaction as Paid
+        if(pbIsUpdateAmountPaid){
+            if(Objects.equals(Detail(row).POReturn().getNetTotal(), ldblAmountPaid)){
+                poJSON = paidLinkedTransaction(lsSourceNo, lsSourceCode);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+            }
+        }
+        
         poJSON.put("result", "success");
         poJSON.put("message", "success");
         return poJSON;
@@ -684,6 +774,12 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 break;
             case DisbursementStatic.SourceCode.PO_RECEIVING: 
                 poJSON = savePOReceivingMaster(row, isAdd);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                break;
+            case DisbursementStatic.SourceCode.PO_RETURN: 
+                poJSON = savePOReturnMaster(row, isAdd);
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }
@@ -863,6 +959,26 @@ public class Disbursement_LinkedTransactions extends Transaction {
                 loPOReceiving.setWithParent(true);
                 loPOReceiving.setWithUI(false);
                 poJSON = loPOReceiving.PaidTransaction("");
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                System.out.println("message : " + (String) poJSON.get("message"));
+                System.out.println("----------------------------------------------");
+                break;
+            case DisbursementStatic.SourceCode.PO_RETURN: 
+                System.out.println("---------------PO RECEIVING TAGGING AS PAID-------------");
+                PurchaseOrderReturn loPOReturn = new PurchaseOrderReturnControllers(poGRider, logwrapr).PurchaseOrderReturn();
+                poJSON = loPOReturn.InitTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                poJSON = loPOReturn.OpenTransaction(fsSourceNo);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                loPOReturn.setWithParent(true);
+                loPOReturn.setWithUI(false);
+                poJSON = loPOReturn.PaidTransaction("");
                 if ("error".equals((String) poJSON.get("result"))) {
                     return poJSON;
                 }

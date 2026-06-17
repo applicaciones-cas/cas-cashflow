@@ -22,9 +22,11 @@ import org.guanzon.cas.parameter.model.Model_Tax_Code;
 import org.guanzon.cas.parameter.services.ParamModels;
 import org.guanzon.cas.purchasing.model.Model_POR_Detail;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.model.Model_POReturn_Master;
 import org.guanzon.cas.purchasing.model.Model_PO_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReturnModels;
 import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
@@ -43,6 +45,7 @@ public class Model_Disbursement_Detail extends Model {
     Model_Tax_Code poTaxCode;
     Model_Payment_Request_Master poPRF;
     Model_POR_Master poPOR;
+    Model_POReturn_Master poPOReturn;
     Model_AP_Payment_Adjustment poAPAdjustment;
     Model_AP_Payment_Master poAPMaster;
     Model_AP_Payment_Detail poAPDetail;
@@ -93,6 +96,8 @@ public class Model_Disbursement_Detail extends Model {
             poInvType = model.InventoryType();
             PurchaseOrderReceivingModels POReceiving = new PurchaseOrderReceivingModels(poGRider);
             poPOR = POReceiving.PurchaseOrderReceivingMaster();
+            PurchaseOrderReturnModels POReturn = new PurchaseOrderReturnModels(poGRider);
+            poPOReturn = POReturn.PurchaseOrderReturnMaster();
             //end - initialize reference objects
             pnEditMode = EditMode.UNKNOWN;
         } catch (SQLException e) {
@@ -674,6 +679,33 @@ public class Model_Disbursement_Detail extends Model {
             return poPOR;
         }
     }
+    
+    public Model_POReturn_Master POReturn() throws SQLException, GuanzonException {
+        String lsSourceNo = (String) getValue("sSourceNo");
+        if(DisbursementStatic.SourceCode.ACCOUNTS_PAYABLE.equals((String) getValue("sSourceCd"))){
+            lsSourceNo = (String) getValue("sDetlSrce");
+        }
+        
+        if (!"".equals(lsSourceNo)) {
+            if ((poPOReturn.getEditMode() == EditMode.READY || poPOReturn.getEditMode() == EditMode.UPDATE)
+                    && poPOReturn.getTransactionNo().equals(lsSourceNo)) {
+                return poPOReturn;
+            } else {
+                poJSON = poPOReturn.openRecord(lsSourceNo);
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOReturn;
+                } else {
+                    poPOReturn.initialize();
+                    return poPOReturn;
+                }
+            }
+        } else {
+            poPOReturn.initialize();
+            return poPOReturn;
+        }
+    }
+
 
     public Model_AP_Payment_Detail SOADetail() throws SQLException, GuanzonException {
         if (!"".equals((String) getValue("sSourceNo"))) {
