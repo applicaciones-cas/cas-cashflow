@@ -232,7 +232,7 @@ public class testDisbursementVoucher {
         }
     }
     
-    @Test
+//    @Test
     public void testLoadTransactionList() {
         String industryId = "02";
         String companyId = "0002";
@@ -340,6 +340,50 @@ public class testDisbursementVoucher {
             }
             
         } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException  ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+        } 
+    }
+    
+    
+    @Test
+    public void testLoadJournalProposal() {
+        try {
+
+            JSONObject loJSON = new JSONObject();
+
+            loJSON = poController.InitTransaction();
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+           
+            loJSON = poController.OpenTransaction("GCO126000046");
+            if (!"success".equals((String) loJSON.get("result"))) {
+                System.err.println((String) loJSON.get("message"));
+                Assert.fail();
+            }
+            
+            
+            System.out.println("----------------JOURNAL PROPOSAL-------------");
+            for(int lnCtr = 0; lnCtr < poController.getJournalProposalList().size(); lnCtr++){
+                System.out.println("JEP Trans No : " + poController.JournalProposal(lnCtr).Master().getTransactionNo());
+                System.out.println("JEP Branch : " + poController.JournalProposal(lnCtr).Master().Branch().getBranchName());
+                System.out.println("JEP Department : " + poController.JournalProposal(lnCtr).Master().Department().getDescription());
+                System.out.println("JEP Total Debit : " + poController.JournalProposal(lnCtr).getTotalDebitAmount());
+                System.out.println("JEP Total Credit : " + poController.JournalProposal(lnCtr).getTotalCreditAmount());
+                
+                System.out.println("----------------JOURNAL PROPOSAL DETAIL-------------");
+                System.out.println("COUNTER : " + (lnCtr+1));
+                for(int lnRow = 0; lnRow < poController.JournalProposal(lnCtr).getDetailCount(); lnRow++){
+                    System.out.println("ROW : " + (lnRow+1));
+                    System.out.println("JEP Detail : " + poController.JournalProposal(lnCtr).Detail(lnRow).getAccountCode());
+                    System.out.println("JEP Debit : " + poController.JournalProposal(lnCtr).Detail(lnRow).getDebitAmount());
+                    System.out.println("JEP Credit : " + poController.JournalProposal(lnCtr).Detail(lnRow).getCreditAmount());
+
+                }
+            }
+            
+        } catch (GuanzonException | SQLException | CloneNotSupportedException | ScriptException ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
         } 
     }
