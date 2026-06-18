@@ -6107,7 +6107,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         if(lsIssuedTo != null && !"".equals(lsIssuedTo)){
                             poJSON = loPayee.getModel().openRecord(lsIssuedTo); //Get the actual Payee setted for AP Payment Adjustment
                         } else {
-                            poJSON = loPayee.getModel().openRecordByReference(findPrimaryContactPerson(lsClientId));
+                            String lsContactPerson = findPrimaryContactPerson(lsClientId);
+                            if(lsContactPerson != null && !"".equals(lsContactPerson)){
+                                poJSON = loPayee.getModel().openRecordByReference(lsContactPerson);
+                            } else {
+                                poJSON = loPayee.getModel().openRecordByReference(lsClientId);
+                            }
                         }
 
                         if ("error".equals((String) poJSON.get("result"))) {
@@ -8818,6 +8823,13 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                                 ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
                             }
                             ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+                            
+//                            if((Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate) > ldblTotalDiscount){
+//                                ldblTotalDiscount = 0.0000;
+//                            } else {
+//                                ldblTotalDiscount = ldblTotalDiscount - (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+//                            }
+                            
                             poJSON = getPOReturnDetail(Detail(lnCtr).POReturn(),Details);
                             if(!isJSONSuccess(poJSON)){
                                 return poJSON;
@@ -8860,6 +8872,11 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                                         ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
                                     }
                                     ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+//                                    if((Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate) > ldblTotalDiscount){
+//                                        ldblTotalDiscount = 0.0000;
+//                                    } else {
+//                                        ldblTotalDiscount = ldblTotalDiscount - (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+//                                    }
                                     poJSON = getPOReturnDetail(Detail(lnCtr).SOADetail().PurchasOrderReturnMaster(),Details);
                                     if(!isJSONSuccess(poJSON)){
                                         return poJSON;
@@ -8991,6 +9008,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     private JSONObject getPOReceivingDetail(Model_POR_Master foObject,  List<TransactionPaymentSummaryDetail> Details ) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
         double lnAmount = 0.0000;
+        String lsInvoiceNo = foObject.getSalesInvoice();
+        if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
+            lsInvoiceNo = foObject.getReferenceNo();
+        }
         
         for(int lnCtr = 0; lnCtr < foObject.getEntryNo();lnCtr++){
             Model_POR_Detail loObject = new PurchaseOrderReceivingModels(poGRider).PurchaseOrderReceivingDetails();
@@ -9017,10 +9038,6 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                     }
                 }
             }
-            String lsInvoiceNo = foObject.getSalesInvoice();
-            if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
-                lsInvoiceNo = foObject.getReferenceNo();
-            }
             if(!lbExist){
                 Details.add(new TransactionPaymentSummaryDetail(
                         Details.size()+1,
@@ -9033,14 +9050,30 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 ));
             }
         }
-    
+        
+        //Check if freight amount is exist
+        if(foObject.getFreight().doubleValue() > 0.0000 && (foObject.getTruckingId() == null || "".equals(foObject.getTruckingId()) || foObject.getSupplierId().equals(foObject.getTruckingId()))){
+            Details.add(new TransactionPaymentSummaryDetail(
+                    Details.size()+1,
+                    "Freight",
+                    foObject.Department().getDescription(),
+                    lsInvoiceNo,
+                    foObject.getTransactionNo(),
+                    DisbursementStatic.SourceCode.PO_RECEIVING,
+                    Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat( foObject.getFreight().doubleValue(), false).replace(",", ""))
+            ));
+        }
+        
         return poJSON;
     }
     
     private JSONObject getPOReturnDetail(Model_POReturn_Master foObject,  List<TransactionPaymentSummaryDetail> Details ) throws SQLException, GuanzonException{
         poJSON = new JSONObject();
         double lnAmount = 0.0000;
-        
+        String lsInvoiceNo = foObject.PurchaseOrderReceivingMaster().getSalesInvoice();
+        if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
+            lsInvoiceNo = foObject.PurchaseOrderReceivingMaster().getReferenceNo();
+        }
         for(int lnCtr = 0; lnCtr < foObject.getEntryNo();lnCtr++){
             Model_POReturn_Detail loObject = new PurchaseOrderReturnModels(poGRider).PurchaseOrderReturnDetails();
             poJSON = loObject.openRecord(foObject.getTransactionNo(), lnCtr+1);
@@ -9056,19 +9089,17 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             }
             lnAmount = loObject.getUnitPrce().doubleValue() * loObject.getQuantity().doubleValue();
             boolean lbExist = false;
+            double lnDetAmt = 0.0000;
             for(int lnRow = 0;lnRow < Details.size();lnRow++){
                 if(Details.get(lnRow).getsSourceCode().equals(DisbursementStatic.SourceCode.PO_RETURN)){
                     if(Details.get(lnRow).getsSourceNo().equals(foObject.getTransactionNo())
                        && Details.get(lnRow).getsParticular().equals(lsCategory)){
-                        lnAmount = lnAmount + Details.get(lnRow).getnTotalAmount();
-                        Details.get(lnRow).setnTotalAmount(Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", "")));
+                        lnDetAmt = Details.get(lnRow).getnTotalAmount() * -1;
+                        lnAmount = lnAmount + lnDetAmt;
+                        Details.get(lnRow).setnTotalAmount(-Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", "")));
                         lbExist = true;
                     }
                 }
-            }
-            String lsInvoiceNo = foObject.PurchaseOrderReceivingMaster().getSalesInvoice();
-            if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
-                lsInvoiceNo = foObject.PurchaseOrderReceivingMaster().getReferenceNo();
             }
             if(!lbExist){
                 Details.add(new TransactionPaymentSummaryDetail(
@@ -9081,6 +9112,19 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         -Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))
                 ));
             }
+        }
+        
+        //Check if freight amount is exist
+        if(foObject.getFreight().doubleValue() > 0.0000){
+            Details.add(new TransactionPaymentSummaryDetail(
+                    Details.size()+1,
+                    "Freight",
+                    foObject.PurchaseOrderReceivingMaster().Department().getDescription(),
+                    lsInvoiceNo,
+                    foObject.getTransactionNo(),
+                    DisbursementStatic.SourceCode.PO_RETURN,
+                    -Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat( foObject.getFreight().doubleValue(), false).replace(",", ""))
+            ));
         }
     
         return poJSON;
