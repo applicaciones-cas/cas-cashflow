@@ -59,6 +59,7 @@ public class CheckStatusUpdate extends Transaction {
     private BankAccountMaster bankAccount;
     List<String> paSOATaggingMaster;
     private Journal poJournal;
+    private JournalProposal poJournalProposal;
     private String psIndustryId = "";
     private String psCompanyId = "";
     private JSONObject cachedCheckTrans;
@@ -69,6 +70,7 @@ public class CheckStatusUpdate extends Transaction {
 
         poMaster = new CashflowModels(poGRider).DisbursementMaster();
         poDetail = new CashflowModels(poGRider).DisbursementDetail();
+        poJournalProposal = new CashflowControllers(poGRider, logwrapr).JournalProposal();
         poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
         disbursement = new CashflowControllers(poGRider, logwrapr).Disbursement();
@@ -742,6 +744,28 @@ public class CheckStatusUpdate extends Transaction {
         poJSON.put("message", "success");
         return poJSON;
     }
+    
+    public JSONObject updateJournalProposal() throws SQLException, GuanzonException, ParseException, CloneNotSupportedException {
+        poJSON = new JSONObject();
+        poJournalProposal.setWithParent(true);
+        poJournalProposal.setWithUI(false);
+        if (psApprover != null && !"".equals(psApprover)) {
+            poJournalProposal.setApproving(psApprover);
+        }
+        poJournalProposal.InitTransaction();
+        poJSON = poJournalProposal.OpenTransaction(getJournalTrans());
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+        poJSON = poJournalProposal.ReturnTransaction("");
+        if (!"success".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
 
     public String getJournalTrans() throws SQLException, GuanzonException {
         String lsSQL = "SELECT sTransNox FROM Journal_Master";
@@ -759,6 +783,42 @@ public class CheckStatusUpdate extends Transaction {
                 return loRS.getString("sTransNox");
             }
             return "";
+        } finally {
+            MiscUtil.close(loRS);
+        }
+    }
+    public boolean hasJournalTrans() throws SQLException, GuanzonException {
+        String lsSQL = "SELECT 1 FROM Journal_Master";
+        lsSQL = MiscUtil.addCondition(
+                lsSQL,
+                "sSourceNo = " + SQLUtil.toSQL(Master().CheckPayments().getSourceNo())
+                + " LIMIT 1");
+
+        System.out.println("EXECUTING SQL : " + lsSQL);
+
+        ResultSet loRS = null;
+        try {
+            loRS = poGRider.executeQuery(lsSQL);
+
+            return loRS != null && loRS.next();
+        } finally {
+            MiscUtil.close(loRS);
+        }
+    }
+    public boolean hasJournalProposal() throws SQLException, GuanzonException {
+        String lsSQL = "SELECT 1 FROM Journal_Master_Proposal";
+        lsSQL = MiscUtil.addCondition(
+                lsSQL,
+                "sSourceNo = " + SQLUtil.toSQL(Master().CheckPayments().getSourceNo())
+                + " LIMIT 1");
+
+        System.out.println("EXECUTING SQL : " + lsSQL);
+
+        ResultSet loRS = null;
+        try {
+            loRS = poGRider.executeQuery(lsSQL);
+
+            return loRS != null && loRS.next();
         } finally {
             MiscUtil.close(loRS);
         }
@@ -1397,11 +1457,23 @@ public class CheckStatusUpdate extends Transaction {
             poGRider.rollbackTrans();
             return poJSON;
         }
-        poJSON = updateJournalEntry();
-        if (!"success".equals((String) poJSON.get("result"))) {
-            poGRider.rollbackTrans();
-            return poJSON;
+        
+        if (hasJournalTrans()) {
+            poJSON = updateJournalEntry();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
         }
+        
+        if (hasJournalProposal()) {
+            poJSON = updateJournalProposal();
+            if (!"success".equals((String) poJSON.get("result"))) {
+                poGRider.rollbackTrans();
+                return poJSON;
+            }
+        }
+        
 
         poJSON = cancelCheckPayment(CheckRemarks);
         if (!"success".equals((String) poJSON.get("result"))) {
