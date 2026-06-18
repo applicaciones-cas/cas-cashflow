@@ -5906,13 +5906,17 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         
         
         //Apply Vat
-        if(ldblBalance < 0 || (DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode())
-                                || DisbursementStatic.SourceCode.PO_RETURN.equals(loController.Master().getSourceCode()))
-        ){
-            if(Master().getVATAmount() > 0.0000){
-                computeDetail(lnRow);
+        if(ldblBalance < 0 || (DisbursementStatic.SourceCode.AP_ADJUSTMENT.equals(loController.Master().getSourceCode()))){
+            if(DisbursementStatic.SourceCode.PO_RETURN.equals(loController.Master().getSourceCode())) {
+                Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount() > 0 ? -loController.Master().getVATAmount() : loController.Master().getVATAmount());
+                Detail(lnRow).setDetailVatSales(loController.Master().getVATSales() > 0 ? -loController.Master().getVATSales() : loController.Master().getVATSales());
+                Detail(lnRow).setDetailVatExempt(loController.Master().getVATExempt() > 0 ? -loController.Master().getVATExempt() : loController.Master().getVATExempt());
             } else {
-                Detail(lnRow).setDetailVatExempt(ldblBalance);
+                if(Master().getVATAmount() > 0.0000){
+                    computeDetail(lnRow);
+                } else {
+                    Detail(lnRow).setDetailVatExempt(ldblBalance);
+                }
             }
         } else {
             Detail(lnRow).setDetailVatAmount(loController.Master().getVATAmount());
