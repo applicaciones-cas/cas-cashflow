@@ -675,7 +675,7 @@ public class CheckPayments extends Parameter {
         + ", sBnkActID"
         + ", sCheckNox"
         + ", dCheckDte"
-        + ", sPayorIdx"
+        + ", sPayorIDx"
         + ", sPayeeIDx"
         + ", nAmountxx"
         + ", sRemarksx"
@@ -714,27 +714,68 @@ public class CheckPayments extends Parameter {
         lsSQL += " GROUP BY sTransNox";
 
         System.out.println("SQL EXECUTED: " + lsSQL);
+        if (pbWithUI) {
+            poJSON = ShowDialogFX.Browse(
+                    poGRider,
+                    lsSQL,
+                    fsTransNo,
+                    "Transaction No»Check No»Check Date",
+                    "sTransNox»sCheckNox»dCheckDte",
+                    "sTransNox»sCheckNox»dCheckDte",
+                    byCode ? 0 : 1
+            );
+            if (poJSON != null) {
 
-        poJSON = ShowDialogFX.Browse(
-                poGRider,
-                lsSQL,
-                fsTransNo,
-                "Transaction No»Check No»Check Date",
-                "sTransNox»sCheckNox»dCheckDte",
-                "sTransNox»sCheckNox»dCheckDte",
-                byCode ? 0 : 1
-        );
+                JSONObject loBrowse = new JSONObject();
+                loBrowse.putAll(poJSON);
+                poJSON = openRecord((String) poJSON.get("sTransNox"));
+                poJSON.put("data", loBrowse);
 
-        if (poJSON != null) {
+                return poJSON;
+            }
+        }else{
+//            poJSON = (JSONObject) poGRider.executeQuery(lsSQL);
+             ResultSet loRS = poGRider.executeQuery(lsSQL);
 
-            JSONObject loBrowse = new JSONObject();
-            loBrowse.putAll(poJSON);
+            if (loRS.next()) {
+                JSONObject loBrowse = new JSONObject();
 
-            poJSON = openRecord((String) poJSON.get("sTransNox"));
+                loBrowse.put("sTransNox", loRS.getObject("sTransNox"));
+                loBrowse.put("sBranchCd", loRS.getObject("sBranchCd"));
+                loBrowse.put("sIndstCdx", loRS.getObject("sIndstCdx"));
+                loBrowse.put("dTransact", loRS.getObject("dTransact"));
+                loBrowse.put("sBankIDxx", loRS.getObject("sBankIDxx"));
+                loBrowse.put("sBnkActID", loRS.getObject("sBnkActID"));
+                loBrowse.put("sCheckNox", loRS.getObject("sCheckNox"));
+                loBrowse.put("dCheckDte", loRS.getObject("dCheckDte"));
+                loBrowse.put("sPayorIDx", loRS.getObject("sPayorIDx"));
+                loBrowse.put("sPayeeIDx", loRS.getObject("sPayeeIDx"));
+                loBrowse.put("nAmountxx", loRS.getObject("nAmountxx"));
+                loBrowse.put("sRemarksx", loRS.getObject("sRemarksx"));
+                loBrowse.put("sSourceCd", loRS.getObject("sSourceCd"));
+                loBrowse.put("sSourceNo", loRS.getObject("sSourceNo"));
+                loBrowse.put("cLocation", loRS.getObject("cLocation"));
+                loBrowse.put("cIsReplcd", loRS.getObject("cIsReplcd"));
+                loBrowse.put("cReleased", loRS.getObject("cReleased"));
+                loBrowse.put("cPayeeTyp", loRS.getObject("cPayeeTyp"));
+                loBrowse.put("cDisbMode", loRS.getObject("cDisbMode"));
+                loBrowse.put("cClaimant", loRS.getObject("cClaimant"));
+                loBrowse.put("sAuthorze", loRS.getObject("sAuthorze"));
+                loBrowse.put("cIsCrossx", loRS.getObject("cIsCrossx"));
+                loBrowse.put("cIsPayeex", loRS.getObject("cIsPayeex"));
+                loBrowse.put("cTranStat", loRS.getObject("cTranStat"));
+                loBrowse.put("cProcessd", loRS.getObject("cProcessd"));
+                loBrowse.put("cPrintxxx", loRS.getObject("cPrintxxx"));
+                loBrowse.put("dPrintxxx", loRS.getObject("dPrintxxx"));
+                loBrowse.put("sModified", loRS.getObject("sModified"));
+                loBrowse.put("dModified", loRS.getObject("dModified"));
 
-            poJSON.put("data", loBrowse);
+                poJSON = openRecord(loRS.getString("sTransNox"));
+                poJSON.put("data", loBrowse);
 
-            return poJSON;
+                return poJSON;
+
+            }
         }
 
         poJSON = new JSONObject();

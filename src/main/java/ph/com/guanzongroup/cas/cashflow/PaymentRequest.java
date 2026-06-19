@@ -110,7 +110,7 @@ public class PaymentRequest extends Transaction {
     public JSONObject UpdateTransaction() {
         return updateTransaction();
     }
-
+    
     public JSONObject ConfirmTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException {
 
         poJSON = new JSONObject();
@@ -2163,7 +2163,7 @@ public class PaymentRequest extends Transaction {
     }
 
     public int getPRFMasterCount() {
-        return this.poPRFMaster.size();
+        return poPRFMaster.size();
     }
 
     public Model_Payment_Request_Master poPRFMaster(int row) {

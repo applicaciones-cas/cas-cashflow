@@ -139,18 +139,19 @@ public class APPaymentAdjustment extends Parameter {
     
     public JSONObject callApproval(){
         poJSON = new JSONObject();
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        if (pbWithUI) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer.");
+                    return poJSON;
+                }
             }
-            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer.");
-                return poJSON;
-            }
-        }   
-        
+        }
         poJSON.put("result", "success");
         poJSON.put("message", "success");
 //        setApproving((String) poJSON.get("sUserIDxx"));

@@ -49,14 +49,13 @@ import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 public class CheckStatusUpdate extends Transaction {
 
     List<Model_Disbursement_Master> poDisbursementMaster;
-    private Disbursement disbursement;
+
     private CheckPayments checkPayments;
     private PaymentRequest PRFTrans;
     private PurchaseOrderReceiving PORTrans;
     private CachePayable CPTrans;
     private APPaymentAdjustment APPaymAdjustTrans;
     private SOATagging SOAMasterTrans;
-    private BankAccountMaster bankAccount;
     List<String> paSOATaggingMaster;
     private Journal poJournal;
     private JournalProposal poJournalProposal;
@@ -73,7 +72,7 @@ public class CheckStatusUpdate extends Transaction {
         poJournalProposal = new CashflowControllers(poGRider, logwrapr).JournalProposal();
         poJournal = new CashflowControllers(poGRider, logwrapr).Journal();
         checkPayments = new CashflowControllers(poGRider, logwrapr).CheckPayments();
-        disbursement = new CashflowControllers(poGRider, logwrapr).Disbursement();
+//        disbursement = new CashflowControllers(poGRider, logwrapr).Disbursement();
         PRFTrans = new CashflowControllers(poGRider, logwrapr).PaymentRequest();
         PORTrans = new PurchaseOrderReceivingControllers(poGRider, logwrapr).PurchaseOrderReceiving();
         CPTrans = new CashflowControllers(poGRider, logwrapr).CachePayable();
@@ -113,13 +112,13 @@ public class CheckStatusUpdate extends Transaction {
         return (CheckPayments) checkPayments;
     }
 
-    public BankAccountMaster BankAccountMaster() {
-        return (BankAccountMaster) bankAccount;
-    }
+//    public BankAccountMaster BankAccountMaster() {
+//        return (BankAccountMaster) bankAccount;
+//    }
 
-    public Disbursement Disbursement() {
-        return (Disbursement) disbursement;
-    }
+//    public Disbursement Disbursement() {
+//        return (Disbursement) disbursement;
+//    }
 
     private Model_Disbursement_Master DisbursementMasterList() {
         return new CashflowModels(poGRider).DisbursementMaster();
@@ -189,7 +188,7 @@ public class CheckStatusUpdate extends Transaction {
     public JSONObject SearchBanks(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
         Banks object = new ParamControllers(poGRider, logwrapr).Banks();
         object.setRecordStatus("1");
-
+        if(pbWithUI)
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             CheckPayments().getModel().setBankID(object.getModel().getBankID());
@@ -473,86 +472,86 @@ public class CheckStatusUpdate extends Transaction {
         return loJSON;
     }
 
-    public JSONObject getDisbursement(String fsBankID,
-            String fsBankAccountID,
-            String fsCheckNo)
-            throws SQLException, GuanzonException {
-
-        poJSON = new JSONObject();
-        String lsSQL = " SELECT a.sTransNox, "
-                + " a.dTransact, "
-                + " b.sTransNox AS checktrans, "
-                + " b.sCheckNox, "
-                + " b.dCheckDte, "
-                + " b.cProcessd, "
-                + " b.cTranStat AS checkstat, "
-                + " c.sBankIDxx, "
-                + " c.sBankName, "
-                + " d.sBnkActID, "
-                + " d.sActNumbr, "
-                + " d.sActNamex "
-                + " FROM Disbursement_Master a "
-                + " LEFT JOIN Check_Payments b ON a.sTransNox = b.sSourceNo "
-                + " LEFT JOIN Banks c ON b.sBankIDxx = c.sBankIDxx "
-                + " LEFT JOIN Bank_Account_Master d ON b.sBnkActID = d.sBnkActID ";
-
-        List<String> lsCondition = new ArrayList<>();
-
-        lsCondition.add("a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO));
-        lsCondition.add("b.sCheckNox IS NOT NULL");
-        lsCondition.add("b.sCheckNox <> ''");
-        lsCondition.add("b.cProcessd = '1'");
-        lsCondition.add("b.cTranStat IN ('1', '5')");
-
-        if (fsBankID != null && !fsBankID.trim().isEmpty()) {
-            lsCondition.add("b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID + "%"));
-        }
-
-        if (fsBankAccountID != null && !fsBankAccountID.trim().isEmpty()) {
-            lsCondition.add("b.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID + "%"));
-        }
-
-        if (fsCheckNo != null && !fsCheckNo.trim().isEmpty()) {
-            lsCondition.add("b.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo + "%"));
-        }
-
-        String lsFilterCondition = String.join(" AND ", lsCondition);
-
-        lsSQL = MiscUtil.addCondition(lsSQL,
-                lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
-
-        System.out.println("Executing SQL: " + lsSQL);
-
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-
-        if (MiscUtil.RecordCount(loRS) > 0) {
-
-            poDisbursementMaster = new ArrayList<>();
-
-            while (loRS.next()) {
-                poDisbursementMaster.add(DisbursementMasterList());
-                poDisbursementMaster
-                        .get(poDisbursementMaster.size() - 1)
-                        .openRecord(loRS.getString("sTransNox"));
-            }
-
-            poJSON.put("result", "success");
-            poJSON.put("message", "Record loaded successfully.");
-
-        } else {
-
-            poDisbursementMaster = new ArrayList<>();
-            poDisbursementMaster.add(DisbursementMasterList());
-
-            poJSON.put("result", "error");
-            poJSON.put("continue", true);
-            poJSON.put("message", "No record found.");
-        }
-
-        MiscUtil.close(loRS);
-
-        return poJSON;
-    }
+//    public JSONObject getDisbursement(String fsBankID,
+//            String fsBankAccountID,
+//            String fsCheckNo)
+//            throws SQLException, GuanzonException {
+//
+//        poJSON = new JSONObject();
+//        String lsSQL = " SELECT a.sTransNox, "
+//                + " a.dTransact, "
+//                + " b.sTransNox AS checktrans, "
+//                + " b.sCheckNox, "
+//                + " b.dCheckDte, "
+//                + " b.cProcessd, "
+//                + " b.cTranStat AS checkstat, "
+//                + " c.sBankIDxx, "
+//                + " c.sBankName, "
+//                + " d.sBnkActID, "
+//                + " d.sActNumbr, "
+//                + " d.sActNamex "
+//                + " FROM Disbursement_Master a "
+//                + " LEFT JOIN Check_Payments b ON a.sTransNox = b.sSourceNo "
+//                + " LEFT JOIN Banks c ON b.sBankIDxx = c.sBankIDxx "
+//                + " LEFT JOIN Bank_Account_Master d ON b.sBnkActID = d.sBnkActID ";
+//
+//        List<String> lsCondition = new ArrayList<>();
+//
+//        lsCondition.add("a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO));
+//        lsCondition.add("b.sCheckNox IS NOT NULL");
+//        lsCondition.add("b.sCheckNox <> ''");
+//        lsCondition.add("b.cProcessd = '1'");
+//        lsCondition.add("b.cTranStat IN ('1', '5')");
+//
+//        if (fsBankID != null && !fsBankID.trim().isEmpty()) {
+//            lsCondition.add("b.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID + "%"));
+//        }
+//
+//        if (fsBankAccountID != null && !fsBankAccountID.trim().isEmpty()) {
+//            lsCondition.add("b.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID + "%"));
+//        }
+//
+//        if (fsCheckNo != null && !fsCheckNo.trim().isEmpty()) {
+//            lsCondition.add("b.sCheckNox LIKE " + SQLUtil.toSQL("%" + fsCheckNo + "%"));
+//        }
+//
+//        String lsFilterCondition = String.join(" AND ", lsCondition);
+//
+//        lsSQL = MiscUtil.addCondition(lsSQL,
+//                lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
+//
+//        System.out.println("Executing SQL: " + lsSQL);
+//
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//
+//        if (MiscUtil.RecordCount(loRS) > 0) {
+//
+//            poDisbursementMaster = new ArrayList<>();
+//
+//            while (loRS.next()) {
+//                poDisbursementMaster.add(DisbursementMasterList());
+//                poDisbursementMaster
+//                        .get(poDisbursementMaster.size() - 1)
+//                        .openRecord(loRS.getString("sTransNox"));
+//            }
+//
+//            poJSON.put("result", "success");
+//            poJSON.put("message", "Record loaded successfully.");
+//
+//        } else {
+//
+//            poDisbursementMaster = new ArrayList<>();
+//            poDisbursementMaster.add(DisbursementMasterList());
+//
+//            poJSON.put("result", "error");
+//            poJSON.put("continue", true);
+//            poJSON.put("message", "No record found.");
+//        }
+//
+//        MiscUtil.close(loRS);
+//
+//        return poJSON;
+//    }
 
     public JSONObject setCheckpayment() throws GuanzonException, SQLException {
         if (Master().getOldDisbursementType().equals(DisbursementStatic.DisbursementType.CHECK)
@@ -628,49 +627,50 @@ public class CheckStatusUpdate extends Transaction {
         return poJSON;
     }
 
-    public JSONObject getDisbursement(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
-        poJSON = new JSONObject();
-        initSQL();
-        String lsFilterCondition = String.join(" AND ",
-                " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
-                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
-                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
-                "g.sCheckNox IS NOT NULL",
-                "g.sCheckNox <> ''",
-                "g.cProcessd = '1'",
-                " g.cTranStat IN ('1', '5')");
-        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
-        System.out.println("Executing SQL: " + lsSQL);
-        ResultSet loRS = poGRider.executeQuery(lsSQL);
-
-        int lnCtr = 0;
-
-        if (MiscUtil.RecordCount(loRS) > 0) {
-            poDisbursementMaster = new ArrayList<>();
-            while (loRS.next()) {
-                poDisbursementMaster.add(DisbursementMasterList());
-                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
-                lnCtr++;
-            }
-            poJSON.put("result", "success");
-            poJSON.put("message", "Record loaded successfully.");
-        } else {
-            poDisbursementMaster = new ArrayList<>();
-            poDisbursementMaster.add(DisbursementMasterList());
-            poJSON.put("result", "error");
-            poJSON.put("continue", true);
-            poJSON.put("message", "No record found .");
-        }
-
-        MiscUtil.close(loRS);
-        return poJSON;
-    }
+//    public JSONObject getDisbursement(String fsBankID, String fsBankAccountID) throws SQLException, GuanzonException {
+//        poJSON = new JSONObject();
+//        initSQL();
+//        String lsFilterCondition = String.join(" AND ",
+//                " a.cDisbrsTp = " + SQLUtil.toSQL(Logical.NO),
+//                " g.sBankIDxx LIKE " + SQLUtil.toSQL("%" + fsBankID),
+//                " g.sBnkActID LIKE " + SQLUtil.toSQL("%" + fsBankAccountID),
+//                "g.sCheckNox IS NOT NULL",
+//                "g.sCheckNox <> ''",
+//                "g.cProcessd = '1'",
+//                " g.cTranStat IN ('1', '5')");
+//        String lsSQL = MiscUtil.addCondition(SQL_BROWSE, lsFilterCondition + " GROUP BY a.sTransNox ORDER BY a.dTransact ASC ");
+//        System.out.println("Executing SQL: " + lsSQL);
+//        ResultSet loRS = poGRider.executeQuery(lsSQL);
+//
+//        int lnCtr = 0;
+//
+//        if (MiscUtil.RecordCount(loRS) > 0) {
+//            poDisbursementMaster = new ArrayList<>();
+//            while (loRS.next()) {
+//                poDisbursementMaster.add(DisbursementMasterList());
+//                poDisbursementMaster.get(poDisbursementMaster.size() - 1).openRecord(loRS.getString("sTransNox"));
+//                lnCtr++;
+//            }
+//            poJSON.put("result", "success");
+//            poJSON.put("message", "Record loaded successfully.");
+//        } else {
+//            poDisbursementMaster = new ArrayList<>();
+//            poDisbursementMaster.add(DisbursementMasterList());
+//            poJSON.put("result", "error");
+//            poJSON.put("continue", true);
+//            poJSON.put("message", "No record found .");
+//        }
+//
+//        MiscUtil.close(loRS);
+//        return poJSON;
+//    }
 
     public JSONObject cancelCheckPayment(String CheckRemarks) throws SQLException, GuanzonException, ParseException, CloneNotSupportedException {
         poJSON = new JSONObject();
         String lsStatus = CheckStatus.CANCELLED;
         CheckPayments checkTrans;
         checkTrans = new CashflowControllers(poGRider, logwrapr).CheckPayments();
+//        poJSON = checkTrans.openRecord(Master().CheckPayments().getTransactionNo());
         poJSON = checkTrans.OpenTransaction(Master().CheckPayments().getTransactionNo(), true);
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -1058,7 +1058,7 @@ public class CheckStatusUpdate extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-        
+        PORTrans.setWithUI(false);
         poJSON = PORTrans.UpdateTransaction();
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
@@ -1435,21 +1435,22 @@ public class CheckStatusUpdate extends Transaction {
         if (!"success".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
-
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            poJSON = ShowDialogFX.getUserApproval(poGRider);
-            if ("error".equals((String) poJSON.get("result"))) {
-                return poJSON;
+        
+        if (pbWithUI) {
+            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+                poJSON = ShowDialogFX.getUserApproval(poGRider);
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized approving officer..");
+                    return poJSON;
+                }
+                setApproving((String) poJSON.get("sUserIDxx"));
+                psApprover = (String) poJSON.get("sUserIDxx");
             }
-            if (Integer.parseInt(poJSON.get("nUserLevl").toString()) <= UserRight.ENCODER) {
-                poJSON.put("result", "error");
-                poJSON.put("message", "User is not an authorized approving officer..");
-                return poJSON;
-            }
-            setApproving((String) poJSON.get("sUserIDxx"));
-            psApprover = (String) poJSON.get("sUserIDxx");
         }
-
         poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
 
         poJSON = statusChange(poMaster.getTable(), (String) poMaster.getValue("sTransNox"), remarks, lsStatus, !lbReturn, true);
