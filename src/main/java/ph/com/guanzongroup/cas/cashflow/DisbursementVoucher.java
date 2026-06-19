@@ -8818,11 +8818,11 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                             }
                             break;
                         case DisbursementStatic.SourceCode.PO_RETURN:
-                            ldblDiscountRate = Detail(lnCtr).POReturn().getDiscountRate().doubleValue();
-                            if(ldblDiscountRate > 0.0000){
-                                ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
-                            }
-                            ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+//                            ldblDiscountRate = Detail(lnCtr).POReturn().getDiscountRate().doubleValue();
+//                            if(ldblDiscountRate > 0.0000){
+//                                ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
+//                            }
+//                            ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
                             
 //                            if((Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate) > ldblTotalDiscount){
 //                                ldblTotalDiscount = 0.0000;
@@ -8867,11 +8867,11 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                                     }
                                 break;
                                 case DisbursementStatic.SourceCode.PO_RETURN:
-                                    ldblDiscountRate = Detail(lnCtr).POReturn().getDiscountRate().doubleValue();
-                                    if(ldblDiscountRate > 0.0000){
-                                        ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
-                                    }
-                                    ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
+//                                    ldblDiscountRate = Detail(lnCtr).POReturn().getDiscountRate().doubleValue();
+//                                    if(ldblDiscountRate > 0.0000){
+//                                        ldblDiscountRate = Detail(lnCtr).POReturn().getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
+//                                    }
+//                                    ldblTotalDiscount += (Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate);
 //                                    if((Detail(lnCtr).POReturn().getDiscount().doubleValue() + ldblDiscountRate) > ldblTotalDiscount){
 //                                        ldblTotalDiscount = 0.0000;
 //                                    } else {
@@ -9074,6 +9074,13 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         if(lsInvoiceNo == null || "".equals(lsInvoiceNo) || "To-follow".equals(lsInvoiceNo)){
             lsInvoiceNo = foObject.PurchaseOrderReceivingMaster().getReferenceNo();
         }
+        Double ldblTotalDiscount = 0.0000;
+        Double ldblDiscountRate = foObject.getDiscountRate().doubleValue();
+        if(ldblDiscountRate > 0.0000){
+            ldblDiscountRate = foObject.getTransactionTotal().doubleValue() * (ldblDiscountRate / 100);
+        }
+        ldblTotalDiscount += (foObject.getDiscount().doubleValue() + ldblDiscountRate);
+        
         for(int lnCtr = 0; lnCtr < foObject.getEntryNo();lnCtr++){
             Model_POReturn_Detail loObject = new PurchaseOrderReturnModels(poGRider).PurchaseOrderReturnDetails();
             poJSON = loObject.openRecord(foObject.getTransactionNo(), lnCtr+1);
@@ -9096,12 +9103,27 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                        && Details.get(lnRow).getsParticular().equals(lsCategory)){
                         lnDetAmt = Details.get(lnRow).getnTotalAmount() * -1;
                         lnAmount = lnAmount + lnDetAmt;
-                        Details.get(lnRow).setnTotalAmount(-Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", "")));
+                        lnAmount = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""));
+                        if(lnAmount > 0.0000){
+                            lnAmount = -lnAmount;
+                        }
+                        Details.get(lnRow).setnTotalAmount(lnAmount);
                         lbExist = true;
                     }
                 }
             }
             if(!lbExist){
+                if(lnAmount > ldblTotalDiscount){
+                    lnAmount = lnAmount - ldblTotalDiscount;
+                    ldblTotalDiscount = 0.0000;
+                } else {
+                    ldblTotalDiscount = ldblTotalDiscount - lnAmount;
+                    lnAmount = 0.0000;
+                }
+                lnAmount = Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""));
+                if(lnAmount > 0.0000){
+                    lnAmount = -lnAmount;
+                }
                 Details.add(new TransactionPaymentSummaryDetail(
                         Details.size()+1,
                         lsCategory,
@@ -9109,13 +9131,14 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         lsInvoiceNo,
                         foObject.getTransactionNo(),
                         DisbursementStatic.SourceCode.PO_RETURN,
-                        -Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(lnAmount, false).replace(",", ""))
+                        lnAmount
                 ));
             }
         }
         
         //Check if freight amount is exist
         if(foObject.getFreight().doubleValue() > 0.0000){
+            
             Details.add(new TransactionPaymentSummaryDetail(
                     Details.size()+1,
                     "Freight",
