@@ -143,7 +143,7 @@ public class Disbursement_LinkedTransactions extends Transaction {
                     break;
                 case DisbursementStatic.SourceCode.PO_RETURN: 
                     //Save PO Receiving and update connected cache payable
-                    poJSON = savePOReceivingMaster(lnCtr, lbAdd);
+                    poJSON = savePOReturnMaster(lnCtr, lbAdd);
                     if ("error".equals((String) poJSON.get("result"))) {
                         poJSON.put("message", "System error while updating PO Return.\n\n" + (String) poJSON.get("message"));
                         return poJSON;
