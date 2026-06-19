@@ -474,7 +474,7 @@ public class DocumentMapping extends Transaction {
      * @throws SQLException if a database access error occurs
      * @throws GuanzonException if transaction processing fails
      */
-    public JSONObject SearchTransaction(String fsValue, String byFilter) throws CloneNotSupportedException, SQLException, GuanzonException {
+    public JSONObject SearchTransaction(String fsValue, String byFilter,boolean byCode) throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
         String lsTransStat = "";
         String lsFilter = "";
@@ -508,7 +508,7 @@ public class DocumentMapping extends Transaction {
                 "Document Code»Description»Status",
                 "sDocCodex»sDescript»cRecdStat",
                 "sDocCodex»sDescript»cRecdStat",
-                1);
+                byCode ? 0 : 1);
 
         if (poJSON != null) {
             return OpenTransaction((String) poJSON.get("sDocCodex"));

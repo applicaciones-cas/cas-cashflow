@@ -4,6 +4,8 @@
  */
 package ph.com.guanzongroup.cas.cashflow.model;
 
+
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -299,9 +301,9 @@ public class Model_Payment_Request_Master extends Model {
 
     @Override
     public String getNextCode() {
-        return MiscUtil.getNextCode(this.getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
+        return MiscUtil.getNextCode(getTable(), ID, true, poGRider.getGConnection().getConnection(), poGRider.getBranchCode());
     }
-
+    
     public Model_Department Department() throws GuanzonException, SQLException {
         if (!"".equals((String) getValue("sDeptIDxx"))) {
             if (poDepartment.getEditMode() == EditMode.READY
@@ -440,5 +442,96 @@ public class Model_Payment_Request_Master extends Model {
             poPOMaster.initialize();
             return poPOMaster;
         }
+    }
+    
+    @Override
+    public JSONObject openRecord(String id) throws SQLException, GuanzonException {
+        this.poJSON = new JSONObject();
+        String lsSQL = MiscUtil.makeSelect(this);
+        lsSQL = MiscUtil.addCondition(lsSQL, this.ID + " = " + SQLUtil.toSQL(id));
+        ResultSet loRS = this.poGRider.executeQuery(lsSQL);
+        try {
+            if (loRS.next()) {
+                for (int lnCtr = 1; lnCtr <= loRS.getMetaData().getColumnCount(); lnCtr++) {
+                    Object loValue = loRS.getObject(lnCtr);
+                    int lnType = loRS.getMetaData().getColumnType(lnCtr); // get JDBC type
+
+                    if (loValue != null) {
+                        switch (lnType) {
+                            case 91: // DATE
+                                loValue = loRS.getDate(lnCtr);
+                                break;
+                            case 93: // TIMESTAMP / DATETIME
+                                loValue = loRS.getTimestamp(lnCtr); // use explicit getter first
+                                if (loValue == null) {
+                                    loValue = toTimestamp(loRS.getString(lnCtr)); // fallback
+                                }
+                                break;
+                            default:
+                                loValue = loRS.getObject(lnCtr);
+                                break;
+                        }
+                    }
+
+                    setValue(lnCtr, loValue);
+                    System.out.println(lnCtr + " - " + (setValue(lnCtr, loValue)).toJSONString());
+                }
+                MiscUtil.close(loRS);
+                this.pnEditMode = 1;
+                this.poJSON = new JSONObject();
+                this.poJSON.put("result", "success");
+                this.poJSON.put("message", "Record loaded successfully.");
+            } else {
+                this.poJSON = new JSONObject();
+                this.poJSON.put("result", "error");
+                this.poJSON.put("message", "No record to load.");
+            }
+        } catch (SQLException e) {
+            this.poJSON = new JSONObject();
+            this.poJSON.put("result", "error");
+            this.poJSON.put("message", e.getMessage());
+        }
+        return this.poJSON;
+    }
+
+    public static java.sql.Timestamp toTimestamp(Object loValue) {
+        if (loValue == null) {
+            return null;
+        }
+        if (loValue instanceof java.sql.Timestamp) {
+            return (java.sql.Timestamp) loValue;
+        }
+        if (loValue instanceof java.util.Date) {
+            return new java.sql.Timestamp(((java.util.Date) loValue).getTime());
+        }
+
+        String lsValue = loValue.toString().trim();
+        if (lsValue.isEmpty()) {
+            return null;
+        }
+
+        // Try all possible formats
+        String[] laFormats = {
+            "yyyy-MM-dd HH:mm:ss.SSS", 
+            "yyyy-MM-dd HH:mm:ss",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS", 
+            "yyyy-MM-dd'T'HH:mm:ss", 
+            "MM/dd/yyyy HH:mm:ss", 
+            "yyyy-MM-dd", 
+        };
+
+        for (String lsFormat : laFormats) {
+            try {
+                java.text.SimpleDateFormat loFmt = new java.text.SimpleDateFormat(lsFormat);
+                loFmt.setLenient(false);
+                return new java.sql.Timestamp(loFmt.parse(lsValue).getTime());
+            } catch (java.text.ParseException e) {
+                // try next format
+            }
+        }
+
+        // Log what value is actually coming in
+        System.err.println("Cannot parse Timestamp from: [" + lsValue + "]");
+        throw new IllegalArgumentException("Cannot parse datetime value: " + lsValue);
     }
 }
