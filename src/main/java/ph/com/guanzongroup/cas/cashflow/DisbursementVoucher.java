@@ -118,7 +118,6 @@ import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
 import ph.com.guanzongroup.cas.cashflow.status.CachePayableStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CheckReleaseStatus;
 import ph.com.guanzongroup.cas.cashflow.status.CheckStatus;
 import ph.com.guanzongroup.cas.cashflow.status.DisbursementStatic;
 import ph.com.guanzongroup.cas.cashflow.status.JournalProposalStatus;
