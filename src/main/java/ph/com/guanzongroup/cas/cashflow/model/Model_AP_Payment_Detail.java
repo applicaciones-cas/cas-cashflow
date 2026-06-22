@@ -15,8 +15,10 @@ import org.guanzon.appdriver.base.MiscUtil;
 import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.cas.purchasing.controller.PurchaseOrderReceiving;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
+import org.guanzon.cas.purchasing.model.Model_POReturn_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingControllers;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
+import org.guanzon.cas.purchasing.services.PurchaseOrderReturnModels;
 import org.json.simple.JSONObject;
 import ph.com.guanzongroup.cas.cashflow.APPaymentAdjustment;
 import ph.com.guanzongroup.cas.cashflow.CachePayable;
@@ -33,6 +35,7 @@ public class Model_AP_Payment_Detail extends Model {
     Model_Payment_Request_Master poPaymentRequest;
     Model_Cache_Payable_Master poCachePayable;
     Model_POR_Master poPOReceiving;
+    Model_POReturn_Master poPOReturn;
     Model_AP_Payment_Adjustment poAPAdjustment;
     
     CachePayable poCachePayableTrans;
@@ -81,6 +84,9 @@ public class Model_AP_Payment_Detail extends Model {
             poPOReceiving = POR.PurchaseOrderReceivingMaster();
             PurchaseOrderReceivingControllers PORController = new PurchaseOrderReceivingControllers(poGRider, logwrapr);
             poPOReceivingTrans = PORController.PurchaseOrderReceiving();
+            
+            PurchaseOrderReturnModels POReturn = new PurchaseOrderReturnModels(poGRider);
+            poPOReturn = POReturn.PurchaseOrderReturnMaster();
             //end - initialize reference objects
 
             pnEditMode = EditMode.UNKNOWN;
@@ -324,6 +330,27 @@ public class Model_AP_Payment_Detail extends Model {
         } else {
             poPOReceiving.initialize();
             return poPOReceiving;
+        }
+    }
+    
+    public Model_POReturn_Master PurchasOrderReturnMaster() throws SQLException, GuanzonException {
+        if (!"".equals((String) getValue("sSourceNo"))) {
+            if (poPOReturn.getEditMode() == EditMode.READY
+                    && poPOReturn.getTransactionNo().equals((String) getValue("sSourceNo"))) {
+                return poPOReturn;
+            } else {
+                poJSON = poPOReturn.openRecord((String) getValue("sSourceNo"));
+
+                if ("success".equals((String) poJSON.get("result"))) {
+                    return poPOReturn;
+                } else {
+                    poPOReturn.initialize();
+                    return poPOReturn;
+                }
+            }
+        } else {
+            poPOReturn.initialize();
+            return poPOReturn;
         }
     }
     
