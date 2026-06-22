@@ -40,7 +40,7 @@ import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatus;
 
 /**
- *
+ * FUNCTION FOR ADDING OF AMOUNT PAID AND UPDATING OF TRANSACTION SOURCE STATUS
  * @author Arsiela 10-24-2025
  */
 public class Disbursement_LinkedTransactions extends Transaction {
