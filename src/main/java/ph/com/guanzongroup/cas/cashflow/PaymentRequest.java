@@ -1844,7 +1844,7 @@ public class PaymentRequest extends Transaction {
             Detail().clear();
             AddDetail();
         }
-        Master().setBranchCode(loObject.getBranchCode());
+        Master().setBranchCode(loObject.getDestinationID()); //getBranchCode //Change by Arsiela 06-19-2026
         Master().setPayeeID(loPayee.getPayeeID());
         Master().setSourceNo(loObject.getTransactionNo());
         Master().setSourceCode(InvTransCons.PURCHASE_ORDER);
