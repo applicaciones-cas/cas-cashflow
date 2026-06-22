@@ -23,7 +23,7 @@ public class CheckStatusUpdateIndividualTest {
     static GRiderCAS instance;
     static CashflowControllers poTrans;
     static Connection conn = null;
-    
+
     @BeforeAll
     public static void setUpClass() throws SQLException, GuanzonException, IOException {
         System.out.println("setUpClass()");
@@ -125,7 +125,7 @@ public class CheckStatusUpdateIndividualTest {
     @AfterEach
     public void tearDown() {
     }
-    
+
     @Test
     public void testGetDisbursementx() throws Exception {
         JSONObject loJSON;
@@ -147,7 +147,7 @@ public class CheckStatusUpdateIndividualTest {
                 JSONArray payload = (JSONArray) loJSON.get("payload");
                 for (int i = 0; i < payload.size(); i++) {
                     JSONObject row = (JSONObject) payload.get(i);
-                    
+
                     System.out.println( "sTransNox   :" + (String) row.get("sTransNox") + "\n"+
                                         "sBankName   :" + (String) row.get("sBankName") + "\n" +
                                         "sActNumbr   :" + (String) row.get("sActNumbr") + "\n" +
@@ -166,18 +166,18 @@ public class CheckStatusUpdateIndividualTest {
             fail("Expected success but got: " + loJSON.get("message"));
         }
     }
-    
+
     @Test
     public void testOpenTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
-        
+
         loJSON = poTrans.CheckStatusUpdate().InitTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
         poTrans.CheckStatusUpdate().setWithUI(false);
-        
+
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000194");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
@@ -185,12 +185,12 @@ public class CheckStatusUpdateIndividualTest {
             assertNotNull(poTrans.CheckStatusUpdate().Master());
         }
     }
-    
+
     @Test
     public void testCancelCheckPORec() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException {
         JSONObject loJSON;
         String Remarks = "Cancel Remarks";
-        
+
         loJSON = poTrans.CheckStatusUpdate().InitTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -200,8 +200,8 @@ public class CheckStatusUpdateIndividualTest {
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000194");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-        } 
-        
+        }
+
         loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -212,16 +212,16 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
-        
+
         loJSON = poTrans.CheckStatusUpdate().ReturnTransaction("", Remarks);
         if (!"success".equals((String) loJSON.get("result"))) {
            System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }
-    
+
     @Test
     public void testCancelCheckPRFSource() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException {
         JSONObject loJSON;
@@ -232,12 +232,12 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000173");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-        } 
-        
+        }
+
         loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -248,33 +248,33 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
-        
+
         loJSON = poTrans.CheckStatusUpdate().ReturnTransaction("", Remarks);
         if (!"success".equals((String) loJSON.get("result"))) {
            System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }
-    
+
 //    @Test
 //    public void testCancelCheckAPAdjusmentSource() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException {
 //        JSONObject loJSON;
 //        String Remarks = "Cancel Remarks";
-//        
+//
 //        poTrans.CheckStatusUpdate().setWithUI(false);
 //        loJSON = poTrans.CheckStatusUpdate().InitTransaction();
 //        if (!"success".equals((String) loJSON.get("result"))) {
 //            System.err.println((String) loJSON.get("message"));
 //            Assert.fail();
 //        }
-//        
+//
 //        loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000108");
 //        if (!"success".equals((String) loJSON.get("result"))) {
 //            System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-//        } 
-//        
+//        }
+//
 //        loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
 //        if (!"success".equals((String) loJSON.get("result"))) {
 //            System.err.println((String) loJSON.get("message"));
@@ -285,9 +285,9 @@ public class CheckStatusUpdateIndividualTest {
 //            System.err.println((String) loJSON.get("message"));
 //            Assert.fail();
 //        }
-//        
+//
 //        poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
-//        
+//
 //        loJSON = poTrans.CheckStatusUpdate().ReturnTransaction("", Remarks);
 //        if (!"success".equals((String) loJSON.get("result"))) {
 //           System.err.println((String) loJSON.get("message"));
@@ -297,22 +297,22 @@ public class CheckStatusUpdateIndividualTest {
     @Test
     public void testSourceCode() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
-            
+
             loJSON = poTrans.CheckStatusUpdate().InitTransaction();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            
+
            poTrans.CheckStatusUpdate().getSourceCode();
            System.out.println("Source Code " + poTrans.CheckStatusUpdate().getSourceCode());
     }
-    
+
     @Test
     public void testReplaceCheckOnly() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException{
         JSONObject loJSON;
         String Remarks = "Cancel Remarks";
-        
+
         loJSON = poTrans.CheckStatusUpdate().InitTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -322,8 +322,8 @@ public class CheckStatusUpdateIndividualTest {
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000194");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-        } 
-        
+        }
+
         loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -334,21 +334,21 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
-        
+
         loJSON = poTrans.CheckStatusUpdate().ReplaceCheck(Remarks);
         if (!"success".equals((String) loJSON.get("result"))) {
-           System.err.println((String) loJSON.get("message")); 
+           System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }
-    
+
     @Test
     public void testClearCheck() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException{
         JSONObject loJSON;
         String Remarks = "Clear Check";
-        
+
         loJSON = poTrans.CheckStatusUpdate().InitTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -358,8 +358,8 @@ public class CheckStatusUpdateIndividualTest {
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000194");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-        } 
-        
+        }
+
         loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -370,22 +370,22 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
         LocalDate localDate = LocalDate.now();
         java.sql.Date sqlDate = java.sql.Date.valueOf(localDate);
         loJSON = poTrans.CheckStatusUpdate().ClearTransaction(Remarks, sqlDate, true);
         if (!"success".equals((String) loJSON.get("result"))) {
-           System.err.println((String) loJSON.get("message")); 
+           System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }
-    
+
     @Test
     public void testHoldCheck() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ScriptException{
         JSONObject loJSON;
         String Remarks = "Clear Check";
-        
+
         loJSON = poTrans.CheckStatusUpdate().InitTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -395,8 +395,8 @@ public class CheckStatusUpdateIndividualTest {
         loJSON = poTrans.CheckStatusUpdate().OpenTransaction("GCO126000194");
         if (!"success".equals((String) loJSON.get("result"))) {
             System.out.println("Notice: Transaction reference not present in test context: " + (String) loJSON.get("message"));
-        } 
-        
+        }
+
         loJSON = poTrans.CheckStatusUpdate().UpdateTransaction();
         if (!"success".equals((String) loJSON.get("result"))) {
             System.err.println((String) loJSON.get("message"));
@@ -407,13 +407,13 @@ public class CheckStatusUpdateIndividualTest {
             System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
-        
+
         poTrans.CheckStatusUpdate().CheckPayments().getModel().setRemarks(Remarks);
         LocalDate localDate = LocalDate.now();
         java.sql.Date sqlDate = java.sql.Date.valueOf(localDate);
         loJSON = poTrans.CheckStatusUpdate().HoldTransaction(sqlDate);
         if (!"success".equals((String) loJSON.get("result"))) {
-           System.err.println((String) loJSON.get("message")); 
+           System.err.println((String) loJSON.get("message"));
             Assert.fail();
         }
     }

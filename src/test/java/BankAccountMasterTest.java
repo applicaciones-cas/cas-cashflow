@@ -1,26 +1,19 @@
+import org.guanzon.appdriver.base.GRiderCAS;
+import org.guanzon.appdriver.base.GuanzonException;
+import org.h2.tools.RunScript;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.ParseException;
+import org.junit.Assert;
+import org.junit.jupiter.api.*;
+import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.sql.Connection;
-import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.util.Properties;
-import org.guanzon.appdriver.base.GRiderCAS;
-import org.guanzon.appdriver.base.GuanzonException;
-import org.guanzon.appdriver.base.MiscUtil;
-import org.guanzon.appdriver.base.SQLUtil;
-import org.h2.tools.RunScript;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.ParseException;
-import org.junit.Assert;
-import org.junit.jupiter.api.*;
-import static org.junit.jupiter.api.Assertions.*;
-import ph.com.guanzongroup.cas.cashflow.CashFundTrans;
-import ph.com.guanzongroup.cas.cashflow.DocumentMapping;
-import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -32,12 +25,12 @@ import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
  * @author User
  */
 
-public class DocumentMappingTest {
+public class BankAccountMasterTest {
     static GRiderCAS instance;
     static CashflowControllers poTrans;
     static Connection conn = null;
 
-    public DocumentMappingTest() {
+    public BankAccountMasterTest() {
     }
 
     @BeforeAll
@@ -170,93 +163,55 @@ public class DocumentMappingTest {
     public void testNewTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
 
-            loJSON = poTrans.DocumentMapping().InitTransaction();
+            poTrans.BankAccountMaster().initialize();
+
+            loJSON = poTrans.BankAccountMaster().newRecord();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().NewTransaction();
+            loJSON = poTrans.BankAccountMaster().getModel().setIndustryCode("02");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().Master().setDocumentCode("GCsDSChk");
+            loJSON = poTrans.BankAccountMaster().getModel().setBranchCode("M001");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().Master().setDesciption("GCash Diposit Slip Check");
+            loJSON = poTrans.BankAccountMaster().getModel().setBranch("THE MOSHU Co. - RAMEN SHOKUDO");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().Master().setEntryNo(3);
+            loJSON = poTrans.BankAccountMaster().getModel().setCompanyId("M001");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().Master().setEntryNo(3);
+            loJSON = poTrans.BankAccountMaster().getModel().setBankId("M00124001");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            loJSON = poTrans.DocumentMapping().Detail(0).setFieldCode("sActNumbr");
+            loJSON = poTrans.BankAccountMaster().getModel().setAccountNo("0000000000111111");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            loJSON = poTrans.DocumentMapping().Detail(0).setFontName("Arial");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            loJSON = poTrans.DocumentMapping().Detail(0).setFontSize(11);
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            poTrans.DocumentMapping().AddDetail();
-            loJSON = poTrans.DocumentMapping().Detail(1).setFieldCode("nTotalDep");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            loJSON = poTrans.DocumentMapping().Detail(1).setFontName("Arial");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            loJSON = poTrans.DocumentMapping().Detail(1).setFontSize(11);
+            loJSON = poTrans.BankAccountMaster().getModel().setAccountName("UEMI");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            poTrans.DocumentMapping().AddDetail();
-            loJSON = poTrans.DocumentMapping().Detail(2).setFieldCode("nTotalDep");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            loJSON = poTrans.DocumentMapping().Detail(2).setFontName("Arial");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            loJSON = poTrans.DocumentMapping().Detail(2).setFontSize(11);
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            poTrans.DocumentMapping().AddDetail();
-            poTrans.DocumentMapping().AddDetail();
-
-            loJSON = poTrans.DocumentMapping().SaveTransaction();
+            loJSON = poTrans.BankAccountMaster().saveRecord();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -270,36 +225,14 @@ public class DocumentMappingTest {
     public void testOpenTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
 
-            loJSON = poTrans.DocumentMapping().InitTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
+            poTrans.BankAccountMaster().initialize();
 
-//            poTrans.DocumentMapping().setVerifyEntryNo(false);
-
-            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
+            loJSON = poTrans.BankAccountMaster().openRecord("GCO126000012");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
             instance.getDepartment();
-
-
-            System.out.println("document code: " + poTrans.DocumentMapping().Master().getDocumentCode());
-            System.out.println("description : " + poTrans.DocumentMapping().Master().getDesciption());
-
-            System.out.println("");
-            int detailSize = poTrans.DocumentMapping().Detail().size();
-            if (detailSize > 0) {
-                 for (int lnCtr = 0; lnCtr < poTrans.DocumentMapping().Detail().size(); lnCtr++) {
-                    System.out.println("DETAIL------------------- " + (lnCtr + 1));
-                    System.out.println("document code : " + poTrans.DocumentMapping().Detail(lnCtr).getDocumentCode());
-                    System.out.println("font: " + poTrans.DocumentMapping().Detail(lnCtr).getFontName());
-                    System.out.println("PARTICULAR ID : " + String.valueOf(poTrans.DocumentMapping().Detail(lnCtr).getFontSize()));
-                    System.out.println("");
-                 }
-            }
 
     }
 
@@ -307,44 +240,31 @@ public class DocumentMappingTest {
     public void testUpdateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException {
         JSONObject loJSON;
 
-            loJSON = poTrans.DocumentMapping().InitTransaction();
+            poTrans.BankAccountMaster().initialize();
+
+            loJSON = poTrans.BankAccountMaster().openRecord("GCO126000012");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-//            poTrans.DocumentMapping().setVerifyEntryNo(false);
-
-            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-            instance.getDepartment();
-
-            System.out.println("");
-            int detailSize = poTrans.DocumentMapping().Detail().size();
-            if (detailSize > 0) {
-                 for (int lnCtr = 0; lnCtr < poTrans.DocumentMapping().Detail().size(); lnCtr++) {
-                    System.out.println("DETAIL------------------- " + (lnCtr + 1));
-                    System.out.println("document code : " + poTrans.DocumentMapping().Detail(lnCtr).getDocumentCode());
-                    System.out.println("font: " + poTrans.DocumentMapping().Detail(lnCtr).getFontName());
-                    System.out.println("PARTICULAR ID : " + String.valueOf(poTrans.DocumentMapping().Detail(lnCtr).getFontSize()));
-                    System.out.println("");
-                 }
-            }
-            loJSON = poTrans.DocumentMapping().UpdateTransaction();
+            loJSON = poTrans.BankAccountMaster().updateRecord();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().Detail(0).setFontSize(0);
+            loJSON = poTrans.BankAccountMaster().getModel().setRemarks("Updated Remarks");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
-            loJSON = poTrans.DocumentMapping().SaveTransaction();
+        loJSON = poTrans.BankAccountMaster().getModel().setClearingDays(1);
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
+        }
+            loJSON = poTrans.BankAccountMaster().saveRecord();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -356,19 +276,15 @@ public class DocumentMappingTest {
     public void testDeactivateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
         JSONObject loJSON;
 
-            loJSON = poTrans.DocumentMapping().InitTransaction();
+            poTrans.BankAccountMaster().initialize();
+
+            loJSON = poTrans.BankAccountMaster().openRecord("GCO126000012");
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
             }
 
-            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-
-            loJSON = poTrans.DocumentMapping().DeactivateTransaction();
+            loJSON = poTrans.BankAccountMaster().deactivateRecord();
             if (!"success".equals((String) loJSON.get("result"))) {
                 System.err.println((String) loJSON.get("message"));
                 Assert.fail();
@@ -379,48 +295,27 @@ public class DocumentMappingTest {
     public void testActivateTransaction() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
         JSONObject loJSON;
 
-            loJSON = poTrans.DocumentMapping().InitTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
+        poTrans.BankAccountMaster().initialize();
 
-            loJSON = poTrans.DocumentMapping().OpenTransaction("BDOChkDS");
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
+        loJSON = poTrans.BankAccountMaster().openRecord("GCO126000012");
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
+        }
 
-            loJSON = poTrans.DocumentMapping().ActivateTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
+        loJSON = poTrans.BankAccountMaster().activateRecord();
+        if (!"success".equals((String) loJSON.get("result"))) {
+            System.err.println((String) loJSON.get("message"));
+            Assert.fail();
+        }
     }
-    @Test
-    public void testSourceCode() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException {
-        JSONObject loJSON;
-
-            loJSON = poTrans.DocumentMapping().InitTransaction();
-            if (!"success".equals((String) loJSON.get("result"))) {
-                System.err.println((String) loJSON.get("message"));
-                Assert.fail();
-            }
-
-           poTrans.DocumentMapping().getSourceCode();
-           System.out.println("Source Code " + poTrans.DocumentMapping().getSourceCode());
-
-    }
-
-
-
 
     private static void loadCorePrimary() throws IOException, SQLException {
         // 1. Get the raw connection from your poCon object
         conn = instance.getGConnection().getConnection();
 
-        try (FileReader schemaReader = new FileReader("test-data/document_mapping_schema.sql");
-             FileReader dataReader = new FileReader("test-data/document_mapping_data.sql")) {
+        try (FileReader schemaReader = new FileReader("test-data/banks_account_master_schema.sql");
+             FileReader dataReader = new FileReader("test-data/banks_account_master_data.sql")) {
 
         //conn.setAutoCommit(false); // Start a single giant transaction
 
