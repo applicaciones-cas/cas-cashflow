@@ -126,6 +126,11 @@ public class RecurringExpenseSchedule extends Parameter{
         if(psIndustryId != null && !"".equals(psIndustryId)){
             lsSQL = lsSQL + " AND b.sIndstCdx = " + SQLUtil.toSQL(psIndustryId);
         }
+        
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
+        }
+        lsSQL = lsSQL + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId);
         lsSQL = lsSQL + " GROUP BY a.sRecurrID ";
         poJSON = ShowDialogFX.Search(poGRider,
                 lsSQL,
@@ -184,89 +189,19 @@ public class RecurringExpenseSchedule extends Parameter{
         return poJSON;
     }
     
-//    public JSONObject populateDetail() throws SQLException, GuanzonException, CloneNotSupportedException{
-//        poJSON = new JSONObject();
-//        AddDetail();
-//        //Retrive all exisiting recurring schedule based on recurring ID
-//        String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
-//                 " a.sRecurrID = " + SQLUtil.toSQL(Master().getRecurringId())
-//                );
-//        System.out.println("Executing SQL: " + lsSQL);
-//        ResultSet loRS = poGRider.executeQuery(lsSQL);
-//        if (MiscUtil.RecordCount(loRS) > 0) {
-//            int lnRow = getDetailCount() - 1;
-//            while (loRS.next()) {
-//                poJSON = Detail(lnRow).openRecord(loRS.getString("sRecurrNo"));
-//                if (!"success".equals((String) poJSON.get("result"))){
-//                    return poJSON;
-//                }
-//                AddDetail();
-//                lnRow = getDetailCount() - 1;
-//            }
-//        }
-//        MiscUtil.close(loRS);
-//        
-//        
-//        if(Master().isAllBranches()){
-//            lsSQL = "SELECT sBranchCd, sBranchNm, sDescript FROM Branch ORDER BY sBranchNm ASC";
-//            System.out.println("Executing SQL: " + lsSQL);
-//            loRS = poGRider.executeQuery(lsSQL);
-//            if (MiscUtil.RecordCount(loRS) <= 0) {
-//                poJSON.put("result", "error");
-//                poJSON.put("message", "No record found for branches.");
-//                return poJSON;
-//            }
-//
-//            int lnRow = getDetailCount() - 1;
-//            while (loRS.next()) {
-//                System.out.println("-------------------------------------------------------------------");
-//                System.out.println("Branch Code : " + lnRow + " : " + loRS.getString("sBranchCd"));
-//                System.out.println("Branch Name : " + lnRow + " : " + loRS.getString("sBranchNm"));
-//                System.out.println("Description : " + lnRow + " : " + loRS.getString("sDescript"));
-//                System.out.println("-------------------------------------------------------------------");
-//                
-//                Model_Recurring_Expense_Schedule loObject = new CashflowModels(poGRider).Recurring_Expense_Schedule();
-//                poJSON = loObject.openRecordByRecurring(Master().getRecurringId(),  loRS.getString("sBranchCd"));
-//                if ("success".equals((String) poJSON.get("result"))) {
-//                    if(!Detail().contains(loObject)){
-//                        Detail(lnRow).op
-//                    }
-//                } else {
-//                    Detail(lnRow).setBranchCode(loRS.getString("sBranchCd"));
-//                }
-//                AddDetail();
-//                lnRow = getDetailCount() - 1;
-//            }
-//            MiscUtil.close(loRS);
-//        } 
-//        if(poModel.getEditMode() == EditMode.READY){
-//            Detail().remove(getDetailCount() - 1);
-//        }
-//        
-//        poJSON.put("result", "success");
-//        poJSON.put("message", "success");
-//        return poJSON;
-//    }
-//    
-//    private JSONObject checkExistingBranch(){
-//    
-//    
-//    }
-    
-    
     public JSONObject populateDetail() throws SQLException, GuanzonException, CloneNotSupportedException{
         poJSON = new JSONObject();
         paDetail = new ArrayList<>();
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
+        }
         AddDetail();
         if(Master().isAllBranches()){
 //            String lsSQL = "SELECT sBranchCd, sBranchNm, sDescript, sCompnyID FROM Branch WHERE sCompnyID IS NOT NULL AND sCompnyID <> ''  ORDER BY sBranchNm ASC";
             
             Model_Branch loObj = new ParamModels(poGRider).Branch();
             loObj.initialize();
-            if(psCompanyId == null || "".equals(psCompanyId)){
-                psCompanyId = poGRider.getCompnyId();
-            }
-            String lsSQL = MiscUtil.addCondition(MiscUtil.makeSelect(loObj), " sCompnyID = "  + SQLUtil.toSQL(psCompanyId)); 
+            String lsSQL = MiscUtil.makeSelect(loObj); // MiscUtil.addCondition(MiscUtil.makeSelect(loObj), " sCompnyID = "  + SQLUtil.toSQL(psCompanyId)); 
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
             if (MiscUtil.RecordCount(loRS) <= 0) {
@@ -279,6 +214,7 @@ public class RecurringExpenseSchedule extends Parameter{
             String lsRecurringNo = "";
             while (loRS.next()) {
                 System.out.println("-------------------------------------------------------------------");
+                System.out.println("Company ID: " + lnRow + " : " + loRS.getString("sCompnyID"));
                 System.out.println("Branch Code : " + lnRow + " : " + loRS.getString("sBranchCd"));
                 System.out.println("Branch Name : " + lnRow + " : " + loRS.getString("sBranchNm"));
                 System.out.println("Description : " + lnRow + " : " + loRS.getString("sDescript"));
@@ -290,6 +226,7 @@ public class RecurringExpenseSchedule extends Parameter{
                         return poJSON;
                     }
                 } else {
+                    Detail(lnRow).setCompanyId(psCompanyId); //Auto set based of company logged in
                     Detail(lnRow).setBranchCode(loRS.getString("sBranchCd"));
                 }
                 AddDetail();
@@ -299,6 +236,7 @@ public class RecurringExpenseSchedule extends Parameter{
         } else {
             String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                      " a.sRecurrID = " + SQLUtil.toSQL(Master().getRecurringId())
+                     + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                     );
             System.out.println("Executing SQL: " + lsSQL);
             ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -327,10 +265,15 @@ public class RecurringExpenseSchedule extends Parameter{
     
     public String checkRecurringExpenseSchedule(String fsBranchCode) throws SQLException{
         poJSON = new JSONObject();
+        
         String lsRecurringNo = "";
+        if(psCompanyId == null || "".equals(psCompanyId)){
+            psCompanyId = poGRider.getCompnyId();
+        }
         String lsSQL = MiscUtil.addCondition(getSQ_Browse(), 
                  " a.sRecurrID = " + SQLUtil.toSQL(Master().getRecurringId())
                 + " AND a.sBranchCd = " + SQLUtil.toSQL(fsBranchCode)
+                + " AND a.sCompnyID = " + SQLUtil.toSQL(psCompanyId)
                 );
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -343,28 +286,6 @@ public class RecurringExpenseSchedule extends Parameter{
     
         return lsRecurringNo;
     }
-    
-    public JSONObject SearchCompany(String value, boolean byCode, int row)
-            throws SQLException,
-            GuanzonException {
-        poJSON = new JSONObject();
-
-        poJSON = validateRecurring();
-        if (!"success".equals(poJSON.get("result"))) {
-            return poJSON;
-        }
-        
-        Company object = new ParamControllers(poGRider, logwrapr).Company();
-        object.setRecordStatus(RecordStatus.ACTIVE);
-        poJSON = object.searchRecord(value, byCode);
-        if ("success".equals((String) poJSON.get("result"))) {
-            Detail(row).setCompanyId(object.getModel().getCompanyId());
-            System.out.println("COMPANY ID : " + Detail(row).getCompanyId());
-            System.out.println("COMPANY NAME : " + Detail(row).Company().getCompanyName());
-        }
-        return poJSON;
-    }
-    
      
     /**
      * Search Branch
@@ -385,14 +306,15 @@ public class RecurringExpenseSchedule extends Parameter{
         }
         
         if(Detail(row).getCompanyId() == null || "".equals(Detail(row).getCompanyId())){
-            poJSON.put("result", "error");
-            poJSON.put("message", "Company cannot be empty");
-            return poJSON;
+            if(psCompanyId == null || "".equals(psCompanyId)){
+                psCompanyId = poGRider.getCompnyId();
+            }
+            Detail(row).setCompanyId(psCompanyId);
         }
        
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
-        object.setCompanyId(Detail(row).getCompanyId());
+//        object.setCompanyId(Detail(row).getCompanyId());
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))){
             Detail(row).setBranchCode(object.getModel().getBranchCode());
@@ -536,6 +458,7 @@ public class RecurringExpenseSchedule extends Parameter{
         loDetail.newRecord();
         paDetail.add(loDetail);
         Detail(getDetailCount() - 1).setDateFrom(poGRider.getServerDate());
+        Detail(getDetailCount() - 1).setCompanyId(psCompanyId);
         return poJSON;
     }
     
@@ -717,6 +640,7 @@ public class RecurringExpenseSchedule extends Parameter{
                     + "  , a.nBillDayx "
                     + "  , a.nDueDayxx "
                     + "  , a.sBranchCd "
+                    + "  , a.sCompnyID "
                     + "  , a.sDeptIDxx "
                     + "  , a.sEmployID "
                     + "  , a.cAccntble "
