@@ -1705,7 +1705,7 @@ public class CheckDeposit extends Transaction {
                 case "sBankIDxx":
                 case "sCheckNox":
                 case "nAmountxx":
-                    if(rowspace < getDetailCount()){
+                    if(rowspace < (getDetailCount()-1)){
                         poJSON = setJSON("error", "Transaction detail cannot be greater than the maximum row for asign bank account document mapping.");
                         return poJSON;
                     }
