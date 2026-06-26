@@ -17,6 +17,7 @@ import org.guanzon.appdriver.constant.EditMode;
 import org.guanzon.appdriver.constant.Logical;
 import org.guanzon.appdriver.constant.RecordStatus;
 import org.guanzon.cas.parameter.Branch;
+import org.guanzon.cas.parameter.Company;
 import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.model.Model_Branch;
 import org.guanzon.cas.parameter.services.ParamControllers;
@@ -342,6 +343,21 @@ public class RecurringExpenseSchedule extends Parameter{
     
         return lsRecurringNo;
     }
+    
+    public JSONObject SearchCompany(String value, boolean byCode, int row)
+            throws SQLException,
+            GuanzonException {
+        poJSON = new JSONObject();
+
+        Company object = new ParamControllers(poGRider, logwrapr).Company();
+        object.setRecordStatus(RecordStatus.ACTIVE);
+        poJSON = object.searchRecord(value, byCode);
+        if ("success".equals((String) poJSON.get("result"))) {
+            Detail(row).setCompanyId(object.getModel().getCompanyId());
+        }
+        return poJSON;
+    }
+    
      
     /**
      * Search Branch
@@ -363,11 +379,13 @@ public class RecurringExpenseSchedule extends Parameter{
         
         Branch object = new ParamControllers(poGRider, logwrapr).Branch();
         object.setRecordStatus(RecordStatus.ACTIVE);
-        if(psCompanyId == null || "".equals(psCompanyId)){
-            psCompanyId = poGRider.getCompnyId();
+        if(Detail(row).getCompanyId() == null || "".equals(Detail(row).getCompanyId())){
+            poJSON.put("result", "error");
+            poJSON.put("message", "Company cannot be empty");
+            return poJSON;
         }
        
-        object.setCompanyId(psCompanyId);
+        object.setCompanyId(Detail(row).getCompanyId());
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))){
             Detail(row).setBranchCode(object.getModel().getBranchCode());
