@@ -101,6 +101,14 @@ public class Model_Recurring_Expense_Schedule extends Model {
         return (String) getValue("sRecurrID");
     }
     
+    public JSONObject setCompanyId(String companyId) {
+        return setValue("sCompnyID", companyId);
+    }
+
+    public String getCompanyId() {
+        return (String) getValue("sCompnyID");
+    }
+    
     public JSONObject setDateFrom(Date dateFrom) {
         if(dateFrom == null){
             try {
@@ -317,17 +325,17 @@ public class Model_Recurring_Expense_Schedule extends Model {
         }
     }
     
-    public Model_Company Company() throws SQLException, GuanzonException {
-        if (!"".equals(Branch().getCompanyId())) {
-            if (poCompany.getEditMode() == EditMode.READY
-                    && poCompany.getCompanyId().equals(Branch().getCompanyId())) {
+    public Model_Company Company() throws SQLException, GuanzonException{
+        if (!"".equals((String) getValue("sCompnyID"))){
+            if (poCompany.getEditMode() == EditMode.READY && 
+                poCompany.getCompanyId().equals((String) getValue("sCompnyID")))
                 return poCompany;
-            } else {
-                poJSON = poCompany.openRecord(Branch().getCompanyId());
+            else{
+                poJSON = poCompany.openRecord((String) getValue("sCompnyID"));
 
-                if ("success".equals((String) poJSON.get("result"))) {
+                if ("success".equals((String) poJSON.get("result")))
                     return poCompany;
-                } else {
+                else {
                     poCompany.initialize();
                     return poCompany;
                 }
