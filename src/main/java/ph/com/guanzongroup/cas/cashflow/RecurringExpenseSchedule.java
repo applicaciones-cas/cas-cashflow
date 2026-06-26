@@ -349,11 +349,18 @@ public class RecurringExpenseSchedule extends Parameter{
             GuanzonException {
         poJSON = new JSONObject();
 
+        poJSON = validateRecurring();
+        if (!"success".equals(poJSON.get("result"))) {
+            return poJSON;
+        }
+        
         Company object = new ParamControllers(poGRider, logwrapr).Company();
         object.setRecordStatus(RecordStatus.ACTIVE);
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))) {
             Detail(row).setCompanyId(object.getModel().getCompanyId());
+            System.out.println("COMPANY ID : " + Detail(row).getCompanyId());
+            System.out.println("COMPANY NAME : " + Detail(row).Company().getCompanyName());
         }
         return poJSON;
     }
@@ -377,14 +384,14 @@ public class RecurringExpenseSchedule extends Parameter{
             return poJSON;
         }
         
-        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
-        object.setRecordStatus(RecordStatus.ACTIVE);
         if(Detail(row).getCompanyId() == null || "".equals(Detail(row).getCompanyId())){
             poJSON.put("result", "error");
             poJSON.put("message", "Company cannot be empty");
             return poJSON;
         }
        
+        Branch object = new ParamControllers(poGRider, logwrapr).Branch();
+        object.setRecordStatus(RecordStatus.ACTIVE);
         object.setCompanyId(Detail(row).getCompanyId());
         poJSON = object.searchRecord(value, byCode);
         if ("success".equals((String) poJSON.get("result"))){
