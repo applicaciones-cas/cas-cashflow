@@ -8182,7 +8182,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         poJSON.put("sUpdateDte", lsDate);
         return poJSON;
     }
-
+    
     public JSONObject printTransaction(List<String> fsTransactionNos)
             throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -8249,6 +8249,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
                 
+                //Additional fields - Arsiela 06222026
+                params.put("sCompany", Master().Company().getCompanyName());
+                params.put("sBranch", Master().Branch().getBranchName());
+                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
+//                params.put("sReceivedBy","");
+                
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
                 params.put("sConfirmer","");
@@ -8310,10 +8316,6 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         params.put("sAuthorizer", (String) loJSONAuthorize.get("sUpdateByx") + " " + String.valueOf((String) loJSONAuthorize.get("sUpdateDte"))); 
                     }
                 }
-                
-//                params.put("sPrepared", poGRider.getLogName());
-//                params.put("sChecked", "Rex Adversalo");
-//                params.put("sApproved", "Guanson Lo");
                 
                 if(Master().isPrinted()){
                     watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
@@ -8725,6 +8727,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
+                
+                //Additional fields - Arsiela 06222026
+                params.put("sCompany", Master().Company().getCompanyName());
+                params.put("sBranch", Master().Branch().getBranchName());
+                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
+//                params.put("sReceivedBy","");
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");

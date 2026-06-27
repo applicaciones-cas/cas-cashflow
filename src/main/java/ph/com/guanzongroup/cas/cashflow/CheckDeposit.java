@@ -469,7 +469,7 @@ public class CheckDeposit extends Transaction {
                     GLTransaction loGLTrans = new GLTransaction(poGRider, poGRider.getBranchCode()); //Get the branch code of the posting branch since check payments is on the detail and possible for multiple branch
                     loGLTrans.initTransaction(getSourceCode(), Master().getTransactionNo());
                     for (int lnCtr = 0; lnCtr <= Journal().getDetailCount() - 1; lnCtr++) {
-                        if(Detail(lnCtr).isReverse()){
+                        if(Journal().Detail(lnCtr).isReverse()){
                             loGLTrans.addDetail(Journal().Master().getBranchCode(),
                                     Journal().Detail(lnCtr).getAccountCode(),
                                     SQLUtil.toDate(xsDateShort(Journal().Detail(lnCtr).getForMonthOf()), SQLUtil.FORMAT_SHORT_DATE),
@@ -1705,7 +1705,7 @@ public class CheckDeposit extends Transaction {
                 case "sBankIDxx":
                 case "sCheckNox":
                 case "nAmountxx":
-                    if(rowspace < getDetailCount()){
+                    if(rowspace < (getDetailCount()-1)){
                         poJSON = setJSON("error", "Transaction detail cannot be greater than the maximum row for asign bank account document mapping.");
                         return poJSON;
                     }
