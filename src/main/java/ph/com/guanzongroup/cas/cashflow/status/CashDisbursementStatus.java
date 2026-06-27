@@ -15,6 +15,10 @@ public class CashDisbursementStatus {
     public static final  String APPROVED = "2";
     public static final  String CANCELLED = "3";
     public static final  String VOID = "4";
+
+    //Additional Status - Arsiela 06-27-2026
+    public static final  String VERIFIED = "8";
+    public static final  String RETURNED = "9";
     
     public static final String DEFAULT_VOUCHER_NO = "00000001";
     

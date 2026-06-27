@@ -53,6 +53,7 @@ import net.sf.jasperreports.swing.JRViewer;
 import net.sf.jasperreports.swing.JRViewerToolbar;
 import net.sf.jasperreports.view.JasperViewer;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang3.StringUtils;
 import org.guanzon.appdriver.agent.ShowDialogFX;
 import org.guanzon.appdriver.agent.ShowMessageFX;
 import org.guanzon.appdriver.agent.services.Model;
@@ -82,18 +83,10 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.rmj.cas.core.GLTransaction;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Advance_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Disbursement_Detail;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Cash_Fund;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Journal_Master;
-import ph.com.guanzongroup.cas.cashflow.model.Model_Withholding_Tax_Deductions;
+import ph.com.guanzongroup.cas.cashflow.model.*;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowControllers;
 import ph.com.guanzongroup.cas.cashflow.services.CashflowModels;
-import ph.com.guanzongroup.cas.cashflow.status.CashAdvanceStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CashDisbursementStatus;
-import ph.com.guanzongroup.cas.cashflow.status.CashFundStatus;
+import ph.com.guanzongroup.cas.cashflow.status.*;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
 import ph.com.guanzongroup.cas.cashflow.validator.CashAdvanceValidator;
 import ph.com.guanzongroup.cas.cashflow.validator.CashDisbursementValidator;
@@ -116,6 +109,7 @@ public class CashDisbursement extends Transaction {
     public List<Model> paMaster;
     public List<Model> paCashAdvances;
     public List<TransactionAttachment> paAttachments;
+    public List<JournalProposal> paJournalProposal; //Arsiela 06-27-2026
     
     /**
     * Initializes a new Cash Disbursement transaction.
@@ -138,6 +132,7 @@ public class CashDisbursement extends Transaction {
         paCashAdvances = new ArrayList<Model>();
         paWTaxDeductions = new ArrayList<WithholdingTaxDeductions>();
         paAttachments = new ArrayList<>();
+        paJournalProposal = new ArrayList<JournalProposal>();
         psApprover = "";
         setApproving("");
         return initialize();
@@ -241,6 +236,12 @@ public class CashDisbursement extends Transaction {
             poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
+
+        poJSON = loadJournalProposal();
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poJSON.put("message", "Unable to load journal proposal.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -287,6 +288,12 @@ public class CashDisbursement extends Transaction {
             poJSON.put("message", "Unable to load journal.\n" + (String) poJSON.get("message"));
             return poJSON;
         }
+
+       poJSON = loadJournalProposal();
+       if (!"success".equals((String) poJSON.get("result"))) {
+           poJSON.put("message", "Unable to load journal proposal.\n" + (String) poJSON.get("message"));
+           return poJSON;
+       }
         
         poJSON = populateWithholdingTaxDeduction();
         if (!"success".equals((String) poJSON.get("result"))) {
@@ -385,6 +392,81 @@ public class CashDisbursement extends Transaction {
         }
         return lsDepartment;
     }
+
+    /**
+     * Checks if a user has an allowed position for a specific transaction status.
+     *
+     * @param fsStatus transaction status
+     * @param fsUserId user ID
+     * @return position name if authorized, otherwise empty string
+     * @throws SQLException if a database error occurs
+     * @throws GuanzonException if query execution fails
+     */
+    public String checkPosition(String fsStatus, String fsUserId) throws SQLException, GuanzonException{
+        String lsSQL = " SELECT   " +
+                "  a.sUserIDxx, " +
+                "  d.sCompnyNm, " +
+                "  e.sDeptName, " +
+                "  c.sPositnNm, " +
+                "  b.dFiredxxx, " +
+                "  b.sDeptIDxx, " +
+                "  b.sPositnID " +
+                "FROM xxxSysUser a " +
+                "LEFT JOIN Employee_Master001 b ON b.sEmployID = a.sEmployNo " +
+                "LEFT JOIN Position c ON c.sPositnID = b.sPositnID  " +
+                "LEFT JOIN Client_Master d ON d.sClientID = b.sEmployID  " +
+                "LEFT JOIN Department e ON e.sDeptIDxx = b.sDeptIDxx  ";
+
+        lsSQL = MiscUtil.addCondition(lsSQL,
+                " a.sUserIDxx = " + SQLUtil.toSQL(fsUserId)
+                        + " AND b.sDeptIDxx = " + SQLUtil.toSQL(System.getProperty("sys.dept.finance"))
+        );
+        String lsPosition = "";
+        switch(fsStatus){
+            case CashDisbursementStatus.OPEN:
+                //Allow to entry cash disbursement only when user is form finance department
+                break;
+            //Who can modify and confirm the transaction
+            case CashDisbursementStatus.CONFIRMED:
+                lsPosition = "%Payable%";
+                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) );
+                break;
+            case CashDisbursementStatus.VERIFIED:
+            case CashDisbursementStatus.APPROVED:
+            case CashDisbursementStatus.RETURNED:
+                //Who can verify and approve the transaction
+                lsPosition = "%Account%";
+                lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition)
+                        + " AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%")
+                );
+                break;
+        }
+        System.out.println("Executing SQL: " + lsSQL);
+        ResultSet loRS = poGRider.executeQuery(lsSQL);
+        try {
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                if(loRS.next()){
+                    if(loRS.getString("sPositnNm") != null && !"".equals(loRS.getString("sPositnNm"))){
+                        return loRS.getString("sPositnNm");
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        } catch (SQLException e) {
+            System.out.println("No record loaded.");
+        }
+        return "";
+    }
+
+    /**
+     * Sets the form identifier for the transaction.
+     *
+     * @param fsForm the form name or code
+     */
+    private String psForm = "";
+    public void setForm(String fsForm){
+        psForm = fsForm;
+    }
     
     /**
     * Validates if the current transaction can be updated based on its latest database status.
@@ -410,23 +492,12 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
 
-        switch(loObject.getTransactionStatus()){
-            case CashDisbursementStatus.VOID:
-            case CashDisbursementStatus.CANCELLED:
-                poJSON = setJSON("error","Transaction status was already "+getStatus(loObject.getTransactionStatus())+"\nCheck transaction history.");
-                return poJSON;
-            case CashDisbursementStatus.CONFIRMED:
-                if(isEntry){
-                    poJSON = setJSON("error", "Transaction status was already "+getStatus(loObject.getTransactionStatus())+"!\nCheck transaction history.");
-                    return poJSON;
-                }
-                break;
-            case CashDisbursementStatus.APPROVED:
-                poJSON = setJSON("error","Transaction status was already approved!\nCheck transaction history.");
-                return poJSON;
+        String lsCurrentStatus = loObject.getTransactionStatus();
+        if (isUpdateRestricted(lsCurrentStatus, isEntry)) {
+            return setTransactionAlreadyUpdatedJSON(lsCurrentStatus);
         }
         
-        if(!loObject.getTransactionStatus().equals(Master().getTransactionStatus())){
+        if(!Objects.equals(lsCurrentStatus, Master().getTransactionStatus())){
             poJSON = OpenTransaction(Master().getTransactionNo());
             if (!isJSONSuccess(poJSON)) {
                 poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
@@ -434,10 +505,38 @@ public class CashDisbursement extends Transaction {
             }
         }
         
+        // Prevent stale form state from affecting succeeding checks.
+        psForm = "";
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+
+    private JSONObject setTransactionAlreadyUpdatedJSON(String fsStatus) {
+        return setJSON("error", "Transaction status was already " + getStatus(fsStatus) + "!\nCheck transaction history.");
+    }
+
+    private boolean isUpdateRestricted(String fsStatus, boolean isEntry) {
+        switch(fsStatus){
+            case CashDisbursementStatus.VOID:
+            case CashDisbursementStatus.CANCELLED:
+            case CashDisbursementStatus.APPROVED:
+                return true; //Do not allow to update
+            case CashDisbursementStatus.CONFIRMED:
+                return isEntry
+                        || CashDisbursementStatus.APPROVED.equals(psForm); //Do not allow to update when entry is true
+            case CashDisbursementStatus.VERIFIED://Do not allow to update verified transaction from entry, confirm and verified form
+                return isEntry
+                        || CashDisbursementStatus.CONFIRMED.equals(psForm)
+                        || CashDisbursementStatus.VERIFIED.equals(psForm);
+            case CashDisbursementStatus.RETURNED: //Do not allow to update returned transaction from entry, verified and approved form
+                return isEntry
+                        || CashDisbursementStatus.VERIFIED.equals(psForm)
+                        || CashDisbursementStatus.APPROVED.equals(psForm);
+            default:
+                return false;
+        }
+    }
+
     /**
     * Converts a numeric or short-code transaction status into a human-readable string.
     * 
@@ -539,21 +638,37 @@ public class CashDisbursement extends Transaction {
         }
         
         if(!pbWthParent){
+            //1. Check the position of the current user
+            String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+            if(lsPosition1 == null || "".equals(lsPosition1) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
             psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
-            
-            String lsDepartment = poGRider.getDepartment();
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                lsDepartment = checkApprover(psApprover);
-            }
-            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+
+            //2. Check the position of the approving officer
+            String lsPosition = checkPosition(lsStatus, psApprover);
+            if(lsPosition == null || "".equals(lsPosition) ){
                 poJSON.put("result", "error" );
-                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+                poJSON.put("message", "User is not an authorized officer." );
                 return poJSON;
             }
+            
+//            String lsDepartment = poGRider.getDepartment();
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                lsDepartment = checkApprover(psApprover);
+//            }
+//            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//                poJSON.put("result", "error" );
+//                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+//                return poJSON;
+//            }
         }
         
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -628,21 +743,37 @@ public class CashDisbursement extends Transaction {
         }
         
         if(!pbWthParent){
+            //1. Check the position of the current user
+            String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+            if(lsPosition1 == null || "".equals(lsPosition1) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
             psApprover = poGRider.getUserID();
             poJSON = callApproval();
             if (!isJSONSuccess(poJSON)) {
                 return poJSON;
             }
-            
-            String lsDepartment = poGRider.getDepartment();
-            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-                lsDepartment = checkApprover(psApprover);
-            }
-            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+
+            //2. Check the position of the approving officer
+            String lsPosition = checkPosition(lsStatus, psApprover);
+            if(lsPosition == null || "".equals(lsPosition) ){
                 poJSON.put("result", "error" );
-                poJSON.put("message", "User or approving officer is not authorized to approve the transaction." );
+                poJSON.put("message", "User is not an authorized officer." );
                 return poJSON;
             }
+            
+//            String lsDepartment = poGRider.getDepartment();
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                lsDepartment = checkApprover(psApprover);
+//            }
+//            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//                poJSON.put("result", "error" );
+//                poJSON.put("message", "User or approving officer is not authorized to approve the transaction." );
+//                return poJSON;
+//            }
         }
         
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
@@ -752,26 +883,42 @@ public class CashDisbursement extends Transaction {
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-        psApprover = poGRider.getUserID();
+
         if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
+                //1. Check the position of the current user
+                String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+                if(lsPosition1 == null || "".equals(lsPosition1) ){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "User is not an authorized officer." );
+                    return poJSON;
+                }
+
+                psApprover = poGRider.getUserID();
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+
+                //2. Check the position of the approving officer
+                String lsPosition = checkPosition(lsStatus, psApprover);
+                if(lsPosition == null || "".equals(lsPosition) ){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "User is not an authorized officer." );
                     return poJSON;
                 }
             }
         }
         
-        String lsDepartment = poGRider.getDepartment();
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            lsDepartment = checkApprover(psApprover);
-        }
-        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
-            poJSON.put("result", "error" );
-            poJSON.put("message", "User or approving officer is not authorized to void the transaction." );
-            return poJSON;
-        }
+//        String lsDepartment = poGRider.getDepartment();
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//            lsDepartment = checkApprover(psApprover);
+//        }
+//        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User or approving officer is not authorized to void the transaction." );
+//            return poJSON;
+//        }
         
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
@@ -843,26 +990,42 @@ public class CashDisbursement extends Transaction {
         if (!isJSONSuccess(poJSON)) {
             return poJSON;
         }
-        
-        psApprover = poGRider.getUserID();
+
         if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
             if(!pbWthParent){
+                //1. Check the position of the current user
+                String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+                if(lsPosition1 == null || "".equals(lsPosition1) ){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "User is not an authorized officer." );
+                    return poJSON;
+                }
+
+                psApprover = poGRider.getUserID();
                 poJSON = callApproval();
                 if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+
+                //2. Check the position of the approving officer
+                String lsPosition = checkPosition(lsStatus, psApprover);
+                if(lsPosition == null || "".equals(lsPosition) ){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "User is not an authorized officer." );
                     return poJSON;
                 }
             }
         }
         
-        String lsDepartment = poGRider.getDepartment();
-        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
-            lsDepartment = checkApprover(psApprover);
-        }
-        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
-            poJSON.put("result", "error" );
-            poJSON.put("message", "User or approving officer is not authorized to cancel the transaction." );
-            return poJSON;
-        }
+//        String lsDepartment = poGRider.getDepartment();
+//        if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//            lsDepartment = checkApprover(psApprover);
+//        }
+//        if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//            poJSON.put("result", "error" );
+//            poJSON.put("message", "User or approving officer is not authorized to cancel the transaction." );
+//            return poJSON;
+//        }
         
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
         
@@ -1472,6 +1635,51 @@ public class CashDisbursement extends Transaction {
                 poJSON.put("message", "Account code " + fsAcctCode + " already exists at row " + (lnCtr+1) + ".");
                 poJournal.Detail(fnRow).setAccountCode("");
                 return poJSON;
+            }
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+
+    /**
+     * Checks if an account code already exists in the journal proposal details.
+     *
+     * @param fnJEProposalRow      current row index of JE Proposal
+     * @param fsBranch
+     * @param fsDept
+     * @return JSONObject indicating if duplicate exists or not
+     */
+    public JSONObject checkJEPExistBranchDept(int fnJEProposalRow, String fsOrigBranchCode, String fsOrigDeptId) throws SQLException, GuanzonException{
+        poJSON = new JSONObject();
+        String lbBranch = "";
+        String lbDepartment = "";
+        int lnRow = 0;
+
+        for(int lnCtr = 0;lnCtr < getJournalProposalList().size() ; lnCtr++){
+            lnRow++;
+            if((fnJEProposalRow == lnCtr || JournalProposalStatus.VOID.equals(JournalProposal(lnCtr).Master()))
+                    || JournalProposalStatus.CANCELLED.equals(JournalProposal(lnCtr).Master())
+            ){
+            } else {
+                lbBranch = JournalProposal(lnCtr).Master().getBranchCode();
+                lbDepartment = JournalProposal(lnCtr).Master().getDepartmentId();
+
+                if(lbBranch != null && !"".equals(lbBranch)){
+                    if(lbBranch.equals(JournalProposal(fnJEProposalRow).Master().getBranchCode())){
+                        if(lbDepartment != null && !"".equals(lbDepartment)){
+                            if(lbDepartment.equals(JournalProposal(fnJEProposalRow).Master().getDepartmentId())){
+                                poJSON.put("row", lnCtr);
+                                poJSON.put("result", "error");
+                                poJSON.put("message", "Branch " + JournalProposal(fnJEProposalRow).Master().Branch().getBranchName() + " and Deparment " + JournalProposal(fnJEProposalRow).Master().Department().getDescription() + " already exist at row " + lnRow);
+                                paJournalProposal.get(fnJEProposalRow).Master().setBranchCode(fsOrigBranchCode);
+                                paJournalProposal.get(fnJEProposalRow).Master().setDepartmentId(fsOrigDeptId);
+                                return poJSON;
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -2168,6 +2376,75 @@ public class CashDisbursement extends Transaction {
 
         return "";
     }
+
+    /**
+     * Check existing Journal Proposal
+     * @return
+     * @throws SQLException
+     */
+    public JSONObject loadJournalProposal() throws SQLException, CloneNotSupportedException, GuanzonException{
+        poJSON = new JSONObject();
+        if(getEditMode() == EditMode.READY || getEditMode() == EditMode.UPDATE){ //Load saved journal proposal
+            paJournalProposal = new ArrayList<JournalProposal>();
+
+            Model_Journal_Master_Proposal loMaster = new CashflowModels(poGRider).Journal_Master_Proposal();
+            String lsSQL = MiscUtil.makeSelect(loMaster);
+            lsSQL = MiscUtil.addCondition(lsSQL,
+                    " sSourceNo = " + SQLUtil.toSQL(Master().getTransactionNo())
+                            + " AND sSourceCD = " + SQLUtil.toSQL(getSourceCode())
+            );
+
+            if(!CashDisbursementStatus.VOID.equals(Master().getTransactionStatus())
+                    && !CashDisbursementStatus.CANCELLED.equals(Master().getTransactionStatus())){
+                lsSQL = lsSQL + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.VOID)
+                        + " AND cTranStat != " + SQLUtil.toSQL(JournalProposalStatus.CANCELLED);
+            }
+
+            System.out.println("Executing SQL: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+            boolean lbExist = false;
+            if (MiscUtil.RecordCount(loRS) > 0) {
+                while (loRS.next()) {
+                    // Print the result set
+                    System.out.println("--------------------------JOURNAL ENTRY PROPOSAL--------------------------");
+                    System.out.println("sTransNox: " + loRS.getString("sTransNox"));
+                    System.out.println("------------------------------------------------------------------------------");
+                    if(loRS.getString("sTransNox") != null && !"".equals(loRS.getString("sTransNox"))){
+                        lbExist = false;
+                        int lnCtr = 0;
+                        for(lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                            if(JournalProposal(lnCtr).Master().getTransactionNo().equals(loRS.getString("sTransNox"))){
+                                lbExist = true;
+                                break;
+                            }
+                        }
+
+                        if(!lbExist){
+                            AddJournalProposal();
+                            lnCtr = getJournalProposalList().size() - 1;
+                            poJSON = JournalProposal(lnCtr).OpenTransaction(loRS.getString("sTransNox"));
+                            if("error".equals((String) poJSON.get("result"))){
+                                return poJSON;
+                            }
+                        }
+
+                        if(getEditMode() == EditMode.UPDATE && JournalProposal(lnCtr).getEditMode() == EditMode.READY){
+                            poJSON = JournalProposal(getJournalProposalList().size() - 1).UpdateTransaction();
+                            if("error".equals((String) poJSON.get("result"))){
+                                return poJSON;
+                            }
+                        }
+                    }
+                }
+            }
+            MiscUtil.close(loRS);
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "No record to load");
+        return poJSON;
+    }
+    
     /**
     * Manages the withholding tax deduction list based on the current edit mode.
     * 
@@ -2594,6 +2871,7 @@ public class CashDisbursement extends Transaction {
         
         //Reset Journal when all details was removed
         resetJournal();
+        resetJournalProposal();
         paAttachments = new ArrayList<>();
 //        setSearchIndustry("");
 //        setSearchPayee("");
@@ -2674,6 +2952,50 @@ public class CashDisbursement extends Transaction {
         }
         return poJournal;
     }
+
+    /**
+     * Gets or initializes the Journal proposal controller.
+     *
+     * @return Journal instance
+     */
+    public JournalProposal JournalProposal(int fnRow){
+        if(paJournalProposal == null){
+            paJournalProposal = new ArrayList<JournalProposal>();
+        }
+        return paJournalProposal.get(fnRow);
+    }
+
+
+    /**
+     * Adds a new journal detail record after validating the last entry.
+     *
+     * @return JSONObject indicating success or error status
+     * @throws CloneNotSupportedException if cloning fails
+     */
+    public JSONObject AddJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        if (getJournalProposalList().size() > 0) {
+            if (JournalProposal(getJournalProposalList().size() - 1).Master().getBranchCode().isEmpty()) {
+                poJSON = new JSONObject();
+                poJSON.put("result", "error");
+                poJSON.put("message", "Last row has empty item.");
+                return poJSON;
+            }
+        }
+        paJournalProposal.add( new CashflowControllers(poGRider, logwrapr).JournalProposal());
+        paJournalProposal.get(getJournalProposalList().size() - 1).InitTransaction();
+        poJSON.put("result", "success");
+        return poJSON;
+    }
+
+    /**
+     * Gets the full list of Journal Proposal records.
+     *
+     * @return list of Journal Proposal models
+     */
+    public List<JournalProposal> getJournalProposalList() {
+        return (List<JournalProposal>) (List<?>) paJournalProposal;
+    }
     
     public JSONObject AddWTaxDeduction() throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -2732,6 +3054,18 @@ public class CashDisbursement extends Transaction {
     }
 
     /**
+     * Resets journal transaction.
+     */
+    public void resetJournalProposal() {
+        try {
+            paJournalProposal = new ArrayList<JournalProposal>();
+            paJournalProposal.set(paJournalProposal.size()-1, new CashflowControllers(poGRider, logwrapr).JournalProposal());
+        } catch (SQLException | GuanzonException ex) {
+            Logger.getLogger(Disbursement.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+
+    /**
      * Completely clears the current transaction state.
      * 
      * Resets the master model, clears all detail and attachment collections, 
@@ -2740,6 +3074,7 @@ public class CashDisbursement extends Transaction {
     public void resetTransaction(){
         resetMaster();
         resetJournal();
+        resetJournalProposal();
         Detail().clear();
         WTaxDeduction().clear();
         paAttachments = new ArrayList<>();
@@ -2808,6 +3143,71 @@ public class CashDisbursement extends Transaction {
             Journal().Detail(getDetailCount() - 1).setForMonthOf(poGRider.getServerDate());
         }
     
+    }
+
+
+    /**
+     * Cleans journal details by removing invalid or empty entries,
+     * ensures at least one valid row exists, and adds a new detail row
+     * when the last entry is valid and contains amounts.
+     *
+     * @throws CloneNotSupportedException if cloning fails
+     * @throws SQLException if a database error occurs
+     */
+    public void ReloadJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException, GuanzonException{
+        int lnCtr = getJournalProposalList().size() - 1;
+        Model_Journal_Detail_Proposal loJEPDetail;
+        while (lnCtr >= 0) {
+            if (JournalProposal(lnCtr) == null ) {
+                getJournalProposalList().remove(lnCtr);
+            } else {
+            }
+            lnCtr--;
+        }
+
+        if(getJournalProposalList() == null){
+            if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                createNewJournalProposal();
+            }
+        } else {
+            if ((getJournalProposalList().size() - 1) >= 0) {
+                lnCtr = getJournalProposalList().size() - 1;
+
+                boolean hasEmptyBranchOrDepartment = getJournalProposalList().stream()
+                        .anyMatch(jp ->
+                                StringUtils.isBlank(jp.Master().getBranchCode()) ||
+                                        StringUtils.isBlank(jp.Master().getDepartmentId())
+                        );
+
+                if(JournalProposal(lnCtr).Master().getBranchCode() != null && !"".equals(JournalProposal(lnCtr).Master().getBranchCode())
+                        && JournalProposal(lnCtr).Master().getDepartmentId() != null && !"".equals(JournalProposal(lnCtr).Master().getDepartmentId())
+                        && JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 && JournalProposal(lnCtr).getTotalCreditAmount()> 0.0000
+                        && !hasEmptyBranchOrDepartment ){
+                    if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                        createNewJournalProposal();
+                    }
+                }
+            }
+            if ((getJournalProposalList().size() - 1) < 0) {
+                if(getEditMode() == EditMode.ADDNEW || getEditMode() == EditMode.UPDATE){
+                    createNewJournalProposal();
+                }
+            }
+        }
+    }
+
+
+    private void createNewJournalProposal() throws CloneNotSupportedException, SQLException, GuanzonException {
+        AddJournalProposal();
+
+        JournalProposal proposal = JournalProposal(getJournalProposalList().size() - 1);
+        proposal.NewTransaction();
+        proposal.Master().setTransactionDate(poGRider.getServerDate());
+        proposal.Master().setCompanyId(Master().getCompanyId());
+        proposal.Master().setIndustryCode(Master().getIndustryId());
+        proposal.Master().setSourceNo(Master().getTransactionNo());
+        proposal.Master().setSourceCode(getSourceCode());
+        proposal.ReloadDetail();
     }
     
     public void ReloadWTDeductions() throws CloneNotSupportedException, SQLException, GuanzonException{
@@ -3311,6 +3711,15 @@ public class CashDisbursement extends Transaction {
                     }
                 }
             }
+
+            //Save Journal Proposal
+            System.out.println("--------------------------SAVE JOURNAL PROPOSAL---------------------------------------------");
+            poJSON = saveJournalProposal();
+            if ("error".equals((String) poJSON.get("result"))) {
+                paOrigJEP = null;
+                return poJSON;
+            }
+            System.out.println("-----------------------------------------------------------------------");
             
 //            Save Journal
             System.out.println("--------------------------SAVE JOURNAL---------------------------------------------");
@@ -3351,16 +3760,176 @@ public class CashDisbursement extends Transaction {
             System.out.println("-----------------------------------------------------------------------");
             
         
-        } catch (SQLException | GuanzonException | CloneNotSupportedException  ex) {
+        } catch (SQLException | GuanzonException | CloneNotSupportedException | ParseException  ex) {
             Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
             poJSON = setJSON("error", MiscUtil.getException(ex));
             return poJSON;
         }
-            
+
+        //Clear value
+        paOrigJEP = null;
         poJSON = setJSON("success", "success");
         return poJSON;
     }
-    
+
+    public List<JournalProposal> paOrigJEP;
+    private JSONObject populateOriginalValue(){
+        poJSON = new JSONObject();
+        paOrigJEP = new ArrayList<JournalProposal>();
+        try {
+            for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                paOrigJEP.add( new CashflowControllers(poGRider, logwrapr).JournalProposal());
+                paOrigJEP.get(paOrigJEP.size() - 1).InitTransaction();
+                JournalProposal loObj = paOrigJEP.get(paOrigJEP.size() - 1);
+                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW){
+                    poJSON = loObj.NewTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                        return poJSON;
+                    }
+                } else if(JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
+                    poJSON = loObj.OpenTransaction(JournalProposal(lnCtr).Master().getTransactionNo());
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                        return poJSON;
+                    }
+                    poJSON = loObj.UpdateTransaction();
+                    if ("error".equals((String) poJSON.get("result"))) {
+                        System.out.println("populateOriginalValue : " + poJSON.get("message"));
+                        return poJSON;
+                    }
+                }
+
+                System.out.println("---------SET ORIGINAL VALUE FOR JOURNAL PROPOSAL---------------");
+
+                System.out.println("---------MASTER JOURNAL PROPOSAL---------------");
+                for (int lnCol = 1; lnCol <= loObj.Master().getColumnCount(); lnCol++) {
+                    System.out.println(loObj.Master().getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Master().getValue(loObj.Master().getColumn(lnCol)));
+                    loObj.Master().setValue(loObj.Master().getColumn(lnCol), JournalProposal(lnCtr).Master().getValue(loObj.Master().getColumn(lnCol)));
+                }
+                System.out.println("---------------------------------------------------------------");
+                for (int lnRow = 0; lnRow < JournalProposal(lnCtr).getDetailCount(); lnRow++){
+                    System.out.println("---------DETAIL JOURNAL PROPOSAL---------------");
+                    int lnDet = -1;
+                    if(JournalProposal(lnCtr).Detail(lnRow).getEditMode() == EditMode.ADDNEW){
+                        loObj.ReloadDetail();
+                        lnDet = loObj.getDetailCount()-1;
+                    } else {
+//                            lnDet = loObj.Detail().indexOf(JournalProposal(lnCtr).Detail(lnRow));
+                        lnDet = lnRow;
+                    }
+                    System.out.println("Detail : " + lnDet);
+                    if(lnDet >= 0){
+                        for (int lnCol = 1; lnCol <= loObj.Detail(lnDet).getColumnCount(); lnCol++) {
+                            System.out.println(loObj.Detail(lnDet).getColumn(lnCol) + " ->> " + JournalProposal(lnCtr).Detail(lnRow).getValue(loObj.Detail(lnDet).getColumn(lnCol)));
+                            loObj.Detail(lnDet).setValue(loObj.Detail(lnDet).getColumn(lnCol), JournalProposal(lnCtr).Detail(lnRow).getValue(loObj.Detail(lnDet).getColumn(lnCol)));
+                        }
+                    }
+                    System.out.println("---------------------------------------------------------------");
+                }
+                System.out.println("---------------------------------------------------------------");
+
+            }
+
+        } catch (GuanzonException | SQLException | CloneNotSupportedException ex) {
+            Logger.getLogger(getClass().getName()).log(Level.SEVERE, null, ex);
+            poJSON.put("result", "error");
+            return poJSON;
+        }
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+
+    private JSONObject saveJournalProposal() throws SQLException, GuanzonException, CloneNotSupportedException, ParseException, ParseException{
+        poJSON = new JSONObject();
+        if(paOrigJEP != null){
+            if(!paOrigJEP.isEmpty()){
+                for(int lnCtr = 0;lnCtr < paOrigJEP.size();lnCtr++){
+                    System.out.println("Original JEP ROW : " + lnCtr );
+                    System.out.println("Original JEP Edit Mode : " + paOrigJEP.get(lnCtr).getEditMode());
+                    System.out.println("Original Transnox : " + paOrigJEP.get(lnCtr).Master().getTransactionNo());
+                }
+                paJournalProposal = null;
+                paJournalProposal = new ArrayList<JournalProposal>();
+                paJournalProposal.addAll(paOrigJEP);
+            }
+        }
+        if(getJournalProposalList() != null){
+            poJSON = populateOriginalValue();
+            if ("error".equals((String) poJSON.get("result"))) {
+                return poJSON;
+            }
+            for(int lnCtr = 0;lnCtr < getJournalProposalList().size(); lnCtr++){
+                System.out.println("JEP ROW : " + lnCtr );
+                System.out.println("JEP Edit Mode : " + JournalProposal(lnCtr).getEditMode() );
+                if(JournalProposal(lnCtr).getEditMode() == EditMode.ADDNEW || JournalProposal(lnCtr).getEditMode() == EditMode.UPDATE){
+                    if(JournalProposal(lnCtr).Master().isReverse()){
+                        if(JournalProposal(lnCtr).getTotalDebitAmount() > 0.0000 || JournalProposal(lnCtr).getTotalCreditAmount() > 0.0000){
+                            poJSON = JournalProposal(lnCtr).validateJournalProposal();
+                            boolean lbContinue = (boolean) poJSON.get("continue");
+                            if ("error".equals((String) poJSON.get("result"))) {
+                                poJSON.put("result", "error");
+                                poJSON.put("message", poJSON.get("message").toString());
+                                return poJSON;
+                            }
+                            if(lbContinue){
+                                JournalProposal(lnCtr).Master().setSourceNo(Master().getTransactionNo());
+                                JournalProposal(lnCtr).Master().setModifyingId(poGRider.getUserID());
+                                JournalProposal(lnCtr).Master().setModifiedDate(poGRider.getServerDate());
+                                JournalProposal(lnCtr).setWithParent(true);
+                                poJSON = JournalProposal(lnCtr).SaveTransaction();
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                                    return poJSON;
+                                }
+                            }
+                        }
+                    } else {
+                        JournalProposal loObj = new CashflowControllers(poGRider, logwrapr).JournalProposal();
+                        poJSON = loObj.InitTransaction();
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                        poJSON = loObj.OpenTransaction(JournalProposal(lnCtr).Master().getTransactionNo());
+                        if ("error".equals((String) poJSON.get("result"))) {
+                            System.out.println("Save Journal Proposal : " + poJSON.get("message"));
+                            return poJSON;
+                        }
+                        loObj.setWithParent(true);
+                        loObj.setWithUI(false);
+                        if(psApprover == null || "".equals(psApprover)){
+                            psApprover = poGRider.getUserID();
+                        }
+                        loObj.setApproving(psApprover);
+                        switch(loObj.Master().getTransactionStatus()){
+                            case JournalProposalStatus.OPEN:
+                                poJSON = loObj.VoidTransaction("");
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    System.out.println("Void Journal Proposal : " + poJSON.get("message"));
+                                    return poJSON;
+                                }
+                                break;
+                            case JournalProposalStatus.CONFIRMED:
+                            case JournalProposalStatus.RETURNED:
+                                poJSON = loObj.CancelTransaction("");
+                                if ("error".equals((String) poJSON.get("result"))) {
+                                    System.out.println("Cancel Journal Proposal : " + poJSON.get("message"));
+                                    return poJSON;
+                                }
+                                break;
+                        }
+                    }
+                }
+            }
+        }
+
+        poJSON.put("result", "success");
+        poJSON.put("message", "success");
+        return poJSON;
+    }
+
     /**
      * Initializes the base SQL query used for browsing Cash Advance records.
      * 
