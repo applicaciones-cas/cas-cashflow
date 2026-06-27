@@ -40,6 +40,7 @@ public class Model_Disbursement_Master extends Model {
     private String searchBranchID = "";
     private String searchPayee = "";
     private double advancesTotal = 0.0000;
+    private boolean isSummarized;
 
     @Override
     public void initialize() {
@@ -397,6 +398,9 @@ public class Model_Disbursement_Master extends Model {
 
     public double getAdvancesTotal() {
         return this.advancesTotal;
+    }
+    public void setSummarized(boolean summarized) {
+        this.isSummarized = summarized;
     }
 
     public Model_Payee Payee() throws GuanzonException, SQLException {

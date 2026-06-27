@@ -54,12 +54,8 @@ import javax.sql.rowset.CachedRowSet;
 import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 import javax.swing.WindowConstants;
-import net.sf.jasperreports.engine.JRException;
-import net.sf.jasperreports.engine.JasperCompileManager;
-import net.sf.jasperreports.engine.JasperFillManager;
-import net.sf.jasperreports.engine.JasperPrint;
-import net.sf.jasperreports.engine.JasperPrintManager;
-import net.sf.jasperreports.engine.JasperReport;
+
+import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.swing.JRViewer;
 import net.sf.jasperreports.swing.JRViewerToolbar;
@@ -82,13 +78,11 @@ import org.guanzon.appdriver.constant.UserRight;
 import org.guanzon.appdriver.iface.GValidator;
 import org.guanzon.cas.client.ClientInfo;
 import org.guanzon.cas.client.services.ClientControllers;
-import org.guanzon.cas.parameter.Banks;
-import org.guanzon.cas.parameter.Branch;
-import org.guanzon.cas.parameter.Industry;
-import org.guanzon.cas.parameter.TaxCode;
+import org.guanzon.cas.parameter.*;
 import org.guanzon.cas.parameter.model.Model_Category;
 import org.guanzon.cas.parameter.services.ParamControllers;
 import org.guanzon.cas.parameter.services.ParamModels;
+import org.guanzon.cas.purchasing.controller.PurchaseOrder;
 import org.guanzon.cas.purchasing.model.Model_POR_Detail;
 import org.guanzon.cas.purchasing.model.Model_POR_Master;
 import org.guanzon.cas.purchasing.model.Model_POReturn_Detail;
@@ -146,6 +140,9 @@ public class DisbursementVoucher extends Transaction {
     public String psApprover = "";
     public boolean pbIsUpdateAmountPaid = false;
     public boolean pbPrint = false;
+
+    private String dfrom;
+    private String dthru;
     
     public OtherPayments poOtherPayments;
     public CheckPayments poCheckPayments;
@@ -2390,8 +2387,8 @@ public class DisbursementVoucher extends Transaction {
     * Checks if an account code already exists in the journal proposal details.
     *
     * @param fnJEProposalRow      current row index of JE Proposal
-     * @param fsBranch
-     * @param fsDept
+     * @param
+     * @param
     * @return JSONObject indicating if duplicate exists or not
     */
     public JSONObject checkJEPExistBranchDept(int fnJEProposalRow, String fsOrigBranchCode, String fsOrigDeptId) throws SQLException, GuanzonException{
@@ -6266,7 +6263,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     }
     /**
      * get Inventory Type Code value
-     * @param fsValue description
+     * @param
      * @return 
      */
     private boolean withCategory(String fsCategory, String fsInvTypeCode){
@@ -7811,7 +7808,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
     
     /**
      * get Inventory Type Code value
-     * @param fsValue description
+     * @param
      * @return 
      */
     private String getDocumentCode(String fsBankAccountId){
@@ -8182,7 +8179,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         poJSON.put("sUpdateDte", lsDate);
         return poJSON;
     }
-    
+
     public JSONObject printTransaction(List<String> fsTransactionNos)
             throws CloneNotSupportedException, SQLException, GuanzonException {
         poJSON = new JSONObject();
@@ -8249,12 +8246,6 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
                 
-                //Additional fields - Arsiela 06222026
-                params.put("sCompany", Master().Company().getCompanyName());
-                params.put("sBranch", Master().Branch().getBranchName());
-                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
-//                params.put("sReceivedBy","");
-                
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
                 params.put("sConfirmer","");
@@ -8316,6 +8307,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         params.put("sAuthorizer", (String) loJSONAuthorize.get("sUpdateByx") + " " + String.valueOf((String) loJSONAuthorize.get("sUpdateDte"))); 
                     }
                 }
+                
+//                params.put("sPrepared", poGRider.getLogName());
+//                params.put("sChecked", "Rex Adversalo");
+//                params.put("sApproved", "Guanson Lo");
                 
                 if(Master().isPrinted()){
                     watermarkPath = watermarkPath + "reprint.png"; //"D:\\GGC_Maven_Systems\\Reports\\images\\reprint.png";
@@ -8727,12 +8722,6 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
-                
-                //Additional fields - Arsiela 06222026
-                params.put("sCompany", Master().Company().getCompanyName());
-                params.put("sBranch", Master().Branch().getBranchName());
-                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
-//                params.put("sReceivedBy","");
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
@@ -9341,5 +9330,911 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
         } 
         return lsEntry;
     }
-    
+
+    /**
+     * Retrieves Disbursement Summary Report records including company, payee,
+     * bank account, check payment, transaction totals, tax amounts, and status
+     * information.
+     *
+     * <p>This method generates a summarized disbursement dataset by joining
+     * disbursement transactions with check payments, bank accounts, banks,
+     * company information, and payee records.</p>
+     *
+     * <p>The result provides transaction-level details suitable for financial
+     * reporting, check monitoring, audit verification, and payment reconciliation
+     * purposes.</p>
+     *
+     * <p><b>Filters Applied:</b></p>
+     * <ul>
+     *   <li>Date range (a.dTransact BETWEEN dateFrom and dateThru)</li>
+     *   <li>Payee name (d.sPayeeNme)</li>
+     *   <li>Bank account number (e.sActNumbr)</li>
+     *   <li>Bank account name (e.sActNamex)</li>
+     *   <li>Bank name (f.sBankName)</li>
+     *   <li>Check transaction status (b.cTranStat)</li>
+     *   <li>Company ID and Industry Code (system context via Master())</li>
+     *   <li>Transaction prefix (based on logged-in branch code)</li>
+     *   <li>Disbursement transaction status (single or multi-value filter)</li>
+     * </ul>
+     *
+     * <p><b>Output Fields:</b></p>
+     * <ul>
+     *   <li>sTransNox - Disbursement transaction number</li>
+     *   <li>sCompnyCd - Company code</li>
+     *   <li>dTransact - Transaction date</li>
+     *   <li>sPayeeNme - Payee name</li>
+     *   <li>sActNumbr - Bank account number</li>
+     *   <li>sActNamex - Bank account name</li>
+     *   <li>sBankName - Bank name</li>
+     *   <li>sCheckNox - Check number</li>
+     *   <li>nTranTotl - Gross transaction amount</li>
+     *   <li>nDiscTotl - Total discount amount</li>
+     *   <li>nWTaxTotl - Total withholding tax amount</li>
+     *   <li>nVATSales - VAT sales amount</li>
+     *   <li>nVATAmtxx - VAT amount</li>
+     *   <li>nZroVATSl - Zero-rated VAT sales amount</li>
+     *   <li>nVatExmpt - VAT exempt amount</li>
+     *   <li>nNetTotal - Net transaction amount</li>
+     *   <li>nAmountxx - Check payment amount</li>
+     *   <li>sStatus - Human-readable disbursement transaction status</li>
+     *   <li>sChkPrint - Check printing status</li>
+     *   <li>sCheckStatus - Human-readable check transaction status</li>
+     *   <li>sRemarksx - Transaction remarks</li>
+     * </ul>
+     *
+     * @param issummarized flag indicating summarized or detailed mode
+     *                     (reserved for future enhancement)
+     * @param dateFrom start date filter (inclusive)
+     * @param dateThru end date filter (inclusive)
+     * @param Payee payee name filter
+     * @param AccountNo bank account number filter
+     * @param AccountNme bank account name filter
+     * @param BankName bank name filter
+     * @param CheckStat check transaction status filter
+     *
+     * @return a JSONObject containing:
+     *         <ul>
+     *           <li>result - success / error</li>
+     *           <li>message - execution status</li>
+     *           <li>data - JSONArray of summarized disbursement records</li>
+     *         </ul>
+     *
+     * @throws SQLException if database query execution fails
+     * @throws GuanzonException if business validation fails
+     *
+     * @author TEEJEI DE CELIS
+     * @since 06-26-2026
+     * @apiNote This method is intended for disbursement summary reporting,
+     *          check monitoring, financial reconciliation, and audit purposes.
+     */
+    public JSONObject RetriveSummaryReports(Boolean issummarized,
+                                            LocalDate dateFrom,
+                                            LocalDate dateThru,
+                                            String Payee,
+                                            String AccountNo,
+                                            String AccountNme,
+                                            String BankName,
+                                            String CheckStat)
+            throws SQLException, GuanzonException {
+
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        dfrom = String.valueOf(dateFrom);
+        dthru = String.valueOf(dateThru);
+        try {
+
+            String lsSQL = "SELECT "
+                    + "  a.sTransNox, "
+                    + "  c.sCompnyCd, "
+                    + "  a.dTransact, "
+                    + "  d.sPayeeNme, "
+                    + "  e.sActNumbr, "
+                    + "  e.sActNamex, "
+                    + "  f.sBankName, "
+                    + "  b.sCheckNox, "
+                    + "  a.nTranTotl, "
+                    + "  a.nDiscTotl, "
+                    + "  a.nWTaxTotl, "
+                    + "  a.nVATSales, "
+                    + "  a.nVATAmtxx, "
+                    + "  a.nZroVATSl, "
+                    + "  a.nVatExmpt, "
+                    + "  a.nNetTotal, "
+                    + "  b.nAmountxx, "
+                    + "  CASE a.cTranStat "
+                    + "      WHEN '0' THEN 'OPEN' "
+                    + "      WHEN '1' THEN 'VERIFIED' "
+                    + "      WHEN '3' THEN 'CANCELLED' "
+                    + "      WHEN '4' THEN 'AUTHORIZED' "
+                    + "      WHEN '5' THEN 'VOID' "
+                    + "      WHEN '6' THEN 'DISAPPROVED' "
+                    + "      WHEN '7' THEN 'CONFIRMED' "
+                    + "      WHEN '8' THEN 'APPROVED' "
+                    + "      WHEN '9' THEN 'RETURNED' "
+                    + "      WHEN 'I' THEN 'RETURNED' "
+                    + "  END AS sStatus, "
+                    + "  CASE b.cPrintxxx "
+                    + "      WHEN '0' THEN 'OPEN' "
+                    + "      WHEN '1' THEN 'PRINTED' "
+                    + "      ELSE 'Unknown' "
+                    + "  END AS sChkPrint, "
+                    + "  CASE b.cTranStat "
+                    + "      WHEN '0' THEN 'OPEN(no check yet)' "
+                    + "      WHEN '1' THEN 'CONFIRMED' "
+                    + "      WHEN '2' THEN 'POSTED' "
+                    + "      WHEN '3' THEN 'CANCELLED' "
+                    + "      WHEN '4' THEN 'STALED' "
+                    + "      WHEN '5' THEN 'for clarification' "
+                    + "      WHEN '6' THEN 'BOUNCED' "
+                    + "      WHEN '7' THEN 'VOID' "
+                    + "  END AS sCheckStatus, "
+                    + "  a.sRemarksx "
+                    + "FROM Disbursement_Master a "
+                    + "LEFT JOIN Check_Payments b "
+                    + "    ON a.sTransNox = b.sSourceNo "
+                    + "LEFT JOIN Bank_Account_Master e "
+                    + "    ON b.sBnkActID = e.sBnkActID "
+                    + "LEFT JOIN Banks f "
+                    + "    ON b.sBankIDxx = f.sBankIDxx "
+                    + "LEFT JOIN Company c "
+                    + "    ON a.sCompnyID = c.sCompnyID "
+                    + "LEFT JOIN Payee d "
+                    + "    ON a.sPayeeIDx = d.sPayeeIDx ";
+
+            // -------------------------------
+            // FILTERS
+            // -------------------------------
+            List<String> lsFilter = new ArrayList<>();
+
+            if (dateFrom != null && dateThru != null) {
+                lsFilter.add("a.dTransact BETWEEN "
+                        + SQLUtil.toSQL(java.sql.Date.valueOf(dateFrom))
+                        + " AND "
+                        + SQLUtil.toSQL(java.sql.Date.valueOf(dateThru)));
+                dfrom = String.valueOf(dateFrom);
+                dthru = String.valueOf(dateThru);
+            }
+            if (Payee != null && !Payee.trim().isEmpty()) {
+                lsFilter.add("d.sPayeeNme LIKE " + SQLUtil.toSQL(Payee + "%"));
+            }
+
+            if (AccountNo != null && !AccountNo.trim().isEmpty()) {
+                lsFilter.add("e.sActNumbr LIKE " + SQLUtil.toSQL(AccountNo + "%"));
+            }
+
+            if (AccountNme != null && !AccountNme.trim().isEmpty()) {
+                lsFilter.add("e.sActNamex LIKE " + SQLUtil.toSQL(AccountNme + "%"));
+            }
+
+            if (BankName != null && !BankName.trim().isEmpty()) {
+                lsFilter.add("f.sBankName LIKE " + SQLUtil.toSQL(BankName + "%"));
+            }
+            if (CheckStat != null && !CheckStat.trim().isEmpty()) {
+                lsFilter.add("b.cTranStat LIKE " + SQLUtil.toSQL(CheckStat + "%"));
+            }
+
+            lsFilter.add("a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
+                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID())
+                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
+
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
+                lsFilter.add( " a.cTranStat IN (" + lsTransStat.substring(2) + ")");
+            } else {
+                lsFilter.add( " a.cTranStat = " + SQLUtil.toSQL(psTranStat));
+            }
+            if (!lsFilter.isEmpty()) {
+                lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+            }
+
+            lsSQL += " ORDER BY a.dTransact,a.sTransNox ASC";
+
+            System.out.println("Retrive Summary Reports QUERY: " + lsSQL);
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS == null) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Query execution failed.");
+                return poJSON;
+            }
+
+            int lnctr = 0;
+            JSONArray dataArray = new JSONArray();
+
+            while (loRS.next()) {
+                JSONObject record = new JSONObject  ();
+
+                record.put("sTransNox", getString(loRS, "sTransNox"));
+                record.put("sCompnyCd", getString(loRS, "sCompnyCd"));
+
+                record.put("dTransact", getDate(loRS, "dTransact"));
+
+                record.put("sPayeeNme", getString(loRS, "sPayeeNme"));
+
+                record.put("sActNumbr", getString(loRS, "sActNumbr"));
+                record.put("sActNamex", getString(loRS, "sActNamex"));
+
+                record.put("sBankName", getString(loRS, "sBankName"));
+                record.put("sCheckNox", getString(loRS, "sCheckNox"));
+
+                record.put("nTranTotl", loRS.getDouble("nTranTotl"));
+                record.put("nDiscTotl", loRS.getDouble("nDiscTotl"));
+                record.put("nWTaxTotl", loRS.getDouble("nWTaxTotl"));
+                record.put("nVATSales", loRS.getDouble("nVATSales"));
+                record.put("nVATAmtxx", loRS.getDouble("nVATAmtxx"));
+                record.put("nZroVATSl", loRS.getDouble("nZroVATSl"));
+                record.put("nVatExmpt", loRS.getDouble("nVatExmpt"));
+                record.put("nNetTotal", loRS.getDouble("nNetTotal"));
+
+                record.put("nAmountxx", loRS.getDouble("nAmountxx"));
+
+                record.put("sStatus", getString(loRS, "sStatus"));
+                record.put("sChkPrint", getString(loRS, "sChkPrint"));
+                record.put("sCheckStatus", getString(loRS, "sCheckStatus"));
+
+                record.put("sRemarksx", getString(loRS, "sRemarksx"));
+
+                dataArray.add(record);
+                lnctr++;
+            }
+
+            MiscUtil.close(loRS);
+
+            if (lnctr > 0) {
+                poJSON.put("result", "success");
+                poJSON.put("message", "Record(s) loaded successfully.");
+                poJSON.put("data", dataArray);
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No records found.");
+                poJSON.put("data", new JSONArray());
+            }
+
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+
+        return poJSON;
+    }
+    /**
+     * Retrieves detailed Disbursement Report records including payee information,
+     * check details, source transactions, VAT applicability, and payment amounts.
+     *
+     * <p>This method generates a detailed transactional dataset by joining
+     * disbursement master records with disbursement details, check payments,
+     * bank accounts, banks, branches, and payee information.</p>
+     *
+     * <p>The result provides source-level payment breakdown suitable for
+     * financial auditing, payment tracing, check reconciliation, and
+     * disbursement analysis purposes.</p>
+     *
+     * <p><b>Filters Applied:</b></p>
+     * <ul>
+     *   <li>Date range (a.dTransact BETWEEN dateFrom and dateThru)</li>
+     *   <li>Payee name (d.sPayeeNme)</li>
+     *   <li>Bank account number (f.sActNumbr)</li>
+     *   <li>Bank account name (f.sActNamex)</li>
+     *   <li>Bank name (g.sBankName)</li>
+     *   <li>Check transaction status (e.cTranStat)</li>
+     *   <li>Company ID and Industry Code (system context via Master())</li>
+     *   <li>Transaction prefix (based on logged-in branch code)</li>
+     *   <li>Disbursement transaction status (single or multi-value filter)</li>
+     * </ul>
+     *
+     * <p><b>Output Fields:</b></p>
+     * <ul>
+     *   <li>sTransNox - Disbursement transaction number</li>
+     *   <li>dTransact - Transaction date</li>
+     *   <li>sPayeeNme - Payee name</li>
+     *   <li>sStatus - Human-readable disbursement status</li>
+     *   <li>sCheckStatus - Human-readable check payment status</li>
+     *   <li>sSourceCode - Source transaction type
+     *       (PO Receiving, PRF, Adjustment, etc.)</li>
+     *   <li>sSourceNo - Source transaction number</li>
+     *   <li>nAmountxx - Original transaction amount</li>
+     *   <li>nAmtAppld - Applied payment amount</li>
+     *   <li>cWithVatx - VAT applicability flag (Yes/No)</li>
+     *   <li>nDetVatAm - Detailed VAT amount</li>
+     * </ul>
+     *
+     * @param issummarized flag indicating summarized or detailed mode
+     *                     (reserved for future enhancement)
+     * @param dateFrom start date filter (inclusive)
+     * @param dateThru end date filter (inclusive)
+     * @param Payee payee name filter
+     * @param AccountNo bank account number filter
+     * @param AccountNme bank account name filter
+     * @param BankName bank name filter
+     * @param CheckStat check transaction status filter
+     *
+     * @return a JSONObject containing:
+     *         <ul>
+     *           <li>result - success / error</li>
+     *           <li>message - execution status</li>
+     *           <li>data - JSONArray of detailed disbursement records</li>
+     *         </ul>
+     *
+     * @throws SQLException if database query execution fails
+     * @throws GuanzonException if business validation fails
+     *
+     * @author TEEJEI DE CELIS
+     * @since 06-26-2026
+     * @apiNote This method is intended for detailed disbursement reporting,
+     *          source transaction auditing, check reconciliation, and
+     *          financial analysis purposes.
+     */
+    public JSONObject RetriveSummaryDetailedReports(Boolean issummarized,
+                                                    LocalDate dateFrom,
+                                                    LocalDate dateThru,
+                                                    String Payee,
+                                                    String AccountNo,
+                                                    String AccountNme,
+                                                    String BankName,
+                                                    String CheckStat)throws SQLException, GuanzonException {
+        poJSON = new JSONObject();
+        String lsTransStat = "";
+        try {
+
+            String lsSQL = "SELECT DISTINCT "
+                    + "  a.sTransNox, "
+                    + "  a.dTransact, "
+                    + "  d.sPayeeNme, "
+                    + "  CASE a.cTranStat "
+                    + "      WHEN '0' THEN 'OPEN' "
+                    + "      WHEN '1' THEN 'VERIFIED' "
+                    + "      WHEN '3' THEN 'CANCELLED' "
+                    + "      WHEN '4' THEN 'AUTHORIZED' "
+                    + "      WHEN '5' THEN 'VOID' "
+                    + "      WHEN '6' THEN 'DISAPPROVED' "
+                    + "      WHEN '7' THEN 'CONFIRMED' "
+                    + "      WHEN '8' THEN 'APPROVED' "
+                    + "      WHEN '9' THEN 'RETURNED' "
+                    + "      WHEN 'I' THEN 'RETURNED' "
+                    + "  END AS sStatus, "
+                    + "  CASE e.cTranStat "
+                    + "      WHEN '0' THEN 'OPEN(no check yet)' "
+                    + "      WHEN '1' THEN 'CONFIRMED' "
+                    + "      WHEN '2' THEN 'POSTED' "
+                    + "      WHEN '3' THEN 'CANCELLED' "
+                    + "      WHEN '4' THEN 'STALED' "
+                    + "      WHEN '5' THEN 'for clarification' "
+                    + "      WHEN '6' THEN 'BOUNCED' "
+                    + "      WHEN '7' THEN 'VOID' "
+                    + "  END AS sCheckStatus, "
+                    + "  CASE b.sSourceCd "
+                    + "      WHEN 'PODA' THEN 'PO Receiving' "
+                    + "      WHEN 'PRFx' THEN 'PRF' "
+                    + "      WHEN 'APAd' THEN 'Adjustment' "
+                    + "      ELSE 'Unknown' "
+                    + "  END AS sSourceCode, "
+                    + "  b.sSourceNo, "
+                    + "  b.nAmountxx, "
+                    + "  b.nAmtAppld, "
+                    + "  b.cWithVatx, "
+                    + "  b.nDetVatAm "
+                    + "FROM Disbursement_Master a "
+                    + "LEFT JOIN Payee d "
+                    + "    ON a.sPayeeIDx = d.sPayeeIDx "
+                    + "LEFT JOIN Check_Payments e "
+                    + "    ON a.sTransNox = e.sSourceNo "
+                    + " LEFT JOIN Bank_Account_Master f "
+                    +      "ON f.sBnkActID = e.sBnkActID "
+                    + " LEFT JOIN Banks g "
+                    +      "ON e.sBankIDxx = g.sBankIDxx "
+                    + "INNER JOIN  Disbursement_Detail b "
+                    + "    ON a.sTransNox = b.sTransNox "
+                    + "LEFT JOIN Branch c "
+                    + "    ON LEFT(b.sTransNox, 4) = c.sBranchCd ";
+
+            // -------------------------------
+            // FILTERS
+            // -------------------------------
+            List<String> lsFilter = new ArrayList<>();
+
+            if (dateFrom != null && dateThru != null) {
+                lsFilter.add("a.dTransact BETWEEN "
+                        + SQLUtil.toSQL(java.sql.Date.valueOf(dateFrom))
+                        + " AND "
+                        + SQLUtil.toSQL(java.sql.Date.valueOf(dateThru)));
+                dfrom = String.valueOf(dateFrom);
+                dthru = String.valueOf(dateThru);
+            }
+
+            if (Payee != null && !Payee.trim().isEmpty()) {
+                lsFilter.add("d.sPayeeNme LIKE " + SQLUtil.toSQL(Payee + "%"));
+            }
+
+            if (AccountNo != null && !AccountNo.trim().isEmpty()) {
+                lsFilter.add("f.sActNumbr LIKE " + SQLUtil.toSQL(AccountNo + "%"));
+            }
+
+            if (AccountNme != null && !AccountNme.trim().isEmpty()) {
+                lsFilter.add("f.sActNamex LIKE " + SQLUtil.toSQL(AccountNme + "%"));
+            }
+
+            if (BankName != null && !BankName.trim().isEmpty()) {
+                lsFilter.add("g.sBankName LIKE " + SQLUtil.toSQL(BankName + "%"));
+            }
+            if (CheckStat != null && !CheckStat.trim().isEmpty()) {
+                lsFilter.add("e.cTranStat LIKE " + SQLUtil.toSQL(CheckStat + "%"));
+            }
+
+            lsFilter.add("a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
+                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID())
+                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
+
+            if (psTranStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
+                    lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
+                }
+                lsFilter.add( " a.cTranStat IN (" + lsTransStat.substring(2) + ")");
+            } else {
+                lsFilter.add( " a.cTranStat = " + SQLUtil.toSQL(psTranStat));
+            }
+
+            if (!lsFilter.isEmpty()) {
+                lsSQL += " WHERE " + String.join(" AND ", lsFilter);
+            }
+
+            lsSQL += " ORDER BY a.dTransact, a.sTransNox, a.nEntryNox ASC";
+
+            System.out.println("Executing SQL: " + lsSQL);
+
+            ResultSet loRS = poGRider.executeQuery(lsSQL);
+
+            if (loRS == null) {
+                poJSON.put("result", "error");
+                poJSON.put("message", "Query execution failed.");
+                return poJSON;
+            }
+
+            int lnctr = 0;
+            JSONArray dataArray = new JSONArray();
+
+            while (loRS.next()) {
+
+                JSONObject record = new JSONObject();
+
+                record.put("sTransNox", getString(loRS, "sTransNox"));
+                record.put("dTransact", getDate(loRS, "dTransact"));
+
+                record.put("sPayeeNme", getString(loRS, "sPayeeNme"));
+
+                record.put("sStatus", getString(loRS, "sStatus"));
+                record.put("sCheckStatus", getString(loRS, "sCheckStatus"));
+                record.put("sSourceCode", getString(loRS, "sSourceCode"));
+
+                record.put("sSourceNo", getString(loRS, "sSourceNo"));
+
+                record.put("nAmountxx", loRS.getDouble("nAmountxx"));
+                record.put("nAmtAppld", loRS.getDouble("nAmtAppld"));
+
+                String withVat = getString(loRS, "cWithVatx");
+                switch (withVat) {
+                    case "0":
+                        record.put("cWithVatx", "No");
+                        break;
+                    case "1":
+                        record.put("cWithVatx", "Yes");
+                        break;
+                    default:
+                        record.put("cWithVatx", withVat);
+                }
+
+                record.put("nDetVatAm", loRS.getDouble("nDetVatAm"));
+
+                dataArray.add(record);
+                lnctr++;
+            }
+
+            MiscUtil.close(loRS);
+
+            if (lnctr > 0) {
+                poJSON.put("result", "success");
+                poJSON.put("message", "Record(s) loaded successfully.");
+                poJSON.put("data", dataArray);
+            } else {
+                poJSON.put("result", "error");
+                poJSON.put("message", "No records found.");
+                poJSON.put("data", new JSONArray());
+            }
+
+        } catch (SQLException e) {
+            poJSON.put("result", "error");
+            poJSON.put("message", e.getMessage());
+        }
+
+        return poJSON;
+    }
+
+    /**
+     * Safely retrieves a String value from a ResultSet column.
+     *
+     * <p>This method prevents null or empty values from propagating to the JSON response.
+     * If the database value is null or empty, a default placeholder "-" is returned.</p>
+     *
+     * @param rs the ResultSet containing the query result
+     * @param col the column name to retrieve
+     * @return a trimmed string value, or "-" if the value is null or empty
+     * @throws SQLException if a database access error occurs
+     *
+     * @author TEEJEI DE CELIS
+     * @since 06-26-2026
+     * @apiNote This method is part of the Disbursement Voucher reporting module.
+     */
+    private String getString(ResultSet rs, String col) throws SQLException {
+        String val = rs.getString(col);
+        return (val == null || val.trim().isEmpty()) ? "-" : val;
+    }
+    /**
+     * Safely retrieves a Date value from a ResultSet column.
+     *
+     * <p>This method ensures null-safe date handling for reporting output.
+     * If the database value is null, an empty string ("") is returned.</p>
+     *
+     * <p>The returned format is the default ISO format (yyyy-MM-dd) as provided by
+     * {@link java.sql.Date#toString()}.</p>
+     *
+     * @param rs the ResultSet containing the query result
+     * @param col the column name to retrieve
+     * @return the date in string format (yyyy-MM-dd), or empty string if null
+     * @throws SQLException if a database access error occurs
+     *
+     * @author TEEJEI DE CELIS
+     * @since 06-26-2026
+     * @apiNote This method is part of the Disbursement Voucher reporting module.
+     */
+    private String getDate(ResultSet rs, String col) throws SQLException {
+        java.sql.Date val = rs.getDate(col);
+        return (val == null) ? "" : val.toString();
+    }
+
+    public JSONObject SearchAccount(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        BankAccountMaster object = new CashflowControllers(poGRider, logwrapr).BankAccountMaster();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecordbyAccount(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            if(byCode){
+                poJSON.put("accountNo",object.getModel().getAccountNo());
+                poJSON.put("result", "success");
+            }else{
+                poJSON.put("accountName",object.getModel().getAccountName());
+                poJSON.put("result", "success");
+            }
+
+        }
+
+        return poJSON;
+    }
+    public JSONObject SearchBank(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Banks object = new ParamControllers(poGRider, logwrapr).Banks();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            poJSON.put("bankName",object.getModel().getBankName());
+            poJSON.put("result", "success");
+        }
+
+        return poJSON;
+    }
+    public JSONObject SearchPayee(String value, boolean byCode) throws ExceptionInInitializerError, SQLException, GuanzonException {
+        Payee object = new CashflowControllers(poGRider, logwrapr).Payee();
+        object.setRecordStatus("1");
+
+        poJSON = object.searchRecord(value, byCode);
+
+        if ("success".equals((String) poJSON.get("result"))) {
+            poJSON.put("payeeName",object.getModel().getPayeeName());
+            poJSON.put("result", "success");
+        }
+
+        return poJSON;
+    }
+
+    public static String formatDateToText(String dfrom) {
+        if (dfrom == null || dfrom.isEmpty()) {
+            return "";
+        }
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-M-d");
+        LocalDate date = LocalDate.parse(dfrom, inputFormatter);
+        DateTimeFormatter outputFormatter= DateTimeFormatter.ofPattern("MMMM dd, yyyy");
+        return date.format(outputFormatter);
+    }
+    private double parseDouble(Object val) {
+        try {
+            return val == null ? 0.0000 : Double.parseDouble(val.toString());
+        } catch (Exception e) {
+            return 0.0000;
+        }
+    }
+    private String safeStrings(Object value) {
+        return value == null ? "" : value.toString();
+    }
+
+
+    public JSONObject printReports(Boolean isSummarized, JSONArray reportData) {
+        poJSON = new JSONObject();
+
+        try {
+
+            System.out.println("Company Address : " + Master().Company().getCompanyAddress());
+            System.out.println("Company Town : " + Master().Company().TownCity().getDescription());
+            System.out.println("Company Province " + Master().Company().TownCity().Province().getDescription());
+            System.out.println("Branch Address : " + Master().Branch().getAddress());
+            System.out.println("Branch Town : " + Master().Branch().TownCity().getDescription());
+            System.out.println("Branch Province " + Master().Branch().TownCity().Province().getDescription());
+
+            String lsCompanyAddress = "";
+            if (Master().Company().getCompanyAddress() != null && !"".equals(Master().Company().getCompanyAddress())) {
+                lsCompanyAddress = Master().Company().getCompanyAddress().trim();
+            }
+            if (Master().Company().TownCity().getDescription() != null && !"".equals(Master().Company().TownCity().getDescription())) {
+                lsCompanyAddress = lsCompanyAddress + " " + Master().Company().TownCity().getDescription().trim();
+            }
+            if (Master().Company().TownCity().Province().getDescription() != null && !"".equals(Master().Company().TownCity().Province().getDescription())) {
+                lsCompanyAddress = lsCompanyAddress + ", " + Master().Company().TownCity().Province().getDescription().trim();
+            }
+
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("sLogCompny", poGRider.getCompnyId());
+            parameters.put("sAddressx", lsCompanyAddress);
+
+            parameters.put("sCompany", Master().Company().getCompanyName());
+            parameters.put("sIndustry", Master().Industry().getDescription());
+//            parameters.put("sBranch", Master().Branchx().getBranchName());
+            parameters.put("sDateRange", "FROM " + formatDateToText(dfrom) + " TO " + formatDateToText(dthru));
+
+            List<Reports> reportList = new ArrayList<>();
+
+            for (int i = 0; i < reportData.size(); i++) {
+
+                JSONObject obj = (JSONObject) reportData.get(i);
+                if (isSummarized) {
+                    System.out.println("reportData : " +  obj);
+
+                    reportList.add(new Reports(i + 1,
+                            safeStrings(obj.get("sTransNox")),
+                            safeStrings(obj.get("dTransact")),
+                            safeStrings(obj.get("sPayeeNme")),
+                            safeStrings(obj.get("sActNumbr")),
+                            safeStrings(obj.get("sActNamex")),
+                            safeStrings(obj.get("sBankName")),
+                            safeStrings(obj.get("sCheckNox")),
+                            parseDouble(obj.get("nTranTotl")),
+                            parseDouble(obj.get("nDiscTotl")),
+                            parseDouble(obj.get("nWTaxTotl")),
+                            parseDouble(obj.get("nVATAmtxx")),
+                            parseDouble(obj.get("nNetTotal")),
+                            parseDouble(obj.get("nAmountxx")),
+                            safeStrings(obj.get("sStatus")),
+                            safeStrings(obj.get("sChkPrint")),
+                            safeStrings(obj.get("sCheckStatus"))));
+
+                } else {
+                    System.out.println("reportData : " +  obj);
+                    reportList.add(new Reports(i + 1,
+                            safeStrings(obj.get("sTransNox")),
+                            safeStrings(obj.get("dTransact")),
+                            safeStrings(obj.get("sPayeeNme")),
+                            safeStrings(obj.get("sStatus")),
+                            safeStrings(obj.get("sCheckStatus")),
+                            safeStrings(obj.get("sSourceCode")),
+                            safeStrings(obj.get("sSourceNo")),
+                            parseDouble(obj.get("nAmountxx")),
+                            parseDouble(obj.get("nAmtAppld")),
+                            safeStrings(obj.get("cWithVatx")),
+                            parseDouble(obj.get("nDetVatAm"))));
+                }
+            }
+
+            JRBeanCollectionDataSource dataSource
+                    = new JRBeanCollectionDataSource(reportList);
+
+
+            // 4. Compile and fill report
+            String jrxmlPath;
+
+            if (isSummarized) {
+                jrxmlPath = System.getProperty("sys.default.path.config")
+                        + "/reports/DisbursementVoucherSummary.jrxml";
+            } else {
+                jrxmlPath = System.getProperty("sys.default.path.config")
+                        + "/reports/DisbursementVoucherSummaryDetail.jrxml";
+            }
+
+            JasperReport jasperReport;
+
+            jasperReport = JasperCompileManager.compileReport(jrxmlPath);
+
+            JasperPrint jasperPrint;
+            jasperPrint = JasperFillManager.fillReport(
+                    jasperReport,
+                    parameters,
+                    dataSource
+            );
+
+            if (System.getProperty("os.name").toLowerCase().contains("win")) {
+                DisbursementVoucher.CustomJasperViewer viewer = new DisbursementVoucher.CustomJasperViewer(jasperPrint);
+                viewer.setVisible(true);
+            } else {
+                //mac 2026.02.21
+                //export pdf file
+                JasperExportManager.exportReportToPdfFile(jasperPrint, System.getProperty("sys.default.path.config") + "/temp/" + Master().getTransactionNo() + ".pdf");
+            }
+
+            poJSON.put("result", "success");
+        } catch (JRException | SQLException | GuanzonException ex) {
+            poJSON.put("result", "error");
+            poJSON.put("message", "Transaction print aborted!");
+            Logger
+                    .getLogger(PurchaseOrder.class
+                            .getName()).log(Level.SEVERE, null, ex);
+        }
+        return poJSON;
+
+    }
+
+    public static class Reports {
+
+        private Integer nRowNo;
+        private String sTransNox;
+        private String dTransact;
+        private String sPayeeNme;
+        private String sActNumbr;
+        private String sActNamex;
+        private String sBankName;
+        private String sCheckNox;
+        private double nTranTotl;
+        private double nDiscTotl;
+        private double nWTaxTotl;
+        private double nVATAmtxx;
+        private double nNetTotal;
+        private double nAmountxx;
+        private String sStatus;
+        private String sChkPrint;
+        private String sCheckStatus;
+
+        private String sSourceCd;
+        private String sSourceNo;
+        private double nAmtAppld;
+        private String cWithVat;
+        private double nDetVatAm;
+        private double nTotal;
+
+        public Reports(Integer nrowNo, String sTransNox, String dTransact, String sPayeeNme, String sActNumbr,
+                       String sActNamex,String sBankName, String sCheckNox, double nTranTotl, double nDiscTotl, double nWTaxTotl,
+                       double nVATAmtxx, double nNetTotal, double nAmountxx, String sStatus, String sChkPrint, String sCheckStatus) {
+
+            this.nRowNo = nrowNo;
+            this.sTransNox = sTransNox;
+            this.dTransact = dTransact;
+            this.sPayeeNme = sPayeeNme;
+            this.sActNumbr = sActNumbr;
+            this.sActNamex = sActNamex;
+            this.sBankName = sBankName;
+            this.sCheckNox = sCheckNox;
+            this.nTranTotl = nTranTotl;
+            this.nDiscTotl = nDiscTotl;
+            this.nWTaxTotl = nWTaxTotl;
+            this.nVATAmtxx = nVATAmtxx;
+            this.nNetTotal = nNetTotal;
+            this.nAmountxx = nAmountxx;
+            this.sStatus = sStatus;
+            this.sChkPrint = sChkPrint;
+            this.sCheckStatus = sCheckStatus;
+        }
+        public Reports(Integer nrowNo, String sTransNox,String dTransact, String sPayeeNme, String sStatus, String sCheckStatus,
+                       String sSourceCd, String sSourceNo,double nAmountxx, double nAmtAppld, String cWithVat, double nDetVatAm) {
+
+            this.nRowNo = nrowNo;
+            this.sTransNox = sTransNox;
+            this.dTransact = dTransact;
+            this.sPayeeNme = sPayeeNme;
+            this.sStatus = sStatus;
+            this.sCheckStatus = sCheckStatus;
+            this.sSourceCd = sSourceCd;
+            this.sSourceNo = sSourceNo;
+            this.nAmountxx = nAmountxx;
+            this.nAmtAppld = nAmtAppld;
+            this.cWithVat = cWithVat;
+            this.nVATAmtxx = nVATAmtxx;
+        }
+
+
+        public Integer getnRowNo() {
+            return nRowNo;
+        }
+
+        public String getsTransNox() {
+            return sTransNox;
+        }
+
+        public String getdTransact() {
+            return dTransact;
+        }
+
+        public String getsPayeeNme() { 
+            return sPayeeNme;
+        }
+
+        public String getsActNumbr() { 
+            return sActNumbr;
+        }
+
+        public String getsActNamex() {
+            return sActNamex;
+        }
+
+        public String getsBankName() {
+            return sBankName;
+        }
+
+        public String getsCheckNox() {
+            return sCheckNox;
+        }
+        
+        public double getnTranTotl() {
+            return nTranTotl;
+        }
+
+        public double getnDiscTotl() {
+            return nDiscTotl;
+        }
+
+        public double getnWTaxTotl() {
+            return nWTaxTotl;
+        }
+
+        public double getnVATAmtxx() {
+            return nVATAmtxx;
+        }
+
+        public double getnNetTotal() {
+            return nNetTotal;
+        }
+
+        public double getnAmountxx() {
+            return nAmountxx;
+        }
+        
+        public String getsStatus() {
+            return sStatus;
+        }
+        
+        public String getsChkPrint() {
+            return sChkPrint;
+        }
+
+        public String getsCheckStatus() {
+            return sStatus;
+        }
+        
+        public String getsSourceCd() {
+            return sSourceCd;
+        }
+
+        public String getsSourceNo() {
+            return sSourceNo;
+        }
+
+        public double getnAmtAppld() {
+            return nAmtAppld;
+        }
+
+        public String getcWithVat() {
+            return cWithVat;
+        }
+        
+        public double getnDetVatAm() {
+            return nDetVatAm;
+        }
+    }
+
 }
