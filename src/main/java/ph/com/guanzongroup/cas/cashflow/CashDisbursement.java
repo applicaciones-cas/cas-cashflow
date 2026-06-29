@@ -589,10 +589,13 @@ public class CashDisbursement extends Transaction {
                 return current.equals(CashDisbursementStatus.OPEN); //Allow void when current status is open
 
             case CashDisbursementStatus.CANCELLED:
-                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow void when current status is confirmed
+                return current.equals(CashDisbursementStatus.CONFIRMED)
+                        || current.equals(CashDisbursementStatus.RETURNED)
+                        || current.equals(CashDisbursementStatus.VERIFIED); //Allow void when current status is confirmed
 
             case CashDisbursementStatus.CONFIRMED:
-                return current.equals(CashDisbursementStatus.OPEN); //Allow confirm when current status is open
+                return current.equals(CashDisbursementStatus.OPEN)
+                        || current.equals(CashDisbursementStatus.RETURNED); //Allow confirm when current status is open
 
             case CashDisbursementStatus.VERIFIED:
                 return current.equals(CashDisbursementStatus.CONFIRMED); //Allow verify when current status is confirm
