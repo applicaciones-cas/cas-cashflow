@@ -514,7 +514,7 @@ public class CashDisbursement extends Transaction {
         }
         
         // Prevent stale form state from affecting succeeding checks.
-        psForm = "";
+//        psForm = "";
         poJSON = setJSON("success", "success");
         return poJSON;
     }
@@ -3978,6 +3978,36 @@ public class CashDisbursement extends Transaction {
 
         }
 
+        //Request Approval
+        if(!pbWthParent) {
+            if ((CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus()) &&
+                    CashDisbursementStatus.CONFIRMED.equals(psForm))
+                    || CashDisbursementStatus.VERIFIED.equals(Master().getTransactionStatus())
+                    || CashDisbursementStatus.RETURNED.equals(Master().getTransactionStatus())) {
+                //1. Check the position of the current user
+                String lsPosition1 = checkPosition(Master().getTransactionStatus(), poGRider.getUserID());
+                if (lsPosition1 == null || "".equals(lsPosition1)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized officer.");
+                    return poJSON;
+                }
+
+                psApprover = poGRider.getUserID();
+                poJSON = callApproval();
+                if (!isJSONSuccess(poJSON)) {
+                    return poJSON;
+                }
+
+                //2. Check the position of the approving officer
+                String lsPosition = checkPosition(Master().getTransactionStatus(), psApprover);
+                if (lsPosition == null || "".equals(lsPosition)) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "User is not an authorized officer.");
+                    return poJSON;
+                }
+
+            }
+        }
         
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {
