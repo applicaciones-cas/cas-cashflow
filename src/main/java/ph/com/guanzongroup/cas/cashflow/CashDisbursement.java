@@ -76,6 +76,7 @@ import org.guanzon.cas.parameter.Department;
 import org.guanzon.cas.parameter.Industry;
 import org.guanzon.cas.parameter.TaxCode;
 import org.guanzon.cas.parameter.services.ParamControllers;
+import org.guanzon.cas.purchasing.status.PurchaseOrderReceivingStatus;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
@@ -3980,32 +3981,33 @@ public class CashDisbursement extends Transaction {
 
         //Request Approval
         if(!pbWthParent) {
-            if ((CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus()) &&
-                    CashDisbursementStatus.CONFIRMED.equals(psForm))
-                    || CashDisbursementStatus.VERIFIED.equals(Master().getTransactionStatus())
-                    || CashDisbursementStatus.RETURNED.equals(Master().getTransactionStatus())) {
-                //1. Check the position of the current user
-                String lsPosition1 = checkPosition(Master().getTransactionStatus(), poGRider.getUserID());
-                if (lsPosition1 == null || "".equals(lsPosition1)) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "User is not an authorized officer.");
-                    return poJSON;
-                }
+            if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())
+                    || CashDisbursementStatus.RETURNED.equals(Master().getTransactionStatus())
+                    || CashDisbursementStatus.VERIFIED.equals(Master().getTransactionStatus())){
 
-                psApprover = poGRider.getUserID();
-                poJSON = callApproval();
-                if (!isJSONSuccess(poJSON)) {
-                    return poJSON;
+                if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())
+                        && CashDisbursementStatus.VERIFIED.equals(psForm)){
+                } else {
+                    String lsUserId = poGRider.getUserID();
+                    poJSON = callApproval();
+                    if (!isJSONSuccess(poJSON)) {
+                        return poJSON;
+                    }
+                    //2. Check the position of the approving officer
+                    if(psApprover != null && !"".equals(psApprover)){
+                        lsUserId = psApprover;
+                    }
+                    String lsPosition = checkPosition(psForm, lsUserId);
+                    if(lsPosition == null || "".equals(lsPosition) ){
+                        poJSON.put("result", "error" );
+                        if(psApprover != null && !"".equals(psApprover)){
+                            poJSON.put("message", "User is not an authorized approving officer." );
+                        } else {
+                            poJSON.put("message", "User is not an authorized officer." );
+                        }
+                        return poJSON;
+                    }
                 }
-
-                //2. Check the position of the approving officer
-                String lsPosition = checkPosition(Master().getTransactionStatus(), psApprover);
-                if (lsPosition == null || "".equals(lsPosition)) {
-                    poJSON.put("result", "error");
-                    poJSON.put("message", "User is not an authorized officer.");
-                    return poJSON;
-                }
-
             }
         }
         
