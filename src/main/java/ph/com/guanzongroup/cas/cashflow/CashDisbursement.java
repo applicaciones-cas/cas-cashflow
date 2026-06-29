@@ -4825,6 +4825,12 @@ public class CashDisbursement extends Transaction {
                 case CashDisbursementStatus.APPROVED:
                     crs.updateString("cRefrStat", "APPROVED");
                     break;
+                case CashDisbursementStatus.VERIFIED:
+                    crs.updateString("cRefrStat", "VERIFIED");
+                    break;
+                case CashDisbursementStatus.RETURNED:
+                    crs.updateString("cRefrStat", "RETURNED");
+                    break;
                 default:
                     char ch = crs.getString("cRefrStat").charAt(0);
                     String stat = String.valueOf((int) ch - 64);
@@ -4844,6 +4850,12 @@ public class CashDisbursement extends Transaction {
                             break;
                         case CashDisbursementStatus.APPROVED:
                             crs.updateString("cRefrStat", "APPROVED");
+                            break;
+                        case CashDisbursementStatus.VERIFIED:
+                            crs.updateString("cRefrStat", "VERIFIED");
+                            break;
+                        case CashDisbursementStatus.RETURNED:
+                            crs.updateString("cRefrStat", "RETURNED");
                             break;
                     }
             }
