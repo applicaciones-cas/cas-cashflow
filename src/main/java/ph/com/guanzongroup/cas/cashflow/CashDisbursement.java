@@ -196,7 +196,7 @@ public class CashDisbursement extends Transaction {
         }
 
         String lsUserId = poGRider.getUserID();
-        String lsPosition = checkPosition(DisbursementStatic.OPEN, lsUserId);
+        String lsPosition = checkPosition(CashDisbursementStatus.OPEN, lsUserId);
         if(lsPosition == null || "".equals(lsPosition) ){
             poJSON.put("result", "error" );
             poJSON.put("message", "User is not authorized to create a disbursement voucher." );
@@ -682,7 +682,7 @@ public class CashDisbursement extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "ConfirmTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -698,6 +698,214 @@ public class CashDisbursement extends Transaction {
         
         poJSON = new JSONObject();
         poJSON = setJSON("success", "Transaction confirmed successfully.");
+        return poJSON;
+    }
+
+    /**
+     * Verify the current cash disbursement transaction.
+     *
+     * This method validates the transaction's current state, ensures it hasn't been
+     * confirmed already, performs necessary approval workflows, and updates the
+     * status to {@code CONFIRMED} in the database.
+     *
+     * @param remarks additional notes or comments for the confirmation process.
+     * @return a {@link JSONObject} containing the success status or a specific error message.
+     * @throws ParseException if an error occurs during data parsing.
+     * @throws SQLException if a database access error occurs.
+     * @throws GuanzonException if business logic or validation fails.
+     * @throws CloneNotSupportedException if an error occurs during object cloning.
+     * @throws ScriptException if an error occurs during script execution.
+     */
+    public JSONObject VerifyTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = CashDisbursementStatus.VERIFIED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
+            poJSON = setJSON("error", "Transaction was already verify.");
+            return poJSON;
+        }
+
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        if(!pbWthParent){
+            //1. Check the position of the current user
+            String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+            if(lsPosition1 == null || "".equals(lsPosition1) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
+            psApprover = poGRider.getUserID();
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+
+            //2. Check the position of the approving officer
+            String lsPosition = checkPosition(lsStatus, psApprover);
+            if(lsPosition == null || "".equals(lsPosition) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
+//            String lsDepartment = poGRider.getDepartment();
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                lsDepartment = checkApprover(psApprover);
+//            }
+//            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//                poJSON.put("result", "error" );
+//                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+//                return poJSON;
+//            }
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "VerifyTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction verify successfully.");
+        return poJSON;
+    }
+
+
+
+    /**
+     * Return the current cash disbursement transaction.
+     *
+     * This method validates the transaction's current state, ensures it hasn't been
+     * confirmed already, performs necessary approval workflows, and updates the
+     * status to {@code CONFIRMED} in the database.
+     *
+     * @param remarks additional notes or comments for the confirmation process.
+     * @return a {@link JSONObject} containing the success status or a specific error message.
+     * @throws ParseException if an error occurs during data parsing.
+     * @throws SQLException if a database access error occurs.
+     * @throws GuanzonException if business logic or validation fails.
+     * @throws CloneNotSupportedException if an error occurs during object cloning.
+     * @throws ScriptException if an error occurs during script execution.
+     */
+    public JSONObject ReturnTransaction(String remarks) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException {
+        poJSON = new JSONObject();
+        String lsStatus = CashDisbursementStatus.RETURNED;
+
+        if (getEditMode() != EditMode.READY) {
+            poJSON = setJSON("error", "No transacton was loaded.");
+            return poJSON;
+        }
+
+        Model_Cash_Disbursement loObject = new CashflowModels(poGRider).CashDisbursementMaster();
+        poJSON = loObject.openRecord(Master().getTransactionNo());
+        if (!isJSONSuccess(poJSON)) {
+            poJSON = setJSON((String) poJSON.get("result"), "Unable to load transaction.\n" + (String) poJSON.get("message"));
+            return poJSON;
+        }
+
+        if (loObject.getTransactionStatus().equals(lsStatus)) {
+            poJSON = setJSON("error", "Transaction was already returned.");
+            return poJSON;
+        }
+
+        if (!isAllowed(loObject.getTransactionStatus(), lsStatus)) {
+            poJSON = setJSON("error",  "Transaction was already "+getStatus(loObject.getTransactionStatus())+".");
+            return poJSON;
+        }
+
+        //validator
+        poJSON = isEntryOkay(lsStatus);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        if(!pbWthParent){
+            //1. Check the position of the current user
+            String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+            if(lsPosition1 == null || "".equals(lsPosition1) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
+            psApprover = poGRider.getUserID();
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
+
+            //2. Check the position of the approving officer
+            String lsPosition = checkPosition(lsStatus, psApprover);
+            if(lsPosition == null || "".equals(lsPosition) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
+
+//            String lsDepartment = poGRider.getDepartment();
+//            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
+//                lsDepartment = checkApprover(psApprover);
+//            }
+//            if(!lsDepartment.equals(System.getProperty("sys.dept.finance"))){
+//                poJSON.put("result", "error" );
+//                poJSON.put("message", "User or approving officer is not authorized to confirm the transaction." );
+//                return poJSON;
+//            }
+        }
+
+        poGRider.beginTrans("UPDATE STATUS", "ReturnTransaction", SOURCE_CODE, Master().getTransactionNo());
+
+        //Update Related transaction to DV
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
+        if (!"success".equals((String) poJSON.get("result"))) {
+            poGRider.rollbackTrans();
+            return poJSON;
+        }
+
+        //change status
+        poJSON = statusChange(Master().getTable(), (String) Master().getValue("sTransNox"),"", lsStatus, false,true);
+        if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poGRider.commitTrans();
+
+        poJSON = new JSONObject();
+        poJSON = setJSON("success", "Transaction returned successfully.");
         return poJSON;
     }
     
@@ -787,7 +995,7 @@ public class CashDisbursement extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "ApproveTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         //Update Related transaction to cash disbursement
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -931,7 +1139,7 @@ public class CashDisbursement extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "VoidTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -1038,7 +1246,7 @@ public class CashDisbursement extends Transaction {
         poGRider.beginTrans("UPDATE STATUS", "CancelTransaction", SOURCE_CODE, Master().getTransactionNo());
         
         //Update Related transaction to DV
-        poJSON = updateRelatedTransactions(lsStatus);
+        poJSON = updateRelatedTransactions(lsStatus,psApprover);
         if (!"success".equals((String) poJSON.get("result"))) {
             poGRider.rollbackTrans();
             return poJSON;
@@ -3255,16 +3463,20 @@ public class CashDisbursement extends Transaction {
     }
     
     
-    public JSONObject updateRelatedTransactions(String fsStatus) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
+    public JSONObject updateRelatedTransactions(String fsStatus, String fsApprovalId) throws ParseException, SQLException, GuanzonException, CloneNotSupportedException, ScriptException{
         poJSON = new JSONObject();
         String lsJournal = existJournal();
         if(lsJournal != null && !"".equals(lsJournal)){
+            poJournal.setWithParent(true);
+            poJournal.setWithUI(false);
+            if(fsApprovalId == null || "".equals(fsApprovalId)){
+                fsApprovalId = poGRider.getUserID();
+            }
+            poJournal.setApproving(fsApprovalId);
             //Update Journal
             switch(fsStatus){
                 case CashDisbursementStatus.CONFIRMED:
                     //Confirm Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
                     poJSON = poJournal.ConfirmTransaction("");
                     if (!isJSONSuccess(poJSON)) {
                         return poJSON;
@@ -3272,8 +3484,6 @@ public class CashDisbursement extends Transaction {
                     break;
                 case CashDisbursementStatus.VOID:
                     //Void Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
                     poJSON = poJournal.VoidTransaction("");
                     if (!isJSONSuccess(poJSON)) {
                         return poJSON;
@@ -3282,11 +3492,49 @@ public class CashDisbursement extends Transaction {
                     break;
                 case CashDisbursementStatus.CANCELLED:
                     //Cancel Journal
-                    poJournal.setWithParent(true);
-                    poJournal.setWithUI(false);
                     poJSON = poJournal.CancelTransaction("");
                     if (!isJSONSuccess(poJSON)) {
                         return poJSON;
+                    }
+                    break;
+            }
+        }
+
+        //Update Journal Proposal
+        for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+            JournalProposal loObj = JournalProposal(lnCtr);
+            loObj.setWithParent(true);
+            loObj.setWithUI(false);
+            if(fsApprovalId == null || "".equals(fsApprovalId)){
+                fsApprovalId = poGRider.getUserID();
+            }
+            loObj.setApproving(fsApprovalId);
+            switch(fsStatus){
+                case CashDisbursementStatus.APPROVED:
+                    poJSON = loObj.ConfirmTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case CashDisbursementStatus.VOID:
+                    poJSON = loObj.VoidTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case CashDisbursementStatus.CANCELLED:
+                    poJSON = loObj.CancelTransaction("");
+                    if (!"success".equals((String) poJSON.get("result"))) {
+                        return poJSON;
+                    }
+                    break;
+                case CashDisbursementStatus.RETURNED:
+                    if(JournalProposalStatus.OPEN.equals(loObj.Master().getTransactionStatus())){
+                    } else {
+                        poJSON = loObj.ReturnTransaction("");
+                        if (!"success".equals((String) poJSON.get("result"))) {
+                            return poJSON;
+                        }
                     }
                     break;
             }
