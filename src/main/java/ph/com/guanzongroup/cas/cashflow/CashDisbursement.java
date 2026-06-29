@@ -564,6 +564,10 @@ public class CashDisbursement extends Transaction {
                 return "Confirmed";
             case CashDisbursementStatus.OPEN:
                 return "Open";
+            case CashDisbursementStatus.VERIFIED:
+                return "Verified";
+            case CashDisbursementStatus.RETURNED:
+                return "Return";
             default:
                 return "Unknown";
         }
@@ -597,7 +601,7 @@ public class CashDisbursement extends Transaction {
                 return current.equals(CashDisbursementStatus.VERIFIED); //Allow return when current status is verify
 
             case CashDisbursementStatus.APPROVED:
-                return current.equals(CashDisbursementStatus.CONFIRMED); //Allow approve when current status is confirmed
+                return current.equals(CashDisbursementStatus.VERIFIED); //Allow approve when current status is confirmed
 
             default:
                 return false;
