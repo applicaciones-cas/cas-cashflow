@@ -758,6 +758,11 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
 
+        poJSON = verifyJournals(lsStatus,false);
+        if ("error".equals((String) poJSON.get("result"))) {
+            return poJSON;
+        }
+
         if(!pbWthParent){
             //1. Check the position of the current user
             String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
@@ -965,6 +970,11 @@ public class CashDisbursement extends Transaction {
         //validator
         poJSON = isEntryOkay(lsStatus);
         if (!isJSONSuccess(poJSON)) {
+            return poJSON;
+        }
+
+        poJSON = verifyJournals(lsStatus,false);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
@@ -3687,6 +3697,64 @@ public class CashDisbursement extends Transaction {
         poJSON.put("continue", lbHasJournal);
         return poJSON;
     }
+
+    private JSONObject verifyJournals(String fsStatus, boolean fbIsWillSave){
+        boolean lbCheckJEP = false;
+        switch(fsStatus){
+            case CashDisbursementStatus.VERIFIED:
+            case CashDisbursementStatus.APPROVED:
+                if(poJournal != null){
+                    if(fbIsWillSave){
+                        if(poJournal.getEditMode() != EditMode.ADDNEW && poJournal.getEditMode() != EditMode.UPDATE){
+                            lbCheckJEP = true;
+                        } else {
+
+                        }
+                    } else {
+                        if(poJournal.getEditMode() != EditMode.READY){
+                            lbCheckJEP = true;
+                        }
+                    }
+                } else {
+                    lbCheckJEP = true;
+                }
+
+                //Check Journal Proposal
+                if(lbCheckJEP){
+                    //Check Journal Proposal
+                    if(getJournalProposalList() != null){
+                        if(getJournalProposalList().isEmpty()){
+                            poJSON.put("result", "error" );
+                            poJSON.put("message", "Journal cannot be empty." );
+                            return poJSON;
+                        }
+                        JournalProposal loObj = JournalProposal(getJournalProposalList().size()-1);
+                        if(fbIsWillSave){
+                            if(loObj.getEditMode() != EditMode.ADDNEW && loObj.getEditMode() != EditMode.UPDATE){
+                                poJSON.put("result", "error" );
+                                poJSON.put("message", "Invalid update mode for journal." );
+                                return poJSON;
+                            }
+                        } else {
+                            if(loObj.getEditMode() != EditMode.READY){
+                                poJSON.put("result", "error" );
+                                poJSON.put("message", "Invalid update mode for journal." );
+                                return poJSON;
+                            }
+                        }
+                    } else {
+                        poJSON.put("result", "error" );
+                        poJSON.put("message", "Journal cannot be empty." );
+                        return poJSON;
+                    }
+                }
+
+                break;
+        }
+
+        poJSON.put("result", "success");
+        return poJSON;
+    }
     
     /**
      * Prepares and validates the transaction data before committing to the database.
@@ -3718,6 +3786,11 @@ public class CashDisbursement extends Transaction {
         String lsCashDisbursement = existCashDisbursement(Master().getSourceNo(), Master().getSourceCode());
         if(lsCashDisbursement != null && !"".equals(lsCashDisbursement)){
             poJSON = setJSON("error", "The selected cash advance has already been processed with a cash disbursement.\nKindly refer to Cash Disbursement No. <" + lsCashDisbursement + ">.");
+            return poJSON;
+        }
+
+        poJSON = verifyJournals(Master().getTransactionStatus(),true);
+        if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
         
@@ -3777,6 +3850,131 @@ public class CashDisbursement extends Transaction {
                 return poJSON;
             }
         }
+        
+        /*Put system validations and other assignments here*/
+        boolean lbUpdated = false;
+        if (CashDisbursementStatus.RETURNED.equals(Master().getTransactionStatus())) {
+            try {
+                CashDisbursement loRecord = new CashflowControllers(poGRider, null).CashDisbursement();
+                poJSON = loRecord.InitTransaction();
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                poJSON = loRecord.OpenTransaction(Master().getTransactionNo());
+                if ("error".equals((String) poJSON.get("result"))) {
+                    return poJSON;
+                }
+                lbUpdated = loRecord.getDetailCount() == getDetailCount()-1;
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getTransactionDate().equals(Master().getTransactionDate());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getDepartmentRequest().equals(Master().getDepartmentRequest());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getCashFundId().equals(Master().getCashFundId());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getCreditedTo().equals(Master().getCreditedTo());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getPayeeName().equals(Master().getPayeeName());
+                }
+                if (lbUpdated) {
+                    lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Master().getNetTotal()), String.format("%.4f", Master().getNetTotal())));
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.getDetailCount() == getDetailCount();
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.Journal().getDetailCount() == Journal().getDetailCount()-1;
+                }
+                if (lbUpdated) {
+                    lbUpdated = loRecord.getWTaxDeductionsCount() == getWTaxDeductionsCount();
+                }
+
+                //Check disbursement detail
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Detail(lnCtr).getAmount()), String.format("%.4f", Detail(lnCtr).getAmount())));
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+
+                //Check Journal
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.Journal().getDetailCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getDebitAmount()), String.format("%.4f", Journal().Detail(lnCtr).getDebitAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.Journal().Detail(lnCtr).getCreditAmount()), String.format("%.4f", Journal().Detail(lnCtr).getCreditAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+
+                //Check Journal Proposal
+                if (lbUpdated) {
+                    lbUpdated = loRecord.getJournalProposalList().size() == (getJournalProposalList().size() - 1);
+                    if (lbUpdated) {
+                        for (int lnCtr = 0; lnCtr < loRecord.getJournalProposalList().size(); lnCtr++) {
+                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalDebitAmount())));
+                            if (lbUpdated) {
+                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalCreditAmount())));
+                            }
+                            if (!lbUpdated) {
+                                break;
+                            }
+
+                            for (int lnRow = 0; lnRow < loRecord.JournalProposal(lnCtr).getDetailCount(); lnRow++) {
+                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnRow).getDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnRow).getDebitAmount())));
+                                if (lbUpdated) {
+                                    lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnRow).getCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnRow).getCreditAmount())));
+                                }
+                                if (lbUpdated) {
+                                    lbUpdated = (Objects.equals(loRecord.JournalProposal(lnCtr).Detail(lnRow).getAccountCode(), JournalProposal(lnCtr).Detail(lnRow).getAccountCode()));
+                                }
+                                if (!lbUpdated) {
+                                    break;
+                                }
+                            }
+
+                        }
+                    }
+                }
+                //Check Witholding Tax
+                if (lbUpdated) {
+                    for (int lnCtr = 0; lnCtr <= loRecord.getWTaxDeductionsCount() - 1; lnCtr++) {
+                        lbUpdated = (Objects.equals(String.format("%.2f", loRecord.WTaxDeduction(lnCtr).getModel().getTaxAmount()), String.format("%.2f", WTaxDeduction(lnCtr).getModel().getTaxAmount())));
+                        if (lbUpdated) {
+                            lbUpdated = (Objects.equals(String.format("%.2f", loRecord.WTaxDeduction(lnCtr).getModel().getBaseAmount()), String.format("%.2f", WTaxDeduction(lnCtr).getModel().getBaseAmount())));
+                        }
+                        if (!lbUpdated) {
+                            break;
+                        }
+                    }
+                }
+
+                if (lbUpdated) {
+                    poJSON.put("result", "error");
+                    poJSON.put("message", "No update has been made.");
+                    return poJSON;
+                }
+            } catch (ScriptException ex) {
+                Logger.getLogger(getClass().getName()).log(Level.SEVERE, MiscUtil.getException(ex), ex);
+                poJSON.put("result", "error");
+                poJSON.put("message", MiscUtil.getException(ex));
+                return poJSON;
+            }
+
+        }
+
         
         Iterator<Model> detail = Detail().iterator();
         while (detail.hasNext()) {

@@ -4538,7 +4538,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
 //                }
 //            }
 //        }
-        
+
         /*Put system validations and other assignments here*/
         boolean lbUpdated = false;
         if (DisbursementStatic.RETURNED.equals(Master().getTransactionStatus())) {
@@ -4634,33 +4634,32 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 }
                 
                 //Check Journal Proposal
-                lbUpdated = loRecord.getJournalProposalList().size() == (getJournalProposalList().size() - 1);
                 if (lbUpdated) {
-                    for (int lnCtr = 0; lnCtr < loRecord.getJournalProposalList().size() ; lnCtr++) {
-                        lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Master().getTransactionStatus()), String.format("%.4f", JournalProposal(lnCtr).Master().getTransactionStatus())));
-                        if (lbUpdated) {
+                    lbUpdated = loRecord.getJournalProposalList().size() == (getJournalProposalList().size() - 1);
+                    if (lbUpdated) {
+                        for (int lnCtr = 0; lnCtr < loRecord.getJournalProposalList().size(); lnCtr++) {
                             lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalDebitAmount())));
-                        }
-                        if (lbUpdated) {
-                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalCreditAmount())));
-                        }
-                        if (!lbUpdated) {
-                            break;
-                        }
-                        
-                        for (int lnRow = 0; lnRow < loRecord.JournalProposal(lnCtr).getDetailCount(); lnRow++) {
-                            lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnCtr).getDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnCtr).getDebitAmount())));
                             if (lbUpdated) {
-                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnCtr).getCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnCtr).getCreditAmount())));
-                            }
-                            if (lbUpdated) {
-                                lbUpdated = (Objects.equals(loRecord.JournalProposal(lnCtr).Detail(lnCtr).getAccountCode(), JournalProposal(lnCtr).Detail(lnCtr).getAccountCode()));
+                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).getTotalCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).getTotalCreditAmount())));
                             }
                             if (!lbUpdated) {
                                 break;
                             }
+
+                            for (int lnRow = 0; lnRow < loRecord.JournalProposal(lnCtr).getDetailCount(); lnRow++) {
+                                lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnRow).getDebitAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnRow).getDebitAmount())));
+                                if (lbUpdated) {
+                                    lbUpdated = (Objects.equals(String.format("%.4f", loRecord.JournalProposal(lnCtr).Detail(lnRow).getCreditAmount()), String.format("%.4f", JournalProposal(lnCtr).Detail(lnRow).getCreditAmount())));
+                                }
+                                if (lbUpdated) {
+                                    lbUpdated = (Objects.equals(loRecord.JournalProposal(lnCtr).Detail(lnRow).getAccountCode(), JournalProposal(lnCtr).Detail(lnRow).getAccountCode()));
+                                }
+                                if (!lbUpdated) {
+                                    break;
+                                }
+                            }
+
                         }
-                        
                     }
                 }
                 //Check Witholding Tax
