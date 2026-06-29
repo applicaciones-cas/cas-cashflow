@@ -194,7 +194,15 @@ public class CashDisbursement extends Transaction {
             poJSON.put("message", "User is not authorized to create the transaction." );
             return poJSON;
         }
-        
+
+        String lsUserId = poGRider.getUserID();
+        String lsPosition = checkPosition(DisbursementStatic.OPEN, lsUserId);
+        if(lsPosition == null || "".equals(lsPosition) ){
+            poJSON.put("result", "error" );
+            poJSON.put("message", "User is not authorized to create a disbursement voucher." );
+            return poJSON;
+        }
+
         resetMaster();
         Detail().clear();
         resetJournal();
@@ -2871,7 +2879,7 @@ public class CashDisbursement extends Transaction {
         
         //Reset Journal when all details was removed
         resetJournal();
-        resetJournalProposal();
+//        resetJournalProposal();
         paAttachments = new ArrayList<>();
 //        setSearchIndustry("");
 //        setSearchPayee("");
@@ -3074,8 +3082,9 @@ public class CashDisbursement extends Transaction {
     public void resetTransaction(){
         resetMaster();
         resetJournal();
-        resetJournalProposal();
+//        resetJournalProposal();
         Detail().clear();
+        getJournalProposalList().clear();
         WTaxDeduction().clear();
         paAttachments = new ArrayList<>();
         psApprover = "";
