@@ -449,6 +449,18 @@ public class CashDisbursement extends Transaction {
                         + " AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%")
                 );
                 break;
+            case CashDisbursementStatus.CANCELLED:
+                if(CashDisbursementStatus.VERIFIED.equals(Master().getTransactionStatus())){
+                    //Who can cancel when the transaction status was verified
+                    lsPosition = "%Account%";
+                    lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition)
+                            + " AND c.sPositnNm NOT LIKE " + SQLUtil.toSQL("%Payable%")
+                    );
+                } else if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
+                    lsPosition = "%Payable%";
+                    lsSQL = MiscUtil.addCondition(lsSQL, " c.sPositnNm LIKE " + SQLUtil.toSQL(lsPosition) );
+                }
+                break;
         }
         System.out.println("Executing SQL: " + lsSQL);
         ResultSet loRS = poGRider.executeQuery(lsSQL);
@@ -776,19 +788,19 @@ public class CashDisbursement extends Transaction {
                 return poJSON;
             }
 
-            psApprover = poGRider.getUserID();
-            poJSON = callApproval();
-            if (!isJSONSuccess(poJSON)) {
-                return poJSON;
-            }
-
-            //2. Check the position of the approving officer
-            String lsPosition = checkPosition(lsStatus, psApprover);
-            if(lsPosition == null || "".equals(lsPosition) ){
-                poJSON.put("result", "error" );
-                poJSON.put("message", "User is not an authorized officer." );
-                return poJSON;
-            }
+//            psApprover = poGRider.getUserID();
+//            poJSON = callApproval();
+//            if (!isJSONSuccess(poJSON)) {
+//                return poJSON;
+//            }
+//
+//            //2. Check the position of the approving officer
+//            String lsPosition = checkPosition(lsStatus, psApprover);
+//            if(lsPosition == null || "".equals(lsPosition) ){
+//                poJSON.put("result", "error" );
+//                poJSON.put("message", "User is not an authorized officer." );
+//                return poJSON;
+//            }
 
 //            String lsDepartment = poGRider.getDepartment();
 //            if (poGRider.getUserLevel() <= UserRight.ENCODER) {
@@ -1231,29 +1243,27 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
 
-        if(CashDisbursementStatus.CONFIRMED.equals(Master().getTransactionStatus())){
-            if(!pbWthParent){
-                //1. Check the position of the current user
-                String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
-                if(lsPosition1 == null || "".equals(lsPosition1) ){
-                    poJSON.put("result", "error" );
-                    poJSON.put("message", "User is not an authorized officer." );
-                    return poJSON;
-                }
+        if(!pbWthParent){
+            //1. Check the position of the current user
+            String lsPosition1 = checkPosition(lsStatus, poGRider.getUserID());
+            if(lsPosition1 == null || "".equals(lsPosition1) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
+            }
 
-                psApprover = poGRider.getUserID();
-                poJSON = callApproval();
-                if (!isJSONSuccess(poJSON)) {
-                    return poJSON;
-                }
+            psApprover = poGRider.getUserID();
+            poJSON = callApproval();
+            if (!isJSONSuccess(poJSON)) {
+                return poJSON;
+            }
 
-                //2. Check the position of the approving officer
-                String lsPosition = checkPosition(lsStatus, psApprover);
-                if(lsPosition == null || "".equals(lsPosition) ){
-                    poJSON.put("result", "error" );
-                    poJSON.put("message", "User is not an authorized officer." );
-                    return poJSON;
-                }
+            //2. Check the position of the approving officer
+            String lsPosition = checkPosition(lsStatus, psApprover);
+            if(lsPosition == null || "".equals(lsPosition) ){
+                poJSON.put("result", "error" );
+                poJSON.put("message", "User is not an authorized officer." );
+                return poJSON;
             }
         }
         
@@ -3536,19 +3546,19 @@ public class CashDisbursement extends Transaction {
             switch(fsStatus){
                 case CashDisbursementStatus.APPROVED:
                     poJSON = loObj.ConfirmTransaction("");
-                    if (!"success".equals((String) poJSON.get("result"))) {
+                   if (!isJSONSuccess(poJSON)) {
                         return poJSON;
                     }
                     break;
                 case CashDisbursementStatus.VOID:
                     poJSON = loObj.VoidTransaction("");
-                    if (!"success".equals((String) poJSON.get("result"))) {
+                    if (!isJSONSuccess(poJSON)) {
                         return poJSON;
                     }
                     break;
                 case CashDisbursementStatus.CANCELLED:
                     poJSON = loObj.CancelTransaction("");
-                    if (!"success".equals((String) poJSON.get("result"))) {
+                    if (!isJSONSuccess(poJSON)) {
                         return poJSON;
                     }
                     break;
@@ -3556,7 +3566,7 @@ public class CashDisbursement extends Transaction {
                     if(JournalProposalStatus.OPEN.equals(loObj.Master().getTransactionStatus())){
                     } else {
                         poJSON = loObj.ReturnTransaction("");
-                        if (!"success".equals((String) poJSON.get("result"))) {
+                        if (!isJSONSuccess(poJSON)) {
                             return poJSON;
                         }
                     }
@@ -3712,7 +3722,9 @@ public class CashDisbursement extends Transaction {
                         if(poJournal.getEditMode() != EditMode.ADDNEW && poJournal.getEditMode() != EditMode.UPDATE){
                             lbCheckJEP = true;
                         } else {
-
+                            if(poJournal.getTotalCreditAmount() <= 0.0000 && poJournal.getTotalDebitAmount() <= 0.0000){
+                                lbCheckJEP = true;
+                            }
                         }
                     } else {
                         if(poJournal.getEditMode() != EditMode.READY){
@@ -3725,19 +3737,18 @@ public class CashDisbursement extends Transaction {
 
                 //Check Journal Proposal
                 if(lbCheckJEP){
-                    //Check Journal Proposal
-                    if(getJournalProposalList() != null){
-                        if(getJournalProposalList().isEmpty()){
-                            poJSON.put("result", "error" );
-                            poJSON.put("message", "Journal cannot be empty." );
-                            return poJSON;
-                        }
-                        JournalProposal loObj = JournalProposal(getJournalProposalList().size()-1);
+                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+                        JournalProposal loObj = JournalProposal(lnCtr);
                         if(fbIsWillSave){
                             if(loObj.getEditMode() != EditMode.ADDNEW && loObj.getEditMode() != EditMode.UPDATE){
                                 poJSON.put("result", "error" );
-                                poJSON.put("message", "Invalid update mode for journal." );
+                                poJSON.put("message", "Invalid update mode for journal proposal." );
                                 return poJSON;
+                            } else {
+                                if(loObj.getTotalCreditAmount() > 0.0000 && loObj.getTotalDebitAmount() > 0.0000){
+                                    lbCheckJEP = false;
+                                    break;
+                                }
                             }
                         } else {
                             if(loObj.getEditMode() != EditMode.READY){
@@ -3746,13 +3757,15 @@ public class CashDisbursement extends Transaction {
                                 return poJSON;
                             }
                         }
-                    } else {
-                        poJSON.put("result", "error" );
-                        poJSON.put("message", "Journal cannot be empty." );
-                        return poJSON;
                     }
                 }
-
+                
+                if(lbCheckJEP){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "Journal details cannot be empty." );
+                    return poJSON;
+                }
+                
                 break;
         }
 
@@ -3793,7 +3806,7 @@ public class CashDisbursement extends Transaction {
             return poJSON;
         }
 
-        poJSON = verifyJournals(Master().getTransactionStatus(),true);
+        poJSON = verifyJournals(psForm,true);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -3891,13 +3904,13 @@ public class CashDisbursement extends Transaction {
                     lbUpdated = loRecord.Master().getRemarks().equals(Master().getRemarks());
                 }
                 if (lbUpdated) {
-                    lbUpdated = loRecord.getDetailCount() == getDetailCount();
+                    lbUpdated = loRecord.getDetailCount() == getDetailCount()-1;
                 }
                 if (lbUpdated) {
                     lbUpdated = loRecord.Journal().getDetailCount() == Journal().getDetailCount()-1;
                 }
                 if (lbUpdated) {
-                    lbUpdated = loRecord.getWTaxDeductionsCount() == getWTaxDeductionsCount();
+                    lbUpdated = loRecord.getWTaxDeductionsCount() == getWTaxDeductionsCount()-1;
                 }
 
                 //Check disbursement detail
