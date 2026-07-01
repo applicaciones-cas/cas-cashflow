@@ -51,9 +51,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javax.script.ScriptException;
 import javax.sql.rowset.CachedRowSet;
-import javax.swing.JButton;
-import javax.swing.SwingUtilities;
-import javax.swing.WindowConstants;
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
@@ -89,6 +88,7 @@ import org.guanzon.cas.purchasing.model.Model_POReturn_Detail;
 import org.guanzon.cas.purchasing.model.Model_POReturn_Master;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReceivingModels;
 import org.guanzon.cas.purchasing.services.PurchaseOrderReturnModels;
+import org.guanzon.cas.purchasing.status.PurchaseOrderStatus;
 import org.guanzon.cas.tbjhandler.TBJEntry;
 import org.guanzon.cas.tbjhandler.TBJTransaction;
 import org.json.simple.JSONArray;
@@ -119,8 +119,31 @@ import ph.com.guanzongroup.cas.cashflow.status.OtherPaymentStatus;
 import ph.com.guanzongroup.cas.cashflow.status.PaymentRequestStatus;
 import ph.com.guanzongroup.cas.cashflow.status.SOATaggingStatic;
 import ph.com.guanzongroup.cas.cashflow.utility.CustomCommonUtil;
+import ph.com.guanzongroup.cas.cashflow.utility.CustomJasperViewerReports;
 import ph.com.guanzongroup.cas.cashflow.utility.NumberToWords;
 import ph.com.guanzongroup.cas.cashflow.validator.DisbursementValidator;
+
+import java.io.File;
+
+import javax.swing.JFileChooser;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+import net.sf.jasperreports.engine.xml.JRXmlWriter;
+import net.sf.jasperreports.engine.JasperExportManager;
+import net.sf.jasperreports.engine.JasperPrint;
+
+import net.sf.jasperreports.export.SimpleExporterInput;
+import net.sf.jasperreports.export.SimpleHtmlExporterOutput;
+import net.sf.jasperreports.export.SimpleOutputStreamExporterOutput;
+import net.sf.jasperreports.export.SimpleWriterExporterOutput;
+import net.sf.jasperreports.export.SimpleXlsReportConfiguration;
+import net.sf.jasperreports.export.SimpleXlsxReportConfiguration;
+
+import net.sf.jasperreports.engine.export.JRCsvExporter;
+import net.sf.jasperreports.engine.export.HtmlExporter;
+import net.sf.jasperreports.engine.export.ooxml.JRDocxExporter;
+import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
+import net.sf.jasperreports.engine.xml.JRXmlWriter;
 
 /**
  *
@@ -183,7 +206,6 @@ public class DisbursementVoucher extends Transaction {
     //Transaction Source Code 
     @Override
     public String getSourceCode() { return SOURCE_CODE; }
-    
     //Set value for private strings used in searching / filtering data
     public void setIndustryID(String industryId) { psIndustryId = industryId; }
     public void setCompanyID(String companyId) { psCompanyId = companyId; }
@@ -9508,14 +9530,22 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             if (BankName != null && !BankName.trim().isEmpty()) {
                 lsFilter.add("f.sBankName LIKE " + SQLUtil.toSQL(BankName + "%"));
             }
-            if (CheckStat != null && !CheckStat.trim().isEmpty()) {
-                lsFilter.add("b.cTranStat LIKE " + SQLUtil.toSQL(CheckStat + "%"));
+
+
+            if (CheckStat.length() > 1) {
+                for (int lnCtr = 0; lnCtr <= CheckStat.length() - 1; lnCtr++) {
+                    lsTransStat += ", " + SQLUtil.toSQL(Character.toString(CheckStat.charAt(lnCtr)));
+                }
+                lsFilter.add( " b.cTranStat IN (" + lsTransStat.substring(2) + ")");
+            } else {
+                lsFilter.add( " b.cTranStat = " + SQLUtil.toSQL(CheckStat));
             }
 
             lsFilter.add("a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID())
-                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
-
+                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID()));
+            if(poGRider.getUserLevel()<=UserRight.ENCODER){
+                lsFilter.add("a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
+            }
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                     lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
@@ -9762,9 +9792,11 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             }
 
             lsFilter.add("a.sCompnyID = " + SQLUtil.toSQL(Master().getCompanyID())
-                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID())
-                    + " AND a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
+                    + " AND a.sIndstCdx = " +  SQLUtil.toSQL(Master().getIndustryID()));
 
+            if(poGRider.getUserLevel()<=UserRight.ENCODER){
+                lsFilter.add("a.sTransNox LIKE " + SQLUtil.toSQL(poGRider.getBranchCode() + "%"));
+            }
             if (psTranStat.length() > 1) {
                 for (int lnCtr = 0; lnCtr <= psTranStat.length() - 1; lnCtr++) {
                     lsTransStat += ", " + SQLUtil.toSQL(Character.toString(psTranStat.charAt(lnCtr)));
@@ -9987,7 +10019,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
 
             parameters.put("sCompany", Master().Company().getCompanyName());
             parameters.put("sIndustry", Master().Industry().getDescription());
-//            parameters.put("sBranch", Master().Branchx().getBranchName());
+            parameters.put("sBranch", Master().Branch().getBranchName());
             parameters.put("sDateRange", "FROM " + formatDateToText(dfrom) + " TO " + formatDateToText(dthru));
 
             List<Reports> reportList = new ArrayList<>();
@@ -10060,8 +10092,10 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             );
 
             if (System.getProperty("os.name").toLowerCase().contains("win")) {
-                DisbursementVoucher.CustomJasperViewer viewer = new DisbursementVoucher.CustomJasperViewer(jasperPrint);
-                viewer.setVisible(true);
+
+                CustomJasperViewerReports.show(
+                        jasperPrint,
+                        "Disbursement Voucher Reports");
             } else {
                 //mac 2026.02.21
                 //export pdf file
@@ -10235,5 +10269,318 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             return nDetVatAm;
         }
     }
+
+//    public class CustomJasperViewers extends JasperViewer {
+//
+//        public CustomJasperViewers(final JasperPrint jasperPrint) {
+//            super(jasperPrint, false);
+//            customizeToolbar(jasperPrint);
+//        }
+//
+//        private void customizeToolbar(final JasperPrint jasperPrint) {
+//
+//            JRViewer viewer = getJRViewer(getContentPane());
+//
+//            if (viewer == null) {
+//                System.out.println("JRViewer not found.");
+//                return;
+//            }
+//
+//            for (Component component : viewer.getComponents()) {
+//
+//                if (!(component instanceof JRViewerToolbar)) {
+//                    continue;
+//                }
+//
+//                JRViewerToolbar toolbar = (JRViewerToolbar) component;
+//
+//                for (Component c : toolbar.getComponents()) {
+//                    if (c instanceof JButton) {
+//                        handleButton((JButton) c, jasperPrint);
+//                    }
+//                }
+//
+//                toolbar.revalidate();
+//                toolbar.repaint();
+//            }
+//        }
+//
+//        private void handleButton(JButton button, final JasperPrint jasperPrint) {
+//
+//            String tooltip = button.getToolTipText();
+//
+//            if ("Save".equals(tooltip)) {
+//
+//                button.setEnabled(true);
+//                button.setVisible(true);
+//
+//                for (ActionListener listener : button.getActionListeners()) {
+//                    button.removeActionListener(listener);
+//                }
+//
+//                button.addActionListener(e -> saveReport(jasperPrint));
+//                return;
+//            }
+//
+//            if ("Print".equals(tooltip)) {
+//
+//                for (ActionListener listener : button.getActionListeners()) {
+//                    button.removeActionListener(listener);
+//                }
+//
+//                button.addActionListener(e -> printReport(jasperPrint));
+//            }
+//        }
+//
+//        private void printReport(final JasperPrint jasperPrint) {
+//
+//            try {
+//
+//                boolean isPrinted = JasperPrintManager.printReport(jasperPrint, true);
+//
+//                if (!isPrinted) {
+//                    Platform.runLater(() -> {
+//                        ShowMessageFX.Warning(
+//                                "Printing was canceled by the user.",
+//                                "Disbursement Voucher Reports",
+//                                null
+//                        );
+//
+//                        SwingUtilities.invokeLater(this::toFront);
+//                    });
+//
+//                    return;
+//                }
+//
+//                // Uncomment when needed
+//                // PrintTransaction(true);
+//
+//            } catch (JRException ex) {
+//
+//                Platform.runLater(() -> {
+//                    ShowMessageFX.Warning(
+//                            "Print Failed: " + ex.getMessage(),
+//                            "Disbursement Voucher Reports",
+//                            null
+//                    );
+//
+//                    SwingUtilities.invokeLater(this::toFront);
+//                });
+//            }
+//        }
+//
+//        private JRViewer getJRViewer(Container container) {
+//
+//            for (Component component : container.getComponents()) {
+//
+//                if (component instanceof JRViewer) {
+//                    return (JRViewer) component;
+//                }
+//
+//                if (component instanceof Container) {
+//
+//                    JRViewer viewer = getJRViewer((Container) component);
+//
+//                    if (viewer != null) {
+//                        return viewer;
+//                    }
+//                }
+//            }
+//
+//            return null;
+//        }
+//
+//        private void saveReport(final JasperPrint jasperPrint) {
+//
+//            JFileChooser chooser = new JFileChooser();
+//            chooser.setDialogTitle("Save Report");
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("PDF (*.pdf)", "pdf"));
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("Excel Workbook (*.xlsx)", "xlsx"));
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("Word Document (*.docx)", "docx"));
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("CSV (*.csv)", "csv"));
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("HTML (*.html)", "html"));
+//
+//            chooser.addChoosableFileFilter(
+//                    new FileNameExtensionFilter("JR XML (*.jrpxml)", "jrpxml"));
+//
+//            chooser.setAcceptAllFileFilterUsed(false);
+//
+//            int result = chooser.showSaveDialog(this);
+//
+//            if (result != JFileChooser.APPROVE_OPTION) {
+//
+//                Platform.runLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        ShowMessageFX.Warning(
+//                                "Saving was canceled by the user.",
+//                                "Disbursement Voucher Reports",
+//                                null
+//                        );
+//                    }
+//                });
+//
+//                return;
+//            }
+//
+//            try {
+//
+//                FileNameExtensionFilter filter =
+//                        (FileNameExtensionFilter) chooser.getFileFilter();
+//
+//                String extension = filter.getExtensions()[0];
+//
+//                File file = chooser.getSelectedFile();
+//                String fileName = file.getAbsolutePath();
+//
+//                if (!fileName.toLowerCase().endsWith("." + extension)) {
+//                    fileName += "." + extension;
+//                }
+//
+//                switch (extension.toLowerCase()) {
+//
+//                    case "pdf":
+//
+//                        JasperExportManager.exportReportToPdfFile(
+//                                jasperPrint,
+//                                fileName
+//                        );
+//
+//                        break;
+//
+//                    case "xlsx": {
+//
+//                        JRXlsxExporter exporter = new JRXlsxExporter();
+//
+//                        exporter.setExporterInput(
+//                                new SimpleExporterInput(jasperPrint));
+//
+//                        exporter.setExporterOutput(
+//                                new SimpleOutputStreamExporterOutput(fileName));
+//
+//                        SimpleXlsxReportConfiguration config =
+//                                new SimpleXlsxReportConfiguration();
+//
+//                        config.setOnePagePerSheet(false);
+//                        config.setDetectCellType(true);
+//                        config.setCollapseRowSpan(false);
+//
+//                        exporter.setConfiguration(config);
+//                        exporter.exportReport();
+//
+//                        break;
+//                    }
+//
+//                    case "docx": {
+//
+//                        JRDocxExporter exporter = new JRDocxExporter();
+//
+//                        exporter.setExporterInput(
+//                                new SimpleExporterInput(jasperPrint));
+//
+//                        exporter.setExporterOutput(
+//                                new SimpleOutputStreamExporterOutput(fileName));
+//
+//                        exporter.exportReport();
+//
+//                        break;
+//                    }
+//
+//                    case "csv": {
+//
+//                        JRCsvExporter exporter = new JRCsvExporter();
+//
+//                        exporter.setExporterInput(
+//                                new SimpleExporterInput(jasperPrint));
+//
+//                        exporter.setExporterOutput(
+//                                new SimpleWriterExporterOutput(fileName));
+//
+//                        exporter.exportReport();
+//
+//                        break;
+//                    }
+//
+//                    case "html": {
+//
+//                        HtmlExporter exporter = new HtmlExporter();
+//
+//                        exporter.setExporterInput(
+//                                new SimpleExporterInput(jasperPrint));
+//
+//                        exporter.setExporterOutput(
+//                                new SimpleHtmlExporterOutput(fileName));
+//
+//                        exporter.exportReport();
+//
+//                        break;
+//                    }
+//
+//                    case "jrpxml":
+//
+//                        JRXmlWriter.writeReport(
+//                                (JRReport) jasperPrint,
+//                                fileName,
+//                                "UTF-8"
+//                        );
+//
+//                        break;
+//
+//                    default:
+//
+//                        throw new IllegalArgumentException(
+//                                "Unsupported file format: " + extension
+//                        );
+//                }
+//
+//                final String savedFile = fileName;
+//
+//                Platform.runLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        ShowMessageFX.Information(
+//                                "Report saved successfully.\n\n" + savedFile,
+//                                "Disbursement Voucher Reports",
+//                                null
+//                        );
+//                    }
+//                });
+//
+//            } catch (final Exception ex) {
+//
+//                Platform.runLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        ShowMessageFX.Warning(
+//                                "Save failed:\n" + ex.getMessage(),
+//                                "Disbursement Voucher Reports",
+//                                null
+//                        );
+//                    }
+//                });
+//
+//                SwingUtilities.invokeLater(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        CustomJasperViewers.this.setVisible(true);
+//                        CustomJasperViewers.this.toFront();
+//                        CustomJasperViewers.this.requestFocus();
+//                    }
+//                });
+//            }
+//        }
+//    }
+
+
 
 }
