@@ -4348,7 +4348,9 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                         if(poJournal.getEditMode() != EditMode.ADDNEW && poJournal.getEditMode() != EditMode.UPDATE){
                             lbCheckJEP = true;
                         } else {
-                            
+                            if(poJournal.getTotalCreditAmount() <= 0.0000 && poJournal.getTotalDebitAmount() <= 0.0000){
+                                lbCheckJEP = true;
+                            }
                         }
                     } else {
                         if(poJournal.getEditMode() != EditMode.READY){
@@ -4358,22 +4360,21 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 } else {
                     lbCheckJEP = true;
                 }
-                 
-                //Check Journal Proposal  
+
+                //Check Journal Proposal
                 if(lbCheckJEP){
-                    //Check Journal Proposal
-                    if(getJournalProposalList() != null){
-                        if(getJournalProposalList().isEmpty()){
-                            poJSON.put("result", "error" );
-                            poJSON.put("message", "Journal cannot be empty." );
-                            return poJSON;
-                        }
-                        JournalProposal loObj = JournalProposal(getJournalProposalList().size()-1);
+                    for(int lnCtr = 0; lnCtr < getJournalProposalList().size(); lnCtr++){
+                        JournalProposal loObj = JournalProposal(lnCtr);
                         if(fbIsWillSave){
                             if(loObj.getEditMode() != EditMode.ADDNEW && loObj.getEditMode() != EditMode.UPDATE){
                                 poJSON.put("result", "error" );
-                                poJSON.put("message", "Invalid update mode for journal." );
+                                poJSON.put("message", "Invalid update mode for journal proposal." );
                                 return poJSON;
+                            } else {
+                                if(loObj.getTotalCreditAmount() > 0.0000 && loObj.getTotalDebitAmount() > 0.0000){
+                                    lbCheckJEP = false;
+                                    break;
+                                }
                             }
                         } else {
                             if(loObj.getEditMode() != EditMode.READY){
@@ -4382,11 +4383,13 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                                 return poJSON;
                             }
                         }
-                    } else {
-                        poJSON.put("result", "error" );
-                        poJSON.put("message", "Journal cannot be empty." );
-                        return poJSON;
                     }
+                }
+                
+                if(lbCheckJEP){
+                    poJSON.put("result", "error" );
+                    poJSON.put("message", "Journal details cannot be empty." );
+                    return poJSON;
                 }
                  
                 break;
@@ -4423,7 +4426,7 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
             Master().setVoucherNo(getVoucherNo());
         }
         
-        poJSON = verifyJournals(Master().getTransactionStatus(),true);
+        poJSON = verifyJournals(psForm,true);
         if ("error".equals((String) poJSON.get("result"))) {
             return poJSON;
         }
@@ -8245,6 +8248,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
                 
+                   //Additional fields - Arsiela 06222026
+                params.put("sCompany", Master().Company().getCompanyName());
+                params.put("sBranch", Master().Branch().getBranchName());
+                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
+//                params.put("sReceivedBy","");
+                
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
                 params.put("sConfirmer","");
@@ -8721,6 +8730,12 @@ private void createNewJournalProposal() throws CloneNotSupportedException, SQLEx
                 params.put("sCheckNox", Master().CheckPayments().getCheckNo());
                 params.put("dCheckDte", Master().CheckPayments().getCheckDate());
                 params.put("nCheckAmountxx", Double.valueOf(CustomCommonUtil.setIntegerValueToDecimalFormat(Master().CheckPayments().getAmount(), false).replace(",", "")));
+                
+                //Additional fields - Arsiela 06222026
+                params.put("sCompany", Master().Company().getCompanyName());
+                params.put("sBranch", Master().Branch().getBranchName());
+                params.put("sBankAccountNo", Master().CheckPayments().Bank_Account_Master().getAccountNo());
+//                params.put("sReceivedBy","");
                 
                 //Set Default value to empty to prevent null in display
                 params.put("sEncoder","");
